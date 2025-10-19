@@ -1,0 +1,28 @@
+# Archivos de configuración sensibles
+email_config.json
+
+# Entorno virtual
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos temporales
+*.tmp
+*.temp
+*.log
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Base de datos (opcional - descomenta si no quieres versionar la BD)
+# presupuestos.db
+

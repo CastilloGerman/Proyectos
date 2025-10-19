@@ -1,0 +1,46 @@
+{
+  "empresa": {
+    "nombre": "pinta menos",
+    "direccion": "calle pichi",
+    "ciudad": "chiva",
+    "telefono": "+34 123 456 789",
+    "email": "castilean@gmail.com",
+    "web": "www.tucuman.com",
+    "cif": "154094727"
+  },
+  "logo": {
+    "usar_logo": true,
+    "ruta_logo": "C:/Users/German/Downloads/logo-abstracto-con-forma-triangular/preview.jpg",
+    "texto_logo": "",
+    "tamaño_logo": 12
+  },
+  "colores": {
+    "color_principal": "#2c3e50",
+    "color_secundario": "#3498db",
+    "color_texto": "#2c3e50"
+  },
+  "texto_personalizado": {
+    "titulo_principal": "PRESUPUESTO",
+    "notas_pie": "• Este presupuesto tiene una validez de 30 días.\n• Los precios incluyen IVA.\n• Para cualquier consulta, contacte con nosotros.",
+    "texto_iva_incluido": "Los precios incluyen IVA.",
+    "texto_iva_no_incluido": "Los precios NO incluyen IVA."
+  },
+  "margenes": {
+    "superior": 72,
+    "inferior": 18,
+    "izquierdo": 72,
+    "derecho": 72
+  },
+  "colores_factura": {
+    "color_fondo": "#F5F5DC",
+    "color_borde": "#000000",
+    "color_texto": "#000000",
+    "color_cabecera": "#F5F5DC"
+  },
+  "pago": {
+    "metodo_pago": "Transferencia bancaria",
+    "banco": "Banco santander",
+    "titular_cuenta": "pinta menos",
+    "numero_cuenta": "ES12 3456 7890 1234 5678 9012"
+  }
+}

@@ -1,0 +1,2 @@
+# Makes `CatalogoPeliculas` a package
+
