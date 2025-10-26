@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox, filedialog, simpledialog
 from datetime import datetime, timedelta
 import os
 import subprocess
@@ -1737,8 +1737,7 @@ class AppPresupuestos:
             archivo_pdf = self.pdf_generator.generate_presupuesto_pdf(presupuesto, ruta_completa)
             
             # Mostrar diálogo de envío
-            if email_sender.mostrar_dialogo_envio(self.root, presupuesto, archivo_pdf):
-                messagebox.showinfo("Éxito", "Presupuesto enviado correctamente")
+            email_sender.mostrar_dialogo_envio(self.root, presupuesto, archivo_pdf)
             
             # Limpiar archivo temporal (opcional)
             # os.remove(archivo_pdf)
@@ -3675,10 +3674,21 @@ class AppPresupuestos:
             messagebox.showerror("Error", "No se pudo obtener los datos de la factura")
             return
         
-        # Verificar que el cliente tenga email
-        if not factura.get('email'):
-            messagebox.showwarning("Advertencia", "El cliente no tiene email configurado. No se puede enviar la factura.")
-            return
+        # Verificar que el cliente tenga email o pedirlo
+        email_destino = factura.get('email', '').strip() if factura.get('email') else ''
+        if not email_destino:
+            email_destino = simpledialog.askstring("Email requerido", 
+                                                  f"El cliente {factura.get('cliente_nombre', '')} no tiene email configurado.\n\nIngrese el email del destinatario:")
+            if not email_destino:
+                return
+            
+            # Validar formato básico de email
+            if '@' not in email_destino or '.' not in email_destino.split('@')[1]:
+                messagebox.showerror("Error", "El email ingresado no es válido")
+                return
+        
+        # Actualizar el email en la factura para el envío
+        factura['email'] = email_destino
         
         # Generar PDF temporal
         try:
@@ -3694,12 +3704,12 @@ class AppPresupuestos:
             
             # Enviar email
             try:
-                email_sender.enviar_factura(
+                if email_sender.enviar_factura(
                     destinatario=factura['email'],
                     factura=factura,
                     archivo_pdf=pdf_path
-                )
-                messagebox.showinfo("Éxito", f"Factura {factura.get('numero_factura', '')} enviada por email correctamente a {factura['email']}")
+                ):
+                    messagebox.showinfo("Éxito", f"Factura {factura.get('numero_factura', '')} enviada por email correctamente a {factura['email']}")
             except Exception as e:
                 messagebox.showerror("Error", f"Error al enviar email: {str(e)}")
                 

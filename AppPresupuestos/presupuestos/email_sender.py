@@ -5,7 +5,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
-from typing import Optional
+from typing import Optional, Tuple
 import tkinter as tk
 from tkinter import messagebox, simpledialog, ttk
 
@@ -54,7 +54,7 @@ class EmailSender:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
                     config = json.load(f)
                     self.smtp_server = config.get("smtp_server")
-                    self.smtp_port = config.get("smtp_port")
+                    self.smtp_port = int(config.get("smtp_port")) if config.get("smtp_port") else None
                     self.email = config.get("email")
                     self.password = config.get("password")
                     self.configurado = config.get("configurado", False)
@@ -443,15 +443,19 @@ CONFIGURACIÓN PERSONALIZADA:
         # Enfocar el primer campo
         smtp_entry.focus()
     
-    def enviar_presupuesto_por_email(self, presupuesto: dict, archivo_pdf: str, email_destino: str = None) -> bool:
-        """Envía el presupuesto por email"""
+    def enviar_presupuesto_por_email(self, presupuesto: dict, archivo_pdf: str, email_destino: str = None) -> Tuple[bool, str]:
+        """Envía el presupuesto por email
+        
+        Returns:
+            tuple: (éxito: bool, mensaje: str)
+        """
         if not self.configurado:
-            return False
+            return False, "El email no está configurado"
         
         if not email_destino:
             email_destino = presupuesto.get('email', '')
             if not email_destino:
-                return False
+                return False, "No se especificó email de destino"
         
         try:
             # Crear el mensaje
@@ -499,11 +503,12 @@ Sistema de Presupuestos
             server.sendmail(self.email, email_destino, text)
             server.quit()
             
-            return True
+            return True, "Email enviado correctamente"
             
         except Exception as e:
-            print(f"Error al enviar email: {str(e)}")
-            return False
+            error_msg = f"Error al enviar email: {str(e)}"
+            print(error_msg)
+            return False, error_msg
     
     def enviar_factura(self, destinatario: str, factura: dict, archivo_pdf: str) -> bool:
         """Envía la factura por email"""
@@ -576,49 +581,49 @@ Sistema de Facturación
         # Ventana de diálogo para el email
         email_window = tk.Toplevel(parent_window)
         email_window.title("Enviar Presupuesto por Email")
-        email_window.geometry("450x300")
+        email_window.geometry("600x550")
         email_window.configure(bg='#ecf0f1')
         email_window.transient(parent_window)
         email_window.grab_set()
         
         # Centrar la ventana
         email_window.update_idletasks()
-        x = (email_window.winfo_screenwidth() // 2) - (450 // 2)
-        y = (email_window.winfo_screenheight() // 2) - (300 // 2)
-        email_window.geometry(f"450x300+{x}+{y}")
+        x = (email_window.winfo_screenwidth() // 2) - (600 // 2)
+        y = (email_window.winfo_screenheight() // 2) - (550 // 2)
+        email_window.geometry(f"600x550+{x}+{y}")
         
         # Frame principal
-        main_frame = ttk.Frame(email_window, padding=20)
+        main_frame = ttk.Frame(email_window, padding=25)
         main_frame.pack(fill='both', expand=True)
         
         # Título
         title_label = ttk.Label(main_frame, text=f"📧 Enviar Presupuesto Nº {presupuesto['id']}", 
-                               font=('Segoe UI', 14, 'bold'))
-        title_label.pack(pady=(0, 20))
+                               font=('Segoe UI', 16, 'bold'))
+        title_label.pack(pady=(0, 25))
         
         # Frame para información del presupuesto
-        info_frame = ttk.LabelFrame(main_frame, text="Información del Presupuesto", padding=15)
-        info_frame.pack(fill='x', pady=(0, 15))
+        info_frame = ttk.LabelFrame(main_frame, text="Información del Presupuesto", padding=18)
+        info_frame.pack(fill='x', pady=(0, 20))
         
         ttk.Label(info_frame, text=f"Cliente: {presupuesto['cliente_nombre']}", 
-                 font=('Segoe UI', 9)).pack(anchor='w')
+                 font=('Segoe UI', 10)).pack(anchor='w', pady=(0, 8))
         ttk.Label(info_frame, text=f"Total: €{presupuesto['total']:.2f}", 
-                 font=('Segoe UI', 9)).pack(anchor='w')
+                 font=('Segoe UI', 10)).pack(anchor='w', pady=(0, 8))
         ttk.Label(info_frame, text=f"Fecha: {presupuesto['fecha_creacion'][:10]}", 
-                 font=('Segoe UI', 9)).pack(anchor='w')
+                 font=('Segoe UI', 10)).pack(anchor='w')
         
         # Frame para el email destino
-        email_frame = ttk.LabelFrame(main_frame, text="Destinatario", padding=15)
-        email_frame.pack(fill='x', pady=(0, 15))
+        email_frame = ttk.LabelFrame(main_frame, text="Destinatario", padding=18)
+        email_frame.pack(fill='x', pady=(0, 20))
         
-        ttk.Label(email_frame, text="Email destino:", font=('Segoe UI', 9, 'bold')).pack(anchor='w')
-        email_entry = ttk.Entry(email_frame, width=50, font=('Segoe UI', 9))
-        email_entry.pack(fill='x', pady=(5, 0))
+        ttk.Label(email_frame, text="Email destino:", font=('Segoe UI', 10, 'bold')).pack(anchor='w', pady=(0, 10))
+        email_entry = ttk.Entry(email_frame, width=50, font=('Segoe UI', 11))
+        email_entry.pack(fill='x', pady=(0, 5))
         email_entry.insert(0, presupuesto.get('email', ''))
         
         # Frame para los botones
         button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill='x', pady=(10, 0))
+        button_frame.pack(fill='x', pady=(15, 0))
         
         resultado = [False]  # Usar lista para poder modificar desde dentro de las funciones
         
@@ -628,16 +633,22 @@ Sistema de Facturación
                 messagebox.showerror("Error", "Ingrese un email destino")
                 return
             
+            # Validar formato básico de email
+            if '@' not in email_destino or '.' not in email_destino.split('@')[1]:
+                messagebox.showerror("Error", "El email ingresado no es válido")
+                return
+            
             # Mostrar mensaje de confirmación
             if messagebox.askyesno("Confirmar Envío", 
                                  f"¿Está seguro de enviar el presupuesto a {email_destino}?"):
                 try:
-                    if self.enviar_presupuesto_por_email(presupuesto, archivo_pdf, email_destino):
+                    exito, mensaje = self.enviar_presupuesto_por_email(presupuesto, archivo_pdf, email_destino)
+                    if exito:
                         messagebox.showinfo("Éxito", "✅ Presupuesto enviado correctamente")
                         resultado[0] = True
                         email_window.destroy()
                     else:
-                        messagebox.showerror("Error", "❌ Error al enviar el presupuesto")
+                        messagebox.showerror("Error", f"❌ {mensaje}")
                 except Exception as e:
                     messagebox.showerror("Error", f"❌ Error al enviar el presupuesto:\n{str(e)}")
         
@@ -647,7 +658,7 @@ Sistema de Facturación
         # Botones con estilos
         send_button = ttk.Button(button_frame, text="📤 Enviar Presupuesto", 
                                 command=enviar, style='Accent.TButton')
-        send_button.pack(side='left', padx=(0, 10))
+        send_button.pack(side='left', padx=(0, 15))
         
         cancel_button = ttk.Button(button_frame, text="❌ Cancelar", 
                                   command=cancelar, style='TButton')
