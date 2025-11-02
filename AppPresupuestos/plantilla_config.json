@@ -6,7 +6,8 @@
     "telefono": "+34 123 456 789",
     "email": "castilean@gmail.com",
     "web": "www.tucuman.com",
-    "cif": "154094727"
+    "cif": "154094727",
+    "registro_mercantil": ""
   },
   "logo": {
     "usar_logo": true,
@@ -41,6 +42,7 @@
     "metodo_pago": "Transferencia bancaria",
     "banco": "Banco santander",
     "titular_cuenta": "pinta menos",
-    "numero_cuenta": "ES12 3456 7890 1234 5678 9012"
+    "numero_cuenta": "ES12 3456 7890 1234 5678 9012",
+    "iban": "ES12 3456 7890 1234 5678 9012"
   }
 }

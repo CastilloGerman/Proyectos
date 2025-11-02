@@ -43,37 +43,55 @@ class FacturaManager:
                      metodo_pago: str = 'Transferencia', estado_pago: str = 'No Pagada',
                      notas: str = '', iva_habilitado: bool = True,
                      presupuesto_id: int = None, descuento_global_porcentaje: float = 0,
-                     descuento_global_fijo: float = 0, descuento_antes_iva: bool = True) -> int:
+                     descuento_global_fijo: float = 0, descuento_antes_iva: bool = True,
+                     retencion_irpf: float = None) -> int:
         """Crea una nueva factura con sus items"""
         # Generar número de factura si no se proporciona
         if not numero_factura:
             numero_factura = self.generar_numero_factura()
         
         # Calcular totales con nuevos campos
-        totales = self.calcular_totales_completo(items, descuento_global_porcentaje, descuento_global_fijo, descuento_antes_iva, iva_habilitado)
+        totales = self.calcular_totales_completo(items, descuento_global_porcentaje, descuento_global_fijo, descuento_antes_iva, iva_habilitado, retencion_irpf)
         
         # Crear factura
         query = """
             INSERT INTO facturas (numero_factura, cliente_id, presupuesto_id, fecha_vencimiento, 
                                 subtotal, iva, total, iva_habilitado, metodo_pago, estado_pago, notas,
-                                descuento_global_porcentaje, descuento_global_fijo, descuento_antes_iva)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                descuento_global_porcentaje, descuento_global_fijo, descuento_antes_iva,
+                                retencion_irpf)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         factura_id = self.db.execute_update(query, (
             numero_factura, cliente_id, presupuesto_id, fecha_vencimiento,
             totales['subtotal'], totales['iva'], totales['total'], 1 if iva_habilitado else 0,
             metodo_pago, estado_pago, notas, descuento_global_porcentaje, descuento_global_fijo,
-            1 if descuento_antes_iva else 0
+            1 if descuento_antes_iva else 0, retencion_irpf
         ))
         
         # Crear items de la factura
         for item in items:
             item_subtotal = item['cantidad'] * item['precio_unitario']
+            
+            # Aplicar descuentos por item
+            item_descuento = 0.0
+            if item.get('descuento_porcentaje', 0) > 0:
+                item_descuento = item_subtotal * (item['descuento_porcentaje'] / 100)
+            elif item.get('descuento_fijo', 0) > 0:
+                item_descuento = min(item['descuento_fijo'], item_subtotal)
+            
+            # Calcular subtotal después de descuentos
+            item_subtotal_final = item_subtotal - item_descuento
+            
+            # Calcular cuota de IVA por línea (21% si aplica IVA)
+            cuota_iva = 0.0
+            if item.get('aplica_iva', True) and iva_habilitado:
+                cuota_iva = item_subtotal_final * (self.iva_porcentaje / 100)
+            
             item_query = """
                 INSERT INTO factura_items (factura_id, material_id, tarea_manual, cantidad, 
                                          precio_unitario, subtotal, visible_pdf, es_tarea_manual,
-                                         aplica_iva, descuento_porcentaje, descuento_fijo)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                         aplica_iva, descuento_porcentaje, descuento_fijo, cuota_iva)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
             self.db.execute_update(item_query, (
                 factura_id,
@@ -81,12 +99,13 @@ class FacturaManager:
                 item.get('tarea_manual', ''),
                 item['cantidad'],
                 item['precio_unitario'],
-                item_subtotal,
+                item_subtotal_final,
                 item.get('visible_pdf', 1),
                 item.get('es_tarea_manual', 0),
                 item.get('aplica_iva', 1),
                 item.get('descuento_porcentaje', 0),
-                item.get('descuento_fijo', 0)
+                item.get('descuento_fijo', 0),
+                cuota_iva
             ))
         
         return factura_id
@@ -268,8 +287,8 @@ class FacturaManager:
     
     def calcular_totales_completo(self, items: List[Dict[str, Any]], descuento_global_porcentaje: float = 0,
                                  descuento_global_fijo: float = 0, descuento_antes_iva: bool = True,
-                                 iva_habilitado: bool = True) -> Dict[str, float]:
-        """Calcula totales completos con descuentos por item y globales"""
+                                 iva_habilitado: bool = True, retencion_irpf: float = None) -> Dict[str, float]:
+        """Calcula totales completos con descuentos por item y globales, incluyendo retención IRPF"""
         subtotal = 0.0
         descuentos_items = 0.0
         iva_base = 0.0
@@ -310,16 +329,27 @@ class FacturaManager:
         if descuento_antes_iva:
             base_iva = subtotal - descuento_global
             iva = iva_base * (base_iva / subtotal) if subtotal > 0 else 0
-            total = base_iva + iva
+            base_imponible = base_iva
         else:
             iva = iva_base
-            total = subtotal + iva - descuento_global
+            base_imponible = subtotal - descuento_global
+        
+        # Calcular retención IRPF sobre la base imponible (antes de IVA según AEAT)
+        retencion_irpf_importe = 0.0
+        if retencion_irpf is not None and retencion_irpf > 0:
+            retencion_irpf_importe = base_imponible * (retencion_irpf / 100)
+        
+        # Total final: base imponible + IVA - retención IRPF
+        total = base_imponible + iva - retencion_irpf_importe
         
         return {
             'subtotal': subtotal,
             'descuentos_items': descuentos_items,
             'descuento_global': descuento_global,
+            'base_imponible': base_imponible,
             'iva': iva,
+            'retencion_irpf': retencion_irpf_importe,
+            'retencion_irpf_porcentaje': retencion_irpf if retencion_irpf else 0,
             'total': total,
             'iva_porcentaje': self.iva_porcentaje,
             'descuento_antes_iva': descuento_antes_iva

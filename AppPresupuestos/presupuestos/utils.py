@@ -93,6 +93,7 @@ class DatabaseManager:
                 descuento_global_porcentaje REAL DEFAULT 0,
                 descuento_global_fijo REAL DEFAULT 0,
                 descuento_antes_iva INTEGER DEFAULT 1,
+                retencion_irpf REAL DEFAULT NULL,
                 FOREIGN KEY (cliente_id) REFERENCES clientes (id),
                 FOREIGN KEY (presupuesto_id) REFERENCES presupuestos (id)
             )
@@ -113,6 +114,7 @@ class DatabaseManager:
                 aplica_iva INTEGER DEFAULT 1,
                 descuento_porcentaje REAL DEFAULT 0,
                 descuento_fijo REAL DEFAULT 0,
+                cuota_iva REAL DEFAULT 0,
                 FOREIGN KEY (factura_id) REFERENCES facturas (id),
                 FOREIGN KEY (material_id) REFERENCES materiales (id)
             )
@@ -230,6 +232,15 @@ class DatabaseManager:
                     pass  # Columna ya existe
                 print("Columnas agregadas a factura_items correctamente")
             
+            # Agregar columna cuota_iva a factura_items
+            if factura_items_columns and 'cuota_iva' not in factura_items_columns:
+                print("Agregando columna cuota_iva a la tabla factura_items...")
+                try:
+                    cursor.execute("ALTER TABLE factura_items ADD COLUMN cuota_iva REAL DEFAULT 0")
+                except:
+                    pass
+                print("Columna cuota_iva agregada correctamente")
+            
             # Verificar y agregar nuevas columnas de descuentos a facturas
             cursor.execute("PRAGMA table_info(facturas)")
             facturas_columns = [column[1] for column in cursor.fetchall()]
@@ -249,6 +260,15 @@ class DatabaseManager:
                 except:
                     pass
                 print("Columnas de descuentos agregadas a facturas correctamente")
+            
+            # Agregar columna retencion_irpf a facturas
+            if 'retencion_irpf' not in facturas_columns:
+                print("Agregando columna retencion_irpf a la tabla facturas...")
+                try:
+                    cursor.execute("ALTER TABLE facturas ADD COLUMN retencion_irpf REAL DEFAULT NULL")
+                except:
+                    pass
+                print("Columna retencion_irpf agregada correctamente")
             
         except Exception as e:
             print(f"Error actualizando tabla: {e}")

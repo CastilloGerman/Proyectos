@@ -253,7 +253,7 @@ class AppPresupuestos:
         self.direccion_entry = ttk.Entry(form_frame, width=25, style='TEntry')
         self.direccion_entry.grid(row=1, column=3, padx=(0, 20), pady=8)
         
-        ttk.Label(form_frame, text="DNI:", style='TLabel').grid(row=2, column=0, sticky='w', padx=(0, 10), pady=8)
+        ttk.Label(form_frame, text="NIF/NIE/IVA Intracomunitario:", style='TLabel').grid(row=2, column=0, sticky='w', padx=(0, 10), pady=8)
         self.dni_entry = ttk.Entry(form_frame, width=20, style='TEntry')
         self.dni_entry.grid(row=2, column=1, padx=(0, 20), pady=8)
         
@@ -2265,18 +2265,31 @@ class AppPresupuestos:
         self.factura_cliente_combo.grid(row=0, column=1, padx=(0, 10), pady=8, sticky='ew')
         self.factura_cliente_combo.bind('<<ComboboxSelected>>', self.on_cliente_select_factura)
         
-        # Datos del cliente (autocompletados)
-        self.factura_cliente_info_frame = ttk.Frame(cliente_frame)
+        # Datos del cliente (editables)
+        self.factura_cliente_info_frame = ttk.LabelFrame(cliente_frame, text="Datos del Cliente (Editable)", padding=10)
         self.factura_cliente_info_frame.grid(row=1, column=0, columnspan=2, sticky='ew', pady=(10, 0))
         
-        self.factura_cliente_telefono_label = ttk.Label(self.factura_cliente_info_frame, text="", foreground='gray')
-        self.factura_cliente_telefono_label.pack(side='left', padx=(0, 20))
+        # Teléfono
+        ttk.Label(self.factura_cliente_info_frame, text="📞 Teléfono:").grid(row=0, column=0, sticky='w', padx=(0, 10), pady=5)
+        self.factura_cliente_telefono_var = tk.StringVar()
+        self.factura_cliente_telefono_entry = ttk.Entry(self.factura_cliente_info_frame, textvariable=self.factura_cliente_telefono_var, width=30)
+        self.factura_cliente_telefono_entry.grid(row=0, column=1, sticky='ew', padx=(0, 20), pady=5)
         
-        self.factura_cliente_email_label = ttk.Label(self.factura_cliente_info_frame, text="", foreground='gray')
-        self.factura_cliente_email_label.pack(side='left', padx=(0, 20))
+        # Email
+        ttk.Label(self.factura_cliente_info_frame, text="📧 Email:").grid(row=0, column=2, sticky='w', padx=(0, 10), pady=5)
+        self.factura_cliente_email_var = tk.StringVar()
+        self.factura_cliente_email_entry = ttk.Entry(self.factura_cliente_info_frame, textvariable=self.factura_cliente_email_var, width=30)
+        self.factura_cliente_email_entry.grid(row=0, column=3, sticky='ew', padx=(0, 20), pady=5)
         
-        self.factura_cliente_direccion_label = ttk.Label(self.factura_cliente_info_frame, text="", foreground='gray')
-        self.factura_cliente_direccion_label.pack(side='left')
+        # Dirección
+        ttk.Label(self.factura_cliente_info_frame, text="📍 Dirección:").grid(row=1, column=0, sticky='w', padx=(0, 10), pady=5)
+        self.factura_cliente_direccion_var = tk.StringVar()
+        self.factura_cliente_direccion_entry = ttk.Entry(self.factura_cliente_info_frame, textvariable=self.factura_cliente_direccion_var, width=70)
+        self.factura_cliente_direccion_entry.grid(row=1, column=1, columnspan=3, sticky='ew', padx=(0, 0), pady=5)
+        
+        # Configurar columnas para que se expandan
+        self.factura_cliente_info_frame.columnconfigure(1, weight=1)
+        self.factura_cliente_info_frame.columnconfigure(3, weight=1)
         
         cliente_frame.columnconfigure(1, weight=1)
         
@@ -2327,6 +2340,14 @@ class AppPresupuestos:
                                              values=['No Pagada', 'Pagada'],
                                              state='readonly', width=13)
         self.estado_pago_combo.grid(row=2, column=1, pady=8, sticky='w')
+        
+        # Retención IRPF
+        ttk.Label(datos_frame, text="📊 Retención IRPF (%):").grid(row=2, column=3, sticky='w', padx=(20, 10), pady=8)
+        self.retencion_irpf_var = tk.StringVar()
+        self.retencion_irpf_entry = ttk.Entry(datos_frame, textvariable=self.retencion_irpf_var, width=10)
+        self.retencion_irpf_entry.grid(row=2, column=4, pady=8, sticky='w')
+        ttk.Label(datos_frame, text="(opcional, ej: 15)", font=('Arial', 8), foreground='gray').grid(row=2, column=5, sticky='w', padx=(5, 0), pady=8)
+        self.retencion_irpf_entry.bind('<KeyRelease>', self.calcular_totales_factura)
         
         # Notas
         ttk.Label(datos_frame, text="📝 Notas:").grid(row=3, column=0, sticky='nw', padx=(0, 10), pady=8)
@@ -2660,14 +2681,10 @@ class AppPresupuestos:
             cliente = cliente_manager.obtener_cliente_por_id(cliente_id)
             
             if cliente:
-                # Actualizar labels con información del cliente
-                telefono = f"📞 {cliente.get('telefono', 'N/A')}"
-                email = f"📧 {cliente.get('email', 'N/A')}"
-                direccion = f"📍 {cliente.get('direccion', 'N/A')}"
-                
-                self.factura_cliente_telefono_label.config(text=telefono)
-                self.factura_cliente_email_label.config(text=email)
-                self.factura_cliente_direccion_label.config(text=direccion)
+                # Poblar Entry widgets con información del cliente
+                self.factura_cliente_telefono_var.set(cliente.get('telefono', ''))
+                self.factura_cliente_email_var.set(cliente.get('email', ''))
+                self.factura_cliente_direccion_var.set(cliente.get('direccion', ''))
         except Exception as e:
             print(f"Error al cargar datos del cliente: {e}")
     
@@ -2850,13 +2867,20 @@ class AppPresupuestos:
         items_con_iva = [item for item in self.factura_items if item.get('aplica_iva', True)]
         iva_realmente_habilitado = len(items_con_iva) > 0 and self.factura_iva_habilitado_var.get()
         
+        # Obtener retención IRPF
+        try:
+            retencion_irpf = float(self.retencion_irpf_var.get() or 0) if self.retencion_irpf_var.get().strip() else None
+        except ValueError:
+            retencion_irpf = None
+        
         # Calcular totales usando el nuevo método del backend
         totales = factura_manager.calcular_totales_completo(
             self.factura_items,
             descuento_porcentaje,
             descuento_fijo,
             self.factura_descuento_antes_iva_var.get(),
-            self.factura_iva_habilitado_var.get()
+            self.factura_iva_habilitado_var.get(),
+            retencion_irpf
         )
         
         # Actualizar labels
@@ -2865,7 +2889,7 @@ class AppPresupuestos:
         self.factura_total_label.config(text=f"€{totales['total']:.2f}")
         self.factura_items_info_label.config(text=f"Items: {len(self.factura_items)}")
         
-        # Mostrar descuentos si los hay
+        # Mostrar descuentos y retención IRPF si los hay
         descuento_texto = ""
         if totales['descuentos_items'] > 0:
             descuento_texto += f"Desc. Items: -€{totales['descuentos_items']:.2f}"
@@ -2873,6 +2897,10 @@ class AppPresupuestos:
             if descuento_texto:
                 descuento_texto += " | "
             descuento_texto += f"Desc. Global: -€{totales['descuento_global']:.2f}"
+        if totales.get('retencion_irpf', 0) > 0:
+            if descuento_texto:
+                descuento_texto += " | "
+            descuento_texto += f"Ret. IRPF ({totales.get('retencion_irpf_porcentaje', 0):.1f}%): -€{totales['retencion_irpf']:.2f}"
         
         self.factura_descuento_label.config(text=descuento_texto)
         
@@ -3070,6 +3098,19 @@ class AppPresupuestos:
             except ValueError:
                 descuento_fijo = 0
             
+            # Obtener retención IRPF
+            try:
+                retencion_irpf = float(self.retencion_irpf_var.get() or 0) if self.retencion_irpf_var.get().strip() else None
+            except ValueError:
+                retencion_irpf = None
+            
+            # Validar que el cliente tenga NIF/NIE
+            cliente = cliente_manager.obtener_cliente_por_id(cliente_id)
+            if not cliente or not cliente.get('dni') or not cliente.get('dni').strip():
+                if not messagebox.askyesno("Advertencia", 
+                    "El cliente no tiene NIF/NIE/IVA Intracomunitario. ¿Desea continuar de todas formas?"):
+                    return
+            
             # Crear factura
             factura_id = factura_manager.crear_factura(
                 cliente_id=cliente_id,
@@ -3082,7 +3123,8 @@ class AppPresupuestos:
                 iva_habilitado=iva_habilitado,
                 descuento_global_porcentaje=descuento_porcentaje,
                 descuento_global_fijo=descuento_fijo,
-                descuento_antes_iva=self.factura_descuento_antes_iva_var.get()
+                descuento_antes_iva=self.factura_descuento_antes_iva_var.get(),
+                retencion_irpf=retencion_irpf
             )
             
             messagebox.showinfo("Éxito", f"Factura guardada correctamente. ID: {factura_id}")
@@ -3111,15 +3153,16 @@ class AppPresupuestos:
         self.factura_tarea_cantidad_entry.delete(0, tk.END)
         self.factura_tarea_precio_entry.delete(0, tk.END)
         self.factura_iva_habilitado_var.set(True)
+        self.retencion_irpf_var.set("")
         self.factura_items.clear()
         self.actualizar_tree_items_factura()
         self.calcular_totales_factura()
         self.generar_numero_factura_auto()
         
-        # Limpiar info del cliente
-        self.factura_cliente_telefono_label.config(text="")
-        self.factura_cliente_email_label.config(text="")
-        self.factura_cliente_direccion_label.config(text="")
+        # Limpiar info del cliente (Entry widgets)
+        self.factura_cliente_telefono_var.set("")
+        self.factura_cliente_email_var.set("")
+        self.factura_cliente_direccion_var.set("")
     
     def importar_desde_presupuesto(self):
         """Importa datos desde un presupuesto existente"""
@@ -3188,6 +3231,14 @@ class AppPresupuestos:
                 self.factura_cliente_var.set(f"{cliente_id} - {presupuesto['cliente_nombre']}")
                 self.on_cliente_select_factura()
                 
+                # Poblar Entry widgets con datos del cliente del presupuesto (sobrescribir si hay datos en el presupuesto)
+                if presupuesto.get('telefono'):
+                    self.factura_cliente_telefono_var.set(presupuesto['telefono'])
+                if presupuesto.get('email'):
+                    self.factura_cliente_email_var.set(presupuesto['email'])
+                if presupuesto.get('direccion'):
+                    self.factura_cliente_direccion_var.set(presupuesto['direccion'])
+                
                 # Cargar items
                 self.factura_items = presupuesto['items'].copy()
                 self.actualizar_tree_items_factura()
@@ -3231,6 +3282,16 @@ class AppPresupuestos:
                 messagebox.showerror("Error", "No se pudo obtener la información del cliente")
                 return
             
+            # Obtener valores de Entry widgets editables (usar como prioridad sobre BD)
+            telefono_editado = self.factura_cliente_telefono_var.get().strip()
+            email_editado = self.factura_cliente_email_var.get().strip()
+            direccion_editada = self.factura_cliente_direccion_var.get().strip()
+            
+            # Usar valores editados si están presentes, sino usar valores de BD como fallback
+            telefono_final = telefono_editado if telefono_editado else cliente.get('telefono', '')
+            email_final = email_editado if email_editado else cliente.get('email', '')
+            direccion_final = direccion_editada if direccion_editada else cliente.get('direccion', '')
+            
             # Obtener descuentos globales
             try:
                 descuento_porcentaje = float(self.factura_descuento_porcentaje_var.get() or 0)
@@ -3251,14 +3312,14 @@ class AppPresupuestos:
                 self.factura_iva_habilitado_var.get()
             )
             
-            # Crear factura temporal
+            # Crear factura temporal usando valores editados
             factura_temp = {
                 'id': 'VISTA_PREVIA',
                 'numero_factura': self.numero_factura_var.get() or 'PREVIEW',
                 'cliente_nombre': cliente['nombre'],
-                'telefono': cliente['telefono'],
-                'email': cliente['email'],
-                'direccion': cliente['direccion'],
+                'telefono': telefono_final,
+                'email': email_final,
+                'direccion': direccion_final,
                 'dni': cliente.get('dni', ''),
                 'fecha_creacion': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'fecha_vencimiento': self.fecha_vencimiento_var.get() or '',
@@ -3852,6 +3913,13 @@ class AppPresupuestos:
         self.config_empresa_web_entry = ttk.Entry(empresa_frame, textvariable=self.config_empresa_web_var, width=40)
         self.config_empresa_web_entry.grid(row=4, column=1, columnspan=2, sticky='ew', pady=8)
         
+        # Registro Mercantil
+        ttk.Label(empresa_frame, text="📋 Registro Mercantil:", font=('Arial', 9, 'bold')).grid(row=5, column=0, sticky='w', padx=(0, 10), pady=8)
+        self.config_empresa_registro_mercantil_var = tk.StringVar()
+        self.config_empresa_registro_mercantil_entry = ttk.Entry(empresa_frame, textvariable=self.config_empresa_registro_mercantil_var, width=40)
+        self.config_empresa_registro_mercantil_entry.grid(row=5, column=1, columnspan=2, sticky='ew', pady=8)
+        ttk.Label(empresa_frame, text="(Opcional, solo para sociedades)", font=('Arial', 8), foreground='gray').grid(row=5, column=3, sticky='w', padx=(5, 0), pady=8)
+        
         empresa_frame.columnconfigure(1, weight=1)
         empresa_frame.columnconfigure(3, weight=1)
         
@@ -3878,10 +3946,16 @@ class AppPresupuestos:
         self.config_banco_titular_entry.grid(row=2, column=1, columnspan=2, sticky='ew', pady=8)
         
         # Número de cuenta
-        ttk.Label(banco_frame, text="🔢 Número de Cuenta (IBAN):", font=('Arial', 9, 'bold')).grid(row=3, column=0, sticky='w', padx=(0, 10), pady=8)
+        ttk.Label(banco_frame, text="🔢 Número de Cuenta:", font=('Arial', 9, 'bold')).grid(row=3, column=0, sticky='w', padx=(0, 10), pady=8)
         self.config_banco_cuenta_var = tk.StringVar()
         self.config_banco_cuenta_entry = ttk.Entry(banco_frame, textvariable=self.config_banco_cuenta_var, width=40)
         self.config_banco_cuenta_entry.grid(row=3, column=1, columnspan=2, sticky='ew', pady=8)
+        
+        # IBAN
+        ttk.Label(banco_frame, text="🏦 IBAN:", font=('Arial', 9, 'bold')).grid(row=4, column=0, sticky='w', padx=(0, 10), pady=8)
+        self.config_banco_iban_var = tk.StringVar()
+        self.config_banco_iban_entry = ttk.Entry(banco_frame, textvariable=self.config_banco_iban_var, width=40)
+        self.config_banco_iban_entry.grid(row=4, column=1, columnspan=2, sticky='ew', pady=8)
         
         banco_frame.columnconfigure(1, weight=1)
         
@@ -3920,6 +3994,7 @@ class AppPresupuestos:
             self.config_empresa_telefono_var.set(empresa.get('telefono', ''))
             self.config_empresa_email_var.set(empresa.get('email', ''))
             self.config_empresa_web_var.set(empresa.get('web', ''))
+            self.config_empresa_registro_mercantil_var.set(empresa.get('registro_mercantil', ''))
             
             # Cargar datos bancarios
             pago = config.get('pago', {})
@@ -3927,6 +4002,7 @@ class AppPresupuestos:
             self.config_banco_nombre_var.set(pago.get('banco', ''))
             self.config_banco_titular_var.set(pago.get('titular_cuenta', ''))
             self.config_banco_cuenta_var.set(pago.get('numero_cuenta', ''))
+            self.config_banco_iban_var.set(pago.get('iban', pago.get('numero_cuenta', '')))
             
             self.config_status_label.config(text="Configuración cargada correctamente", foreground='green')
             
@@ -3970,7 +4046,8 @@ class AppPresupuestos:
                 'ciudad': self.config_empresa_ciudad_var.get().strip(),
                 'telefono': self.config_empresa_telefono_var.get().strip(),
                 'email': self.config_empresa_email_var.get().strip(),
-                'web': self.config_empresa_web_var.get().strip()
+                'web': self.config_empresa_web_var.get().strip(),
+                'registro_mercantil': self.config_empresa_registro_mercantil_var.get().strip()
             })
             
             # Actualizar datos bancarios
@@ -3981,7 +4058,8 @@ class AppPresupuestos:
                 'metodo_pago': self.config_banco_metodo_var.get().strip(),
                 'banco': self.config_banco_nombre_var.get().strip(),
                 'titular_cuenta': self.config_banco_titular_var.get().strip(),
-                'numero_cuenta': self.config_banco_cuenta_var.get().strip()
+                'numero_cuenta': self.config_banco_cuenta_var.get().strip(),
+                'iban': self.config_banco_iban_var.get().strip()
             })
             
             # Guardar archivo
