@@ -359,6 +359,74 @@ class FacturaManager:
         """Calcula fecha de vencimiento sumando días a la fecha actual"""
         fecha_vencimiento = datetime.now() + timedelta(days=dias)
         return fecha_vencimiento.strftime("%Y-%m-%d")
+    
+    def obtener_estadisticas_facturas(self, fecha_inicio: str = None, fecha_fin: str = None) -> Dict[str, Any]:
+        """Obtiene estadísticas de facturas con filtros de fecha opcionales"""
+        # Construir query base
+        where_clauses = []
+        params = []
+        
+        if fecha_inicio:
+            where_clauses.append("DATE(f.fecha_creacion) >= ?")
+            params.append(fecha_inicio)
+        
+        if fecha_fin:
+            where_clauses.append("DATE(f.fecha_creacion) <= ?")
+            params.append(fecha_fin)
+        
+        where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+        
+        # Total emitidas
+        query_total = f"""
+            SELECT COUNT(*) as total
+            FROM facturas f
+            {where_sql}
+        """
+        result_total = self.db.execute_query(query_total, tuple(params))
+        total_emitidas = result_total[0]['total'] if result_total else 0
+        
+        # Contadores por estado de pago
+        query_estados = f"""
+            SELECT 
+                COALESCE(estado_pago, 'No Pagada') as estado_pago,
+                COUNT(*) as cantidad
+            FROM facturas f
+            {where_sql}
+            GROUP BY COALESCE(estado_pago, 'No Pagada')
+        """
+        result_estados = self.db.execute_query(query_estados, tuple(params))
+        
+        # Inicializar contadores
+        no_pagadas = 0
+        pagadas = 0
+        
+        for row in result_estados:
+            estado = row['estado_pago']
+            cantidad = row['cantidad']
+            if estado == 'No Pagada':
+                no_pagadas = cantidad
+            elif estado == 'Pagada':
+                pagadas = cantidad
+        
+        # Datos agrupados por mes para evolución
+        query_mensual = f"""
+            SELECT 
+                strftime('%Y-%m', f.fecha_creacion) as mes,
+                COUNT(*) as cantidad,
+                COALESCE(estado_pago, 'No Pagada') as estado_pago
+            FROM facturas f
+            {where_sql}
+            GROUP BY strftime('%Y-%m', f.fecha_creacion), COALESCE(estado_pago, 'No Pagada')
+            ORDER BY mes
+        """
+        result_mensual = self.db.execute_query(query_mensual, tuple(params))
+        
+        return {
+            'total_emitidas': total_emitidas,
+            'no_pagadas': no_pagadas,
+            'pagadas': pagadas,
+            'evolucion_mensual': result_mensual
+        }
 
 # Instancia global del manager de facturas
 factura_manager = FacturaManager()

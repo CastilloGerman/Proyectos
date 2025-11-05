@@ -1,4 +1,4 @@
-tkinter
-sqlite3
 reportlab
 Pillow
+matplotlib
+pyinstaller

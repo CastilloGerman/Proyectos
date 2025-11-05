@@ -1,28 +1,63 @@
-# Archivos de configuración sensibles
-email_config.json
-
-# Entorno virtual
-venv/
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Archivos temporales
-*.tmp
-*.temp
-*.log
+# Virtual Environment
+venv/
+ENV/
+env/
 
-# Archivos del sistema
-.DS_Store
-Thumbs.db
-
-# Archivos de IDE
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
-# Base de datos (opcional - descomenta si no quieres versionar la BD)
-# presupuestos.db
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
 
+# Application specific
+*.db
+*.db-journal
+presupuestos.db
+presupuestos.db-journal
+
+# Output files
+output/
+distribucion/
+*.pdf
+!docs/examples/*.pdf
+
+# Temporary files
+*.tmp
+*.temp
+*_temp.pdf
+*_temp.*
+vista_previa*.pdf
+
+# Configuration (opcional - descomentar si no quieres versionar config)
+# config/*.json
+
+# Logs
+*.log

@@ -138,21 +138,34 @@ class PresupuestoManager:
             if item.get('aplica_iva', True) and iva_habilitado:
                 iva_base += (item_subtotal - item_descuento) * (self.iva_porcentaje / 100)
         
-        # Aplicar descuento global
-        descuento_global = 0.0
-        if descuento_global_porcentaje > 0:
-            descuento_global = subtotal * (descuento_global_porcentaje / 100)
-        elif descuento_global_fijo > 0:
-            descuento_global = min(descuento_global_fijo, subtotal)
+        # Calcular IVA primero (sin descuento global aplicado aún)
+        iva = iva_base
         
-        # Determinar base para IVA según configuración
+        # Aplicar descuento global según configuración
+        descuento_global = 0.0
         if descuento_antes_iva:
+            # Descuento se aplica antes de calcular IVA
+            if descuento_global_porcentaje > 0:
+                descuento_global = subtotal * (descuento_global_porcentaje / 100)
+            elif descuento_global_fijo > 0:
+                descuento_global = min(descuento_global_fijo, subtotal)
+            
+            # Recalcular IVA sobre la base después del descuento
             base_iva = subtotal - descuento_global
-            iva = iva_base * (base_iva / subtotal) if subtotal > 0 else 0
+            if subtotal > 0:
+                iva = iva_base * (base_iva / subtotal)
+            else:
+                iva = 0.0
             total = base_iva + iva
         else:
-            iva = iva_base
-            total = subtotal + iva - descuento_global
+            # Descuento se aplica después de calcular IVA (sobre subtotal + IVA)
+            total_sin_descuento = subtotal + iva
+            if descuento_global_porcentaje > 0:
+                descuento_global = total_sin_descuento * (descuento_global_porcentaje / 100)
+            elif descuento_global_fijo > 0:
+                descuento_global = min(descuento_global_fijo, total_sin_descuento)
+            
+            total = total_sin_descuento - descuento_global
         
         return {
             'subtotal': subtotal,
@@ -204,6 +217,78 @@ class PresupuestoManager:
             return True
         except:
             return False
+    
+    def obtener_estadisticas_presupuestos(self, fecha_inicio: str = None, fecha_fin: str = None) -> Dict[str, Any]:
+        """Obtiene estadísticas de presupuestos con filtros de fecha opcionales"""
+        # Construir query base
+        where_clauses = []
+        params = []
+        
+        if fecha_inicio:
+            where_clauses.append("DATE(p.fecha_creacion) >= ?")
+            params.append(fecha_inicio)
+        
+        if fecha_fin:
+            where_clauses.append("DATE(p.fecha_creacion) <= ?")
+            params.append(fecha_fin)
+        
+        where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+        
+        # Total emitidos
+        query_total = f"""
+            SELECT COUNT(*) as total
+            FROM presupuestos p
+            {where_sql}
+        """
+        result_total = self.db.execute_query(query_total, tuple(params))
+        total_emitidos = result_total[0]['total'] if result_total else 0
+        
+        # Contadores por estado
+        query_estados = f"""
+            SELECT 
+                COALESCE(estado, 'Pendiente') as estado,
+                COUNT(*) as cantidad
+            FROM presupuestos p
+            {where_sql}
+            GROUP BY COALESCE(estado, 'Pendiente')
+        """
+        result_estados = self.db.execute_query(query_estados, tuple(params))
+        
+        # Inicializar contadores
+        pendientes = 0
+        aprobados = 0
+        rechazados = 0
+        
+        for row in result_estados:
+            estado = row['estado']
+            cantidad = row['cantidad']
+            if estado == 'Pendiente':
+                pendientes = cantidad
+            elif estado == 'Aprobado':
+                aprobados = cantidad
+            elif estado == 'Rechazado':
+                rechazados = cantidad
+        
+        # Datos agrupados por mes para evolución
+        query_mensual = f"""
+            SELECT 
+                strftime('%Y-%m', p.fecha_creacion) as mes,
+                COUNT(*) as cantidad,
+                COALESCE(estado, 'Pendiente') as estado
+            FROM presupuestos p
+            {where_sql}
+            GROUP BY strftime('%Y-%m', p.fecha_creacion), COALESCE(estado, 'Pendiente')
+            ORDER BY mes
+        """
+        result_mensual = self.db.execute_query(query_mensual, tuple(params))
+        
+        return {
+            'total_emitidos': total_emitidos,
+            'pendientes': pendientes,
+            'aprobados': aprobados,
+            'rechazados': rechazados,
+            'evolucion_mensual': result_mensual
+        }
 
 # Instancia global del manager de presupuestos
 presupuesto_manager = PresupuestoManager()

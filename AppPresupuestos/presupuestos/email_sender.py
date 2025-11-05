@@ -16,7 +16,7 @@ class EmailSender:
         self.email = None
         self.password = None
         self.configurado = False
-        self.config_file = "email_config.json"
+        self.config_file = "config/email_config.json"
         
         # Cargar configuración al inicializar
         self.cargar_configuracion()
