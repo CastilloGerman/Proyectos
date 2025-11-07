@@ -50,15 +50,29 @@ class PresupuestoManager:
         
         return presupuesto_id
     
-    def obtener_presupuestos(self) -> List[Dict[str, Any]]:
-        """Obtiene todos los presupuestos con información del cliente"""
-        query = """
+    def obtener_presupuestos(self, anio: Optional[int] = None, mes: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Obtiene presupuestos con filtros opcionales por año y mes"""
+        where_clauses = []
+        params: List[Any] = []
+
+        if anio is not None:
+            where_clauses.append("strftime('%Y', p.fecha_creacion) = ?")
+            params.append(str(anio))
+
+        if mes is not None:
+            where_clauses.append("strftime('%m', p.fecha_creacion) = ?")
+            params.append(f"{int(mes):02d}")
+
+        where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+
+        query = f"""
             SELECT p.*, c.nombre as cliente_nombre, c.telefono, c.email
             FROM presupuestos p
             JOIN clientes c ON p.cliente_id = c.id
+            {where_sql}
             ORDER BY p.fecha_creacion DESC
         """
-        return self.db.execute_query(query)
+        return self.db.execute_query(query, tuple(params))
     
     def obtener_presupuesto_por_id(self, presupuesto_id: int) -> Optional[Dict[str, Any]]:
         """Obtiene un presupuesto específico con sus items"""
@@ -197,17 +211,66 @@ class PresupuestoManager:
         """
         return self.db.execute_query(query, (presupuesto_id,))
     
-    def buscar_presupuestos(self, termino: str) -> List[Dict[str, Any]]:
-        """Busca presupuestos por cliente, ID o fecha"""
-        query = """
+    def buscar_presupuestos(self, termino: str, anio: Optional[int] = None, mes: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Busca presupuestos por cliente, ID o fecha con filtros opcionales"""
+        where_clauses = [
+            "(c.nombre LIKE ? OR CAST(p.id AS TEXT) LIKE ? OR p.fecha_creacion LIKE ?)"
+        ]
+        params: List[Any] = []
+
+        termino_busqueda = f"%{termino}%"
+        params.extend([termino_busqueda, termino_busqueda, termino_busqueda])
+
+        if anio is not None:
+            where_clauses.append("strftime('%Y', p.fecha_creacion) = ?")
+            params.append(str(anio))
+
+        if mes is not None:
+            where_clauses.append("strftime('%m', p.fecha_creacion) = ?")
+            params.append(f"{int(mes):02d}")
+
+        where_sql = " AND ".join(where_clauses)
+
+        query = f"""
             SELECT p.*, c.nombre as cliente_nombre, c.telefono, c.email
             FROM presupuestos p
             JOIN clientes c ON p.cliente_id = c.id
-            WHERE c.nombre LIKE ? OR p.id LIKE ? OR p.fecha_creacion LIKE ?
+            WHERE {where_sql}
             ORDER BY p.fecha_creacion DESC
         """
-        termino_busqueda = f"%{termino}%"
-        return self.db.execute_query(query, (termino_busqueda, termino_busqueda, termino_busqueda))
+        return self.db.execute_query(query, tuple(params))
+
+    def obtener_anios_presupuestos(self) -> List[str]:
+        """Obtiene la lista de años disponibles en los registros de presupuestos"""
+        query = """
+            SELECT DISTINCT strftime('%Y', fecha_creacion) as anio
+            FROM presupuestos
+            WHERE fecha_creacion IS NOT NULL
+            ORDER BY anio DESC
+        """
+        result = self.db.execute_query(query)
+        return [row['anio'] for row in result if row.get('anio')]
+
+    def obtener_meses_presupuestos(self, anio: Optional[int] = None) -> List[str]:
+        """Obtiene la lista de meses disponibles, opcionalmente filtrados por año"""
+        where_clauses = ["fecha_creacion IS NOT NULL"]
+        params: List[Any] = []
+
+        if anio is not None:
+            where_clauses.append("strftime('%Y', fecha_creacion) = ?")
+            params.append(str(anio))
+
+        where_sql = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+
+        query = f"""
+            SELECT DISTINCT strftime('%m', fecha_creacion) as mes
+            FROM presupuestos
+            {where_sql}
+            ORDER BY mes ASC
+        """
+
+        result = self.db.execute_query(query, tuple(params))
+        return [row['mes'] for row in result if row.get('mes')]
     
     def actualizar_estado_presupuesto(self, presupuesto_id: int, estado: str) -> bool:
         """Actualiza el estado de un presupuesto"""

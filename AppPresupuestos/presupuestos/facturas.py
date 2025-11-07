@@ -138,15 +138,29 @@ class FacturaManager:
         
         return factura_id
     
-    def obtener_facturas(self) -> List[Dict[str, Any]]:
-        """Obtiene todas las facturas con información del cliente"""
-        query = """
+    def obtener_facturas(self, anio: Optional[int] = None, mes: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Obtiene facturas con filtros opcionales por año y mes"""
+        where_clauses = []
+        params: List[Any] = []
+
+        if anio is not None:
+            where_clauses.append("strftime('%Y', f.fecha_creacion) = ?")
+            params.append(str(anio))
+
+        if mes is not None:
+            where_clauses.append("strftime('%m', f.fecha_creacion) = ?")
+            params.append(f"{int(mes):02d}")
+
+        where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+
+        query = f"""
             SELECT f.*, c.nombre as cliente_nombre, c.telefono, c.email
             FROM facturas f
             JOIN clientes c ON f.cliente_id = c.id
+            {where_sql}
             ORDER BY f.fecha_creacion DESC
         """
-        return self.db.execute_query(query)
+        return self.db.execute_query(query, tuple(params))
     
     def obtener_factura_por_id(self, factura_id: int) -> Optional[Dict[str, Any]]:
         """Obtiene una factura específica con sus items"""
@@ -199,17 +213,66 @@ class FacturaManager:
         factura[0]['items'] = items
         return factura[0]
     
-    def buscar_facturas(self, termino: str) -> List[Dict[str, Any]]:
-        """Busca facturas por cliente, número de factura o fecha"""
-        query = """
+    def buscar_facturas(self, termino: str, anio: Optional[int] = None, mes: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Busca facturas por cliente, número de factura o fecha con filtros opcionales"""
+        where_clauses = [
+            "(c.nombre LIKE ? OR f.numero_factura LIKE ? OR f.fecha_creacion LIKE ?)"
+        ]
+        params: List[Any] = []
+
+        termino_busqueda = f"%{termino}%"
+        params.extend([termino_busqueda, termino_busqueda, termino_busqueda])
+
+        if anio is not None:
+            where_clauses.append("strftime('%Y', f.fecha_creacion) = ?")
+            params.append(str(anio))
+
+        if mes is not None:
+            where_clauses.append("strftime('%m', f.fecha_creacion) = ?")
+            params.append(f"{int(mes):02d}")
+
+        where_sql = " AND ".join(where_clauses)
+
+        query = f"""
             SELECT f.*, c.nombre as cliente_nombre, c.telefono, c.email
             FROM facturas f
             JOIN clientes c ON f.cliente_id = c.id
-            WHERE c.nombre LIKE ? OR f.numero_factura LIKE ? OR f.fecha_creacion LIKE ?
+            WHERE {where_sql}
             ORDER BY f.fecha_creacion DESC
         """
-        termino_busqueda = f"%{termino}%"
-        return self.db.execute_query(query, (termino_busqueda, termino_busqueda, termino_busqueda))
+        return self.db.execute_query(query, tuple(params))
+
+    def obtener_anios_facturas(self) -> List[str]:
+        """Obtiene la lista de años disponibles en los registros de facturas"""
+        query = """
+            SELECT DISTINCT strftime('%Y', fecha_creacion) as anio
+            FROM facturas
+            WHERE fecha_creacion IS NOT NULL
+            ORDER BY anio DESC
+        """
+        result = self.db.execute_query(query)
+        return [row['anio'] for row in result if row.get('anio')]
+
+    def obtener_meses_facturas(self, anio: Optional[int] = None) -> List[str]:
+        """Obtiene la lista de meses disponibles, opcionalmente filtrados por año"""
+        where_clauses = ["fecha_creacion IS NOT NULL"]
+        params: List[Any] = []
+
+        if anio is not None:
+            where_clauses.append("strftime('%Y', fecha_creacion) = ?")
+            params.append(str(anio))
+
+        where_sql = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+
+        query = f"""
+            SELECT DISTINCT strftime('%m', fecha_creacion) as mes
+            FROM facturas
+            {where_sql}
+            ORDER BY mes ASC
+        """
+
+        result = self.db.execute_query(query, tuple(params))
+        return [row['mes'] for row in result if row.get('mes')]
     
     def actualizar_estado_pago(self, factura_id: int, estado_pago: str) -> bool:
         """Actualiza el estado de pago de una factura"""

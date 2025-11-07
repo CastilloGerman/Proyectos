@@ -13,6 +13,22 @@ from presupuestos.facturas import factura_manager
 from presupuestos.utils import db
 from presupuestos.pdf_generator import PDFGenerator
 from presupuestos.email_sender import email_sender
+
+
+MESES_NOMBRES = {
+    '01': 'Enero',
+    '02': 'Febrero',
+    '03': 'Marzo',
+    '04': 'Abril',
+    '05': 'Mayo',
+    '06': 'Junio',
+    '07': 'Julio',
+    '08': 'Agosto',
+    '09': 'Septiembre',
+    '10': 'Octubre',
+    '11': 'Noviembre',
+    '12': 'Diciembre'
+}
 try:
     from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
     from matplotlib.figure import Figure
@@ -460,8 +476,29 @@ class AppPresupuestos:
         self.ver_presupuestos_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.ver_presupuestos_frame, text="Ver Presupuestos")
         
-        # Frame principal
-        main_frame = ttk.Frame(self.ver_presupuestos_frame)
+        # Canvas y scrollbar para permitir desplazamiento
+        canvas = tk.Canvas(self.ver_presupuestos_frame, bg='#ecf0f1', highlightthickness=0)
+        scrollbar = ttk.Scrollbar(self.ver_presupuestos_frame, orient='vertical', command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas_window = canvas.create_window((0, 0), window=scrollable_frame, anchor='nw')
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        def _configure_canvas_width(event):
+            canvas.itemconfig(canvas_window, width=event.width)
+
+        canvas.bind('<Configure>', _configure_canvas_width)
+
+        canvas.pack(side='left', fill='both', expand=True)
+        scrollbar.pack(side='right', fill='y')
+
+        # Frame principal dentro del área desplazable
+        main_frame = ttk.Frame(scrollable_frame)
         main_frame.pack(fill='both', expand=True, padx=10, pady=10)
         
         # Frame para búsqueda y filtros
@@ -497,10 +534,46 @@ class AppPresupuestos:
         ttk.Button(filter_frame, text="✅ Marcar como Aprobado", command=self.marcar_aprobado, style='Success.TButton').pack(side='left', padx=(10, 5))
         ttk.Button(filter_frame, text="⏳ Marcar como Pendiente", command=self.marcar_pendiente, style='Warning.TButton').pack(side='left', padx=(5, 5))
         ttk.Button(filter_frame, text="❌ Marcar como Rechazado", command=self.marcar_rechazado, style='Danger.TButton').pack(side='left', padx=(5, 0))
+
+        # Tercera fila: Filtros por fecha
+        date_filter_frame = ttk.Frame(search_filter_frame)
+        date_filter_frame.pack(fill='x', pady=(10, 0))
+
+        ttk.Label(date_filter_frame, text="🗓️ Mes:", style='TLabel').pack(side='left', padx=(0, 10))
+        self.presupuesto_mes_filtro_var = tk.StringVar(value="Todos")
+        self.presupuesto_mes_combo = ttk.Combobox(
+            date_filter_frame,
+            textvariable=self.presupuesto_mes_filtro_var,
+            values=["Todos"],
+            state="readonly",
+            width=20,
+            style='TCombobox'
+        )
+        self.presupuesto_mes_combo.pack(side='left', padx=(0, 10))
+        self.presupuesto_mes_combo.bind('<<ComboboxSelected>>', self.buscar_presupuestos)
+
+        ttk.Label(date_filter_frame, text="Año:", style='TLabel').pack(side='left', padx=(0, 10))
+        self.presupuesto_anio_filtro_var = tk.StringVar(value="Todos")
+        self.presupuesto_anio_combo = ttk.Combobox(
+            date_filter_frame,
+            textvariable=self.presupuesto_anio_filtro_var,
+            values=["Todos"],
+            state="readonly",
+            width=10,
+            style='TCombobox'
+        )
+        self.presupuesto_anio_combo.pack(side='left', padx=(0, 10))
+        self.presupuesto_anio_combo.bind('<<ComboboxSelected>>', self.on_presupuesto_anio_cambiado)
+
+        # Inicializar valores de filtros de fecha
+        self.cargar_filtros_fecha_presupuestos()
         
         # Treeview para presupuestos
+        tree_container = ttk.Frame(main_frame)
+        tree_container.pack(fill='both', expand=True)
+
         columns = ('ID', 'Cliente', 'Fecha', 'Subtotal', 'IVA', 'Total', 'Estado')
-        self.presupuestos_tree = ttk.Treeview(main_frame, columns=columns, show='headings', height=18)
+        self.presupuestos_tree = ttk.Treeview(tree_container, columns=columns, show='headings', height=18)
         
         for col in columns:
             self.presupuestos_tree.heading(col, text=col)
@@ -510,7 +583,7 @@ class AppPresupuestos:
                 self.presupuestos_tree.column(col, width=130)
         
         # Scrollbar
-        presupuestos_scrollbar = ttk.Scrollbar(main_frame, orient='vertical', command=self.presupuestos_tree.yview)
+        presupuestos_scrollbar = ttk.Scrollbar(tree_container, orient='vertical', command=self.presupuestos_tree.yview)
         self.presupuestos_tree.configure(yscrollcommand=presupuestos_scrollbar.set)
         
         self.presupuestos_tree.pack(side='left', fill='both', expand=True)
@@ -520,8 +593,8 @@ class AppPresupuestos:
         self.presupuestos_tree.bind('<Double-1>', self.ver_detalle_presupuesto)
         
         # Botones
-        button_frame = ttk.Frame(self.ver_presupuestos_frame)
-        button_frame.pack(fill='x', padx=10, pady=(0, 10))
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill='x', pady=(0, 10))
         
         # Primera fila de botones
         button_row1 = ttk.Frame(button_frame)
@@ -545,6 +618,24 @@ class AppPresupuestos:
         self.carpeta_pdfs_label = ttk.Label(button_row2, text="Carpeta PDFs: No configurada", 
                                           font=('Arial', 8), foreground='gray')
         self.carpeta_pdfs_label.pack(side='left', padx=(15, 0))
+
+        # Configurar desplazamiento con rueda del mouse en toda la vista
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        def _bind_to_mousewheel(event=None):
+            canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        def _unbind_from_mousewheel(event=None):
+            canvas.unbind_all("<MouseWheel>")
+
+        def _bind_scroll_events(widget):
+            widget.bind('<Enter>', _bind_to_mousewheel)
+            widget.bind('<Leave>', _unbind_from_mousewheel)
+            for child in widget.winfo_children():
+                _bind_scroll_events(child)
+
+        _bind_scroll_events(scrollable_frame)
     
     # Métodos para gestión de clientes
     def agregar_cliente(self):
@@ -1403,8 +1494,9 @@ class AppPresupuestos:
             messagebox.showerror("Error", f"Error al generar vista previa:\n{str(e)}\n\nDetalles:\n{error_details}")
     
     def refresh_presupuestos(self):
-        presupuestos = presupuesto_manager.obtener_presupuestos()
-        self.actualizar_tree_presupuestos(presupuestos)
+        if hasattr(self, 'presupuesto_mes_combo') and hasattr(self, 'presupuesto_anio_combo'):
+            self.cargar_filtros_fecha_presupuestos(mantener_seleccion=True)
+        self.buscar_presupuestos()
     
     def actualizar_tree_presupuestos(self, presupuestos):
         for item in self.presupuestos_tree.get_children():
@@ -1622,11 +1714,20 @@ class AppPresupuestos:
         """Busca presupuestos por término"""
         termino = self.presupuesto_busqueda_entry.get().strip()
         estado_filtro = self.estado_filtro_var.get()
+        anio_param = self._obtener_anio_desde_combo(getattr(self, 'presupuesto_anio_filtro_var', None))
+        mes_param = self._obtener_mes_desde_combo(getattr(self, 'presupuesto_mes_filtro_var', None))
         
         if termino:
-            presupuestos = presupuesto_manager.buscar_presupuestos(termino)
+            presupuestos = presupuesto_manager.buscar_presupuestos(
+                termino,
+                anio=anio_param,
+                mes=mes_param
+            )
         else:
-            presupuestos = presupuesto_manager.obtener_presupuestos()
+            presupuestos = presupuesto_manager.obtener_presupuestos(
+                anio=anio_param,
+                mes=mes_param
+            )
         
         # Aplicar filtro de estado
         if estado_filtro != "Todos":
@@ -1638,11 +1739,92 @@ class AppPresupuestos:
         """Limpia la búsqueda y muestra todos los presupuestos"""
         self.presupuesto_busqueda_entry.delete(0, tk.END)
         self.estado_filtro_var.set("Todos")
+        if hasattr(self, 'presupuesto_anio_filtro_var'):
+            self.presupuesto_anio_filtro_var.set("Todos")
+        if hasattr(self, 'presupuesto_mes_filtro_var'):
+            self.presupuesto_mes_filtro_var.set("Todos")
+        self.cargar_filtros_fecha_presupuestos()
         self.refresh_presupuestos()
     
     def filtrar_por_estado(self, event=None):
         """Filtra presupuestos por estado"""
         self.buscar_presupuestos()
+
+    def on_presupuesto_anio_cambiado(self, event=None):
+        """Actualiza los meses disponibles al cambiar el año y reaplica filtros"""
+        self.cargar_filtros_fecha_presupuestos()
+        self.buscar_presupuestos()
+
+    def cargar_filtros_fecha_presupuestos(self, mantener_seleccion: bool = False):
+        """Carga los valores de los combos de mes/año para presupuestos"""
+        if not hasattr(self, 'presupuesto_mes_combo'):
+            return
+
+        mes_actual = self.presupuesto_mes_filtro_var.get() if mantener_seleccion else "Todos"
+        anio_actual = self.presupuesto_anio_filtro_var.get() if hasattr(self, 'presupuesto_anio_filtro_var') else "Todos"
+
+        # Poblar años
+        anios_disponibles = presupuesto_manager.obtener_anios_presupuestos()
+        anios_values = ["Todos"] + anios_disponibles
+        self.presupuesto_anio_combo['values'] = anios_values
+
+        if anio_actual not in anios_values:
+            anio_actual = "Todos"
+        self.presupuesto_anio_filtro_var.set(anio_actual)
+
+        anio_param = self._obtener_anio_desde_combo(self.presupuesto_anio_filtro_var)
+
+        # Poblar meses según el año seleccionado
+        meses_disponibles = presupuesto_manager.obtener_meses_presupuestos(anio_param)
+        meses_values = ["Todos"] + [self._formatear_mes_opcion(mes) for mes in meses_disponibles]
+        self.presupuesto_mes_combo['values'] = meses_values
+
+        if mantener_seleccion and mes_actual in meses_values:
+            self.presupuesto_mes_filtro_var.set(mes_actual)
+        else:
+            self.presupuesto_mes_filtro_var.set("Todos")
+
+    def _formatear_mes_opcion(self, mes_codigo: str) -> str:
+        """Devuelve una representación legible del mes"""
+        nombre = MESES_NOMBRES.get(mes_codigo, mes_codigo)
+        return f"{nombre} ({mes_codigo})"
+
+    def _obtener_anio_desde_combo(self, var):
+        """Convierte el valor del combo de año a entero"""
+        if not var:
+            return None
+
+        valor = var.get() if isinstance(var, tk.StringVar) else var
+        if not valor or valor == "Todos":
+            return None
+
+        try:
+            return int(valor)
+        except (TypeError, ValueError):
+            return None
+
+    def _obtener_mes_desde_combo(self, var):
+        """Convierte el valor del combo de mes a entero"""
+        if not var:
+            return None
+
+        valor = var.get() if isinstance(var, tk.StringVar) else var
+        if not valor or valor == "Todos":
+            return None
+
+        match = re.search(r"\((\d{2})\)", valor)
+        if match:
+            return int(match.group(1))
+
+        if valor.isdigit() and len(valor) == 2:
+            return int(valor)
+
+        # Intentar mapa inverso (nombre -> código)
+        for codigo, nombre in MESES_NOMBRES.items():
+            if nombre.lower() == valor.lower():
+                return int(codigo)
+
+        return None
     
     def marcar_aprobado(self):
         """Marca el presupuesto seleccionado como aprobado"""
@@ -2500,6 +2682,37 @@ class AppPresupuestos:
         
         ttk.Button(filter_line2, text="✅ Marcar como Pagada", command=self.marcar_factura_pagada, style='Success.TButton').pack(side='left', padx=(0, 5))
         ttk.Button(filter_line2, text="❌ Marcar como No Pagada", command=self.marcar_factura_no_pagada, style='Warning.TButton').pack(side='left')
+
+        # Tercera línea: Filtros por fecha
+        date_filter_frame = ttk.Frame(filter_frame)
+        date_filter_frame.pack(fill='x', pady=(10, 0))
+
+        ttk.Label(date_filter_frame, text="🗓️ Mes:").pack(side='left', padx=(0, 10))
+        self.factura_mes_filtro_var = tk.StringVar(value="Todos")
+        self.factura_mes_combo = ttk.Combobox(
+            date_filter_frame,
+            textvariable=self.factura_mes_filtro_var,
+            values=["Todos"],
+            state="readonly",
+            width=20
+        )
+        self.factura_mes_combo.pack(side='left', padx=(0, 10))
+        self.factura_mes_combo.bind('<<ComboboxSelected>>', self.buscar_facturas)
+
+        ttk.Label(date_filter_frame, text="Año:").pack(side='left', padx=(0, 10))
+        self.factura_anio_filtro_var = tk.StringVar(value="Todos")
+        self.factura_anio_combo = ttk.Combobox(
+            date_filter_frame,
+            textvariable=self.factura_anio_filtro_var,
+            values=["Todos"],
+            state="readonly",
+            width=10
+        )
+        self.factura_anio_combo.pack(side='left', padx=(0, 10))
+        self.factura_anio_combo.bind('<<ComboboxSelected>>', self.on_factura_anio_cambiado)
+
+        # Inicializar valores de filtros de fecha
+        self.cargar_filtros_fecha_facturas()
         
         # Treeview para facturas
         columns = ('ID', 'Nº Factura', 'Cliente', 'Fecha', 'Vencimiento', 'Total', 'Estado Pago')
@@ -3388,8 +3601,9 @@ class AppPresupuestos:
     
     def refresh_facturas(self):
         """Actualiza la lista de facturas"""
-        facturas = factura_manager.obtener_facturas()
-        self.actualizar_tree_facturas(facturas)
+        if hasattr(self, 'factura_mes_combo') and hasattr(self, 'factura_anio_combo'):
+            self.cargar_filtros_fecha_facturas(mantener_seleccion=True)
+        self.buscar_facturas()
     
     def actualizar_tree_facturas(self, facturas):
         """Actualiza el treeview de facturas"""
@@ -3424,11 +3638,20 @@ class AppPresupuestos:
         """Busca facturas por término"""
         termino = self.factura_busqueda_entry.get().strip()
         estado_filtro = self.factura_estado_filtro_var.get()
+        anio_param = self._obtener_anio_desde_combo(getattr(self, 'factura_anio_filtro_var', None))
+        mes_param = self._obtener_mes_desde_combo(getattr(self, 'factura_mes_filtro_var', None))
         
         if termino:
-            facturas = factura_manager.buscar_facturas(termino)
+            facturas = factura_manager.buscar_facturas(
+                termino,
+                anio=anio_param,
+                mes=mes_param
+            )
         else:
-            facturas = factura_manager.obtener_facturas()
+            facturas = factura_manager.obtener_facturas(
+                anio=anio_param,
+                mes=mes_param
+            )
         
         # Aplicar filtro de estado
         if estado_filtro != "Todos":
@@ -3440,11 +3663,48 @@ class AppPresupuestos:
         """Limpia la búsqueda de facturas"""
         self.factura_busqueda_entry.delete(0, tk.END)
         self.factura_estado_filtro_var.set("Todos")
+        if hasattr(self, 'factura_anio_filtro_var'):
+            self.factura_anio_filtro_var.set("Todos")
+        if hasattr(self, 'factura_mes_filtro_var'):
+            self.factura_mes_filtro_var.set("Todos")
+        self.cargar_filtros_fecha_facturas()
         self.refresh_facturas()
     
     def filtrar_facturas_por_estado(self, event=None):
         """Filtra facturas por estado de pago"""
         self.buscar_facturas()
+
+    def on_factura_anio_cambiado(self, event=None):
+        """Actualiza los meses disponibles al cambiar el año en facturas"""
+        self.cargar_filtros_fecha_facturas()
+        self.buscar_facturas()
+
+    def cargar_filtros_fecha_facturas(self, mantener_seleccion: bool = False):
+        """Carga los combos de mes/año para facturas"""
+        if not hasattr(self, 'factura_mes_combo'):
+            return
+
+        mes_actual = self.factura_mes_filtro_var.get() if mantener_seleccion else "Todos"
+        anio_actual = self.factura_anio_filtro_var.get() if hasattr(self, 'factura_anio_filtro_var') else "Todos"
+
+        anios_disponibles = factura_manager.obtener_anios_facturas()
+        anios_values = ["Todos"] + anios_disponibles
+        self.factura_anio_combo['values'] = anios_values
+
+        if anio_actual not in anios_values:
+            anio_actual = "Todos"
+        self.factura_anio_filtro_var.set(anio_actual)
+
+        anio_param = self._obtener_anio_desde_combo(self.factura_anio_filtro_var)
+
+        meses_disponibles = factura_manager.obtener_meses_facturas(anio_param)
+        meses_values = ["Todos"] + [self._formatear_mes_opcion(mes) for mes in meses_disponibles]
+        self.factura_mes_combo['values'] = meses_values
+
+        if mantener_seleccion and mes_actual in meses_values:
+            self.factura_mes_filtro_var.set(mes_actual)
+        else:
+            self.factura_mes_filtro_var.set("Todos")
     
     def ver_detalle_factura(self, event=None):
         """Muestra el detalle de una factura"""
