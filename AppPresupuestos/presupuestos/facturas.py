@@ -51,7 +51,14 @@ class FacturaManager:
             numero_factura = self.generar_numero_factura()
         
         # Calcular totales con nuevos campos
-        totales = self.calcular_totales_completo(items, descuento_global_porcentaje, descuento_global_fijo, descuento_antes_iva, iva_habilitado, retencion_irpf)
+        totales = self.calcular_totales_completo(
+            items,
+            descuento_global_porcentaje,
+            descuento_global_fijo,
+            descuento_antes_iva,
+            iva_habilitado,
+            retencion_irpf
+        )
         
         # Crear factura
         query = """
@@ -84,8 +91,9 @@ class FacturaManager:
             
             # Calcular cuota de IVA por línea (21% si aplica IVA)
             cuota_iva = 0.0
-            if item.get('aplica_iva', True) and iva_habilitado:
-                cuota_iva = item_subtotal_final * (self.iva_porcentaje / 100)
+            item_iva_porcentaje = item.get('iva_porcentaje', self.iva_porcentaje)
+            if item.get('aplica_iva', True) and iva_habilitado and item_iva_porcentaje:
+                cuota_iva = item_subtotal_final * (item_iva_porcentaje / 100)
             
             item_query = """
                 INSERT INTO factura_items (factura_id, material_id, tarea_manual, cantidad, 
@@ -185,8 +193,38 @@ class FacturaManager:
         """
         items = self.db.execute_query(items_query, (factura_id,))
         
-        factura[0]['items'] = items
-        return factura[0]
+        factura_data = factura[0]
+        factura_data['iva_porcentaje'] = self.iva_porcentaje
+        factura_data['iva_habilitado'] = bool(factura_data.get('iva_habilitado', 1))
+        factura_data['descuento_antes_iva'] = bool(factura_data.get('descuento_antes_iva', 1))
+
+        # Normalizar items con metadatos de IVA
+        for item in items:
+            item['aplica_iva'] = bool(item.get('aplica_iva', 1))
+            item['iva_porcentaje'] = item.get('iva_porcentaje', self.iva_porcentaje if item['aplica_iva'] else 0.0)
+            item['subtotal_linea'] = item['subtotal']
+            item['cuota_iva'] = item.get('cuota_iva', 0.0) or 0.0
+
+        factura_data['items'] = items
+
+        # Recalcular totales y desglose de IVA para el PDF
+        totales = self.calcular_totales_completo(
+            items,
+            factura_data.get('descuento_global_porcentaje', 0) or 0,
+            factura_data.get('descuento_global_fijo', 0) or 0,
+            factura_data['descuento_antes_iva'],
+            factura_data['iva_habilitado'],
+            factura_data.get('retencion_irpf')
+        )
+
+        factura_data['iva_breakdown'] = totales.get('iva_breakdown', {})
+        factura_data['base_imponible_calculada'] = totales.get('base_imponible', 0.0)
+        factura_data['base_exenta'] = totales.get('base_exenta', 0.0)
+        factura_data['retencion_irpf_importe'] = totales.get('retencion_irpf', 0.0)
+        factura_data['descuento_global_calculado'] = totales.get('descuento_global', 0.0)
+        factura_data['descuentos_items_calculados'] = totales.get('descuentos_items', 0.0)
+
+        return factura_data
     
     def obtener_factura_por_numero(self, numero_factura: str) -> Optional[Dict[str, Any]]:
         """Obtiene una factura por su número de factura"""
@@ -210,8 +248,36 @@ class FacturaManager:
         """
         items = self.db.execute_query(items_query, (factura[0]['id'],))
         
-        factura[0]['items'] = items
-        return factura[0]
+        factura_data = factura[0]
+        factura_data['iva_porcentaje'] = self.iva_porcentaje
+        factura_data['iva_habilitado'] = bool(factura_data.get('iva_habilitado', 1))
+        factura_data['descuento_antes_iva'] = bool(factura_data.get('descuento_antes_iva', 1))
+
+        for item in items:
+            item['aplica_iva'] = bool(item.get('aplica_iva', 1))
+            item['iva_porcentaje'] = item.get('iva_porcentaje', self.iva_porcentaje if item['aplica_iva'] else 0.0)
+            item['subtotal_linea'] = item['subtotal']
+            item['cuota_iva'] = item.get('cuota_iva', 0.0) or 0.0
+
+        factura_data['items'] = items
+
+        totales = self.calcular_totales_completo(
+            items,
+            factura_data.get('descuento_global_porcentaje', 0) or 0,
+            factura_data.get('descuento_global_fijo', 0) or 0,
+            factura_data['descuento_antes_iva'],
+            factura_data['iva_habilitado'],
+            factura_data.get('retencion_irpf')
+        )
+
+        factura_data['iva_breakdown'] = totales.get('iva_breakdown', {})
+        factura_data['base_imponible_calculada'] = totales.get('base_imponible', 0.0)
+        factura_data['base_exenta'] = totales.get('base_exenta', 0.0)
+        factura_data['retencion_irpf_importe'] = totales.get('retencion_irpf', 0.0)
+        factura_data['descuento_global_calculado'] = totales.get('descuento_global', 0.0)
+        factura_data['descuentos_items_calculados'] = totales.get('descuentos_items', 0.0)
+
+        return factura_data
     
     def buscar_facturas(self, termino: str, anio: Optional[int] = None, mes: Optional[int] = None) -> List[Dict[str, Any]]:
         """Busca facturas por cliente, número de factura o fecha con filtros opcionales"""
@@ -354,7 +420,8 @@ class FacturaManager:
         """Calcula totales completos con descuentos por item y globales, incluyendo retención IRPF"""
         subtotal = 0.0
         descuentos_items = 0.0
-        iva_base = 0.0
+        iva_breakdown_raw: Dict[float, Dict[str, float]] = {}
+        base_exenta_raw = 0.0
         
         # Verificar si hay items y si alguno tiene IVA habilitado
         items_con_iva = [item for item in items if item.get('aplica_iva', True)]
@@ -365,7 +432,9 @@ class FacturaManager:
         
         # Calcular subtotal y descuentos por item
         for item in items:
-            item_subtotal = item['cantidad'] * item['precio_unitario']
+            cantidad = item.get('cantidad', 0)
+            precio_unitario = item.get('precio_unitario', 0.0)
+            item_subtotal = cantidad * precio_unitario
             
             # Aplicar descuentos por item (porcentaje tiene prioridad)
             item_descuento = 0.0
@@ -374,12 +443,19 @@ class FacturaManager:
             elif item.get('descuento_fijo', 0) > 0:
                 item_descuento = min(item['descuento_fijo'], item_subtotal)
             
-            subtotal += item_subtotal - item_descuento
+            neto_linea = item_subtotal - item_descuento
+            subtotal += neto_linea
             descuentos_items += item_descuento
             
             # Calcular IVA solo para items que lo tienen habilitado
-            if item.get('aplica_iva', True) and iva_habilitado:
-                iva_base += (item_subtotal - item_descuento) * (self.iva_porcentaje / 100)
+            item_iva_porcentaje = float(item.get('iva_porcentaje', self.iva_porcentaje))
+            aplica_iva = item.get('aplica_iva', True) and iva_habilitado and item_iva_porcentaje > 0
+            if aplica_iva:
+                if item_iva_porcentaje not in iva_breakdown_raw:
+                    iva_breakdown_raw[item_iva_porcentaje] = {'base': 0.0}
+                iva_breakdown_raw[item_iva_porcentaje]['base'] += neto_linea
+            else:
+                base_exenta_raw += neto_linea
         
         # Aplicar descuento global
         descuento_global = 0.0
@@ -388,14 +464,40 @@ class FacturaManager:
         elif descuento_global_fijo > 0:
             descuento_global = min(descuento_global_fijo, subtotal)
         
-        # Determinar base para IVA según configuración
-        if descuento_antes_iva:
-            base_iva = subtotal - descuento_global
-            iva = iva_base * (base_iva / subtotal) if subtotal > 0 else 0
-            base_imponible = base_iva
-        else:
-            iva = iva_base
-            base_imponible = subtotal - descuento_global
+        subtotal_neto = subtotal - descuento_global
+        factor_ajuste = (subtotal_neto / subtotal) if subtotal > 0 else 0
+        aplicar_factor = descuento_antes_iva
+        
+        iva_breakdown: Dict[float, Dict[str, float]] = {}
+        iva_total = 0.0
+        base_exenta = base_exenta_raw
+        
+        for porcentaje, datos in iva_breakdown_raw.items():
+            base_original = datos['base']
+            base_ajustada = base_original
+            
+            if aplicar_factor:
+                base_ajustada = base_original * factor_ajuste
+            
+            cuota = 0.0
+            if iva_habilitado and porcentaje > 0:
+                cuota = base_ajustada * (porcentaje / 100)
+                iva_total += cuota
+            
+            iva_breakdown[porcentaje] = {
+                'base': base_ajustada if iva_habilitado else 0.0,
+                'cuota': cuota if iva_habilitado else 0.0
+            }
+        
+        if aplicar_factor:
+            base_exenta = base_exenta_raw * factor_ajuste
+        
+        if not iva_habilitado:
+            iva_total = 0.0
+            iva_breakdown = {}
+        
+        base_imponible = subtotal_neto
+        iva = iva_total
         
         # Calcular retención IRPF sobre la base imponible (antes de IVA según AEAT)
         retencion_irpf_importe = 0.0
@@ -415,7 +517,9 @@ class FacturaManager:
             'retencion_irpf_porcentaje': retencion_irpf if retencion_irpf else 0,
             'total': total,
             'iva_porcentaje': self.iva_porcentaje,
-            'descuento_antes_iva': descuento_antes_iva
+            'descuento_antes_iva': descuento_antes_iva,
+            'iva_breakdown': iva_breakdown,
+            'base_exenta': base_exenta
         }
     
     def calcular_fecha_vencimiento(self, dias: int) -> str:

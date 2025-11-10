@@ -2,7 +2,7 @@ from reportlab.lib.pagesizes import A4, letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch, cm
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, Frame
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, Frame, KeepTogether
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
@@ -21,12 +21,24 @@ class PDFGenerator:
         """Retorna la configuración por defecto"""
         return {
             "empresa": {
-                "nombre": "Mi Empresa",
-                "direccion": "Calle Principal 123, Ciudad",
+                "nombre": "Mi Empresa S.L.",
+                "direccion": "Calle Principal 123",
+                "codigo_postal": "28001",
+                "ciudad": "Madrid",
+                "provincia": "Madrid",
+                "pais": "España",
                 "telefono": "+34 123 456 789",
                 "email": "info@miempresa.com",
                 "web": "www.miempresa.com",
-                "cif": "B12345678"
+                "cif": "B12345678",
+                "registro_mercantil": {
+                    "provincia": "Madrid",
+                    "tomo": "12345",
+                    "folio": "67",
+                    "seccion": "8",
+                    "hoja": "M-123456",
+                    "inscripcion": "1ª"
+                }
             },
             "logo": {
                 "usar_logo": False,
@@ -43,13 +55,24 @@ class PDFGenerator:
                 "titulo_principal": "PRESUPUESTO",
                 "notas_pie": "• Este presupuesto tiene una validez de 30 días.\n• Los precios incluyen IVA.\n• Para cualquier consulta, contacte con nosotros.",
                 "texto_iva_incluido": "Los precios incluyen IVA.",
-                "texto_iva_no_incluido": "Los precios NO incluyen IVA."
+                "texto_iva_no_incluido": "Los precios NO incluyen IVA.",
+                "nota_factura_iva_incluido": "Los importes de esta factura incluyen IVA al tipo correspondiente.",
+                "nota_factura_iva_exento": "Operación exenta de IVA conforme a la normativa vigente.",
+                "nota_factura_general": "Pago mediante transferencia en un plazo máximo de 30 días."
             },
             "margenes": {
                 "superior": 72,
                 "inferior": 18,
                 "izquierdo": 72,
                 "derecho": 72
+            },
+            "legal": {
+                "mostrar_firma": False,
+                "firma_texto": "Firma y sello de la empresa",
+                "nota_exencion": "Operación exenta según art. 20 de la Ley 37/1992 del IVA."
+            },
+            "opciones_pdf": {
+                "mostrar_registro_mercantil": True
             }
         }
     
@@ -491,21 +514,23 @@ class PDFGenerator:
         # TABLA DE ITEMS/SERVICIOS según plantilla
         items_table = self.create_factura_items_table_template(factura)
         story.append(items_table)
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 16))
         
         # TOTALES según plantilla (IVA y TOTAL en caja)
         totals_section = self.create_factura_totals_template(factura)
         story.append(totals_section)
-        story.append(Spacer(1, 30))
+        story.append(Spacer(1, 18))
         
-        # INFORMACIÓN DE PAGO según plantilla (con fondo beige)
-        payment_section = self.create_factura_payment_info_template(factura)
-        story.append(payment_section)
-        story.append(Spacer(1, 20))
+        # INFORMACIÓN DE PAGO Y NOTAS en una sola sección compacta
+        additional_sections = self.create_factura_additional_sections(factura)
+        story.append(additional_sections)
+        story.append(Spacer(1, 15))
         
-        # FOOTER - Notas de la factura
-        footer_section = self.create_factura_footer_section(factura)
-        story.append(footer_section)
+        # Firma opcional
+        signature_block = self.create_factura_signature_block(factura)
+        if signature_block:
+            story.append(Spacer(1, 12))
+            story.append(signature_block)
         
         # Construir el PDF
         doc.build(story)
@@ -610,14 +635,54 @@ class PDFGenerator:
     
     def create_factura_footer_section(self, factura):
         """Crea la sección del footer con notas de la factura"""
-        notas = factura.get('notas', '')
-        if not notas:
-            notas = self.plantilla_config['texto_personalizado'].get('notas_pie', 
-                'Gracias por su confianza. Para cualquier consulta, contacte con nosotros.')
+        notas_custom = (factura.get('notas') or '').strip()
+        notas_config = self.plantilla_config.get('texto_personalizado', {})
+        legal_config = self.plantilla_config.get('legal', {})
+        notas_generadas: List[str] = []
         
-        # Agregar subtítulo "Notas:"
-        footer_text = f"<para align='left'><b>Notas:</b><br/><br/>{notas}</para>"
+        if notas_custom:
+            notas_generadas.append(notas_custom)
+        else:
+            iva_breakdown = factura.get('iva_breakdown', {})
+            tiene_iva = factura.get('iva_habilitado', True) and any(
+                float(porcentaje) > 0 and (datos.get('cuota', 0) or 0) > 0
+                for porcentaje, datos in iva_breakdown.items()
+            )
+            
+            if tiene_iva:
+                nota_iva = notas_config.get('nota_factura_iva_incluido')
+            else:
+                nota_iva = notas_config.get('nota_factura_iva_exento') or legal_config.get('nota_exencion')
+            
+            if nota_iva:
+                notas_generadas.append(nota_iva)
+            
+            nota_general = notas_config.get('nota_factura_general')
+            if nota_general:
+                notas_generadas.append(nota_general)
+        
+        if not notas_generadas:
+            notas_generadas.append('Gracias por su confianza. Para cualquier consulta, contacte con nosotros.')
+        
+        notas_formateadas = "<br/>".join(f"• {nota.strip()}" for nota in notas_generadas if nota.strip())
+        
+        footer_text = f"<para align='left'><b>Notas:</b><br/><br/>{notas_formateadas}</para>"
         return Paragraph(footer_text, self.styles['Normal'])
+    
+    def create_factura_notes_block(self, factura, width=3*inch, reference_height=None):
+        """Crea un bloque compacto de notas para ubicarlo junto a la información de pago"""
+        notes_para = self.create_factura_footer_section(factura)
+        heights = [reference_height] if reference_height else None
+        notes_table = Table([[notes_para]], colWidths=[width], rowHeights=heights)
+        notes_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#FDFBF6')),
+            ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#000000')),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        return notes_table
     
     # === NUEVOS MÉTODOS PARA PLANTILLA DE FACTURA ===
     
@@ -699,6 +764,65 @@ class PDFGenerator:
             textColor=colors.HexColor('#000000')
         ))
     
+    def _format_cif(self, cif: str) -> str:
+        if not cif:
+            return "N/A"
+        return cif.strip().upper()
+    
+    def _format_registro_mercantil(self, registro) -> str:
+        if not registro:
+            return ""
+        if isinstance(registro, dict):
+            partes = [
+                registro.get('provincia'),
+                f"Tomo {registro.get('tomo')}" if registro.get('tomo') else None,
+                f"Folio {registro.get('folio')}" if registro.get('folio') else None,
+                f"Sección {registro.get('seccion')}" if registro.get('seccion') else None,
+                f"Hoja {registro.get('hoja')}" if registro.get('hoja') else None,
+                f"Inscripción {registro.get('inscripcion')}" if registro.get('inscripcion') else None,
+            ]
+            return ', '.join([p for p in partes if p])
+        return str(registro).strip()
+    
+    def _format_direccion_empresa(self, empresa: Dict[str, Any]) -> str:
+        direccion = empresa.get('direccion', '')
+        codigo_postal = empresa.get('codigo_postal', '')
+        ciudad = empresa.get('ciudad', '')
+        provincia = empresa.get('provincia', '')
+        pais = empresa.get('pais', '')
+        
+        linea_principal = direccion
+        linea_localidad = ", ".join([part for part in [codigo_postal, ciudad, provincia] if part])
+        linea_pais = pais
+        
+        partes = [linea_principal]
+        if linea_localidad:
+            partes.append(linea_localidad)
+        if linea_pais:
+            partes.append(linea_pais)
+        return "<br/>".join(partes)
+    
+    def _build_iva_breakdown_from_items(self, factura: Dict[str, Any]) -> Dict[float, Dict[str, float]]:
+        breakdown: Dict[float, Dict[str, float]] = {}
+        iva_habilitado = factura.get('iva_habilitado', True)
+        if not iva_habilitado:
+            return breakdown
+        
+        for item in factura.get('items', []):
+            base_linea = item.get('subtotal', item.get('subtotal_linea', 0.0)) or 0.0
+            iva_porcentaje = float(item.get('iva_porcentaje', factura.get('iva_porcentaje', 0.0)) or 0.0)
+            aplica_iva = item.get('aplica_iva', True) and iva_porcentaje > 0
+            
+            if aplica_iva:
+                datos = breakdown.setdefault(iva_porcentaje, {'base': 0.0, 'cuota': 0.0})
+                datos['base'] += base_linea
+                cuota_linea = item.get('cuota_iva')
+                if cuota_linea is None:
+                    cuota_linea = base_linea * (iva_porcentaje / 100)
+                datos['cuota'] += cuota_linea or 0.0
+        
+        return breakdown
+    
     def create_factura_client_company_info(self, factura):
         """Crea la sección de información del cliente y empresa en dos columnas"""
         # Información del cliente (izquierda)
@@ -716,13 +840,17 @@ class PDFGenerator:
         # Información de la empresa (derecha)
         empresa = self.plantilla_config['empresa']
         registro_mercantil = empresa.get('registro_mercantil', '')
+        mostrar_registro = self.plantilla_config.get('opciones_pdf', {}).get('mostrar_registro_mercantil', True)
+        registro_formateado = self._format_registro_mercantil(registro_mercantil) if mostrar_registro else ""
+        cif_formateado = self._format_cif(empresa.get('cif', 'N/A'))
+        domicilio_formateado = self._format_direccion_empresa(empresa)
         empresa_info = f"""
         <b>DATOS DE LA EMPRESA</b><br/>
         <br/>
         <b>{empresa['nombre']}</b><br/>
-        CIF: {empresa.get('cif', 'N/A')}<br/>
-        {f'Registro Mercantil: {registro_mercantil}<br/>' if registro_mercantil else ''}
-        {empresa['direccion']}, {empresa.get('ciudad', '')}<br/>
+        CIF: {cif_formateado}<br/>
+        {f'Registro Mercantil: {registro_formateado}<br/>' if registro_formateado else ''}
+        {domicilio_formateado}<br/>
         {empresa['email']}<br/>
         {empresa['telefono']}
         """
@@ -789,7 +917,12 @@ class PDFGenerator:
                     nombre_item = item.get('tarea_manual', 'Tarea manual')
                 else:
                     # Es un material
-                    nombre_item = f"{item['material_nombre']}"
+                    nombre_item = item.get('material_nombre')
+                
+                if not nombre_item:
+                    nombre_item = "Concepto sin descripción"
+                else:
+                    nombre_item = str(nombre_item)
                 
                 # Calcular subtotal después de descuentos
                 item_subtotal_bruto = item['cantidad'] * item['precio_unitario']
@@ -804,12 +937,16 @@ class PDFGenerator:
                 subtotal_sin_iva = item_subtotal_bruto - item_descuento
                 
                 # Obtener cuota de IVA (ya calculada en BD o calcular si no existe)
-                cuota_iva = item.get('cuota_iva', 0)
-                if cuota_iva == 0 and item.get('aplica_iva', True) and iva_habilitado:
-                    cuota_iva = subtotal_sin_iva * 0.21
+                cuota_iva = item.get('cuota_iva', 0) or 0.0
+                iva_porcentaje_valor = float(item.get('iva_porcentaje', factura.get('iva_porcentaje', 0)))
                 
-                # Porcentaje de IVA
-                iva_porcentaje = "21%" if (item.get('aplica_iva', True) and iva_habilitado) else "0%"
+                if cuota_iva == 0 and item.get('aplica_iva', True) and iva_habilitado and iva_porcentaje_valor:
+                    cuota_iva = subtotal_sin_iva * (iva_porcentaje_valor / 100)
+                
+                if item.get('aplica_iva', True) and iva_habilitado and iva_porcentaje_valor:
+                    iva_porcentaje = f"{iva_porcentaje_valor:.0f}%"
+                else:
+                    iva_porcentaje = "0%"
                 
                 # Total con IVA
                 total_con_iva = subtotal_sin_iva + cuota_iva
@@ -884,72 +1021,110 @@ class PDFGenerator:
     def create_factura_totals_template(self, factura):
         """Crea la sección de totales según la plantilla con descuentos"""
         iva_habilitado = factura.get('iva_habilitado', True)
+        iva_breakdown = factura.get('iva_breakdown', {})
+        if (not iva_breakdown) and iva_habilitado:
+            iva_breakdown = self._build_iva_breakdown_from_items(factura)
         
-        # Calcular descuentos desde la base de datos
-        descuentos_items = 0
-        descuento_global = 0
-        
-        # Calcular descuentos de items
-        for item in factura.get('items', []):
-            item_subtotal = item['cantidad'] * item['precio_unitario']
-            if item.get('descuento_porcentaje', 0) > 0:
-                descuentos_items += item_subtotal * (item['descuento_porcentaje'] / 100)
-            elif item.get('descuento_fijo', 0) > 0:
-                descuentos_items += min(item['descuento_fijo'], item_subtotal)
-        
-        # Descuento global desde la base de datos
-        descuento_global_porcentaje = factura.get('descuento_global_porcentaje', 0)
-        descuento_global_fijo = factura.get('descuento_global_fijo', 0)
-        
-        if descuento_global_porcentaje > 0:
-            descuento_global = factura['subtotal'] * (descuento_global_porcentaje / 100)
-        elif descuento_global_fijo > 0:
-            descuento_global = min(descuento_global_fijo, factura['subtotal'])
-        
-        # Calcular base imponible (después de descuentos, antes de IVA)
-        base_imponible = factura['subtotal'] - descuento_global
-        
-        # Obtener retención IRPF
+        subtotal = factura.get('subtotal', 0.0)
+        descuento_global = factura.get('descuento_global_calculado', 0.0)
+        descuentos_items = factura.get('descuentos_items_calculados', 0.0)
+        base_exenta = factura.get('base_exenta', 0.0)
+        base_imponible = factura.get('base_imponible_calculada', subtotal - descuento_global)
+        iva_total = sum(data.get('cuota', 0.0) for data in iva_breakdown.values()) if iva_habilitado else 0.0
         retencion_irpf_porcentaje = factura.get('retencion_irpf')
-        retencion_irpf_importe = 0.0
-        if retencion_irpf_porcentaje is not None and retencion_irpf_porcentaje > 0:
-            retencion_irpf_importe = base_imponible * (retencion_irpf_porcentaje / 100)
+        retencion_irpf_importe = factura.get('retencion_irpf_importe', 0.0)
+        total_factura = factura.get('total', base_imponible + iva_total - retencion_irpf_importe)
         
-        # Crear tabla de totales
-        totales_data = []
+        breakdown_rows = []
+        header_style = ParagraphStyle(
+            name='TotalesHeader',
+            parent=self.styles['Normal'],
+            fontSize=9,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor('#000000')
+        )
+        cell_style = ParagraphStyle(
+            name='TotalesCell',
+            parent=self.styles['Normal'],
+            fontSize=9,
+            alignment=TA_RIGHT,
+            textColor=colors.HexColor('#000000')
+        )
         
-        # Base imponible (requerida por AEAT)
-        totales_data.append(['BASE IMPONIBLE', f"{base_imponible:.2f} €"])
+        breakdown_rows.append([
+            Paragraph("Tipo IVA", header_style),
+            Paragraph("Base (€)", header_style),
+            Paragraph("Cuota (€)", header_style)
+        ])
         
-        # IVA (requerido por AEAT)
-        if iva_habilitado:
-            iva_porcentaje = 21.0
-            totales_data.append([f'IVA ({iva_porcentaje:.0f}%)', f"{factura['iva']:.2f} €"])
+        if iva_habilitado and iva_breakdown:
+            for porcentaje in sorted(iva_breakdown.keys(), key=lambda x: float(x)):
+                datos = iva_breakdown[porcentaje]
+                porcentaje_valor = float(porcentaje)
+                tipo_texto = f"{porcentaje_valor:.0f}%" if porcentaje_valor > 0 else "Exento"
+                breakdown_rows.append([
+                    Paragraph(tipo_texto, self.styles['Normal']),
+                    Paragraph(f"{datos.get('base', 0.0):.2f} €", cell_style),
+                    Paragraph(f"{datos.get('cuota', 0.0):.2f} €", cell_style)
+                ])
+        else:
+            breakdown_rows.append([
+                Paragraph("Exento", self.styles['Normal']),
+                Paragraph(f"{base_imponible:.2f} €", cell_style),
+                Paragraph("0.00 €", cell_style)
+            ])
         
-        # Retención IRPF (si aplica)
-        if retencion_irpf_importe > 0:
-            totales_data.append([f'RETENCIÓN IRPF ({retencion_irpf_porcentaje:.1f}%)', f"-{retencion_irpf_importe:.2f} €"])
+        if base_exenta > 0:
+            breakdown_rows.append([
+                Paragraph("Base exenta (0%)", self.styles['Normal']),
+                Paragraph(f"{base_exenta:.2f} €", cell_style),
+                Paragraph("0.00 €", cell_style)
+            ])
         
-        # TOTAL
-        totales_data.append(['TOTAL FACTURA', f"{factura['total']:.2f} €"])
-        
-        # Crear tabla de totales
-        totales_table = Table(totales_data, colWidths=[1.5*inch, 1*inch])
-        totales_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
-            ('FONTSIZE', (0, 0), (-1, -2), 10),
-            ('FONTSIZE', (0, -1), (-1, -1), 12),  # Total más grande
-            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),  # Total en negrita
-            ('TEXTCOLOR', (0, -1), (-1, -1), colors.HexColor('#000000')),
-            ('LINEABOVE', (0, -1), (-1, -1), 1, colors.HexColor('#000000')),  # Línea sobre el total
-            ('LINEBELOW', (0, -1), (-1, -1), 1, colors.HexColor('#000000')),  # Línea bajo el total
+        breakdown_table = Table(breakdown_rows, colWidths=[1.6*inch, 1.2*inch, 1.1*inch])
+        breakdown_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F5F5DC')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#000000')),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('ALIGN', (0, 1), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 1), (-1, -1), 'RIGHT'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.HexColor('#000000')),
+            ('BOX', (0, 0), (-1, -1), 0.25, colors.HexColor('#000000')),
         ]))
         
-        # Simplemente devolver la tabla sin usar Frame
-        # El Frame estaba causando problemas, mejor usar la tabla directamente
-        return totales_table
+        resumen_rows = []
+        resumen_rows.append(['Subtotal', f"{subtotal:.2f} €"])
+        if descuentos_items > 0:
+            resumen_rows.append(['Descuentos por línea', f"-{descuentos_items:.2f} €"])
+        if descuento_global > 0:
+            resumen_rows.append(['Descuento global', f"-{descuento_global:.2f} €"])
+        
+        resumen_rows.append(['Base neta', f"{base_imponible:.2f} €"])
+        if iva_total > 0:
+            resumen_rows.append(['IVA total', f"{iva_total:.2f} €"])
+        else:
+            resumen_rows.append(['IVA total', "0.00 €"])
+        
+        if retencion_irpf_importe > 0 and retencion_irpf_porcentaje:
+            resumen_rows.append([f"Retención IRPF ({retencion_irpf_porcentaje:.1f}%)", f"-{retencion_irpf_importe:.2f} €"])
+        
+        resumen_rows.append(['TOTAL FACTURA', f"{total_factura:.2f} €"])
+        
+        resumen_table = Table(resumen_rows, colWidths=[2.0*inch, 1.5*inch])
+        resumen_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -2), 'RIGHT'),
+            ('FONTSIZE', (0, 0), (-1, -2), 10),
+            ('FONTSIZE', (0, -1), (-1, -1), 12),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('TEXTCOLOR', (0, -1), (-1, -1), colors.HexColor('#000000')),
+            ('LINEABOVE', (0, -1), (-1, -1), 1, colors.HexColor('#000000')),
+            ('LINEBELOW', (0, -1), (-1, -1), 1, colors.HexColor('#000000')),
+        ]))
+        
+        return KeepTogether([breakdown_table, Spacer(1, 10), resumen_table])
     
-    def create_factura_payment_info_template(self, factura):
+    def create_factura_payment_info_template(self, factura, width=6*inch):
         """Crea la sección de información de pago según la plantilla"""
         pago_config = self.plantilla_config.get('pago', {})
         
@@ -996,7 +1171,7 @@ class PDFGenerator:
         
         # Crear tabla con fondo beige
         payment_data = [[payment_para]]
-        payment_table = Table(payment_data, colWidths=[6*inch])
+        payment_table = Table(payment_data, colWidths=[width])
         payment_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#F5F5DC')),
             ('LEFTPADDING', (0, 0), (-1, -1), 0),
@@ -1006,6 +1181,50 @@ class PDFGenerator:
         ]))
         
         return payment_table
+    
+    def create_factura_additional_sections(self, factura):
+        """Crea un bloque con la información de pago y las notas en una sola fila"""
+        payment_block = self.create_factura_payment_info_template(factura, width=3*inch)
+        payment_width, payment_height = payment_block.wrap(3*inch, 0)
+        notes_block = self.create_factura_notes_block(factura, width=3*inch, reference_height=payment_height)
+        
+        combined_table = Table([[payment_block, notes_block]], colWidths=[3*inch, 3*inch])
+        combined_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        
+        return combined_table
+    
+    def create_factura_signature_block(self, factura):
+        """Crea un bloque de firma opcional según configuración"""
+        legal_config = self.plantilla_config.get('legal', {})
+        if not legal_config.get('mostrar_firma'):
+            return None
+        
+        firma_texto = legal_config.get('firma_texto', 'Firma y sello')
+        firma_para = Paragraph(
+            f"<para align='center'><br/><br/><br/>{firma_texto}</para>",
+            ParagraphStyle(
+                name='FirmaFactura',
+                parent=self.styles['Normal'],
+                fontSize=10,
+                alignment=TA_CENTER,
+                textColor=colors.HexColor('#000000')
+            )
+        )
+        
+        signature_table = Table([[firma_para]], colWidths=[6*inch])
+        signature_table.setStyle(TableStyle([
+            ('LINEABOVE', (0, 0), (-1, 0), 0.5, colors.HexColor('#000000')),
+            ('TOPPADDING', (0, 0), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        
+        return signature_table
 
 # Instancia global del generador de PDF
 pdf_generator = PDFGenerator()

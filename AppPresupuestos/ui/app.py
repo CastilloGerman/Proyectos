@@ -5,6 +5,8 @@ import os
 import subprocess
 import platform
 import json
+import ast
+import copy
 import re
 from presupuestos.clientes import cliente_manager
 from presupuestos.materiales import material_manager
@@ -1972,13 +1974,24 @@ class AppPresupuestos:
         # Configuración por defecto completa
         config_default = {
             "empresa": {
-                "nombre": "Mi Empresa",
+                "nombre": "Mi Empresa S.L.",
                 "direccion": "Calle Principal 123",
-                "ciudad": "Ciudad",
+                "codigo_postal": "28001",
+                "ciudad": "Madrid",
+                "provincia": "Madrid",
+                "pais": "España",
                 "telefono": "+34 123 456 789",
                 "email": "info@miempresa.com",
                 "web": "www.miempresa.com",
-                "cif": "B12345678"
+                "cif": "B12345678",
+                "registro_mercantil": {
+                    "provincia": "Madrid",
+                    "tomo": "12345",
+                    "folio": "67",
+                    "seccion": "8",
+                    "hoja": "M-123456",
+                    "inscripcion": "1ª"
+                }
             },
             "logo": {
                 "usar_logo": False,
@@ -1995,13 +2008,24 @@ class AppPresupuestos:
                 "titulo_principal": "PRESUPUESTO",
                 "notas_pie": "• Este presupuesto tiene una validez de 30 días.\n• Los precios incluyen IVA.\n• Para cualquier consulta, contacte con nosotros.",
                 "texto_iva_incluido": "Los precios incluyen IVA.",
-                "texto_iva_no_incluido": "Los precios NO incluyen IVA."
+                "texto_iva_no_incluido": "Los precios NO incluyen IVA.",
+                "nota_factura_iva_incluido": "Los importes de esta factura incluyen IVA al tipo correspondiente.",
+                "nota_factura_iva_exento": "Operación exenta de IVA conforme a la normativa vigente.",
+                "nota_factura_general": "Pago mediante transferencia en un plazo máximo de 30 días."
             },
             "margenes": {
                 "superior": 72,
                 "inferior": 18,
                 "izquierdo": 72,
                 "derecho": 72
+            },
+            "legal": {
+                "mostrar_firma": False,
+                "firma_texto": "Firma y sello de la empresa",
+                "nota_exencion": "Operación exenta según art. 20 de la Ley 37/1992 del IVA."
+            },
+            "opciones_pdf": {
+                "mostrar_registro_mercantil": True
             }
         }
         
@@ -2010,22 +2034,45 @@ class AppPresupuestos:
                 with open(self.plantilla_config_file, 'r', encoding='utf-8') as f:
                     config_cargada = json.load(f)
                     # Fusionar con configuración por defecto para asegurar que todas las claves existan
-                    return self.merge_config(config_default, config_cargada)
+                    config_final = self.merge_config(copy.deepcopy(config_default), config_cargada)
+                    return self._normalizar_config_plantilla(config_final)
             else:
-                return config_default
+                return self._normalizar_config_plantilla(copy.deepcopy(config_default))
         except Exception as e:
             print(f"Error cargando configuración de plantilla: {e}")
-            return config_default
+            return self._normalizar_config_plantilla(copy.deepcopy(config_default))
     
     def merge_config(self, default_config, loaded_config):
         """Fusiona la configuración cargada con la configuración por defecto"""
-        merged = default_config.copy()
+        merged = copy.deepcopy(default_config)
         for key, value in loaded_config.items():
             if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
                 merged[key] = self.merge_config(merged[key], value)
             else:
                 merged[key] = value
         return merged
+    
+    def _normalizar_config_plantilla(self, config):
+        """Normaliza valores especiales dentro de la configuración"""
+        empresa = config.get('empresa', {})
+        registro = empresa.get('registro_mercantil')
+        if isinstance(registro, str):
+            try:
+                registro_dict = ast.literal_eval(registro)
+                if isinstance(registro_dict, dict):
+                    empresa['registro_mercantil'] = registro_dict
+            except (ValueError, SyntaxError):
+                empresa['registro_mercantil'] = {"descripcion": registro}
+        elif not isinstance(registro, dict) and registro is not None:
+            empresa['registro_mercantil'] = {"descripcion": str(registro)}
+        
+        opciones_pdf = config.get('opciones_pdf')
+        if not isinstance(opciones_pdf, dict):
+            config['opciones_pdf'] = {"mostrar_registro_mercantil": True}
+        else:
+            opciones_pdf.setdefault('mostrar_registro_mercantil', True)
+        
+        return config
     
     def guardar_configuracion_plantilla(self):
         """Guarda la configuración de la plantilla en el archivo JSON"""
@@ -2202,6 +2249,9 @@ class AppPresupuestos:
                 self.plantilla_config['texto_personalizado'] = {key: var.get() for key, var in vars_texto.items()}
                 self.plantilla_config['texto_personalizado']['notas_pie'] = text_area.get('1.0', tk.END).strip()
                 self.plantilla_config['margenes'] = {key: var.get() for key, var in vars_margenes.items()}
+                if not isinstance(self.plantilla_config.get('opciones_pdf'), dict):
+                    self.plantilla_config['opciones_pdf'] = {}
+                self.plantilla_config['opciones_pdf']['mostrar_registro_mercantil'] = bool(self.config_mostrar_registro_var.get())
                 
                 # Guardar archivo
                 self.guardar_configuracion_plantilla()
@@ -3420,6 +3470,29 @@ class AppPresupuestos:
                 self.factura_iva_habilitado_var.get()
             )
             
+            # Normalizar items para PDF (asegurar banderas de IVA y porcentajes)
+            items_para_pdf = []
+            iva_porcentaje_general = totales.get('iva_porcentaje', factura_manager.iva_porcentaje)
+            for item in self.factura_items:
+                item_copy = item.copy()
+                aplica_iva = bool(item_copy.get('aplica_iva', True))
+                item_copy['aplica_iva'] = aplica_iva
+                
+                iva_item = item_copy.get('iva_porcentaje')
+                if iva_item is None:
+                    iva_item = iva_porcentaje_general if aplica_iva else 0.0
+                try:
+                    iva_item = float(iva_item)
+                except (TypeError, ValueError):
+                    iva_item = iva_porcentaje_general if aplica_iva else 0.0
+                item_copy['iva_porcentaje'] = iva_item
+                
+                if 'subtotal' not in item_copy and 'subtotal_linea' in item_copy:
+                    item_copy['subtotal'] = item_copy['subtotal_linea']
+                item_copy['subtotal_linea'] = item_copy.get('subtotal', item_copy.get('cantidad', 0) * item_copy.get('precio_unitario', 0))
+                
+                items_para_pdf.append(item_copy)
+            
             # Crear factura temporal usando valores editados
             factura_temp = {
                 'id': 'VISTA_PREVIA',
@@ -3438,7 +3511,15 @@ class AppPresupuestos:
                 'metodo_pago': self.metodo_pago_var.get(),
                 'estado_pago': self.estado_pago_var.get(),
                 'notas': self.factura_notas_text.get('1.0', tk.END).strip(),
-                'items': self.factura_items
+                'items': items_para_pdf,
+                'iva_porcentaje': iva_porcentaje_general,
+                'iva_breakdown': totales.get('iva_breakdown', {}),
+                'descuento_global_calculado': totales.get('descuento_global', 0.0),
+                'descuentos_items_calculados': totales.get('descuentos_items', 0.0),
+                'base_imponible_calculada': totales.get('base_imponible', totales['subtotal']),
+                'base_exenta': totales.get('base_exenta', 0.0),
+                'retencion_irpf': totales.get('retencion_irpf_porcentaje', 0.0),
+                'retencion_irpf_importe': totales.get('retencion_irpf', 0.0)
             }
             
             # Generar PDF temporal
@@ -4075,6 +4156,10 @@ class AppPresupuestos:
         self.config_empresa_registro_mercantil_entry.grid(row=5, column=1, columnspan=2, sticky='ew', pady=8)
         ttk.Label(empresa_frame, text="(Opcional, solo para sociedades)", font=('Arial', 8), foreground='gray').grid(row=5, column=3, sticky='w', padx=(5, 0), pady=8)
         
+        self.config_mostrar_registro_var = tk.BooleanVar(value=self.plantilla_config.get('opciones_pdf', {}).get('mostrar_registro_mercantil', True))
+        ttk.Checkbutton(empresa_frame, text="Mostrar Registro Mercantil en el PDF",
+                        variable=self.config_mostrar_registro_var).grid(row=6, column=0, columnspan=4, sticky='w', padx=(0, 10), pady=(0, 10))
+        
         empresa_frame.columnconfigure(1, weight=1)
         empresa_frame.columnconfigure(3, weight=1)
         
@@ -4142,6 +4227,11 @@ class AppPresupuestos:
             
             # Cargar datos de empresa
             empresa = config.get('empresa', {})
+            registro_valor = empresa.get('registro_mercantil', '')
+            if isinstance(registro_valor, dict):
+                registro_valor = ", ".join(
+                    [f"{k.capitalize()}: {v}" for k, v in registro_valor.items() if v]
+                )
             self.config_empresa_nombre_var.set(empresa.get('nombre', ''))
             self.config_empresa_cif_var.set(empresa.get('cif', ''))
             self.config_empresa_direccion_var.set(empresa.get('direccion', ''))
@@ -4149,7 +4239,10 @@ class AppPresupuestos:
             self.config_empresa_telefono_var.set(empresa.get('telefono', ''))
             self.config_empresa_email_var.set(empresa.get('email', ''))
             self.config_empresa_web_var.set(empresa.get('web', ''))
-            self.config_empresa_registro_mercantil_var.set(empresa.get('registro_mercantil', ''))
+            self.config_empresa_registro_mercantil_var.set(registro_valor)
+            
+            opciones_pdf = config.get('opciones_pdf', {})
+            self.config_mostrar_registro_var.set(opciones_pdf.get('mostrar_registro_mercantil', True))
             
             # Cargar datos bancarios
             pago = config.get('pago', {})
@@ -4205,6 +4298,10 @@ class AppPresupuestos:
                 'registro_mercantil': self.config_empresa_registro_mercantil_var.get().strip()
             })
             
+            if 'opciones_pdf' not in config or not isinstance(config['opciones_pdf'], dict):
+                config['opciones_pdf'] = {}
+            config['opciones_pdf']['mostrar_registro_mercantil'] = bool(self.config_mostrar_registro_var.get())
+            
             # Actualizar datos bancarios
             if 'pago' not in config:
                 config['pago'] = {}
@@ -4222,10 +4319,10 @@ class AppPresupuestos:
                 json.dump(config, f, indent=2, ensure_ascii=False)
             
             # NUEVO: Actualizar configuración en memoria
-            self.plantilla_config = config
+            self.plantilla_config = self._normalizar_config_plantilla(config)
             
             # Actualizar PDFGenerator con nueva configuración
-            self.pdf_generator = PDFGenerator(config)
+            self.pdf_generator = PDFGenerator(self.plantilla_config)
             
             self.config_status_label.config(text="✅ Configuración guardada exitosamente", foreground='green')
             messagebox.showinfo("Éxito", "Configuración de empresa y banco guardada correctamente.\n\nLos cambios se aplicarán en las próximas facturas generadas.")
