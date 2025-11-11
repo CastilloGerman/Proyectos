@@ -1611,6 +1611,49 @@ class AppPresupuestos:
             ttk.Label(totales_frame, text="IVA: No incluido", font=('Arial', 10, 'bold'), foreground='gray').pack(anchor='w')
         
         ttk.Label(totales_frame, text=f"Total: €{presupuesto['total']:.2f}", font=('Arial', 12, 'bold'), foreground='blue').pack(anchor='w')
+        
+        # Botones de acción
+        botones_frame = ttk.Frame(main_frame)
+        botones_frame.pack(fill='x', pady=(10, 0))
+        
+        def abrir_pdf_presupuesto():
+            """Busca y abre el PDF del presupuesto, o lo genera si no existe"""
+            try:
+                # Buscar PDF existente más reciente
+                patron = f"presupuesto_{presupuesto['id']}_*.pdf"
+                pdfs_encontrados = []
+                
+                if os.path.exists(self.carpeta_pdfs):
+                    for archivo in os.listdir(self.carpeta_pdfs):
+                        if archivo.startswith(f"presupuesto_{presupuesto['id']}_") and archivo.endswith('.pdf'):
+                            ruta_completa = os.path.join(self.carpeta_pdfs, archivo)
+                            pdfs_encontrados.append((ruta_completa, os.path.getmtime(ruta_completa)))
+                
+                if pdfs_encontrados:
+                    # Ordenar por fecha de modificación (más reciente primero)
+                    pdfs_encontrados.sort(key=lambda x: x[1], reverse=True)
+                    pdf_path = pdfs_encontrados[0][0]
+                else:
+                    # Generar PDF si no existe
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    nombre_archivo = f"presupuesto_{presupuesto['id']}_{timestamp}.pdf"
+                    pdf_path = os.path.join(self.carpeta_pdfs, nombre_archivo)
+                    os.makedirs(self.carpeta_pdfs, exist_ok=True)
+                    self.pdf_generator.generate_presupuesto_pdf(presupuesto, pdf_path)
+                
+                # Abrir PDF
+                if platform.system() == 'Windows':
+                    os.startfile(pdf_path)
+                elif platform.system() == 'Darwin':  # macOS
+                    subprocess.run(['open', pdf_path])
+                else:  # Linux
+                    subprocess.run(['xdg-open', pdf_path])
+                    
+            except Exception as e:
+                messagebox.showerror("Error", f"Error al abrir PDF: {str(e)}")
+        
+        ttk.Button(botones_frame, text="📄 Abrir PDF", command=abrir_pdf_presupuesto, style='Accent.TButton').pack(side='left', padx=(0, 10))
+        ttk.Button(botones_frame, text="Cerrar", command=detalle_window.destroy).pack(side='right')
     
     def eliminar_presupuesto(self):
         selection = self.presupuestos_tree.selection()
@@ -3812,8 +3855,8 @@ class AppPresupuestos:
         main_frame.pack(fill='both', expand=True)
         
         # Información de la factura
-        info_frame = ttk.LabelFrame(main_frame, text="Información de la Factura", padding=10)
-        info_frame.pack(fill='x', pady=(0, 10))
+        info_frame = ttk.LabelFrame(main_frame, text="Información de la Factura", padding=8)
+        info_frame.pack(fill='x', pady=(0, 8))
         
         ttk.Label(info_frame, text=f"Número de Factura: {factura.get('numero_factura', 'N/A')}", font=('Arial', 10, 'bold')).pack(anchor='w')
         ttk.Label(info_frame, text=f"Fecha: {factura['fecha_creacion'][:10]}").pack(anchor='w')
@@ -3826,8 +3869,8 @@ class AppPresupuestos:
         estado_label.pack(anchor='w')
         
         # Información del cliente
-        cliente_frame = ttk.LabelFrame(main_frame, text="Información del Cliente", padding=10)
-        cliente_frame.pack(fill='x', pady=(0, 10))
+        cliente_frame = ttk.LabelFrame(main_frame, text="Información del Cliente", padding=8)
+        cliente_frame.pack(fill='x', pady=(0, 8))
         
         ttk.Label(cliente_frame, text=f"Nombre: {factura['cliente_nombre']}").pack(anchor='w')
         ttk.Label(cliente_frame, text=f"Teléfono: {factura['telefono'] or 'N/A'}").pack(anchor='w')
@@ -3835,18 +3878,20 @@ class AppPresupuestos:
         ttk.Label(cliente_frame, text=f"Dirección: {factura['direccion'] or 'N/A'}").pack(anchor='w')
         
         # Items
-        items_frame = ttk.LabelFrame(main_frame, text="Items de la Factura", padding=10)
-        items_frame.pack(fill='both', expand=True, pady=(0, 10))
+        items_frame = ttk.LabelFrame(main_frame, text="Items de la Factura", padding=8)
+        items_frame.pack(fill='both', expand=True, pady=(0, 8))
         
         columns = ('Tipo', 'Descripción', 'Cantidad', 'Precio Unit.', 'Subtotal')
-        items_tree = ttk.Treeview(items_frame, columns=columns, show='headings', height=10)
+        items_tree = ttk.Treeview(items_frame, columns=columns, show='headings', height=6)
         
         for col in columns:
             items_tree.heading(col, text=col)
             if col == 'Tipo':
-                items_tree.column(col, width=80)
+                items_tree.column(col, width=70)
+            elif col == 'Descripción':
+                items_tree.column(col, width=200)
             else:
-                items_tree.column(col, width=150)
+                items_tree.column(col, width=100)
         
         items_scrollbar = ttk.Scrollbar(items_frame, orient='vertical', command=items_tree.yview)
         items_tree.configure(yscrollcommand=items_scrollbar.set)
@@ -3872,8 +3917,8 @@ class AppPresupuestos:
             ))
         
         # Totales
-        totales_frame = ttk.LabelFrame(main_frame, text="Totales", padding=10)
-        totales_frame.pack(fill='x')
+        totales_frame = ttk.LabelFrame(main_frame, text="Totales", padding=8)
+        totales_frame.pack(fill='x', pady=(0, 8))
         
         ttk.Label(totales_frame, text=f"Subtotal: €{factura['subtotal']:.2f}", font=('Arial', 10, 'bold')).pack(anchor='w')
         
@@ -3887,9 +3932,57 @@ class AppPresupuestos:
         
         # Notas
         if factura.get('notas'):
-            notas_frame = ttk.LabelFrame(main_frame, text="Notas", padding=10)
-            notas_frame.pack(fill='x', pady=(10, 0))
+            notas_frame = ttk.LabelFrame(main_frame, text="Notas", padding=8)
+            notas_frame.pack(fill='x', pady=(0, 8))
             ttk.Label(notas_frame, text=factura['notas'], wraplength=750).pack(anchor='w')
+        
+        # Botones de acción
+        botones_frame = ttk.Frame(main_frame)
+        botones_frame.pack(fill='x', pady=(5, 0))
+        
+        def abrir_pdf_factura():
+            """Busca y abre el PDF de la factura, o lo genera si no existe"""
+            try:
+                # Buscar PDF existente más reciente
+                numero_factura = factura.get('numero_factura', f"F{factura['id']:04d}")
+                numero_limpio = numero_factura.replace('/', '_').replace('\\', '_').replace(' ', '_')
+                pdfs_encontrados = []
+                
+                if os.path.exists(self.carpeta_facturas):
+                    for archivo in os.listdir(self.carpeta_facturas):
+                        # Buscar por número de factura o ID
+                        if (archivo.startswith(f"factura_{numero_limpio}_") or 
+                            archivo.startswith(f"factura_F{factura['id']:04d}_")) and archivo.endswith('.pdf'):
+                            # Excluir archivos temporales de vista previa
+                            if 'temp' not in archivo.lower():
+                                ruta_completa = os.path.join(self.carpeta_facturas, archivo)
+                                pdfs_encontrados.append((ruta_completa, os.path.getmtime(ruta_completa)))
+                
+                if pdfs_encontrados:
+                    # Ordenar por fecha de modificación (más reciente primero)
+                    pdfs_encontrados.sort(key=lambda x: x[1], reverse=True)
+                    pdf_path = pdfs_encontrados[0][0]
+                else:
+                    # Generar PDF si no existe
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    nombre_archivo = f"factura_{numero_limpio}_{timestamp}.pdf"
+                    pdf_path = os.path.join(self.carpeta_facturas, nombre_archivo)
+                    os.makedirs(self.carpeta_facturas, exist_ok=True)
+                    self.pdf_generator.generate_factura_pdf(factura, pdf_path)
+                
+                # Abrir PDF
+                if platform.system() == 'Windows':
+                    os.startfile(pdf_path)
+                elif platform.system() == 'Darwin':  # macOS
+                    subprocess.run(['open', pdf_path])
+                else:  # Linux
+                    subprocess.run(['xdg-open', pdf_path])
+                    
+            except Exception as e:
+                messagebox.showerror("Error", f"Error al abrir PDF: {str(e)}")
+        
+        ttk.Button(botones_frame, text="📄 Abrir PDF", command=abrir_pdf_factura, style='Accent.TButton').pack(side='left', padx=(0, 10))
+        ttk.Button(botones_frame, text="Cerrar", command=detalle_window.destroy).pack(side='right')
     
     def exportar_factura_pdf(self):
         """Exporta una factura a PDF"""

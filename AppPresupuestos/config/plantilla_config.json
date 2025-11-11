@@ -2,9 +2,9 @@
   "empresa": {
     "nombre": "Pinta Menos S.L.",
     "direccion": "Calle Pichi 12",
-    "codigo_postal": "46370",
+    "codigo_postal": "28001",
     "ciudad": "Chiva",
-    "provincia": "Valencia",
+    "provincia": "Madrid",
     "pais": "España",
     "telefono": "+34 123 456 789",
     "email": "castilean@gmail.com",
@@ -16,8 +16,7 @@
       "folio": "67",
       "seccion": "8",
       "hoja": "M-123456",
-      "inscripcion": "1ª",
-      "descripcion": "Provincia: Valencia, Tomo: 1234, Folio: 56, Seccion: 8, Hoja: V-123456, Inscripcion: 1ª"
+      "inscripcion": "1ª"
     }
   },
   "logo": {
@@ -36,8 +35,8 @@
     "notas_pie": "• Este presupuesto tiene una validez de 30 días.\n• Los precios incluyen IVA.\n• Para cualquier consulta, contacte con nosotros.",
     "texto_iva_incluido": "Los precios incluyen IVA.",
     "texto_iva_no_incluido": "Los precios NO incluyen IVA.",
-    "nota_factura_iva_incluido": "Los importes de esta factura incluyen IVA al 21%.",
-    "nota_factura_iva_exento": "Operación exenta según art. 20 de la Ley 37/1992 del IVA.",
+    "nota_factura_iva_incluido": "Los importes de esta factura incluyen IVA al tipo correspondiente.",
+    "nota_factura_iva_exento": "Operación exenta de IVA conforme a la normativa vigente.",
     "nota_factura_general": "Pago mediante transferencia en un plazo máximo de 30 días."
   },
   "margenes": {
