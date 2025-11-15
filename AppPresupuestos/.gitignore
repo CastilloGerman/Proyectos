@@ -61,3 +61,8 @@ vista_previa*.pdf
 
 # Logs
 *.log
+
+# PyInstaller
+*.spec
+build/
+dist/
