@@ -332,11 +332,57 @@ class PresupuestoManager:
             elif estado == 'Rechazado':
                 rechazados = cantidad
         
+        # Cálculos monetarios
+        query_valores = f"""
+            SELECT 
+                COALESCE(SUM(total), 0) as total_valor_emitidos,
+                COALESCE(AVG(total), 0) as promedio_presupuesto,
+                COALESCE(MAX(total), 0) as presupuesto_max,
+                COALESCE(MIN(total), 0) as presupuesto_min,
+                COALESCE(SUM(descuento_global_porcentaje * total / 100), 0) + 
+                COALESCE(SUM(descuento_global_fijo), 0) as total_descuentos
+            FROM presupuestos p
+            {where_sql}
+        """
+        result_valores = self.db.execute_query(query_valores, tuple(params))
+        valores = result_valores[0] if result_valores else {}
+        total_valor_emitidos = valores.get('total_valor_emitidos', 0) or 0
+        promedio_presupuesto = valores.get('promedio_presupuesto', 0) or 0
+        presupuesto_max = valores.get('presupuesto_max', 0) or 0
+        presupuesto_min = valores.get('presupuesto_min', 0) or 0
+        total_descuentos = valores.get('total_descuentos', 0) or 0
+        
+        # Valores por estado
+        query_valor_estados = f"""
+            SELECT 
+                COALESCE(estado, 'Pendiente') as estado,
+                COALESCE(SUM(total), 0) as valor_total
+            FROM presupuestos p
+            {where_sql}
+            GROUP BY COALESCE(estado, 'Pendiente')
+        """
+        result_valor_estados = self.db.execute_query(query_valor_estados, tuple(params))
+        
+        total_valor_pendientes = 0
+        total_valor_aprobados = 0
+        total_valor_rechazados = 0
+        
+        for row in result_valor_estados:
+            estado = row['estado']
+            valor = row['valor_total'] or 0
+            if estado == 'Pendiente':
+                total_valor_pendientes = valor
+            elif estado == 'Aprobado':
+                total_valor_aprobados = valor
+            elif estado == 'Rechazado':
+                total_valor_rechazados = valor
+        
         # Datos agrupados por mes para evolución
         query_mensual = f"""
             SELECT 
                 strftime('%Y-%m', p.fecha_creacion) as mes,
                 COUNT(*) as cantidad,
+                COALESCE(SUM(total), 0) as valor_total,
                 COALESCE(estado, 'Pendiente') as estado
             FROM presupuestos p
             {where_sql}
@@ -350,8 +396,98 @@ class PresupuestoManager:
             'pendientes': pendientes,
             'aprobados': aprobados,
             'rechazados': rechazados,
+            'total_valor_emitidos': total_valor_emitidos,
+            'total_valor_pendientes': total_valor_pendientes,
+            'total_valor_aprobados': total_valor_aprobados,
+            'total_valor_rechazados': total_valor_rechazados,
+            'promedio_presupuesto': promedio_presupuesto,
+            'presupuesto_max': presupuesto_max,
+            'presupuesto_min': presupuesto_min,
+            'total_descuentos': total_descuentos,
             'evolucion_mensual': result_mensual
         }
+
+    def obtener_tasa_conversion_presupuestos(self, fecha_inicio: str = None, fecha_fin: str = None) -> Dict[str, Any]:
+        """Calcula la tasa de conversión de presupuestos a facturas"""
+        where_clauses = []
+        params = []
+        
+        if fecha_inicio:
+            where_clauses.append("DATE(p.fecha_creacion) >= ?")
+            params.append(fecha_inicio)
+        
+        if fecha_fin:
+            where_clauses.append("DATE(p.fecha_creacion) <= ?")
+            params.append(fecha_fin)
+        
+        # Construir WHERE clause
+        if where_clauses:
+            where_sql = "WHERE " + " AND ".join(where_clauses)
+            where_sql_aprobados = where_sql + " AND COALESCE(estado, 'Pendiente') = 'Aprobado'"
+        else:
+            where_sql = ""
+            where_sql_aprobados = "WHERE COALESCE(estado, 'Pendiente') = 'Aprobado'"
+        
+        # Presupuestos aprobados
+        query_aprobados = f"""
+            SELECT COUNT(*) as total
+            FROM presupuestos p
+            {where_sql_aprobados}
+        """
+        result_aprobados = self.db.execute_query(query_aprobados, tuple(params))
+        total_aprobados = result_aprobados[0]['total'] if result_aprobados else 0
+        
+        # Presupuestos que tienen factura asociada
+        base_query_con_factura = """
+            SELECT COUNT(DISTINCT p.id) as total
+            FROM presupuestos p
+            INNER JOIN facturas f ON f.presupuesto_id = p.id
+        """
+        query_con_factura = base_query_con_factura + where_sql
+        result_con_factura = self.db.execute_query(query_con_factura, tuple(params))
+        total_con_factura = result_con_factura[0]['total'] if result_con_factura else 0
+        
+        # Calcular tasa de conversión
+        tasa_conversion = 0.0
+        if total_aprobados > 0:
+            tasa_conversion = (total_con_factura / total_aprobados) * 100
+        
+        return {
+            'total_aprobados': total_aprobados,
+            'total_con_factura': total_con_factura,
+            'tasa_conversion': tasa_conversion
+        }
+    
+    def obtener_top_clientes_presupuestos(self, fecha_inicio: str = None, fecha_fin: str = None, limite: int = 10) -> List[Dict[str, Any]]:
+        """Obtiene los top clientes por valor de presupuestos"""
+        where_clauses = []
+        params = []
+        
+        if fecha_inicio:
+            where_clauses.append("DATE(p.fecha_creacion) >= ?")
+            params.append(fecha_inicio)
+        
+        if fecha_fin:
+            where_clauses.append("DATE(p.fecha_creacion) <= ?")
+            params.append(fecha_fin)
+        
+        where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+        
+        query = f"""
+            SELECT 
+                c.id as cliente_id,
+                c.nombre as cliente_nombre,
+                COUNT(p.id) as cantidad_presupuestos,
+                COALESCE(SUM(p.total), 0) as total_valor
+            FROM presupuestos p
+            JOIN clientes c ON p.cliente_id = c.id
+            {where_sql}
+            GROUP BY c.id, c.nombre
+            ORDER BY total_valor DESC
+            LIMIT ?
+        """
+        params.append(limite)
+        return self.db.execute_query(query, tuple(params))
 
 # Instancia global del manager de presupuestos
 presupuesto_manager = PresupuestoManager()

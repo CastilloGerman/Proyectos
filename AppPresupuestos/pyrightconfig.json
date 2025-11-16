@@ -1,0 +1,39 @@
+{
+  "reportMissingImports": "none",
+  "reportMissingTypeStubs": "none",
+  "reportGeneralTypeIssues": "none",
+  "reportArgumentType": "none",
+  "reportAssignmentType": "none",
+  "reportAttributeAccessIssue": "none",
+  "reportCallIssue": "none",
+  "reportIncompatibleMethodOverride": "none",
+  "reportIncompatibleVariableOverride": "none",
+  "reportOperatorIssue": "none",
+  "reportOptionalMemberAccess": "none",
+  "reportOptionalSubscript": "none",
+  "reportPrivateImportUsage": "none",
+  "reportUnknownMemberType": "none",
+  "reportUnknownArgumentType": "none",
+  "reportUnknownVariableType": "none",
+  "reportUntypedFunctionCall": "none",
+  "reportUntypedClass": "none",
+  "reportUntypedBaseClass": "none",
+  "reportUntypedNamedTuple": "none",
+  "reportPrivateUsage": "none",
+  "pythonVersion": "3.13",
+  "typeCheckingMode": "off",
+  "include": [
+    "presupuestos",
+    "ui",
+    "main.py"
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.*",
+    "venv",
+    "build",
+    "output"
+  ]
+}
+

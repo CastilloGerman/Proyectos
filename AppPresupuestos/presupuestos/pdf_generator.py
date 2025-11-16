@@ -8,7 +8,8 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 import io
 import os
-from datetime import datetime
+import re
+from datetime import datetime, timedelta
 from typing import Dict, Any, List
 
 class PDFGenerator:
@@ -657,8 +658,35 @@ class PDFGenerator:
             if nota_iva:
                 notas_generadas.append(nota_iva)
             
-            nota_general = notas_config.get('nota_factura_general')
+            # Calcular días de plazo desde fecha de creación hasta fecha de vencimiento
+            dias_plazo = None
+            fecha_creacion = factura.get('fecha_creacion', '')
+            fecha_vencimiento = factura.get('fecha_vencimiento', '')
+            
+            if fecha_creacion and fecha_vencimiento:
+                try:
+                    # Limpiar fechas si tienen hora
+                    if len(fecha_creacion) > 10:
+                        fecha_creacion = fecha_creacion[:10]
+                    if len(fecha_vencimiento) > 10:
+                        fecha_vencimiento = fecha_vencimiento[:10]
+                    
+                    fecha_creacion_obj = datetime.strptime(fecha_creacion, '%Y-%m-%d')
+                    fecha_vencimiento_obj = datetime.strptime(fecha_vencimiento, '%Y-%m-%d')
+                    diferencia = fecha_vencimiento_obj - fecha_creacion_obj
+                    dias_plazo = diferencia.days
+                except (ValueError, TypeError):
+                    dias_plazo = None
+            
+            nota_general = notas_config.get('nota_factura_general', '')
             if nota_general:
+                # Reemplazar el número de días dinámicamente si se puede calcular
+                if dias_plazo is not None and dias_plazo > 0:
+                    # Buscar y reemplazar cualquier número seguido de "días" o "día"
+                    # Patrón para encontrar números seguidos de "días" o "día" (con o sin espacios)
+                    # Ejemplos: "30 días", "30días", "30 día", "30día"
+                    patron = r'\d+\s*d[ií]a[s]?'
+                    nota_general = re.sub(patron, f'{dias_plazo} días', nota_general, flags=re.IGNORECASE)
                 notas_generadas.append(nota_general)
         
         if not notas_generadas:

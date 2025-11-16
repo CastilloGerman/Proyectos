@@ -4590,6 +4590,43 @@ También puedes configurar tu IDE para usar el Python del venv:
         # Bindear todos los widgets existentes
         bind_all_children(scrollable_frame)
         
+        # ============================================
+        # SECCIÓN 1: DASHBOARD FINANCIERO (KPI Cards)
+        # ============================================
+        dashboard_frame = ttk.LabelFrame(scrollable_frame, text="📈 Dashboard Financiero", padding=15)
+        dashboard_frame.pack(fill='x', padx=10, pady=10)
+        
+        kpi_frame = ttk.Frame(dashboard_frame)
+        kpi_frame.pack(fill='x', pady=10)
+        
+        # KPI Card 1: Facturación Total
+        kpi_card1 = ttk.Frame(kpi_frame, relief='raised', borderwidth=2)
+        kpi_card1.pack(side='left', fill='both', expand=True, padx=5)
+        ttk.Label(kpi_card1, text="Facturación Total", font=('Segoe UI', 10, 'bold')).pack(pady=(10, 5))
+        self.kpi_facturacion_total_label = ttk.Label(kpi_card1, text="€0.00", font=('Segoe UI', 18, 'bold'), foreground='#27ae60')
+        self.kpi_facturacion_total_label.pack(pady=(0, 10))
+        
+        # KPI Card 2: Pendiente de Cobro
+        kpi_card2 = ttk.Frame(kpi_frame, relief='raised', borderwidth=2)
+        kpi_card2.pack(side='left', fill='both', expand=True, padx=5)
+        ttk.Label(kpi_card2, text="Pendiente de Cobro", font=('Segoe UI', 10, 'bold')).pack(pady=(10, 5))
+        self.kpi_pendiente_cobro_label = ttk.Label(kpi_card2, text="€0.00", font=('Segoe UI', 18, 'bold'), foreground='#e74c3c')
+        self.kpi_pendiente_cobro_label.pack(pady=(0, 10))
+        
+        # KPI Card 3: Facturación Promedio
+        kpi_card3 = ttk.Frame(kpi_frame, relief='raised', borderwidth=2)
+        kpi_card3.pack(side='left', fill='both', expand=True, padx=5)
+        ttk.Label(kpi_card3, text="Facturación Promedio", font=('Segoe UI', 10, 'bold')).pack(pady=(10, 5))
+        self.kpi_promedio_label = ttk.Label(kpi_card3, text="€0.00", font=('Segoe UI', 18, 'bold'), foreground='#3498db')
+        self.kpi_promedio_label.pack(pady=(0, 10))
+        
+        # KPI Card 4: Comparación Mes Anterior
+        kpi_card4 = ttk.Frame(kpi_frame, relief='raised', borderwidth=2)
+        kpi_card4.pack(side='left', fill='both', expand=True, padx=5)
+        ttk.Label(kpi_card4, text="vs Mes Anterior", font=('Segoe UI', 10, 'bold')).pack(pady=(10, 5))
+        self.kpi_comparacion_label = ttk.Label(kpi_card4, text="+0.0%", font=('Segoe UI', 18, 'bold'), foreground='#9b59b6')
+        self.kpi_comparacion_label.pack(pady=(0, 10))
+        
         # Sección de Presupuestos
         presupuestos_frame = ttk.LabelFrame(scrollable_frame, text="📊 Estadísticas de Presupuestos", padding=15)
         presupuestos_frame.pack(fill='x', padx=10, pady=10)
@@ -4635,6 +4672,30 @@ También puedes configurar tu IDE para usar el Python del venv:
         self.rechazados_label = ttk.Label(stats_left_frame, text="Rechazados: 0 (0%)", 
                                           font=('Segoe UI', 10), style='TLabel')
         self.rechazados_label.pack(anchor='w', pady=3)
+        
+        # Separador
+        ttk.Separator(stats_left_frame, orient='horizontal').pack(fill='x', pady=10)
+        
+        # Métricas monetarias
+        self.valor_total_emitidos_label = ttk.Label(stats_left_frame, text="Valor Total Emitido: €0.00", 
+                                                     font=('Segoe UI', 11, 'bold'), style='TLabel', foreground='#2c3e50')
+        self.valor_total_emitidos_label.pack(anchor='w', pady=3)
+        
+        self.valor_aprobados_label = ttk.Label(stats_left_frame, text="Valor Aprobado: €0.00", 
+                                               font=('Segoe UI', 10), style='TLabel', foreground='#27ae60')
+        self.valor_aprobados_label.pack(anchor='w', pady=2)
+        
+        self.valor_pendientes_label = ttk.Label(stats_left_frame, text="Valor Pendiente: €0.00", 
+                                                font=('Segoe UI', 10), style='TLabel', foreground='#f39c12')
+        self.valor_pendientes_label.pack(anchor='w', pady=2)
+        
+        self.promedio_presupuesto_label = ttk.Label(stats_left_frame, text="Promedio por Presupuesto: €0.00", 
+                                                     font=('Segoe UI', 10), style='TLabel')
+        self.promedio_presupuesto_label.pack(anchor='w', pady=2)
+        
+        self.tasa_conversion_label = ttk.Label(stats_left_frame, text="Tasa Conversión: 0.0%", 
+                                               font=('Segoe UI', 10, 'bold'), style='TLabel', foreground='#9b59b6')
+        self.tasa_conversion_label.pack(anchor='w', pady=3)
         
         # Gráfico de presupuestos
         chart_presupuestos_frame = ttk.Frame(stats_presupuestos_frame)
@@ -4687,6 +4748,26 @@ También puedes configurar tu IDE para usar el Python del venv:
                                        font=('Segoe UI', 10), style='TLabel')
         self.pagadas_label.pack(anchor='w', pady=3)
         
+        # Separador
+        ttk.Separator(stats_left_frame_facturas, orient='horizontal').pack(fill='x', pady=10)
+        
+        # Métricas monetarias
+        self.total_facturado_label = ttk.Label(stats_left_frame_facturas, text="Total Facturado: €0.00", 
+                                               font=('Segoe UI', 11, 'bold'), style='TLabel', foreground='#27ae60')
+        self.total_facturado_label.pack(anchor='w', pady=3)
+        
+        self.pendiente_cobro_label = ttk.Label(stats_left_frame_facturas, text="Pendiente de Cobro: €0.00", 
+                                               font=('Segoe UI', 10), style='TLabel', foreground='#e74c3c')
+        self.pendiente_cobro_label.pack(anchor='w', pady=2)
+        
+        self.promedio_factura_label = ttk.Label(stats_left_frame_facturas, text="Promedio por Factura: €0.00", 
+                                                font=('Segoe UI', 10), style='TLabel')
+        self.promedio_factura_label.pack(anchor='w', pady=2)
+        
+        self.dias_promedio_cobro_label = ttk.Label(stats_left_frame_facturas, text="Días Promedio de Cobro: 0", 
+                                                   font=('Segoe UI', 10), style='TLabel')
+        self.dias_promedio_cobro_label.pack(anchor='w', pady=2)
+        
         # Gráfico de facturas
         chart_facturas_frame = ttk.Frame(stats_facturas_frame)
         chart_facturas_frame.pack(side='right', fill='both', expand=True)
@@ -4701,23 +4782,205 @@ También puedes configurar tu IDE para usar el Python del venv:
         self._unbind_from_mousewheel_metricas = _unbind_from_mousewheel
         self._bind_all_children_metricas = bind_all_children
         
+        # ============================================
+        # SECCIÓN 4: ANÁLISIS DE COBRANZA
+        # ============================================
+        cobranza_frame = ttk.LabelFrame(scrollable_frame, text="⚠️ Análisis de Cobranza", padding=15)
+        cobranza_frame.pack(fill='x', padx=10, pady=10)
+        
+        cobranza_content_frame = ttk.Frame(cobranza_frame)
+        cobranza_content_frame.pack(fill='both', expand=True)
+        
+        # Facturas vencidas
+        vencidas_frame = ttk.LabelFrame(cobranza_content_frame, text="Facturas Vencidas", padding=10)
+        vencidas_frame.pack(side='left', fill='both', expand=True, padx=(0, 5))
+        
+        self.facturas_vencidas_tree = ttk.Treeview(vencidas_frame, columns=('Número', 'Cliente', 'Monto', 'Días Vencidos'), 
+                                                   show='headings', height=6)
+        self.facturas_vencidas_tree.heading('Número', text='Número')
+        self.facturas_vencidas_tree.heading('Cliente', text='Cliente')
+        self.facturas_vencidas_tree.heading('Monto', text='Monto')
+        self.facturas_vencidas_tree.heading('Días Vencidos', text='Días Vencidos')
+        self.facturas_vencidas_tree.column('Número', width=120)
+        self.facturas_vencidas_tree.column('Cliente', width=200)
+        self.facturas_vencidas_tree.column('Monto', width=100)
+        self.facturas_vencidas_tree.column('Días Vencidos', width=120)
+        self.facturas_vencidas_tree.pack(fill='both', expand=True)
+        
+        self.monto_total_vencido_label = ttk.Label(vencidas_frame, text="Monto Total Vencido: €0.00", 
+                                                   font=('Segoe UI', 10, 'bold'), foreground='#e74c3c')
+        self.monto_total_vencido_label.pack(pady=5)
+        
+        # Facturas próximas a vencer
+        proximas_frame = ttk.LabelFrame(cobranza_content_frame, text="Próximas a Vencer (30 días)", padding=10)
+        proximas_frame.pack(side='right', fill='both', expand=True, padx=(5, 0))
+        
+        self.facturas_proximas_tree = ttk.Treeview(proximas_frame, columns=('Número', 'Cliente', 'Monto', 'Días Restantes'), 
+                                                   show='headings', height=6)
+        self.facturas_proximas_tree.heading('Número', text='Número')
+        self.facturas_proximas_tree.heading('Cliente', text='Cliente')
+        self.facturas_proximas_tree.heading('Monto', text='Monto')
+        self.facturas_proximas_tree.heading('Días Restantes', text='Días Restantes')
+        self.facturas_proximas_tree.column('Número', width=120)
+        self.facturas_proximas_tree.column('Cliente', width=200)
+        self.facturas_proximas_tree.column('Monto', width=100)
+        self.facturas_proximas_tree.column('Días Restantes', width=120)
+        self.facturas_proximas_tree.pack(fill='both', expand=True)
+        
+        self.monto_total_proximas_label = ttk.Label(proximas_frame, text="Monto Total Próximo: €0.00", 
+                                                    font=('Segoe UI', 10, 'bold'), foreground='#f39c12')
+        self.monto_total_proximas_label.pack(pady=5)
+        
+        # ============================================
+        # SECCIÓN 5: TOP CLIENTES
+        # ============================================
+        top_clientes_frame = ttk.LabelFrame(scrollable_frame, text="👥 Top Clientes", padding=15)
+        top_clientes_frame.pack(fill='x', padx=10, pady=10)
+        
+        top_clientes_content = ttk.Frame(top_clientes_frame)
+        top_clientes_content.pack(fill='both', expand=True)
+        
+        # Tabla de top clientes
+        clientes_table_frame = ttk.Frame(top_clientes_content)
+        clientes_table_frame.pack(side='left', fill='both', expand=True, padx=(0, 10))
+        
+        self.top_clientes_tree = ttk.Treeview(clientes_table_frame, columns=('Cliente', 'Facturas', 'Total Facturado', 'Promedio'), 
+                                             show='headings', height=8)
+        self.top_clientes_tree.heading('Cliente', text='Cliente')
+        self.top_clientes_tree.heading('Facturas', text='Facturas')
+        self.top_clientes_tree.heading('Total Facturado', text='Total Facturado')
+        self.top_clientes_tree.heading('Promedio', text='Promedio')
+        self.top_clientes_tree.column('Cliente', width=200)
+        self.top_clientes_tree.column('Facturas', width=100)
+        self.top_clientes_tree.column('Total Facturado', width=150)
+        self.top_clientes_tree.column('Promedio', width=120)
+        self.top_clientes_tree.pack(fill='both', expand=True)
+        
+        # Gráfico de top clientes
+        chart_clientes_frame = ttk.Frame(top_clientes_content)
+        chart_clientes_frame.pack(side='right', fill='both', expand=True)
+        
+        self.fig_clientes = Figure(figsize=(5, 4), dpi=100)
+        self.ax_clientes = self.fig_clientes.add_subplot(111)
+        self.canvas_clientes = FigureCanvasTkAgg(self.fig_clientes, chart_clientes_frame)
+        self.canvas_clientes.get_tk_widget().pack(fill='both', expand=True)
+        
+        # ============================================
+        # SECCIÓN 6: TOP MATERIALES
+        # ============================================
+        top_materiales_frame = ttk.LabelFrame(scrollable_frame, text="📦 Top Materiales/Servicios", padding=15)
+        top_materiales_frame.pack(fill='x', padx=10, pady=10)
+        
+        materiales_tabs = ttk.Notebook(top_materiales_frame)
+        materiales_tabs.pack(fill='both', expand=True)
+        
+        # Tab por ingresos
+        tab_ingresos = ttk.Frame(materiales_tabs)
+        materiales_tabs.add(tab_ingresos, text="Por Ingresos")
+        
+        materiales_content_ingresos = ttk.Frame(tab_ingresos)
+        materiales_content_ingresos.pack(fill='both', expand=True)
+        
+        self.top_materiales_ingresos_tree = ttk.Treeview(materiales_content_ingresos, 
+                                                        columns=('Material', 'Ingresos', 'Cantidad', 'Veces Usado'), 
+                                                        show='headings', height=6)
+        self.top_materiales_ingresos_tree.heading('Material', text='Material')
+        self.top_materiales_ingresos_tree.heading('Ingresos', text='Ingresos Total')
+        self.top_materiales_ingresos_tree.heading('Cantidad', text='Cantidad')
+        self.top_materiales_ingresos_tree.heading('Veces Usado', text='Veces Usado')
+        self.top_materiales_ingresos_tree.column('Material', width=200)
+        self.top_materiales_ingresos_tree.column('Ingresos', width=120)
+        self.top_materiales_ingresos_tree.column('Cantidad', width=100)
+        self.top_materiales_ingresos_tree.column('Veces Usado', width=100)
+        self.top_materiales_ingresos_tree.pack(side='left', fill='both', expand=True, padx=(0, 10))
+        
+        chart_materiales_frame = ttk.Frame(materiales_content_ingresos)
+        chart_materiales_frame.pack(side='right', fill='both', expand=True)
+        
+        self.fig_materiales = Figure(figsize=(5, 4), dpi=100)
+        self.ax_materiales = self.fig_materiales.add_subplot(111)
+        self.canvas_materiales = FigureCanvasTkAgg(self.fig_materiales, chart_materiales_frame)
+        self.canvas_materiales.get_tk_widget().pack(fill='both', expand=True)
+        
+        # Tab por cantidad
+        tab_cantidad = ttk.Frame(materiales_tabs)
+        materiales_tabs.add(tab_cantidad, text="Por Cantidad")
+        
+        self.top_materiales_cantidad_tree = ttk.Treeview(tab_cantidad, 
+                                                         columns=('Material', 'Cantidad', 'Ingresos', 'Veces Usado'), 
+                                                         show='headings', height=8)
+        self.top_materiales_cantidad_tree.heading('Material', text='Material')
+        self.top_materiales_cantidad_tree.heading('Cantidad', text='Cantidad Total')
+        self.top_materiales_cantidad_tree.heading('Ingresos', text='Ingresos Total')
+        self.top_materiales_cantidad_tree.heading('Veces Usado', text='Veces Usado')
+        self.top_materiales_cantidad_tree.column('Material', width=200)
+        self.top_materiales_cantidad_tree.column('Cantidad', width=120)
+        self.top_materiales_cantidad_tree.column('Ingresos', width=120)
+        self.top_materiales_cantidad_tree.column('Veces Usado', width=100)
+        self.top_materiales_cantidad_tree.pack(fill='both', expand=True, padx=10, pady=10)
+        
+        # ============================================
+        # SECCIÓN 7: ANÁLISIS DE DESCUENTOS
+        # ============================================
+        descuentos_frame = ttk.LabelFrame(scrollable_frame, text="💸 Análisis de Descuentos", padding=15)
+        descuentos_frame.pack(fill='x', padx=10, pady=10)
+        
+        descuentos_content = ttk.Frame(descuentos_frame)
+        descuentos_content.pack(fill='x')
+        
+        self.total_descuentos_label = ttk.Label(descuentos_content, text="Total Descuentos Aplicados: €0.00", 
+                                                font=('Segoe UI', 12, 'bold'), foreground='#e67e22')
+        self.total_descuentos_label.pack(side='left', padx=10)
+        
+        self.promedio_descuento_label = ttk.Label(descuentos_content, text="Promedio por Factura/Presupuesto: €0.00", 
+                                                   font=('Segoe UI', 10))
+        self.promedio_descuento_label.pack(side='left', padx=10)
+        
+        # ============================================
+        # SECCIÓN 8: COMPARACIONES TEMPORALES
+        # ============================================
+        comparaciones_frame = ttk.LabelFrame(scrollable_frame, text="📊 Comparaciones Temporales", padding=15)
+        comparaciones_frame.pack(fill='x', padx=10, pady=10)
+        
+        comparaciones_content = ttk.Frame(comparaciones_frame)
+        comparaciones_content.pack(fill='both', expand=True)
+        
+        # Gráfico de evolución mensual
+        chart_evolucion_frame = ttk.Frame(comparaciones_content)
+        chart_evolucion_frame.pack(fill='both', expand=True)
+        
+        self.fig_evolucion = Figure(figsize=(10, 5), dpi=100)
+        self.ax_evolucion = self.fig_evolucion.add_subplot(111)
+        self.canvas_evolucion = FigureCanvasTkAgg(self.fig_evolucion, chart_evolucion_frame)
+        self.canvas_evolucion.get_tk_widget().pack(fill='both', expand=True)
+        
         # Cargar datos iniciales
+        self.actualizar_dashboard_financiero()
         self.actualizar_metricas_presupuestos()
         self.actualizar_metricas_facturas()
+        self.actualizar_analisis_cobranza()
+        self.actualizar_top_clientes()
+        self.actualizar_top_materiales()
+        self.actualizar_comparaciones_temporales()
         
         # Volver a bindear después de crear todos los widgets y gráficos para asegurar que funcione en toda el área
         bind_all_children(scrollable_frame)
         
         # También bindear los widgets de matplotlib directamente
         try:
-            if hasattr(self, 'canvas_presupuestos') and self.canvas_presupuestos:
-                matplotlib_widget = self.canvas_presupuestos.get_tk_widget()
-                matplotlib_widget.bind('<Enter>', _bind_to_mousewheel)
-                matplotlib_widget.bind('<Leave>', _unbind_from_mousewheel)
-            if hasattr(self, 'canvas_facturas') and self.canvas_facturas:
-                matplotlib_widget = self.canvas_facturas.get_tk_widget()
-                matplotlib_widget.bind('<Enter>', _bind_to_mousewheel)
-                matplotlib_widget.bind('<Leave>', _unbind_from_mousewheel)
+            matplotlib_widgets = [
+                ('canvas_presupuestos', self.canvas_presupuestos),
+                ('canvas_facturas', self.canvas_facturas),
+                ('canvas_clientes', self.canvas_clientes),
+                ('canvas_materiales', self.canvas_materiales),
+                ('canvas_evolucion', self.canvas_evolucion)
+            ]
+            
+            for attr_name, canvas_obj in matplotlib_widgets:
+                if hasattr(self, attr_name) and canvas_obj:
+                    matplotlib_widget = canvas_obj.get_tk_widget()
+                    matplotlib_widget.bind('<Enter>', _bind_to_mousewheel)
+                    matplotlib_widget.bind('<Leave>', _unbind_from_mousewheel)
         except:
             pass
     
@@ -4768,10 +5031,16 @@ También puedes configurar tu IDE para usar el Python del venv:
     def on_mes_changed_presupuestos(self, event=None):
         """Maneja el cambio de mes en el filtro de presupuestos"""
         self.actualizar_metricas_presupuestos()
+        # También actualizar descuentos ya que incluye presupuestos
+        self.actualizar_comparaciones_temporales()
     
     def on_mes_changed_facturas(self, event=None):
         """Maneja el cambio de mes en el filtro de facturas"""
         self.actualizar_metricas_facturas()
+        self.actualizar_top_clientes()
+        self.actualizar_top_materiales()
+        # También actualizar descuentos ya que incluye facturas
+        self.actualizar_comparaciones_temporales()
     
     def actualizar_metricas_presupuestos(self):
         """Actualiza las métricas de presupuestos según el filtro seleccionado"""
@@ -4820,6 +5089,22 @@ También puedes configurar tu IDE para usar el Python del venv:
         self.pendientes_label.config(text=f"Pendientes: {pendientes} ({porcentaje_pendientes:.1f}%)")
         self.aprobados_label.config(text=f"Aprobados: {aprobados} ({porcentaje_aprobados:.1f}%)")
         self.rechazados_label.config(text=f"Rechazados: {rechazados} ({porcentaje_rechazados:.1f}%)")
+        
+        # Actualizar métricas monetarias
+        valor_total = stats.get('total_valor_emitidos', 0) or 0
+        valor_aprobados = stats.get('total_valor_aprobados', 0) or 0
+        valor_pendientes = stats.get('total_valor_pendientes', 0) or 0
+        promedio = stats.get('promedio_presupuesto', 0) or 0
+        
+        self.valor_total_emitidos_label.config(text=f"Valor Total Emitido: €{valor_total:.2f}")
+        self.valor_aprobados_label.config(text=f"Valor Aprobado: €{valor_aprobados:.2f}")
+        self.valor_pendientes_label.config(text=f"Valor Pendiente: €{valor_pendientes:.2f}")
+        self.promedio_presupuesto_label.config(text=f"Promedio por Presupuesto: €{promedio:.2f}")
+        
+        # Tasa de conversión
+        conversion = presupuesto_manager.obtener_tasa_conversion_presupuestos(fecha_inicio, fecha_fin)
+        tasa = conversion.get('tasa_conversion', 0) or 0
+        self.tasa_conversion_label.config(text=f"Tasa Conversión: {tasa:.1f}%")
         
         # Actualizar gráfico
         self.ax_presupuestos.clear()
@@ -4900,6 +5185,17 @@ También puedes configurar tu IDE para usar el Python del venv:
         self.no_pagadas_label.config(text=f"No Pagadas: {no_pagadas} ({porcentaje_no_pagadas:.1f}%)")
         self.pagadas_label.config(text=f"Pagadas: {pagadas} ({porcentaje_pagadas:.1f}%)")
         
+        # Actualizar métricas monetarias
+        total_facturado = stats.get('total_facturado', 0) or 0
+        pendiente_cobro = stats.get('total_pendiente_cobro', 0) or 0
+        promedio = stats.get('promedio_factura', 0) or 0
+        dias_promedio = factura_manager.obtener_dias_promedio_cobro(fecha_inicio, fecha_fin)
+        
+        self.total_facturado_label.config(text=f"Total Facturado: €{total_facturado:.2f}")
+        self.pendiente_cobro_label.config(text=f"Pendiente de Cobro: €{pendiente_cobro:.2f}")
+        self.promedio_factura_label.config(text=f"Promedio por Factura: €{promedio:.2f}")
+        self.dias_promedio_cobro_label.config(text=f"Días Promedio de Cobro: {int(dias_promedio)}")
+        
         # Actualizar gráfico
         self.ax_facturas.clear()
         
@@ -4928,6 +5224,301 @@ También puedes configurar tu IDE para usar el Python del venv:
             self.ax_facturas.set_title('Distribución de Facturas por Estado de Pago', fontsize=12, fontweight='bold')
         
         self.canvas_facturas.draw()
+    
+    def actualizar_dashboard_financiero(self):
+        """Actualiza el dashboard financiero con KPIs principales"""
+        # Obtener mes actual
+        ahora = datetime.now()
+        fecha_inicio_mes = ahora.replace(day=1).strftime("%Y-%m-%d")
+        fecha_fin_mes = ahora.strftime("%Y-%m-%d")
+        
+        # Mes anterior
+        primer_dia_mes_anterior = (ahora.replace(day=1) - timedelta(days=1)).replace(day=1)
+        ultimo_dia_mes_anterior = ahora.replace(day=1) - timedelta(days=1)
+        fecha_inicio_anterior = primer_dia_mes_anterior.strftime("%Y-%m-%d")
+        fecha_fin_anterior = ultimo_dia_mes_anterior.strftime("%Y-%m-%d")
+        
+        # Estadísticas mes actual
+        stats_actual = factura_manager.obtener_estadisticas_facturas(fecha_inicio_mes, fecha_fin_mes)
+        facturacion_actual = stats_actual.get('total_facturado', 0) or 0
+        pendiente_actual = stats_actual.get('total_pendiente_cobro', 0) or 0
+        promedio_actual = stats_actual.get('promedio_factura', 0) or 0
+        
+        # Estadísticas mes anterior
+        stats_anterior = factura_manager.obtener_estadisticas_facturas(fecha_inicio_anterior, fecha_fin_anterior)
+        facturacion_anterior = stats_anterior.get('total_facturado', 0) or 0
+        
+        # Calcular comparación
+        if facturacion_anterior > 0:
+            cambio_porcentaje = ((facturacion_actual - facturacion_anterior) / facturacion_anterior) * 100
+            signo = "+" if cambio_porcentaje >= 0 else ""
+            self.kpi_comparacion_label.config(text=f"{signo}{cambio_porcentaje:.1f}%", 
+                                             foreground='#27ae60' if cambio_porcentaje >= 0 else '#e74c3c')
+        else:
+            self.kpi_comparacion_label.config(text="N/A", foreground='#95a5a6')
+        
+        # Actualizar KPIs
+        self.kpi_facturacion_total_label.config(text=f"€{facturacion_actual:.2f}")
+        self.kpi_pendiente_cobro_label.config(text=f"€{pendiente_actual:.2f}")
+        self.kpi_promedio_label.config(text=f"€{promedio_actual:.2f}")
+    
+    def actualizar_analisis_cobranza(self):
+        """Actualiza el análisis de cobranza con facturas vencidas y próximas"""
+        # Facturas vencidas
+        vencidas_data = factura_manager.obtener_facturas_vencidas()
+        
+        # Limpiar tabla
+        for item in self.facturas_vencidas_tree.get_children():
+            self.facturas_vencidas_tree.delete(item)
+        
+        # Agregar facturas vencidas
+        for factura in vencidas_data.get('facturas', []):
+            numero = factura.get('numero_factura', '')
+            cliente = factura.get('cliente_nombre', '')
+            monto = factura.get('total', 0) or 0
+            dias_vencidos = int(factura.get('dias_vencidos', 0) or 0)
+            
+            self.facturas_vencidas_tree.insert('', 'end', values=(
+                numero, cliente, f"€{monto:.2f}", f"{dias_vencidos} días"
+            ))
+        
+        monto_total_vencido = vencidas_data.get('monto_total_vencido', 0) or 0
+        self.monto_total_vencido_label.config(text=f"Monto Total Vencido: €{monto_total_vencido:.2f}")
+        
+        # Facturas próximas a vencer
+        proximas_data = factura_manager.obtener_facturas_proximas_vencer(30)
+        
+        # Limpiar tabla
+        for item in self.facturas_proximas_tree.get_children():
+            self.facturas_proximas_tree.delete(item)
+        
+        # Agregar facturas próximas
+        for factura in proximas_data.get('facturas', []):
+            numero = factura.get('numero_factura', '')
+            cliente = factura.get('cliente_nombre', '')
+            monto = factura.get('total', 0) or 0
+            dias_restantes = int(factura.get('dias_restantes', 0) or 0)
+            
+            self.facturas_proximas_tree.insert('', 'end', values=(
+                numero, cliente, f"€{monto:.2f}", f"{dias_restantes} días"
+            ))
+        
+        monto_total_proximas = proximas_data.get('monto_total', 0) or 0
+        self.monto_total_proximas_label.config(text=f"Monto Total Próximo: €{monto_total_proximas:.2f}")
+    
+    def actualizar_top_clientes(self):
+        """Actualiza la sección de top clientes"""
+        mes_seleccionado = self.mes_filtro_facturas_var.get()
+        
+        fecha_inicio = None
+        fecha_fin = None
+        
+        if mes_seleccionado != "Todos":
+            match = re.search(r'\((\d{4}-\d{2})\)', mes_seleccionado)
+            if match:
+                año_mes = match.group(1)
+                fecha_inicio = f"{año_mes}-01"
+                año, mes = año_mes.split('-')
+                mes_int = int(mes)
+                if mes_int == 12:
+                    fecha_fin = f"{int(año)}-12-31"
+                elif mes_int in [1, 3, 5, 7, 8, 10]:
+                    fecha_fin = f"{año}-{mes}-31"
+                elif mes_int in [4, 6, 9, 11]:
+                    fecha_fin = f"{año}-{mes}-30"
+                else:
+                    if int(año) % 4 == 0:
+                        fecha_fin = f"{año}-02-29"
+                    else:
+                        fecha_fin = f"{año}-02-28"
+        
+        top_clientes = factura_manager.obtener_top_clientes_facturas(fecha_inicio, fecha_fin, 10)
+        
+        # Limpiar tabla
+        for item in self.top_clientes_tree.get_children():
+            self.top_clientes_tree.delete(item)
+        
+        # Agregar clientes
+        for cliente in top_clientes:
+            nombre = cliente.get('cliente_nombre', '')
+            facturas = cliente.get('cantidad_facturas', 0) or 0
+            total = cliente.get('total_pagado', 0) or 0
+            promedio = cliente.get('promedio_factura', 0) or 0
+            
+            self.top_clientes_tree.insert('', 'end', values=(
+                nombre, facturas, f"€{total:.2f}", f"€{promedio:.2f}"
+            ))
+        
+        # Actualizar gráfico
+        self.ax_clientes.clear()
+        
+        if top_clientes:
+            top_5 = top_clientes[:5]
+            nombres = [c.get('cliente_nombre', '')[:20] for c in top_5]
+            valores = [c.get('total_pagado', 0) or 0 for c in top_5]
+            
+            if valores:
+                self.ax_clientes.barh(nombres, valores, color='#3498db')
+                self.ax_clientes.set_xlabel('Facturación Total (€)', fontsize=10)
+                self.ax_clientes.set_title('Top 5 Clientes por Facturación', fontsize=12, fontweight='bold')
+                self.ax_clientes.tick_params(axis='y', labelsize=9)
+        
+        self.canvas_clientes.draw()
+    
+    def actualizar_top_materiales(self):
+        """Actualiza la sección de top materiales"""
+        mes_seleccionado = self.mes_filtro_facturas_var.get()
+        
+        fecha_inicio = None
+        fecha_fin = None
+        
+        if mes_seleccionado != "Todos":
+            match = re.search(r'\((\d{4}-\d{2})\)', mes_seleccionado)
+            if match:
+                año_mes = match.group(1)
+                fecha_inicio = f"{año_mes}-01"
+                año, mes = año_mes.split('-')
+                mes_int = int(mes)
+                if mes_int == 12:
+                    fecha_fin = f"{int(año)}-12-31"
+                elif mes_int in [1, 3, 5, 7, 8, 10]:
+                    fecha_fin = f"{año}-{mes}-31"
+                elif mes_int in [4, 6, 9, 11]:
+                    fecha_fin = f"{año}-{mes}-30"
+                else:
+                    if int(año) % 4 == 0:
+                        fecha_fin = f"{año}-02-29"
+                    else:
+                        fecha_fin = f"{año}-02-28"
+        
+        top_materiales = material_manager.obtener_top_materiales(fecha_inicio, fecha_fin, 10)
+        
+        # Limpiar tablas
+        for item in self.top_materiales_ingresos_tree.get_children():
+            self.top_materiales_ingresos_tree.delete(item)
+        
+        for item in self.top_materiales_cantidad_tree.get_children():
+            self.top_materiales_cantidad_tree.delete(item)
+        
+        # Por ingresos
+        materiales_ingresos = top_materiales.get('por_ingresos', [])
+        for material in materiales_ingresos:
+            nombre = material.get('material_nombre', '')
+            ingresos = material.get('ingresos_total', 0) or 0
+            cantidad = material.get('cantidad_total', 0) or 0
+            veces = material.get('veces_usado', 0) or 0
+            
+            self.top_materiales_ingresos_tree.insert('', 'end', values=(
+                nombre, f"€{ingresos:.2f}", f"{cantidad:.2f}", veces
+            ))
+        
+        # Por cantidad
+        materiales_cantidad = top_materiales.get('por_cantidad', [])
+        for material in materiales_cantidad:
+            nombre = material.get('material_nombre', '')
+            cantidad = material.get('cantidad_total', 0) or 0
+            ingresos = material.get('ingresos_total', 0) or 0
+            veces = material.get('veces_usado', 0) or 0
+            
+            self.top_materiales_cantidad_tree.insert('', 'end', values=(
+                nombre, f"{cantidad:.2f}", f"€{ingresos:.2f}", veces
+            ))
+        
+        # Actualizar gráfico
+        self.ax_materiales.clear()
+        
+        if materiales_ingresos:
+            top_5 = materiales_ingresos[:5]
+            nombres = [m.get('material_nombre', '')[:15] for m in top_5]
+            valores = [m.get('ingresos_total', 0) or 0 for m in top_5]
+            
+            if valores:
+                self.ax_materiales.bar(range(len(nombres)), valores, color='#e67e22')
+                self.ax_materiales.set_xticks(range(len(nombres)))
+                self.ax_materiales.set_xticklabels(nombres, rotation=45, ha='right', fontsize=9)
+                self.ax_materiales.set_ylabel('Ingresos (€)', fontsize=10)
+                self.ax_materiales.set_title('Top 5 Materiales por Ingresos', fontsize=12, fontweight='bold')
+        
+        self.canvas_materiales.draw()
+    
+    def actualizar_comparaciones_temporales(self):
+        """Actualiza las comparaciones temporales con gráfico de evolución"""
+        evolucion = factura_manager.obtener_evolucion_facturacion_mensual(12)
+        
+        self.ax_evolucion.clear()
+        
+        if evolucion:
+            meses = [e.get('mes', '') for e in evolucion]
+            facturacion_pagada = [e.get('facturacion_pagada', 0) or 0 for e in evolucion]
+            facturacion_pendiente = [e.get('facturacion_pendiente', 0) or 0 for e in evolucion]
+            
+            # Formatear meses para mostrar
+            meses_formateados = []
+            meses_nombres = {
+                '01': 'Ene', '02': 'Feb', '03': 'Mar', '04': 'Abr',
+                '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Ago',
+                '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dic'
+            }
+            for mes in meses:
+                if mes:
+                    año, mes_num = mes.split('-')
+                    meses_formateados.append(f"{meses_nombres.get(mes_num, mes_num)} {año[-2:]}")
+            
+            x = range(len(meses_formateados))
+            width = 0.35
+            
+            self.ax_evolucion.bar([i - width/2 for i in x], facturacion_pagada, width, label='Pagada', color='#27ae60')
+            self.ax_evolucion.bar([i + width/2 for i in x], facturacion_pendiente, width, label='Pendiente', color='#e74c3c')
+            
+            self.ax_evolucion.set_xlabel('Mes', fontsize=10)
+            self.ax_evolucion.set_ylabel('Facturación (€)', fontsize=10)
+            self.ax_evolucion.set_title('Evolución Mensual de Facturación (Últimos 12 meses)', fontsize=12, fontweight='bold')
+            self.ax_evolucion.set_xticks(x)
+            self.ax_evolucion.set_xticklabels(meses_formateados, rotation=45, ha='right', fontsize=9)
+            self.ax_evolucion.legend()
+            self.ax_evolucion.grid(True, alpha=0.3)
+        
+        self.canvas_evolucion.draw()
+        
+        # Actualizar descuentos
+        mes_seleccionado = self.mes_filtro_facturas_var.get()
+        fecha_inicio = None
+        fecha_fin = None
+        
+        if mes_seleccionado != "Todos":
+            match = re.search(r'\((\d{4}-\d{2})\)', mes_seleccionado)
+            if match:
+                año_mes = match.group(1)
+                fecha_inicio = f"{año_mes}-01"
+                año, mes = año_mes.split('-')
+                mes_int = int(mes)
+                if mes_int == 12:
+                    fecha_fin = f"{int(año)}-12-31"
+                elif mes_int in [1, 3, 5, 7, 8, 10]:
+                    fecha_fin = f"{año}-{mes}-31"
+                elif mes_int in [4, 6, 9, 11]:
+                    fecha_fin = f"{año}-{mes}-30"
+                else:
+                    if int(año) % 4 == 0:
+                        fecha_fin = f"{año}-02-29"
+                    else:
+                        fecha_fin = f"{año}-02-28"
+        
+        stats_facturas = factura_manager.obtener_estadisticas_facturas(fecha_inicio, fecha_fin)
+        stats_presupuestos = presupuesto_manager.obtener_estadisticas_presupuestos(fecha_inicio, fecha_fin)
+        
+        total_descuentos_facturas = stats_facturas.get('total_descuentos', 0) or 0
+        total_descuentos_presupuestos = stats_presupuestos.get('total_descuentos', 0) or 0
+        total_descuentos = total_descuentos_facturas + total_descuentos_presupuestos
+        
+        total_facturas = stats_facturas.get('total_emitidas', 0) or 0
+        total_presupuestos = stats_presupuestos.get('total_emitidos', 0) or 0
+        total_docs = total_facturas + total_presupuestos
+        
+        promedio_descuento = (total_descuentos / total_docs) if total_docs > 0 else 0
+        
+        self.total_descuentos_label.config(text=f"Total Descuentos Aplicados: €{total_descuentos:.2f}")
+        self.promedio_descuento_label.config(text=f"Promedio por Factura/Presupuesto: €{promedio_descuento:.2f}")
 
     # ============================================
     # FIN DE MÉTODOS DE MÉTRICAS

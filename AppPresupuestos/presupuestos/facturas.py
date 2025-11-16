@@ -575,11 +575,37 @@ class FacturaManager:
             elif estado == 'Pagada':
                 pagadas = cantidad
         
+        # Cálculos monetarios
+        query_valores = f"""
+            SELECT 
+                COALESCE(SUM(CASE WHEN estado_pago = 'Pagada' THEN total ELSE 0 END), 0) as total_facturado,
+                COALESCE(SUM(CASE WHEN estado_pago = 'No Pagada' THEN total ELSE 0 END), 0) as total_pendiente_cobro,
+                COALESCE(AVG(total), 0) as promedio_factura,
+                COALESCE(MAX(total), 0) as factura_max,
+                COALESCE(MIN(total), 0) as factura_min,
+                COALESCE(SUM(descuento_global_porcentaje * total / 100), 0) + 
+                COALESCE(SUM(descuento_global_fijo), 0) as total_descuentos,
+                COALESCE(SUM(retencion_irpf * subtotal / 100), 0) as total_retencion_irpf
+            FROM facturas f
+            {where_sql}
+        """
+        result_valores = self.db.execute_query(query_valores, tuple(params))
+        valores = result_valores[0] if result_valores else {}
+        total_facturado = valores.get('total_facturado', 0) or 0
+        total_pendiente_cobro = valores.get('total_pendiente_cobro', 0) or 0
+        promedio_factura = valores.get('promedio_factura', 0) or 0
+        factura_max = valores.get('factura_max', 0) or 0
+        factura_min = valores.get('factura_min', 0) or 0
+        total_descuentos = valores.get('total_descuentos', 0) or 0
+        total_retencion_irpf = valores.get('total_retencion_irpf', 0) or 0
+        
         # Datos agrupados por mes para evolución
         query_mensual = f"""
             SELECT 
                 strftime('%Y-%m', f.fecha_creacion) as mes,
                 COUNT(*) as cantidad,
+                COALESCE(SUM(CASE WHEN estado_pago = 'Pagada' THEN total ELSE 0 END), 0) as valor_pagado,
+                COALESCE(SUM(CASE WHEN estado_pago = 'No Pagada' THEN total ELSE 0 END), 0) as valor_pendiente,
                 COALESCE(estado_pago, 'No Pagada') as estado_pago
             FROM facturas f
             {where_sql}
@@ -592,8 +618,172 @@ class FacturaManager:
             'total_emitidas': total_emitidas,
             'no_pagadas': no_pagadas,
             'pagadas': pagadas,
+            'total_facturado': total_facturado,
+            'total_pendiente_cobro': total_pendiente_cobro,
+            'promedio_factura': promedio_factura,
+            'factura_max': factura_max,
+            'factura_min': factura_min,
+            'total_descuentos': total_descuentos,
+            'total_retencion_irpf': total_retencion_irpf,
             'evolucion_mensual': result_mensual
         }
+
+    def obtener_facturas_vencidas(self) -> Dict[str, Any]:
+        """Obtiene facturas vencidas (fecha_vencimiento < fecha_actual y estado_pago = 'No Pagada')"""
+        fecha_actual = datetime.now().strftime("%Y-%m-%d")
+        
+        query = """
+            SELECT 
+                f.id,
+                f.numero_factura,
+                c.nombre as cliente_nombre,
+                f.total,
+                f.fecha_vencimiento,
+                f.fecha_creacion,
+                julianday(?) - julianday(f.fecha_vencimiento) as dias_vencidos
+            FROM facturas f
+            JOIN clientes c ON f.cliente_id = c.id
+            WHERE f.fecha_vencimiento IS NOT NULL 
+                AND DATE(f.fecha_vencimiento) < DATE(?)
+                AND f.estado_pago = 'No Pagada'
+            ORDER BY f.fecha_vencimiento ASC
+        """
+        facturas = self.db.execute_query(query, (fecha_actual, fecha_actual))
+        
+        monto_total_vencido = sum(f.get('total', 0) or 0 for f in facturas)
+        
+        return {
+            'facturas': facturas,
+            'cantidad': len(facturas),
+            'monto_total_vencido': monto_total_vencido
+        }
+    
+    def obtener_facturas_proximas_vencer(self, dias: int = 30) -> Dict[str, Any]:
+        """Obtiene facturas que vencen en los próximos N días"""
+        fecha_actual = datetime.now().strftime("%Y-%m-%d")
+        fecha_limite = (datetime.now() + timedelta(days=dias)).strftime("%Y-%m-%d")
+        
+        query = """
+            SELECT 
+                f.id,
+                f.numero_factura,
+                c.nombre as cliente_nombre,
+                f.total,
+                f.fecha_vencimiento,
+                f.fecha_creacion,
+                julianday(f.fecha_vencimiento) - julianday(?) as dias_restantes
+            FROM facturas f
+            JOIN clientes c ON f.cliente_id = c.id
+            WHERE f.fecha_vencimiento IS NOT NULL 
+                AND DATE(f.fecha_vencimiento) >= DATE(?)
+                AND DATE(f.fecha_vencimiento) <= DATE(?)
+                AND f.estado_pago = 'No Pagada'
+            ORDER BY f.fecha_vencimiento ASC
+        """
+        facturas = self.db.execute_query(query, (fecha_actual, fecha_actual, fecha_limite))
+        
+        # Agrupar por días restantes
+        grupos = {}
+        for factura in facturas:
+            dias_rest = int(factura.get('dias_restantes', 0))
+            if dias_rest not in grupos:
+                grupos[dias_rest] = {'cantidad': 0, 'monto': 0, 'facturas': []}
+            grupos[dias_rest]['cantidad'] += 1
+            grupos[dias_rest]['monto'] += factura.get('total', 0) or 0
+            grupos[dias_rest]['facturas'].append(factura)
+        
+        monto_total = sum(f.get('total', 0) or 0 for f in facturas)
+        
+        return {
+            'facturas': facturas,
+            'cantidad': len(facturas),
+            'monto_total': monto_total,
+            'grupos_por_dias': grupos
+        }
+    
+    def obtener_dias_promedio_cobro(self, fecha_inicio: str = None, fecha_fin: str = None) -> float:
+        """Calcula días promedio de cobro para facturas pagadas"""
+        where_clauses = ["f.estado_pago = 'Pagada'"]
+        params = []
+        
+        if fecha_inicio:
+            where_clauses.append("DATE(f.fecha_creacion) >= ?")
+            params.append(fecha_inicio)
+        
+        if fecha_fin:
+            where_clauses.append("DATE(f.fecha_creacion) <= ?")
+            params.append(fecha_fin)
+        
+        # Construir WHERE clause
+        if where_clauses:
+            where_sql = "WHERE " + " AND ".join(where_clauses)
+        else:
+            where_sql = ""
+        
+        # Nota: Necesitamos rastrear cuándo se pagó la factura
+        # Por ahora, usamos fecha_creacion como aproximación
+        # En una implementación real, necesitarías un campo fecha_pago
+        base_query = """
+            SELECT AVG(julianday('now') - julianday(f.fecha_creacion)) as dias_promedio
+            FROM facturas f
+        """
+        query = base_query + where_sql
+        result = self.db.execute_query(query, tuple(params))
+        
+        if result and result[0].get('dias_promedio'):
+            return float(result[0]['dias_promedio'])
+        return 0.0
+    
+    def obtener_top_clientes_facturas(self, fecha_inicio: str = None, fecha_fin: str = None, limite: int = 10) -> List[Dict[str, Any]]:
+        """Obtiene los top clientes por facturación total"""
+        where_clauses = []
+        params = []
+        
+        if fecha_inicio:
+            where_clauses.append("DATE(f.fecha_creacion) >= ?")
+            params.append(fecha_inicio)
+        
+        if fecha_fin:
+            where_clauses.append("DATE(f.fecha_creacion) <= ?")
+            params.append(fecha_fin)
+        
+        where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+        
+        query = f"""
+            SELECT 
+                c.id as cliente_id,
+                c.nombre as cliente_nombre,
+                COUNT(f.id) as cantidad_facturas,
+                COALESCE(SUM(CASE WHEN f.estado_pago = 'Pagada' THEN f.total ELSE 0 END), 0) as total_pagado,
+                COALESCE(SUM(f.total), 0) as total_facturado,
+                COALESCE(AVG(f.total), 0) as promedio_factura
+            FROM facturas f
+            JOIN clientes c ON f.cliente_id = c.id
+            {where_sql}
+            GROUP BY c.id, c.nombre
+            ORDER BY total_pagado DESC
+            LIMIT ?
+        """
+        params.append(limite)
+        return self.db.execute_query(query, tuple(params))
+    
+    def obtener_evolucion_facturacion_mensual(self, meses: int = 12) -> List[Dict[str, Any]]:
+        """Obtiene evolución mensual de facturación (últimos N meses)"""
+        fecha_limite = (datetime.now() - timedelta(days=meses*30)).strftime("%Y-%m-%d")
+        
+        query = """
+            SELECT 
+                strftime('%Y-%m', f.fecha_creacion) as mes,
+                COUNT(*) as cantidad_facturas,
+                COALESCE(SUM(CASE WHEN f.estado_pago = 'Pagada' THEN f.total ELSE 0 END), 0) as facturacion_pagada,
+                COALESCE(SUM(CASE WHEN f.estado_pago = 'No Pagada' THEN f.total ELSE 0 END), 0) as facturacion_pendiente,
+                COALESCE(SUM(f.total), 0) as facturacion_total
+            FROM facturas f
+            WHERE DATE(f.fecha_creacion) >= DATE(?)
+            GROUP BY strftime('%Y-%m', f.fecha_creacion)
+            ORDER BY mes ASC
+        """
+        return self.db.execute_query(query, (fecha_limite,))
 
 # Instancia global del manager de facturas
 factura_manager = FacturaManager()
