@@ -15,8 +15,6 @@
   "reportUnknownMemberType": "none",
   "reportUnknownArgumentType": "none",
   "reportUnknownVariableType": "none",
-  "reportUntypedFunctionCall": "none",
-  "reportUntypedClass": "none",
   "reportUntypedBaseClass": "none",
   "reportUntypedNamedTuple": "none",
   "reportPrivateUsage": "none",

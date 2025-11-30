@@ -303,16 +303,31 @@ class AppPresupuestos:
         material_frame = ttk.LabelFrame(scrollable_frame, text="Agregar Material", padding=10)
         material_frame.pack(fill='x', pady=(0, 10))
         
-        ttk.Label(material_frame, text="📦 Material:", style='TLabel').grid(row=0, column=0, sticky='w', padx=(0, 10), pady=8)
+        # Sección de materiales más utilizados
+        ttk.Label(material_frame, text="⭐ Más utilizados:", style='TLabel').grid(row=0, column=0, sticky='w', padx=(0, 10), pady=(0, 5))
+        self.top_materiales_frame = ttk.Frame(material_frame)
+        self.top_materiales_frame.grid(row=0, column=1, columnspan=4, sticky='w', pady=(0, 10))
+        self.top_materiales_buttons = []
+        
+        # Búsqueda manual
+        ttk.Label(material_frame, text="🔍 Buscar Material:", style='TLabel').grid(row=1, column=0, sticky='w', padx=(0, 10), pady=8)
+        self.material_busqueda_presupuesto = ttk.Entry(material_frame, width=30, style='TEntry')
+        self.material_busqueda_presupuesto.grid(row=1, column=1, padx=(0, 10), pady=8)
+        self.material_busqueda_presupuesto.bind('<KeyRelease>', self.filtrar_materiales_presupuesto)
+        
+        # Combobox de materiales (ahora editable para búsqueda)
+        ttk.Label(material_frame, text="📦 Material:", style='TLabel').grid(row=2, column=0, sticky='w', padx=(0, 10), pady=8)
         self.material_var = tk.StringVar()
-        self.material_combo = ttk.Combobox(material_frame, textvariable=self.material_var, width=30, state='readonly', style='TCombobox')
-        self.material_combo.grid(row=0, column=1, padx=(0, 20), pady=8)
+        self.material_combo = ttk.Combobox(material_frame, textvariable=self.material_var, width=30, style='TCombobox')
+        self.material_combo.grid(row=2, column=1, padx=(0, 20), pady=8)
+        self.material_combo.bind('<KeyRelease>', self.filtrar_materiales_presupuesto)
+        self.material_combo.bind('<<ComboboxSelected>>', self.on_material_selected_presupuesto)
         
-        ttk.Label(material_frame, text="🔢 Cantidad:", style='TLabel').grid(row=0, column=2, sticky='w', padx=(0, 10), pady=8)
+        ttk.Label(material_frame, text="🔢 Cantidad:", style='TLabel').grid(row=2, column=2, sticky='w', padx=(0, 10), pady=8)
         self.cantidad_entry = ttk.Entry(material_frame, width=10, style='TEntry')
-        self.cantidad_entry.grid(row=0, column=3, padx=(0, 20), pady=8)
+        self.cantidad_entry.grid(row=2, column=3, padx=(0, 20), pady=8)
         
-        ttk.Button(material_frame, text="➕ Agregar Material", command=self.agregar_item_presupuesto, style='Success.TButton').grid(row=0, column=4, padx=(10, 0), pady=8)
+        ttk.Button(material_frame, text="➕ Agregar Material", command=self.agregar_item_presupuesto, style='Success.TButton').grid(row=2, column=4, padx=(10, 0), pady=8)
         
         # Frame para agregar tareas manuales
         tarea_frame = ttk.LabelFrame(scrollable_frame, text="Agregar Tarea Manual", padding=10)
@@ -879,6 +894,63 @@ class AppPresupuestos:
         material_names = [f"{m['id']} - {m['nombre']} ({m['unidad_medida']})" for m in materiales]
         self.material_combo['values'] = material_names
         self.materiales_data = {m['id']: m for m in materiales}
+        # Cargar materiales más utilizados
+        self.cargar_materiales_mas_utilizados()
+    
+    def cargar_materiales_mas_utilizados(self):
+        """Carga y muestra los materiales más utilizados como botones rápidos"""
+        # Limpiar botones existentes
+        for btn in self.top_materiales_buttons:
+            btn.destroy()
+        self.top_materiales_buttons.clear()
+        
+        try:
+            top_materiales = material_manager.obtener_materiales_mas_utilizados(limite=5)
+            for material in top_materiales:
+                btn_text = f"{material['nombre']} ({material['unidad_medida']})"
+                btn = ttk.Button(
+                    self.top_materiales_frame,
+                    text=btn_text,
+                    command=lambda m=material: self.seleccionar_material_rapido(m),
+                    width=25
+                )
+                btn.pack(side='left', padx=5)
+                self.top_materiales_buttons.append(btn)
+        except Exception as e:
+            print(f"Error cargando materiales más utilizados: {e}")
+    
+    def seleccionar_material_rapido(self, material):
+        """Selecciona un material desde los botones rápidos"""
+        material_text = f"{material['id']} - {material['nombre']} ({material['unidad_medida']})"
+        self.material_var.set(material_text)
+        self.material_combo.set(material_text)
+        self.cantidad_entry.focus()
+    
+    def filtrar_materiales_presupuesto(self, event=None):
+        """Filtra materiales según el texto de búsqueda"""
+        termino = self.material_busqueda_presupuesto.get().strip().lower()
+        if not termino:
+            # Si no hay término, mostrar todos
+            materiales = material_manager.obtener_materiales()
+        else:
+            # Buscar materiales
+            materiales = material_manager.buscar_materiales(termino)
+        
+        # Actualizar combo con materiales filtrados
+        material_names = [f"{m['id']} - {m['nombre']} ({m['unidad_medida']})" for m in materiales]
+        self.material_combo['values'] = material_names
+        
+        # Si hay un solo resultado y coincide exactamente, seleccionarlo
+        if len(materiales) == 1 and termino:
+            material = materiales[0]
+            material_text = f"{material['id']} - {material['nombre']} ({material['unidad_medida']})"
+            if termino.lower() in material['nombre'].lower():
+                self.material_var.set(material_text)
+    
+    def on_material_selected_presupuesto(self, event=None):
+        """Maneja la selección de material desde el combo"""
+        # Limpiar el campo de búsqueda cuando se selecciona un material
+        self.material_busqueda_presupuesto.delete(0, tk.END)
     
     # Métodos para presupuestos
     def agregar_item_presupuesto(self):
@@ -2528,16 +2600,31 @@ class AppPresupuestos:
         material_frame = ttk.LabelFrame(scrollable_frame, text="Agregar Material", padding=10)
         material_frame.pack(fill='x', pady=(0, 10))
         
-        ttk.Label(material_frame, text="📦 Material:").grid(row=0, column=0, sticky='w', padx=(0, 10), pady=8)
+        # Sección de materiales más utilizados
+        ttk.Label(material_frame, text="⭐ Más utilizados:", style='TLabel').grid(row=0, column=0, sticky='w', padx=(0, 10), pady=(0, 5))
+        self.top_materiales_frame_factura = ttk.Frame(material_frame)
+        self.top_materiales_frame_factura.grid(row=0, column=1, columnspan=4, sticky='w', pady=(0, 10))
+        self.top_materiales_buttons_factura = []
+        
+        # Búsqueda manual
+        ttk.Label(material_frame, text="🔍 Buscar Material:", style='TLabel').grid(row=1, column=0, sticky='w', padx=(0, 10), pady=8)
+        self.material_busqueda_factura = ttk.Entry(material_frame, width=30, style='TEntry')
+        self.material_busqueda_factura.grid(row=1, column=1, padx=(0, 10), pady=8)
+        self.material_busqueda_factura.bind('<KeyRelease>', self.filtrar_materiales_factura)
+        
+        # Combobox de materiales (ahora editable para búsqueda)
+        ttk.Label(material_frame, text="📦 Material:").grid(row=2, column=0, sticky='w', padx=(0, 10), pady=8)
         self.factura_material_var = tk.StringVar()
-        self.factura_material_combo = ttk.Combobox(material_frame, textvariable=self.factura_material_var, width=30, state='readonly')
-        self.factura_material_combo.grid(row=0, column=1, padx=(0, 20), pady=8)
+        self.factura_material_combo = ttk.Combobox(material_frame, textvariable=self.factura_material_var, width=30)
+        self.factura_material_combo.grid(row=2, column=1, padx=(0, 20), pady=8)
+        self.factura_material_combo.bind('<KeyRelease>', self.filtrar_materiales_factura)
+        self.factura_material_combo.bind('<<ComboboxSelected>>', self.on_material_selected_factura)
         
-        ttk.Label(material_frame, text="🔢 Cantidad:").grid(row=0, column=2, sticky='w', padx=(0, 10), pady=8)
+        ttk.Label(material_frame, text="🔢 Cantidad:").grid(row=2, column=2, sticky='w', padx=(0, 10), pady=8)
         self.factura_cantidad_entry = ttk.Entry(material_frame, width=10)
-        self.factura_cantidad_entry.grid(row=0, column=3, padx=(0, 20), pady=8)
+        self.factura_cantidad_entry.grid(row=2, column=3, padx=(0, 20), pady=8)
         
-        ttk.Button(material_frame, text="➕ Agregar Material", command=self.agregar_item_factura, style='Success.TButton').grid(row=0, column=4, padx=(10, 0), pady=8)
+        ttk.Button(material_frame, text="➕ Agregar Material", command=self.agregar_item_factura, style='Success.TButton').grid(row=2, column=4, padx=(10, 0), pady=8)
         
         # Frame para agregar tareas manuales
         tarea_frame = ttk.LabelFrame(scrollable_frame, text="Agregar Tarea Manual", padding=10)
@@ -2870,6 +2957,63 @@ class AppPresupuestos:
         materiales = material_manager.obtener_materiales()
         material_names = [f"{m['id']} - {m['nombre']} ({m['unidad_medida']})" for m in materiales]
         self.factura_material_combo['values'] = material_names
+        # Cargar materiales más utilizados para facturas
+        self.cargar_materiales_mas_utilizados_factura()
+    
+    def cargar_materiales_mas_utilizados_factura(self):
+        """Carga y muestra los materiales más utilizados como botones rápidos para facturas"""
+        # Limpiar botones existentes
+        for btn in self.top_materiales_buttons_factura:
+            btn.destroy()
+        self.top_materiales_buttons_factura.clear()
+        
+        try:
+            top_materiales = material_manager.obtener_materiales_mas_utilizados(limite=5)
+            for material in top_materiales:
+                btn_text = f"{material['nombre']} ({material['unidad_medida']})"
+                btn = ttk.Button(
+                    self.top_materiales_frame_factura,
+                    text=btn_text,
+                    command=lambda m=material: self.seleccionar_material_rapido_factura(m),
+                    width=25
+                )
+                btn.pack(side='left', padx=5)
+                self.top_materiales_buttons_factura.append(btn)
+        except Exception as e:
+            print(f"Error cargando materiales más utilizados: {e}")
+    
+    def seleccionar_material_rapido_factura(self, material):
+        """Selecciona un material desde los botones rápidos en facturas"""
+        material_text = f"{material['id']} - {material['nombre']} ({material['unidad_medida']})"
+        self.factura_material_var.set(material_text)
+        self.factura_material_combo.set(material_text)
+        self.factura_cantidad_entry.focus()
+    
+    def filtrar_materiales_factura(self, event=None):
+        """Filtra materiales según el texto de búsqueda en facturas"""
+        termino = self.material_busqueda_factura.get().strip().lower()
+        if not termino:
+            # Si no hay término, mostrar todos
+            materiales = material_manager.obtener_materiales()
+        else:
+            # Buscar materiales
+            materiales = material_manager.buscar_materiales(termino)
+        
+        # Actualizar combo con materiales filtrados
+        material_names = [f"{m['id']} - {m['nombre']} ({m['unidad_medida']})" for m in materiales]
+        self.factura_material_combo['values'] = material_names
+        
+        # Si hay un solo resultado y coincide exactamente, seleccionarlo
+        if len(materiales) == 1 and termino:
+            material = materiales[0]
+            material_text = f"{material['id']} - {material['nombre']} ({material['unidad_medida']})"
+            if termino.lower() in material['nombre'].lower():
+                self.factura_material_var.set(material_text)
+    
+    def on_material_selected_factura(self, event=None):
+        """Maneja la selección de material desde el combo en facturas"""
+        # Limpiar el campo de búsqueda cuando se selecciona un material
+        self.material_busqueda_factura.delete(0, tk.END)
     
     def on_cliente_select_factura(self, event=None):
         """Autocompleta los datos del cliente seleccionado"""

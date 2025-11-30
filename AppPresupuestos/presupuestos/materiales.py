@@ -57,6 +57,30 @@ class MaterialManager:
         except:
             return False
     
+    def obtener_materiales_mas_utilizados(self, limite: int = 5) -> List[Dict[str, Any]]:
+        """Obtiene los materiales más utilizados en presupuestos y facturas"""
+        query = """
+            SELECT 
+                m.id,
+                m.nombre,
+                m.unidad_medida,
+                m.precio_unitario,
+                (COALESCE(COUNT(DISTINCT pi.presupuesto_id), 0) + COALESCE(COUNT(DISTINCT fi.factura_id), 0)) as veces_usado
+            FROM materiales m
+            LEFT JOIN presupuesto_items pi ON pi.material_id = m.id AND pi.material_id IS NOT NULL
+            LEFT JOIN factura_items fi ON fi.material_id = m.id AND fi.material_id IS NOT NULL
+            GROUP BY m.id, m.nombre, m.unidad_medida, m.precio_unitario
+            HAVING veces_usado > 0
+            ORDER BY veces_usado DESC, m.nombre ASC
+            LIMIT ?
+        """
+        try:
+            return self.db.execute_query(query, (limite,))
+        except Exception as e:
+            # Si hay error (por ejemplo, tabla no existe), retornar lista vacía
+            print(f"Error obteniendo materiales más utilizados: {e}")
+            return []
+    
     def obtener_top_materiales(self, fecha_inicio: str = None, fecha_fin: str = None, limite: int = 10) -> Dict[str, List[Dict[str, Any]]]:
         """Obtiene top materiales por cantidad e ingresos"""
         where_clauses = []

@@ -11,12 +11,42 @@ import os
 import re
 from datetime import datetime, timedelta
 from typing import Dict, Any, List
+from decimal import Decimal, ROUND_DOWN
 
 class PDFGenerator:
     def __init__(self, plantilla_config=None):
         self.styles = getSampleStyleSheet()
         self.plantilla_config = plantilla_config or self.get_default_config()
         self.setup_custom_styles()
+    
+    def format_price_exact(self, value: float, include_euro: bool = True) -> str:
+        """
+        Formatea un precio mostrando exactamente 2 decimales (céntimos) sin redondear.
+        Si el valor tiene más de 2 decimales, se trunca (no se redondea).
+        
+        Args:
+            value: El valor numérico a formatear
+            include_euro: Si True, agrega el símbolo € al final
+        
+        Returns:
+            String con el precio formateado con exactamente 2 decimales
+        """
+        if value is None:
+            value = 0.0
+        
+        # Convertir a Decimal para evitar problemas de precisión de punto flotante
+        try:
+            decimal_value = Decimal(str(value))
+        except:
+            decimal_value = Decimal(str(float(value)))
+        
+        # Truncar a 2 decimales sin redondear (usando ROUND_DOWN)
+        decimal_value = decimal_value.quantize(Decimal('0.01'), rounding=ROUND_DOWN)
+        
+        # Formatear siempre con 2 decimales
+        str_value = format(decimal_value, '.2f')
+        
+        return f"{str_value}€" if include_euro else str_value
     
     def get_default_config(self):
         """Retorna la configuración por defecto"""
@@ -203,7 +233,7 @@ class PDFGenerator:
         story.append(Spacer(1, 30))
         
         # FOOTER - Términos de pago
-        footer_section = self.create_footer_section()
+        footer_section = self.create_footer_section(presupuesto)
         story.append(footer_section)
         
         # Construir el PDF
@@ -330,18 +360,33 @@ class PDFGenerator:
                 if descuento_pct > 0:
                     descuento_texto = f"-{descuento_pct:.1f}%"
                 elif descuento_fijo > 0:
-                    descuento_texto = f"-€{descuento_fijo:.0f}"
+                    descuento_fijo_formateado = self.format_price_exact(descuento_fijo, include_euro=False)
+                    descuento_texto = f"-€{descuento_fijo_formateado}"
                 
-                # IVA indicator
-                iva_indicator = "✓" if item.get('aplica_iva', True) else "✗"
+                # IVA indicator - mostrar texto claro sin tildes
+                iva_habilitado_presupuesto = presupuesto.get('iva_habilitado', True)
+                if isinstance(iva_habilitado_presupuesto, int):
+                    iva_habilitado_presupuesto = bool(iva_habilitado_presupuesto)
+                
+                # Determinar si el item aplica IVA
+                aplica_iva_item = item.get('aplica_iva', True)
+                
+                if iva_habilitado_presupuesto and aplica_iva_item:
+                    # Si el presupuesto tiene IVA habilitado y el item aplica IVA, mostrar porcentaje
+                    # Por defecto 21%, pero podría venir del item o del presupuesto
+                    iva_porcentaje = item.get('iva_porcentaje', presupuesto.get('iva_porcentaje', 21.0))
+                    iva_indicator = f"{iva_porcentaje:.0f}%"
+                else:
+                    # Si no aplica IVA, mostrar claramente "Sin IVA"
+                    iva_indicator = "Sin IVA"
                 
                 table_data.append([
                     nombre_item,
-                    f"{item['cantidad']:.0f}",
-                    f"{item['precio_unitario']:.0f}€",
+                    self.format_price_exact(item['cantidad'], include_euro=False),
+                    self.format_price_exact(item['precio_unitario']),
                     iva_indicator,
                     descuento_texto,
-                    f"{item['subtotal']:.0f}€"
+                    self.format_price_exact(item['subtotal'])
                 ])
         
         # Agregar filas vacías para completar el diseño
@@ -405,26 +450,28 @@ class PDFGenerator:
         
         # Subtotal original (antes de descuentos)
         subtotal_original = presupuesto['subtotal'] + descuentos_items
-        totales_data.append(['SUBTOTAL ORIGINAL', f"{subtotal_original:.0f}€"])
+        totales_data.append(['SUBTOTAL ORIGINAL', self.format_price_exact(subtotal_original)])
         
         # Descuentos de items
         if descuentos_items > 0:
-            totales_data.append(['DESCUENTO ITEMS', f"-{descuentos_items:.0f}€"])
+            descuentos_items_str = self.format_price_exact(descuentos_items, include_euro=False)
+            totales_data.append(['DESCUENTO ITEMS', f"-{descuentos_items_str}€"])
         
         # Subtotal después de descuentos de items
         if descuentos_items > 0:
-            totales_data.append(['SUBTOTAL', f"{presupuesto['subtotal']:.0f}€"])
+            totales_data.append(['SUBTOTAL', self.format_price_exact(presupuesto['subtotal'])])
         
         # Descuento global
         if descuento_global > 0:
-            totales_data.append(['DESCUENTO GLOBAL', f"-{descuento_global:.0f}€"])
+            descuento_global_str = self.format_price_exact(descuento_global, include_euro=False)
+            totales_data.append(['DESCUENTO GLOBAL', f"-{descuento_global_str}€"])
         
         # IVA
         if iva_habilitado:
-            totales_data.append(['IVA (21%)', f"{presupuesto['iva']:.0f}€"])
+            totales_data.append(['IVA (21%)', self.format_price_exact(presupuesto['iva'])])
         
         # TOTAL
-        totales_data.append(['TOTAL', f"{presupuesto['total']:.0f}€"])
+        totales_data.append(['TOTAL', self.format_price_exact(presupuesto['total'])])
         
         totales_table = Table(totales_data, colWidths=[1.5*inch, 1*inch])
         totales_table.setStyle(TableStyle([
@@ -440,11 +487,43 @@ class PDFGenerator:
         
         return totales_table
     
-    def create_footer_section(self):
+    def create_footer_section(self, presupuesto: Dict[str, Any] = None):
         """Crea la sección del footer con términos de pago"""
         notas_pie = self.plantilla_config['texto_personalizado'].get('notas_pie', '')
         if not notas_pie:
             notas_pie = "Modo de pago 50% a la aceptación del encargo y 50% a su finalización"
+        
+        # Verificar si el IVA está habilitado en el presupuesto
+        if presupuesto:
+            iva_habilitado = presupuesto.get('iva_habilitado', True)
+            if isinstance(iva_habilitado, int):
+                iva_habilitado = bool(iva_habilitado)
+            
+            # Dividir las notas en líneas para procesarlas
+            lineas_notas = notas_pie.split('\n')
+            
+            # Eliminar cualquier línea que mencione IVA (para evitar contradicciones)
+            lineas_notas_filtradas = []
+            for linea in lineas_notas:
+                linea_lower = linea.lower()
+                # Eliminar líneas que mencionen IVA (incluye variaciones comunes)
+                if 'iva' not in linea_lower and 'impuesto' not in linea_lower:
+                    lineas_notas_filtradas.append(linea.strip())
+            
+            # Agregar la nota correcta sobre IVA según el estado del presupuesto
+            if iva_habilitado:
+                nota_iva = "• Los precios incluyen IVA."
+            else:
+                nota_iva = "• Los precios NO incluyen IVA. Operacion exenta de IVA."
+            
+            # Agregar la nota de IVA al final
+            lineas_notas_filtradas.append(nota_iva)
+            
+            # Unir todas las líneas con <br/> para HTML
+            notas_pie = '<br/>'.join(lineas_notas_filtradas)
+        else:
+            # Si no hay presupuesto, convertir saltos de línea a <br/>
+            notas_pie = notas_pie.replace('\n', '<br/>')
         
         footer_text = f"<para align='center'>{notas_pie}</para>"
         return Paragraph(footer_text, self.styles['Normal'])
@@ -463,11 +542,12 @@ class PDFGenerator:
         story.append(Spacer(1, 20))
         
         # Información básica
+        total_formateado = self.format_price_exact(presupuesto['total'], include_euro=False)
         info_text = f"""
         <b>Presupuesto Nº:</b> {presupuesto['id']}<br/>
         <b>Fecha:</b> {presupuesto['fecha_creacion'][:10]}<br/>
         <b>Cliente:</b> {presupuesto['cliente_nombre']}<br/>
-        <b>Total:</b> €{presupuesto['total']:.2f}
+        <b>Total:</b> €{total_formateado}
         """
         story.append(Paragraph(info_text, self.styles['Normal']))
         story.append(Spacer(1, 20))
@@ -475,7 +555,9 @@ class PDFGenerator:
         # Items
         story.append(Paragraph("<b>Materiales:</b>", self.styles['CustomHeading']))
         for item in presupuesto['items']:
-            item_text = f"• {item['material_nombre']} - {item['cantidad']} {item['unidad_medida']} - €{item['subtotal']:.2f}"
+            cantidad_formateada = self.format_price_exact(item['cantidad'], include_euro=False)
+            subtotal_formateado = self.format_price_exact(item['subtotal'], include_euro=False)
+            item_text = f"• {item['material_nombre']} - {cantidad_formateada} {item['unidad_medida']} - €{subtotal_formateado}"
             story.append(Paragraph(item_text, self.styles['Normal']))
         
         doc.build(story)
@@ -998,13 +1080,18 @@ class PDFGenerator:
                     leading=9
                 )
                 
+                cantidad_formateada = self.format_price_exact(item['cantidad'], include_euro=False)
+                precio_formateado = self.format_price_exact(item['precio_unitario'], include_euro=False)
+                cuota_iva_formateada = self.format_price_exact(cuota_iva, include_euro=False) if cuota_iva > 0 else "-"
+                total_con_iva_formateado = self.format_price_exact(total_con_iva, include_euro=False)
+                
                 table_data.append([
                     desc_para,
-                    Paragraph(f"{item['cantidad']:.2f}", num_style),
-                    Paragraph(f"{item['precio_unitario']:.2f} €", num_style),
+                    Paragraph(cantidad_formateada, num_style),
+                    Paragraph(f"{precio_formateado} €", num_style),
                     Paragraph(iva_porcentaje, num_style),
-                    Paragraph(f"{cuota_iva:.2f} €" if cuota_iva > 0 else "-", num_style),
-                    Paragraph(f"{total_con_iva:.2f} €", num_style)
+                    Paragraph(f"{cuota_iva_formateada} €" if cuota_iva > 0 else "-", num_style),
+                    Paragraph(f"{total_con_iva_formateado} €", num_style)
                 ])
         
         # Crear la tabla con columnas según requisitos AEAT (ajustadas para mejor visualización)
@@ -1090,23 +1177,27 @@ class PDFGenerator:
                 datos = iva_breakdown[porcentaje]
                 porcentaje_valor = float(porcentaje)
                 tipo_texto = f"{porcentaje_valor:.0f}%" if porcentaje_valor > 0 else "Exento"
+                base_formateada = self.format_price_exact(datos.get('base', 0.0), include_euro=False)
+                cuota_formateada = self.format_price_exact(datos.get('cuota', 0.0), include_euro=False)
                 breakdown_rows.append([
                     Paragraph(tipo_texto, self.styles['Normal']),
-                    Paragraph(f"{datos.get('base', 0.0):.2f} €", cell_style),
-                    Paragraph(f"{datos.get('cuota', 0.0):.2f} €", cell_style)
+                    Paragraph(f"{base_formateada} €", cell_style),
+                    Paragraph(f"{cuota_formateada} €", cell_style)
                 ])
         else:
+            base_imponible_formateada = self.format_price_exact(base_imponible, include_euro=False)
             breakdown_rows.append([
                 Paragraph("Exento", self.styles['Normal']),
-                Paragraph(f"{base_imponible:.2f} €", cell_style),
-                Paragraph("0.00 €", cell_style)
+                Paragraph(f"{base_imponible_formateada} €", cell_style),
+                Paragraph("0 €", cell_style)
             ])
         
         if base_exenta > 0:
+            base_exenta_formateada = self.format_price_exact(base_exenta, include_euro=False)
             breakdown_rows.append([
                 Paragraph("Base exenta (0%)", self.styles['Normal']),
-                Paragraph(f"{base_exenta:.2f} €", cell_style),
-                Paragraph("0.00 €", cell_style)
+                Paragraph(f"{base_exenta_formateada} €", cell_style),
+                Paragraph("0 €", cell_style)
             ])
         
         breakdown_table = Table(breakdown_rows, colWidths=[1.6*inch, 1.2*inch, 1.1*inch])
@@ -1122,22 +1213,29 @@ class PDFGenerator:
         ]))
         
         resumen_rows = []
-        resumen_rows.append(['Subtotal', f"{subtotal:.2f} €"])
+        subtotal_formateado = self.format_price_exact(subtotal, include_euro=False)
+        resumen_rows.append(['Subtotal', f"{subtotal_formateado} €"])
         if descuentos_items > 0:
-            resumen_rows.append(['Descuentos por línea', f"-{descuentos_items:.2f} €"])
+            descuentos_items_formateado = self.format_price_exact(descuentos_items, include_euro=False)
+            resumen_rows.append(['Descuentos por línea', f"-{descuentos_items_formateado} €"])
         if descuento_global > 0:
-            resumen_rows.append(['Descuento global', f"-{descuento_global:.2f} €"])
+            descuento_global_formateado = self.format_price_exact(descuento_global, include_euro=False)
+            resumen_rows.append(['Descuento global', f"-{descuento_global_formateado} €"])
         
-        resumen_rows.append(['Base neta', f"{base_imponible:.2f} €"])
+        base_imponible_formateada = self.format_price_exact(base_imponible, include_euro=False)
+        resumen_rows.append(['Base neta', f"{base_imponible_formateada} €"])
         if iva_total > 0:
-            resumen_rows.append(['IVA total', f"{iva_total:.2f} €"])
+            iva_total_formateado = self.format_price_exact(iva_total, include_euro=False)
+            resumen_rows.append(['IVA total', f"{iva_total_formateado} €"])
         else:
-            resumen_rows.append(['IVA total', "0.00 €"])
+            resumen_rows.append(['IVA total', "0 €"])
         
         if retencion_irpf_importe > 0 and retencion_irpf_porcentaje:
-            resumen_rows.append([f"Retención IRPF ({retencion_irpf_porcentaje:.1f}%)", f"-{retencion_irpf_importe:.2f} €"])
+            retencion_formateada = self.format_price_exact(retencion_irpf_importe, include_euro=False)
+            resumen_rows.append([f"Retención IRPF ({retencion_irpf_porcentaje:.1f}%)", f"-{retencion_formateada} €"])
         
-        resumen_rows.append(['TOTAL FACTURA', f"{total_factura:.2f} €"])
+        total_factura_formateado = self.format_price_exact(total_factura, include_euro=False)
+        resumen_rows.append(['TOTAL FACTURA', f"{total_factura_formateado} €"])
         
         resumen_table = Table(resumen_rows, colWidths=[2.0*inch, 1.5*inch])
         resumen_table.setStyle(TableStyle([
