@@ -1,0 +1,28 @@
+{"id":"log_app_start","timestamp":1770834000069,"location":"AppGestionApplication.start","message":"start entry","data":{"logFile":"C:\\Users\\German\\Documents\\Proyectos\\AppGestion\\.cursor\\debug.log"},"hypothesisId":"A"}
+
+{"id":"log_db","timestamp":1770834000239,"location":"Database.getConnection","message":"entry","data":{"path":"C:\\Users\\German\\Documents\\Proyectos\\AppGestion\\presupuestos.db"},"hypothesisId":"C"}
+
+{"id":"log_db","timestamp":1770834000440,"location":"Database.getConnection","message":"entry","data":{"path":"C:\\Users\\German\\Documents\\Proyectos\\AppGestion\\presupuestos.db"},"hypothesisId":"C"}
+
+{"id":"log_db","timestamp":1770834000489,"location":"Database.getConnection","message":"entry","data":{"path":"C:\\Users\\German\\Documents\\Proyectos\\AppGestion\\presupuestos.db"},"hypothesisId":"C"}
+
+{"id":"log_db","timestamp":1770834000493,"location":"Database.getConnection","message":"entry","data":{"path":"C:\\Users\\German\\Documents\\Proyectos\\AppGestion\\presupuestos.db"},"hypothesisId":"C"}
+
+{"id":"log_db","timestamp":1770834000502,"location":"Database.getConnection","message":"entry","data":{"path":"C:\\Users\\German\\Documents\\Proyectos\\AppGestion\\presupuestos.db"},"hypothesisId":"C"}
+
+{"id":"log_recargar","timestamp":1770834000504,"location":"VerPresupuestosController.recargar","message":"entry","data":{"termino":"","anio":null,"mes":null},"hypothesisId":"D"}
+
+{"id":"log_buscar","timestamp":1770834000509,"location":"PresupuestoService.buscarPresupuestos","message":"entry","data":{"termino":"set","anio":null,"mes":null},"hypothesisId":"D"}
+
+{"id":"log_db","timestamp":1770834000509,"location":"Database.getConnection","message":"entry","data":{"path":"C:\\Users\\German\\Documents\\Proyectos\\AppGestion\\presupuestos.db"},"hypothesisId":"C"}
+
+{"id":"log_db","timestamp":1770834000514,"location":"Database.getConnection","message":"entry","data":{"path":"C:\\Users\\German\\Documents\\Proyectos\\AppGestion\\presupuestos.db"},"hypothesisId":"C"}
+
+{"id":"log_db","timestamp":1770834000516,"location":"Database.getConnection","message":"entry","data":{"path":"C:\\Users\\German\\Documents\\Proyectos\\AppGestion\\presupuestos.db"},"hypothesisId":"C"}
+
+{"id":"log_css","timestamp":1770834000522,"location":"AppGestionApplication.start","message":"before load css","data":{"cssUrlNull":false},"hypothesisId":"A"}
+
+{"id":"log_db","timestamp":1770834064881,"location":"Database.getConnection","message":"entry","data":{"path":"C:\\Users\\German\\Documents\\Proyectos\\AppGestion\\presupuestos.db"},"hypothesisId":"C"}
+
+{"id":"log_db","timestamp":1770834092873,"location":"Database.getConnection","message":"entry","data":{"path":"C:\\Users\\German\\Documents\\Proyectos\\AppGestion\\presupuestos.db"},"hypothesisId":"C"}
+
