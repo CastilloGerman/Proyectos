@@ -68,7 +68,9 @@ public class AppGestionApplication extends Application {
         tabPane.getTabs().add(tabVerPresupuestos);
 
         // Pestaña de facturación (refrescar al seleccionar para ver facturas recién creadas)
-        FacturacionController facturacionController = new FacturacionController(facturaService);
+        FacturacionController facturacionController = new FacturacionController(
+                facturaService, clienteService, presupuestoService, materialService
+        );
         Tab tabFacturacion = createTab("Facturación", facturacionController.createContent());
         tabFacturacion.selectedProperty().addListener((o, prev, selected) -> {
             if (Boolean.TRUE.equals(selected)) facturacionController.recargar();

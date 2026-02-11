@@ -318,14 +318,14 @@ public class PresupuestoService {
      */
     public PresupuestoDetalle obtenerPresupuestoPorId(int presupuestoId) {
         String cabSql = """
-                SELECT p.id, p.fecha_creacion, p.subtotal, p.iva, p.total, p.iva_habilitado,
+                SELECT p.id, p.cliente_id, p.fecha_creacion, p.subtotal, p.iva, p.total, p.iva_habilitado,
                        c.nombre as cliente_nombre, c.telefono, c.email, c.direccion
                 FROM presupuestos p
                 JOIN clientes c ON p.cliente_id = c.id
                 WHERE p.id = ?
                 """;
         String itemsSql = """
-                SELECT pi.tarea_manual, pi.cantidad, pi.precio_unitario, pi.subtotal, pi.es_tarea_manual,
+                SELECT pi.material_id, pi.tarea_manual, pi.cantidad, pi.precio_unitario, pi.subtotal, pi.es_tarea_manual,
                        m.nombre as material_nombre, m.unidad_medida
                 FROM presupuesto_items pi
                 LEFT JOIN materiales m ON pi.material_id = m.id
@@ -340,6 +340,7 @@ public class PresupuestoService {
                 if (!rsCab.next()) return null;
                 PresupuestoDetalle d = new PresupuestoDetalle();
                 d.id = rsCab.getInt("id");
+                d.clienteId = rsCab.getInt("cliente_id");
                 d.fechaCreacion = rsCab.getString("fecha_creacion");
                 d.clienteNombre = rsCab.getString("cliente_nombre");
                 d.telefono = rsCab.getString("telefono");
@@ -354,6 +355,8 @@ public class PresupuestoService {
                 try (ResultSet rsItems = psItems.executeQuery()) {
                     while (rsItems.next()) {
                         PresupuestoItemDetalle it = new PresupuestoItemDetalle();
+                        int mid = rsItems.getInt("material_id");
+                        it.materialId = rsItems.wasNull() ? null : mid;
                         it.esTareaManual = rsItems.getInt("es_tarea_manual") == 1;
                         it.tareaManual = rsItems.getString("tarea_manual");
                         it.materialNombre = rsItems.getString("material_nombre");
@@ -374,6 +377,7 @@ public class PresupuestoService {
 
     public static class PresupuestoDetalle {
         public int id;
+        public int clienteId;
         public String fechaCreacion;
         public String clienteNombre;
         public String telefono;
@@ -387,6 +391,7 @@ public class PresupuestoService {
     }
 
     public static class PresupuestoItemDetalle {
+        public Integer materialId;
         public boolean esTareaManual;
         public String tareaManual;
         public String materialNombre;

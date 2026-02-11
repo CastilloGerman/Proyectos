@@ -1,11 +1,18 @@
 package appgestion.controller;
 
+import appgestion.model.Cliente;
+import appgestion.model.Material;
+import appgestion.model.PresupuestoItemRow;
+import appgestion.service.ClienteService;
 import appgestion.service.ConfigService;
 import appgestion.service.FacturaService;
 import appgestion.service.FacturaService.FacturaDetalle;
 import appgestion.service.FacturaService.FacturaItemDetalle;
 import appgestion.service.FacturaService.FacturaResumen;
+import appgestion.service.MaterialService;
 import appgestion.service.PdfGeneratorService;
+import appgestion.service.PresupuestoService;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -15,6 +22,7 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
@@ -26,22 +34,33 @@ import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Pestaña de facturación básica:
- * - Lista las facturas
- * - Permite generar una nueva factura a partir de un ID de presupuesto existente
+ * Pestaña de facturación:
+ * - Crear factura manual o importar desde presupuesto
+ * - Lista de facturas con filtros y detalle/PDF
  */
 public class FacturacionController {
 
     private static final Logger log = Logger.getLogger(FacturacionController.class.getName());
     private final FacturaService facturaService;
+    private final ClienteService clienteService;
+    private final PresupuestoService presupuestoService;
+    private final MaterialService materialService;
     private final ConfigService configService = new ConfigService();
     private final PdfGeneratorService pdfGenerator = new PdfGeneratorService();
     private final ObservableList<FacturaResumen> facturas = FXCollections.observableArrayList();
+    private final ObservableList<Cliente> clientesFactura = FXCollections.observableArrayList();
+    private final ObservableList<Material> materialesFactura = FXCollections.observableArrayList();
+    private final ObservableList<PresupuestoItemRow> itemsFactura = FXCollections.observableArrayList();
 
     private TableView<FacturaResumen> facturasTable;
     private TextField presupuestoIdField;
@@ -51,8 +70,32 @@ public class FacturacionController {
     private ComboBox<String> estadoCombo;
     private Label resumenLabel;
 
-    public FacturacionController(FacturaService facturaService) {
+    // Formulario crear factura manual
+    private ComboBox<Cliente> clienteFacturaCombo;
+    private TextField numeroFacturaField;
+    private javafx.scene.control.DatePicker fechaVencimientoPicker;
+    private ComboBox<String> metodoPagoCombo;
+    private ComboBox<String> estadoPagoCombo;
+    private CheckBox ivaHabilitadoCheck;
+    private TextArea notasFacturaArea;
+    private ComboBox<Material> materialFacturaCombo;
+    private TextField cantidadFacturaField;
+    private TextField tareaDescripcionField;
+    private TextField tareaCantidadField;
+    private TextField tareaPrecioField;
+    private TableView<PresupuestoItemRow> itemsFacturaTable;
+    private Label subtotalFacturaLabel;
+    private Label ivaFacturaLabel;
+    private Label totalFacturaLabel;
+
+    public FacturacionController(FacturaService facturaService,
+                                 ClienteService clienteService,
+                                 PresupuestoService presupuestoService,
+                                 MaterialService materialService) {
         this.facturaService = facturaService;
+        this.clienteService = clienteService;
+        this.presupuestoService = presupuestoService;
+        this.materialService = materialService;
     }
 
     public Node createContent() {
@@ -61,7 +104,146 @@ public class FacturacionController {
 
         VBox topBox = new VBox(8);
 
-        // Crear factura desde presupuesto
+        // --- Formulario Crear factura (manual o tras importar) ---
+        ScrollPane formScroll = new ScrollPane();
+        formScroll.setFitToWidth(true);
+        formScroll.setMaxHeight(420);
+        VBox formBox = new VBox(8);
+        formBox.setPadding(new Insets(6));
+
+        TitledPane datosPane = new TitledPane();
+        datosPane.setText("Crear factura");
+        datosPane.setCollapsible(false);
+        VBox datosBox = new VBox(8);
+        HBox fila1 = new HBox(10);
+        clienteFacturaCombo = new ComboBox<>();
+        clienteFacturaCombo.setPrefWidth(280);
+        numeroFacturaField = new TextField();
+        numeroFacturaField.setPromptText("Nº factura");
+        Button autoNumBtn = new Button("Auto");
+        autoNumBtn.setOnAction(e -> onAutoNumeroFactura());
+        fechaVencimientoPicker = new javafx.scene.control.DatePicker();
+        fechaVencimientoPicker.setValue(LocalDate.now().plusDays(30));
+        fila1.getChildren().addAll(
+                new Label("Cliente:"), clienteFacturaCombo,
+                new Label("Nº factura:"), numeroFacturaField, autoNumBtn,
+                new Label("Vencimiento:"), fechaVencimientoPicker
+        );
+        HBox fila2 = new HBox(10);
+        metodoPagoCombo = new ComboBox<>();
+        metodoPagoCombo.getItems().addAll("Transferencia", "Efectivo", "Tarjeta", "Bizum", "Otro");
+        metodoPagoCombo.getSelectionModel().selectFirst();
+        estadoPagoCombo = new ComboBox<>();
+        estadoPagoCombo.getItems().addAll("No Pagada", "Pagada", "Parcial");
+        estadoPagoCombo.getSelectionModel().selectFirst();
+        ivaHabilitadoCheck = new CheckBox("Incluir IVA (21%)");
+        ivaHabilitadoCheck.setSelected(true);
+        ivaHabilitadoCheck.setOnAction(e -> recalcularTotalesFactura());
+        fila2.getChildren().addAll(
+                new Label("Método pago:"), metodoPagoCombo,
+                new Label("Estado:"), estadoPagoCombo,
+                ivaHabilitadoCheck
+        );
+        notasFacturaArea = new TextArea();
+        notasFacturaArea.setPromptText("Notas (opcional)");
+        notasFacturaArea.setPrefRowCount(2);
+        datosBox.getChildren().addAll(fila1, fila2, new Label("Notas:"), notasFacturaArea);
+        datosPane.setContent(datosBox);
+        formBox.getChildren().add(datosPane);
+
+        TitledPane materialPane = new TitledPane();
+        materialPane.setText("Agregar Material");
+        materialPane.setCollapsible(false);
+        HBox materialBox = new HBox(10);
+        materialFacturaCombo = new ComboBox<>();
+        materialFacturaCombo.setPrefWidth(300);
+        cantidadFacturaField = new TextField();
+        cantidadFacturaField.setPromptText("Cantidad");
+        Button agregarMaterialBtn = new Button("➕ Agregar Material");
+        agregarMaterialBtn.setOnAction(e -> onAgregarMaterialFactura());
+        materialBox.getChildren().addAll(
+                new Label("Material:"), materialFacturaCombo,
+                new Label("Cantidad:"), cantidadFacturaField,
+                agregarMaterialBtn
+        );
+        materialPane.setContent(materialBox);
+        formBox.getChildren().add(materialPane);
+
+        TitledPane tareaPane = new TitledPane();
+        tareaPane.setText("Agregar Tarea Manual");
+        tareaPane.setCollapsible(false);
+        VBox tareaBox = new VBox(8);
+        HBox tareaFila1 = new HBox(10);
+        tareaDescripcionField = new TextField();
+        tareaDescripcionField.setPrefWidth(350);
+        tareaDescripcionField.setPromptText("Descripción");
+        tareaFila1.getChildren().addAll(new Label("Descripción:"), tareaDescripcionField);
+        HBox tareaFila2 = new HBox(10);
+        tareaCantidadField = new TextField();
+        tareaCantidadField.setPromptText("Cantidad");
+        tareaPrecioField = new TextField();
+        tareaPrecioField.setPromptText("Precio Unit.");
+        Button agregarTareaBtn = new Button("➕ Agregar Tarea");
+        agregarTareaBtn.setOnAction(e -> onAgregarTareaFactura());
+        tareaFila2.getChildren().addAll(
+                new Label("Cantidad:"), tareaCantidadField,
+                new Label("Precio Unit.:"), tareaPrecioField,
+                agregarTareaBtn
+        );
+        tareaBox.getChildren().addAll(tareaFila1, tareaFila2);
+        tareaPane.setContent(tareaBox);
+        formBox.getChildren().add(tareaPane);
+
+        TitledPane itemsPane = new TitledPane();
+        itemsPane.setText("Items de la factura");
+        itemsPane.setCollapsible(false);
+        itemsFacturaTable = new TableView<>(itemsFactura);
+        itemsFacturaTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        TableColumn<PresupuestoItemRow, String> colTipo = new TableColumn<>("Tipo");
+        colTipo.setCellValueFactory(data -> new SimpleStringProperty(
+                data.getValue().isEsTareaManual() ? "Tarea" : "Material"));
+        colTipo.setMaxWidth(90);
+        TableColumn<PresupuestoItemRow, String> colDesc = new TableColumn<>("Descripción");
+        colDesc.setCellValueFactory(data -> data.getValue().descripcionProperty());
+        TableColumn<PresupuestoItemRow, Number> colCant = new TableColumn<>("Cantidad");
+        colCant.setCellValueFactory(data -> data.getValue().cantidadProperty());
+        TableColumn<PresupuestoItemRow, Number> colPrecio = new TableColumn<>("Precio Unit.");
+        colPrecio.setCellValueFactory(data -> data.getValue().precioUnitarioProperty());
+        TableColumn<PresupuestoItemRow, Number> colSub = new TableColumn<>("Subtotal");
+        colSub.setCellValueFactory(data -> data.getValue().subtotalProperty());
+        itemsFacturaTable.getColumns().add(colTipo);
+        itemsFacturaTable.getColumns().add(colDesc);
+        itemsFacturaTable.getColumns().add(colCant);
+        itemsFacturaTable.getColumns().add(colPrecio);
+        itemsFacturaTable.getColumns().add(colSub);
+        ContextMenu ctxMenu = new ContextMenu();
+        MenuItem eliminarItem = new MenuItem("Eliminar item");
+        eliminarItem.setOnAction(e -> onEliminarItemFactura());
+        ctxMenu.getItems().add(eliminarItem);
+        itemsFacturaTable.setContextMenu(ctxMenu);
+        VBox itemsBox = new VBox(itemsFacturaTable);
+        VBox.setVgrow(itemsFacturaTable, Priority.ALWAYS);
+        itemsPane.setContent(itemsBox);
+        formBox.getChildren().add(itemsPane);
+
+        HBox totalesRow = new HBox(20);
+        subtotalFacturaLabel = new Label("Subtotal: €0.00");
+        ivaFacturaLabel = new Label("IVA: €0.00");
+        totalFacturaLabel = new Label("Total: €0.00");
+        totalesRow.getChildren().addAll(subtotalFacturaLabel, ivaFacturaLabel, totalFacturaLabel);
+
+        Button guardarFacturaBtn = new Button("Guardar factura");
+        guardarFacturaBtn.setOnAction(e -> onGuardarFacturaManual());
+        Button limpiarFacturaBtn = new Button("Limpiar");
+        limpiarFacturaBtn.setOnAction(e -> onLimpiarFormularioFactura());
+        Button importarPresupuestoBtn = new Button("Importar desde presupuesto");
+        importarPresupuestoBtn.setOnAction(e -> onImportarDesdePresupuesto());
+        HBox botonesFactura = new HBox(10, guardarFacturaBtn, limpiarFacturaBtn, importarPresupuestoBtn);
+        formBox.getChildren().addAll(totalesRow, botonesFactura);
+        formScroll.setContent(formBox);
+        topBox.getChildren().add(formScroll);
+
+        // Crear factura desde presupuesto (por ID)
         HBox crearBox = new HBox(10);
         presupuestoIdField = new TextField();
         presupuestoIdField.setPromptText("ID de presupuesto");
@@ -146,9 +328,260 @@ public class FacturacionController {
         root.setCenter(centerBox);
 
         cargarCombos();
+        cargarDatosFormularioFactura();
         recargar();
+        recalcularTotalesFactura();
 
         return root;
+    }
+
+    private void cargarDatosFormularioFactura() {
+        clientesFactura.setAll(clienteService.obtenerTodos());
+        materialesFactura.setAll(materialService.obtenerTodos());
+        clienteFacturaCombo.setItems(clientesFactura);
+        clienteFacturaCombo.setConverter(new javafx.util.StringConverter<Cliente>() {
+            @Override
+            public String toString(Cliente c) { return c == null ? "" : c.getNombre(); }
+            @Override
+            public Cliente fromString(String s) { return null; }
+        });
+        materialFacturaCombo.setItems(materialesFactura);
+        materialFacturaCombo.setConverter(new javafx.util.StringConverter<Material>() {
+            @Override
+            public String toString(Material m) {
+                if (m == null) return "";
+                return m.getNombre() + " (" + m.getUnidadMedida() + ") - €" + m.getPrecioUnitario();
+            }
+            @Override
+            public Material fromString(String s) { return null; }
+        });
+    }
+
+    private void onAutoNumeroFactura() {
+        try {
+            numeroFacturaField.setText(facturaService.generarNumeroFactura());
+        } catch (SQLException e) {
+            mostrarAlertaError("Error", "No se pudo generar el número: " + e.getMessage());
+        }
+    }
+
+    private void onAgregarMaterialFactura() {
+        Material m = materialFacturaCombo.getValue();
+        if (m == null) {
+            mostrarAlerta("Validación", "Selecciona un material.");
+            return;
+        }
+        double cantidad = parseDoubleOrZero(cantidadFacturaField.getText());
+        if (cantidad <= 0) {
+            mostrarAlerta("Validación", "La cantidad debe ser mayor que cero.");
+            return;
+        }
+        PresupuestoItemRow row = new PresupuestoItemRow();
+        row.setMaterialId(m.getId());
+        row.setDescripcion(m.getNombre());
+        row.setEsTareaManual(false);
+        row.setCantidad(cantidad);
+        row.setPrecioUnitario(m.getPrecioUnitario());
+        row.setAplicaIva(true);
+        row.setVisiblePdf(true);
+        itemsFactura.add(row);
+        cantidadFacturaField.clear();
+        recalcularTotalesFactura();
+    }
+
+    private void onAgregarTareaFactura() {
+        String desc = tareaDescripcionField.getText();
+        if (desc == null || desc.trim().isEmpty()) {
+            mostrarAlerta("Validación", "La descripción de la tarea es obligatoria.");
+            return;
+        }
+        double cantidad = parseDoubleOrZero(tareaCantidadField.getText());
+        double precio = parseDoubleOrZero(tareaPrecioField.getText());
+        if (cantidad <= 0 || precio < 0) {
+            mostrarAlerta("Validación", "Cantidad debe ser > 0 y precio >= 0.");
+            return;
+        }
+        PresupuestoItemRow row = new PresupuestoItemRow();
+        row.setMaterialId(0);
+        row.setDescripcion(desc.trim());
+        row.setEsTareaManual(true);
+        row.setCantidad(cantidad);
+        row.setPrecioUnitario(precio);
+        row.setAplicaIva(true);
+        row.setVisiblePdf(true);
+        itemsFactura.add(row);
+        tareaDescripcionField.clear();
+        tareaCantidadField.clear();
+        tareaPrecioField.clear();
+        recalcularTotalesFactura();
+    }
+
+    private void onEliminarItemFactura() {
+        PresupuestoItemRow sel = itemsFacturaTable.getSelectionModel().getSelectedItem();
+        if (sel != null) {
+            itemsFactura.remove(sel);
+            recalcularTotalesFactura();
+        }
+    }
+
+    private void recalcularTotalesFactura() {
+        if (itemsFactura.isEmpty()) {
+            subtotalFacturaLabel.setText("Subtotal: €0.00");
+            ivaFacturaLabel.setText("IVA: €0.00");
+            totalFacturaLabel.setText("Total: €0.00");
+            return;
+        }
+        PresupuestoService.TotalesPresupuesto t = presupuestoService.calcularTotalesCompleto(
+                itemsFactura, 0, 0, true, ivaHabilitadoCheck != null && ivaHabilitadoCheck.isSelected());
+        subtotalFacturaLabel.setText(String.format(Locale.US, "Subtotal: €%.2f", t.subtotal));
+        ivaFacturaLabel.setText(String.format(Locale.US, "IVA: €%.2f", t.iva));
+        totalFacturaLabel.setText(String.format(Locale.US, "Total: €%.2f", t.total));
+    }
+
+    private void onGuardarFacturaManual() {
+        Cliente c = clienteFacturaCombo.getValue();
+        if (c == null) {
+            mostrarAlerta("Validación", "Selecciona un cliente.");
+            return;
+        }
+        if (itemsFactura.isEmpty()) {
+            mostrarAlerta("Validación", "Añade al menos un item a la factura.");
+            return;
+        }
+        String numero = numeroFacturaField.getText();
+        String fechaVenc = fechaVencimientoPicker.getValue() != null
+                ? fechaVencimientoPicker.getValue().format(DateTimeFormatter.ISO_LOCAL_DATE)
+                : "";
+        String metodoPago = metodoPagoCombo.getValue() != null ? metodoPagoCombo.getValue() : "Transferencia";
+        String estadoPago = estadoPagoCombo.getValue() != null ? estadoPagoCombo.getValue() : "No Pagada";
+        String notas = notasFacturaArea.getText();
+        if (notas == null) notas = "";
+        boolean ivaHab = ivaHabilitadoCheck.isSelected();
+        List<PresupuestoItemRow> itemsList = new ArrayList<>(itemsFactura);
+        try {
+            int facturaId = facturaService.crearFacturaManual(
+                    c.getId(), itemsList, numero.isEmpty() ? null : numero, fechaVenc,
+                    metodoPago, estadoPago, notas, ivaHab);
+            mostrarAlerta("Factura creada", "Factura creada con ID " + facturaId + ".");
+            onLimpiarFormularioFactura();
+            recargar();
+        } catch (SQLException e) {
+            log.log(Level.SEVERE, "Error al guardar factura", e);
+            mostrarAlertaError("Error", "No se pudo guardar la factura: " + e.getMessage());
+        }
+    }
+
+    private void onLimpiarFormularioFactura() {
+        clienteFacturaCombo.getSelectionModel().clearSelection();
+        numeroFacturaField.clear();
+        fechaVencimientoPicker.setValue(LocalDate.now().plusDays(30));
+        metodoPagoCombo.getSelectionModel().selectFirst();
+        estadoPagoCombo.getSelectionModel().selectFirst();
+        ivaHabilitadoCheck.setSelected(true);
+        notasFacturaArea.clear();
+        itemsFactura.clear();
+        recalcularTotalesFactura();
+    }
+
+    private void onImportarDesdePresupuesto() {
+        abrirDialogoImportarPresupuesto();
+    }
+
+    private void abrirDialogoImportarPresupuesto() {
+        Stage stage = new Stage();
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.setTitle("Importar desde presupuesto");
+        ObservableList<PresupuestoService.PresupuestoResumen> items = FXCollections.observableArrayList();
+        TableView<PresupuestoService.PresupuestoResumen> table = new TableView<>(items);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        TableColumn<PresupuestoService.PresupuestoResumen, Integer> colId = new TableColumn<>("ID");
+        colId.setCellValueFactory(c -> new javafx.beans.property.SimpleIntegerProperty(c.getValue().id).asObject());
+        TableColumn<PresupuestoService.PresupuestoResumen, String> colCliente = new TableColumn<>("Cliente");
+        colCliente.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().clienteNombre));
+        TableColumn<PresupuestoService.PresupuestoResumen, String> colFecha = new TableColumn<>("Fecha");
+        colFecha.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().fechaCreacion));
+        TableColumn<PresupuestoService.PresupuestoResumen, Double> colTotal = new TableColumn<>("Total");
+        colTotal.setCellValueFactory(c -> new javafx.beans.property.SimpleDoubleProperty(c.getValue().total).asObject());
+        table.getColumns().add(colId);
+        table.getColumns().add(colCliente);
+        table.getColumns().add(colFecha);
+        table.getColumns().add(colTotal);
+        Label avisoVacio = new Label("No hay presupuestos. Crea uno en la pestaña \"Gestión de Presupuestos\".");
+        avisoVacio.setVisible(false);
+        Button importarBtn = new Button("Importar");
+        importarBtn.setOnAction(e -> {
+            PresupuestoService.PresupuestoResumen sel = table.getSelectionModel().getSelectedItem();
+            if (sel == null) {
+                mostrarAlerta("Aviso", "Selecciona un presupuesto.");
+                return;
+            }
+            rellenarFormularioDesdePresupuesto(sel.id);
+            stage.close();
+        });
+        Button cancelarBtn = new Button("Cancelar");
+        cancelarBtn.setOnAction(e -> stage.close());
+        Button refrescarBtn = new Button("Actualizar lista");
+        refrescarBtn.setOnAction(e -> {
+            items.setAll(presupuestoService.obtenerPresupuestos());
+            avisoVacio.setVisible(items.isEmpty());
+        });
+        VBox root = new VBox(10, table, avisoVacio, new HBox(10, importarBtn, refrescarBtn, cancelarBtn));
+        root.setPadding(new Insets(10));
+        stage.setScene(new Scene(root, 560, 400));
+        stage.setOnShown(e -> {
+            items.setAll(presupuestoService.obtenerPresupuestos());
+            avisoVacio.setVisible(items.isEmpty());
+        });
+        stage.show();
+    }
+
+    private void rellenarFormularioDesdePresupuesto(int presupuestoId) {
+        PresupuestoService.PresupuestoDetalle d = presupuestoService.obtenerPresupuestoPorId(presupuestoId);
+        if (d == null) {
+            mostrarAlertaError("Error", "No se pudo cargar el presupuesto.");
+            return;
+        }
+        itemsFactura.clear();
+        Cliente clienteSel = null;
+        for (Cliente c : clientesFactura) {
+            if (c.getId() == d.clienteId) {
+                clienteSel = c;
+                break;
+            }
+        }
+        if (clienteSel != null) clienteFacturaCombo.setValue(clienteSel);
+        try {
+            numeroFacturaField.setText(facturaService.generarNumeroFactura());
+        } catch (SQLException ignored) { }
+        fechaVencimientoPicker.setValue(LocalDate.now().plusDays(30));
+        estadoPagoCombo.getSelectionModel().selectFirst();
+        ivaHabilitadoCheck.setSelected(d.ivaHabilitado);
+        if (d.items != null) {
+            for (PresupuestoService.PresupuestoItemDetalle it : d.items) {
+                PresupuestoItemRow row = new PresupuestoItemRow();
+                row.setMaterialId(Optional.ofNullable(it.materialId).orElse(0));
+                String desc = it.esTareaManual && it.tareaManual != null && !it.tareaManual.isEmpty()
+                        ? it.tareaManual
+                        : (it.materialNombre != null ? it.materialNombre : "");
+                row.setDescripcion(desc);
+                row.setEsTareaManual(it.esTareaManual);
+                row.setCantidad(it.cantidad);
+                row.setPrecioUnitario(it.precioUnitario);
+                row.setAplicaIva(true);
+                row.setVisiblePdf(true);
+                itemsFactura.add(row);
+            }
+        }
+        recalcularTotalesFactura();
+    }
+
+    private double parseDoubleOrZero(String text) {
+        if (text == null || text.isEmpty()) return 0.0;
+        try {
+            return Double.parseDouble(text.trim().replace(',', '.'));
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
     }
 
     private void onCrearFactura() {

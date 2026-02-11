@@ -1,5 +1,7 @@
 package appgestion.service;
 
+import appgestion.model.PresupuestoItemRow;
+
 import java.sql.*;
 import java.time.Year;
 import java.util.ArrayList;
@@ -39,6 +41,119 @@ public class FacturaService {
         }
         int anioActual = Year.now().getValue();
         return String.format("F0001-%d", anioActual);
+    }
+
+    /**
+     * Crea una factura manual (sin presupuesto): cliente, ítems, número, vencimiento, método de pago, etc.
+     */
+    public int crearFacturaManual(
+            int clienteId,
+            List<PresupuestoItemRow> items,
+            String numeroFactura,
+            String fechaVencimiento,
+            String metodoPago,
+            String estadoPago,
+            String notas,
+            boolean ivaHabilitado
+    ) throws SQLException {
+        if (numeroFactura == null || numeroFactura.isBlank()) {
+            numeroFactura = generarNumeroFactura();
+        }
+        double subtotal = 0;
+        double iva = 0;
+        for (PresupuestoItemRow row : items) {
+            double itemSt = row.getCantidad() * row.getPrecioUnitario();
+            double desc = 0;
+            if (row.getDescuentoPorcentaje() > 0) {
+                desc = itemSt * (row.getDescuentoPorcentaje() / 100.0);
+            } else if (row.getDescuentoFijo() > 0) {
+                desc = Math.min(row.getDescuentoFijo(), itemSt);
+            }
+            double neto = itemSt - desc;
+            subtotal += neto;
+            if (row.isAplicaIva() && ivaHabilitado) {
+                iva += neto * (ivaPorcentaje / 100.0);
+            }
+        }
+        double total = subtotal + iva;
+
+        try (Connection conn = Database.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                String insertFactura = """
+                        INSERT INTO facturas
+                        (numero_factura, cliente_id, presupuesto_id, fecha_vencimiento, subtotal, iva, total,
+                         iva_habilitado, metodo_pago, estado_pago, notas)
+                        VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """;
+                int facturaId;
+                try (PreparedStatement ps = conn.prepareStatement(insertFactura, Statement.RETURN_GENERATED_KEYS)) {
+                    ps.setString(1, numeroFactura);
+                    ps.setInt(2, clienteId);
+                    ps.setString(3, fechaVencimiento != null ? fechaVencimiento : "");
+                    ps.setDouble(4, subtotal);
+                    ps.setDouble(5, iva);
+                    ps.setDouble(6, total);
+                    ps.setInt(7, ivaHabilitado ? 1 : 0);
+                    ps.setString(8, metodoPago != null ? metodoPago : "Transferencia");
+                    ps.setString(9, estadoPago != null ? estadoPago : "No Pagada");
+                    ps.setString(10, notas != null ? notas : "");
+                    ps.executeUpdate();
+                    try (ResultSet rs = ps.getGeneratedKeys()) {
+                        if (!rs.next()) {
+                            throw new SQLException("No se pudo obtener el ID de factura creada.");
+                        }
+                        facturaId = rs.getInt(1);
+                    }
+                }
+
+                String insertItem = """
+                        INSERT INTO factura_items
+                        (factura_id, material_id, tarea_manual, cantidad, precio_unitario, subtotal,
+                         visible_pdf, es_tarea_manual, aplica_iva, descuento_porcentaje, descuento_fijo, cuota_iva)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """;
+                try (PreparedStatement psItem = conn.prepareStatement(insertItem)) {
+                    for (PresupuestoItemRow row : items) {
+                        double itemSt = row.getCantidad() * row.getPrecioUnitario();
+                        double desc = 0;
+                        if (row.getDescuentoPorcentaje() > 0) {
+                            desc = itemSt * (row.getDescuentoPorcentaje() / 100.0);
+                        } else if (row.getDescuentoFijo() > 0) {
+                            desc = Math.min(row.getDescuentoFijo(), itemSt);
+                        }
+                        double neto = itemSt - desc;
+                        double cuotaIva = (row.isAplicaIva() && ivaHabilitado) ? neto * (ivaPorcentaje / 100.0) : 0;
+
+                        psItem.setInt(1, facturaId);
+                        if (row.isEsTareaManual() || row.getMaterialId() == 0) {
+                            psItem.setNull(2, Types.INTEGER);
+                        } else {
+                            psItem.setInt(2, row.getMaterialId());
+                        }
+                        psItem.setString(3, row.getDescripcion() != null ? row.getDescripcion() : "");
+                        psItem.setDouble(4, row.getCantidad());
+                        psItem.setDouble(5, row.getPrecioUnitario());
+                        psItem.setDouble(6, neto);
+                        psItem.setInt(7, row.isVisiblePdf() ? 1 : 0);
+                        psItem.setInt(8, row.isEsTareaManual() ? 1 : 0);
+                        psItem.setInt(9, row.isAplicaIva() ? 1 : 0);
+                        psItem.setDouble(10, row.getDescuentoPorcentaje());
+                        psItem.setDouble(11, row.getDescuentoFijo());
+                        psItem.setDouble(12, cuotaIva);
+                        psItem.addBatch();
+                    }
+                    psItem.executeBatch();
+                }
+                conn.commit();
+                return facturaId;
+            } catch (SQLException ex) {
+                conn.rollback();
+                throw ex;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
     }
 
     public int crearFacturaDesdePresupuesto(int presupuestoId) throws SQLException {
