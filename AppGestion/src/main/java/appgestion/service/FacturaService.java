@@ -430,6 +430,22 @@ public class FacturaService {
     }
 
     /**
+     * Actualiza el estado de pago de una factura (No Pagada, Pagada, Parcial).
+     */
+    public boolean actualizarEstadoPago(int facturaId, String estadoPago) {
+        String sql = "UPDATE facturas SET estado_pago = ? WHERE id = ?";
+        try (Connection conn = Database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, estadoPago);
+            ps.setInt(2, facturaId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            log.log(Level.SEVERE, "Error en actualizarEstadoPago", e);
+            return false;
+        }
+    }
+
+    /**
      * Obtiene una factura completa por ID (cabecera + items) para ver detalle y generar PDF.
      */
     public FacturaDetalle obtenerFacturaPorId(int facturaId) {

@@ -274,12 +274,17 @@ public class FacturacionController {
         });
         Button verDetalleBtn = new Button("Ver detalle");
         verDetalleBtn.setOnAction(e -> verDetalleFactura());
+        Button marcarPagadaBtn = new Button("✓ Marcar como Pagada");
+        marcarPagadaBtn.getStyleClass().add("success-button");
+        marcarPagadaBtn.setOnAction(e -> marcarEstadoPagoFactura("Pagada"));
+        Button marcarNoPagadaBtn = new Button("Marcar como No Pagada");
+        marcarNoPagadaBtn.setOnAction(e -> marcarEstadoPagoFactura("No Pagada"));
         filtrosBox.getChildren().addAll(
                 new Label("Buscar:"), buscarField,
                 new Label("Año:"), anioCombo,
                 new Label("Mes:"), mesCombo,
                 new Label("Estado:"), estadoCombo,
-                aplicarFiltrosBtn, limpiarFiltrosBtn, verDetalleBtn
+                aplicarFiltrosBtn, limpiarFiltrosBtn, verDetalleBtn, marcarPagadaBtn, marcarNoPagadaBtn
         );
 
         topBox.getChildren().addAll(crearBox, filtrosBox);
@@ -658,6 +663,20 @@ public class FacturacionController {
         alert.showAndWait();
     }
 
+    private void marcarEstadoPagoFactura(String estadoPago) {
+        FacturaResumen sel = facturasTable.getSelectionModel().getSelectedItem();
+        if (sel == null) {
+            mostrarAlerta("Aviso", "Seleccione una factura para cambiar su estado de pago.");
+            return;
+        }
+        if (facturaService.actualizarEstadoPago(sel.id, estadoPago)) {
+            mostrarAlerta("Éxito", "Factura " + sel.numeroFactura + " marcada como " + estadoPago + ".");
+            recargar();
+        } else {
+            mostrarAlertaError("Error", "No se pudo actualizar el estado de pago.");
+        }
+    }
+
     private void verDetalleFactura() {
         FacturaResumen sel = facturasTable.getSelectionModel().getSelectedItem();
         if (sel == null) {
@@ -742,11 +761,16 @@ public class FacturacionController {
         }
         TitledPane totalesPane = new TitledPane("Totales", totalesBox);
 
+        Button marcarPagadaBtn = new Button("✓ Marcar como Pagada");
+        marcarPagadaBtn.getStyleClass().add("success-button");
+        marcarPagadaBtn.setOnAction(e -> { marcarEstadoPagoFacturaDesdeDetalle(d.id, "Pagada", stage); });
+        Button marcarNoPagadaBtn = new Button("Marcar como No Pagada");
+        marcarNoPagadaBtn.setOnAction(e -> { marcarEstadoPagoFacturaDesdeDetalle(d.id, "No Pagada", stage); });
         Button generarPdfBtn = new Button("Generar PDF");
         generarPdfBtn.setOnAction(e -> generarPdfFactura(d, stage));
         Button cerrarBtn = new Button("Cerrar");
         cerrarBtn.setOnAction(e -> stage.close());
-        HBox botones = new HBox(10, generarPdfBtn, cerrarBtn);
+        HBox botones = new HBox(10, marcarPagadaBtn, marcarNoPagadaBtn, generarPdfBtn, cerrarBtn);
         botones.setPadding(new Insets(10));
 
         VBox root = new VBox(10, infoPane, clientePane, new TitledPane("Items de la factura", itemsTable), totalesPane, botones);
@@ -754,6 +778,16 @@ public class FacturacionController {
         Scene scene = new Scene(root, 720, 580);
         stage.setScene(scene);
         stage.show();
+    }
+
+    private void marcarEstadoPagoFacturaDesdeDetalle(int facturaId, String estadoPago, Stage stage) {
+        if (facturaService.actualizarEstadoPago(facturaId, estadoPago)) {
+            mostrarAlerta("Éxito", "Factura actualizada como " + estadoPago + ".");
+            recargar();
+            stage.close();
+        } else {
+            mostrarAlertaError("Error", "No se pudo actualizar el estado de pago.");
+        }
     }
 
     private void generarPdfFactura(FacturaDetalle d, Stage parentStage) {

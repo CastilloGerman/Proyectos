@@ -2,16 +2,17 @@ package appgestion;
 
 import javafx.application.Application;
 import appgestion.controller.ClientesController;
+import appgestion.controller.FacturacionController;
 import appgestion.controller.MaterialesController;
+import appgestion.controller.MetricasController;
 import appgestion.controller.PresupuestosController;
 import appgestion.controller.VerPresupuestosController;
-import appgestion.controller.FacturacionController;
 import appgestion.service.ClienteService;
-import appgestion.service.MaterialService;
-import appgestion.service.PresupuestoService;
 import appgestion.service.FacturaService;
+import appgestion.service.MaterialService;
+import appgestion.service.MetricasService;
+import appgestion.service.PresupuestoService;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.layout.BorderPane;
@@ -76,7 +77,14 @@ public class AppGestionApplication extends Application {
             if (Boolean.TRUE.equals(selected)) facturacionController.recargar();
         });
         tabPane.getTabs().add(tabFacturacion);
-        tabPane.getTabs().add(createTab("Métricas"));
+
+        // Pestaña de métricas con gráficos y estadísticas (refrescar al seleccionar)
+        MetricasController metricasController = new MetricasController(new MetricasService());
+        Tab tabMetricas = createTab("Métricas", metricasController.createContent());
+        tabMetricas.selectedProperty().addListener((o, prev, selected) -> {
+            if (Boolean.TRUE.equals(selected)) metricasController.recargar();
+        });
+        tabPane.getTabs().add(tabMetricas);
 
         root.setCenter(tabPane);
 
@@ -86,10 +94,6 @@ public class AppGestionApplication extends Application {
 
         primaryStage.setScene(scene);
         primaryStage.show();
-    }
-
-    private Tab createTab(String title) {
-        return createTab(title, new Label("Contenido pendiente de migrar para: " + title));
     }
 
     private Tab createTab(String title, javafx.scene.Node content) {

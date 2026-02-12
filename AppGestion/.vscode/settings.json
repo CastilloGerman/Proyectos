@@ -2,5 +2,6 @@
   "java.configuration.updateBuildConfiguration": "automatic",
   "java.import.maven.enabled": true,
   "java.project.importHint": true,
-  "java.server.launchMode": "Standard"
+  "java.server.launchMode": "Standard",
+  "java.compile.nullAnalysis.mode": "automatic"
 }

@@ -3,6 +3,7 @@ C:\Users\German\Documents\Proyectos\AppGestion\src\main\java\appgestion\config\P
 C:\Users\German\Documents\Proyectos\AppGestion\src\main\java\appgestion\controller\ClientesController.java
 C:\Users\German\Documents\Proyectos\AppGestion\src\main\java\appgestion\controller\FacturacionController.java
 C:\Users\German\Documents\Proyectos\AppGestion\src\main\java\appgestion\controller\MaterialesController.java
+C:\Users\German\Documents\Proyectos\AppGestion\src\main\java\appgestion\controller\MetricasController.java
 C:\Users\German\Documents\Proyectos\AppGestion\src\main\java\appgestion\controller\PresupuestosController.java
 C:\Users\German\Documents\Proyectos\AppGestion\src\main\java\appgestion\controller\VerPresupuestosController.java
 C:\Users\German\Documents\Proyectos\AppGestion\src\main\java\appgestion\model\Cliente.java
@@ -13,5 +14,6 @@ C:\Users\German\Documents\Proyectos\AppGestion\src\main\java\appgestion\service\
 C:\Users\German\Documents\Proyectos\AppGestion\src\main\java\appgestion\service\Database.java
 C:\Users\German\Documents\Proyectos\AppGestion\src\main\java\appgestion\service\FacturaService.java
 C:\Users\German\Documents\Proyectos\AppGestion\src\main\java\appgestion\service\MaterialService.java
+C:\Users\German\Documents\Proyectos\AppGestion\src\main\java\appgestion\service\MetricasService.java
 C:\Users\German\Documents\Proyectos\AppGestion\src\main\java\appgestion\service\PdfGeneratorService.java
 C:\Users\German\Documents\Proyectos\AppGestion\src\main\java\appgestion\service\PresupuestoService.java

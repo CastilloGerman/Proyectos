@@ -70,11 +70,17 @@ public class VerPresupuestosController {
         });
         Button verDetalleBtn = new Button("Ver detalle");
         verDetalleBtn.setOnAction(e -> verDetallePresupuesto());
+        Button marcarAprobadoBtn = new Button("✓ Marcar Aprobado");
+        marcarAprobadoBtn.getStyleClass().add("success-button");
+        marcarAprobadoBtn.setOnAction(e -> marcarEstadoPresupuesto("Aprobado"));
+        Button marcarRechazadoBtn = new Button("✗ Marcar Rechazado");
+        marcarRechazadoBtn.getStyleClass().add("danger-button");
+        marcarRechazadoBtn.setOnAction(e -> marcarEstadoPresupuesto("Rechazado"));
         filtros.getChildren().addAll(
                 new Label("Buscar:"), buscarField,
                 new Label("Año:"), anioCombo,
                 new Label("Mes:"), mesCombo,
-                aplicarBtn, limpiarBtn, verDetalleBtn
+                aplicarBtn, limpiarBtn, verDetalleBtn, marcarAprobadoBtn, marcarRechazadoBtn
         );
         root.setTop(filtros);
 
@@ -99,6 +105,8 @@ public class VerPresupuestosController {
 
         TableColumn<PresupuestoResumen, Double> colTotal = new TableColumn<>("Total");
         colTotal.setCellValueFactory(new PropertyValueFactory<>("total"));
+        TableColumn<PresupuestoResumen, String> colEstado = new TableColumn<>("Estado");
+        colEstado.setCellValueFactory(new PropertyValueFactory<>("estado"));
 
         table.getColumns().add(colId);
         table.getColumns().add(colFecha);
@@ -106,6 +114,7 @@ public class VerPresupuestosController {
         table.getColumns().add(colSubtotal);
         table.getColumns().add(colIva);
         table.getColumns().add(colTotal);
+        table.getColumns().add(colEstado);
 
         resumenLabel = new Label();
 
@@ -151,6 +160,20 @@ public class VerPresupuestosController {
         ));
     }
 
+    private void marcarEstadoPresupuesto(String estado) {
+        PresupuestoResumen sel = table == null ? null : table.getSelectionModel().getSelectedItem();
+        if (sel == null) {
+            mostrarAlerta("Aviso", "Seleccione un presupuesto para cambiar su estado.");
+            return;
+        }
+        if (presupuestoService.actualizarEstadoPresupuesto(sel.id, estado)) {
+            mostrarAlerta("Éxito", "Presupuesto #" + sel.id + " marcado como " + estado + ".");
+            recargar();
+        } else {
+            mostrarAlertaError("Error", "No se pudo actualizar el estado.");
+        }
+    }
+
     private void verDetallePresupuesto() {
         PresupuestoResumen sel = table == null ? null : table.getSelectionModel().getSelectedItem();
         if (sel == null) {
@@ -173,6 +196,7 @@ public class VerPresupuestosController {
         VBox clientBox = new VBox(4);
         clientBox.setPadding(new Insets(10));
         clientBox.getChildren().addAll(
+                new Label("Estado: " + nullToEmpty(d.estado)),
                 new Label("Cliente: " + nullToEmpty(d.clienteNombre)),
                 new Label("Teléfono: " + nullToEmpty(d.telefono)),
                 new Label("Email: " + nullToEmpty(d.email)),
@@ -221,11 +245,17 @@ public class VerPresupuestosController {
         );
         TitledPane totalesPane = new TitledPane("Totales", totalesBox);
 
+        Button marcarAprobadoBtn = new Button("✓ Marcar Aprobado");
+        marcarAprobadoBtn.getStyleClass().add("success-button");
+        marcarAprobadoBtn.setOnAction(e -> { marcarEstadoPresupuestoDesdeDetalle(d.id, "Aprobado", stage); });
+        Button marcarRechazadoBtn = new Button("✗ Marcar Rechazado");
+        marcarRechazadoBtn.getStyleClass().add("danger-button");
+        marcarRechazadoBtn.setOnAction(e -> { marcarEstadoPresupuestoDesdeDetalle(d.id, "Rechazado", stage); });
         Button generarPdfBtn = new Button("Generar PDF");
         generarPdfBtn.setOnAction(e -> generarPdfPresupuesto(d, stage));
         Button cerrarBtn = new Button("Cerrar");
         cerrarBtn.setOnAction(e -> stage.close());
-        HBox botones = new HBox(10, generarPdfBtn, cerrarBtn);
+        HBox botones = new HBox(10, marcarAprobadoBtn, marcarRechazadoBtn, generarPdfBtn, cerrarBtn);
         botones.setPadding(new Insets(10));
 
         VBox root = new VBox(10, clientePane, new TitledPane("Items del presupuesto", itemsTable), totalesPane, botones);
@@ -233,6 +263,16 @@ public class VerPresupuestosController {
         Scene scene = new Scene(root, 700, 550);
         stage.setScene(scene);
         stage.show();
+    }
+
+    private void marcarEstadoPresupuestoDesdeDetalle(int presupuestoId, String estado, Stage stage) {
+        if (presupuestoService.actualizarEstadoPresupuesto(presupuestoId, estado)) {
+            mostrarAlerta("Éxito", "Presupuesto #" + presupuestoId + " marcado como " + estado + ".");
+            recargar();
+            stage.close();
+        } else {
+            mostrarAlertaError("Error", "No se pudo actualizar el estado.");
+        }
     }
 
     private void generarPdfPresupuesto(PresupuestoDetalle d, Stage parentStage) {

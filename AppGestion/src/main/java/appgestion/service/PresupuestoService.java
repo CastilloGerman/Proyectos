@@ -179,6 +179,7 @@ public class PresupuestoService {
     public List<PresupuestoResumen> obtenerPresupuestos() {
         String sql = """
                 SELECT p.id, p.fecha_creacion, p.subtotal, p.iva, p.total,
+                       COALESCE(p.estado, 'Pendiente') as estado,
                        c.nombre as cliente_nombre
                 FROM presupuestos p
                 JOIN clientes c ON p.cliente_id = c.id
@@ -195,6 +196,7 @@ public class PresupuestoService {
                 r.subtotal = rs.getDouble("subtotal");
                 r.iva = rs.getDouble("iva");
                 r.total = rs.getDouble("total");
+                r.estado = rs.getString("estado");
                 r.clienteNombre = rs.getString("cliente_nombre");
                 lista.add(r);
             }
@@ -262,6 +264,7 @@ public class PresupuestoService {
     public List<PresupuestoResumen> buscarPresupuestos(String termino, Integer anio, Integer mes) {
         StringBuilder sql = new StringBuilder("""
                 SELECT p.id, p.fecha_creacion, p.subtotal, p.iva, p.total,
+                       COALESCE(p.estado, 'Pendiente') as estado,
                        c.nombre as cliente_nombre
                 FROM presupuestos p
                 JOIN clientes c ON p.cliente_id = c.id
@@ -303,6 +306,7 @@ public class PresupuestoService {
                     r.subtotal = rs.getDouble("subtotal");
                     r.iva = rs.getDouble("iva");
                     r.total = rs.getDouble("total");
+                    r.estado = rs.getString("estado");
                     r.clienteNombre = rs.getString("cliente_nombre");
                     lista.add(r);
                 }
@@ -314,11 +318,28 @@ public class PresupuestoService {
     }
 
     /**
+     * Actualiza el estado de un presupuesto (Pendiente, Aprobado, Rechazado).
+     */
+    public boolean actualizarEstadoPresupuesto(int presupuestoId, String estado) {
+        String sql = "UPDATE presupuestos SET estado = ? WHERE id = ?";
+        try (Connection conn = Database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, estado);
+            ps.setInt(2, presupuestoId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            log.log(Level.SEVERE, "Error en actualizarEstadoPresupuesto", e);
+            return false;
+        }
+    }
+
+    /**
      * Obtiene un presupuesto completo por ID (cabecera + items) para ver detalle y generar PDF.
      */
     public PresupuestoDetalle obtenerPresupuestoPorId(int presupuestoId) {
         String cabSql = """
                 SELECT p.id, p.cliente_id, p.fecha_creacion, p.subtotal, p.iva, p.total, p.iva_habilitado,
+                       COALESCE(p.estado, 'Pendiente') as estado,
                        c.nombre as cliente_nombre, c.telefono, c.email, c.direccion
                 FROM presupuestos p
                 JOIN clientes c ON p.cliente_id = c.id
@@ -342,6 +363,7 @@ public class PresupuestoService {
                 d.id = rsCab.getInt("id");
                 d.clienteId = rsCab.getInt("cliente_id");
                 d.fechaCreacion = rsCab.getString("fecha_creacion");
+                d.estado = rsCab.getString("estado");
                 d.clienteNombre = rsCab.getString("cliente_nombre");
                 d.telefono = rsCab.getString("telefono");
                 d.email = rsCab.getString("email");
@@ -379,6 +401,7 @@ public class PresupuestoService {
         public int id;
         public int clienteId;
         public String fechaCreacion;
+        public String estado;
         public String clienteNombre;
         public String telefono;
         public String email;
@@ -417,6 +440,7 @@ public class PresupuestoService {
         public double subtotal;
         public double iva;
         public double total;
+        public String estado;
         public String clienteNombre;
 
         public int getId() { return id; }
@@ -424,6 +448,7 @@ public class PresupuestoService {
         public double getSubtotal() { return subtotal; }
         public double getIva() { return iva; }
         public double getTotal() { return total; }
+        public String getEstado() { return estado; }
         public String getClienteNombre() { return clienteNombre; }
     }
 }
