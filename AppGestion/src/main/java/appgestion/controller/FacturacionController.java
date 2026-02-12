@@ -12,6 +12,8 @@ import appgestion.service.FacturaService.FacturaResumen;
 import appgestion.service.MaterialService;
 import appgestion.service.PdfGeneratorService;
 import appgestion.service.PresupuestoService;
+import appgestion.util.FxAlerts;
+import appgestion.util.StringUtils;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -366,19 +368,19 @@ public class FacturacionController {
         try {
             numeroFacturaField.setText(facturaService.generarNumeroFactura());
         } catch (SQLException e) {
-            mostrarAlertaError("Error", "No se pudo generar el número: " + e.getMessage());
+            FxAlerts.showError("Error", "No se pudo generar el número: " + e.getMessage());
         }
     }
 
     private void onAgregarMaterialFactura() {
         Material m = materialFacturaCombo.getValue();
         if (m == null) {
-            mostrarAlerta("Validación", "Selecciona un material.");
+            FxAlerts.showInfo("Validación", "Selecciona un material.");
             return;
         }
         double cantidad = parseDoubleOrZero(cantidadFacturaField.getText());
         if (cantidad <= 0) {
-            mostrarAlerta("Validación", "La cantidad debe ser mayor que cero.");
+            FxAlerts.showInfo("Validación", "La cantidad debe ser mayor que cero.");
             return;
         }
         PresupuestoItemRow row = new PresupuestoItemRow();
@@ -397,13 +399,13 @@ public class FacturacionController {
     private void onAgregarTareaFactura() {
         String desc = tareaDescripcionField.getText();
         if (desc == null || desc.trim().isEmpty()) {
-            mostrarAlerta("Validación", "La descripción de la tarea es obligatoria.");
+            FxAlerts.showInfo("Validación", "La descripción de la tarea es obligatoria.");
             return;
         }
         double cantidad = parseDoubleOrZero(tareaCantidadField.getText());
         double precio = parseDoubleOrZero(tareaPrecioField.getText());
         if (cantidad <= 0 || precio < 0) {
-            mostrarAlerta("Validación", "Cantidad debe ser > 0 y precio >= 0.");
+            FxAlerts.showInfo("Validación", "Cantidad debe ser > 0 y precio >= 0.");
             return;
         }
         PresupuestoItemRow row = new PresupuestoItemRow();
@@ -446,11 +448,11 @@ public class FacturacionController {
     private void onGuardarFacturaManual() {
         Cliente c = clienteFacturaCombo.getValue();
         if (c == null) {
-            mostrarAlerta("Validación", "Selecciona un cliente.");
+            FxAlerts.showInfo("Validación", "Selecciona un cliente.");
             return;
         }
         if (itemsFactura.isEmpty()) {
-            mostrarAlerta("Validación", "Añade al menos un item a la factura.");
+            FxAlerts.showInfo("Validación", "Añade al menos un item a la factura.");
             return;
         }
         String numero = numeroFacturaField.getText();
@@ -467,12 +469,12 @@ public class FacturacionController {
             int facturaId = facturaService.crearFacturaManual(
                     c.getId(), itemsList, numero.isEmpty() ? null : numero, fechaVenc,
                     metodoPago, estadoPago, notas, ivaHab);
-            mostrarAlerta("Factura creada", "Factura creada con ID " + facturaId + ".");
+            FxAlerts.showInfo("Factura creada", "Factura creada con ID " + facturaId + ".");
             onLimpiarFormularioFactura();
             recargar();
         } catch (SQLException e) {
             log.log(Level.SEVERE, "Error al guardar factura", e);
-            mostrarAlertaError("Error", "No se pudo guardar la factura: " + e.getMessage());
+            FxAlerts.showError("Error", "No se pudo guardar la factura: " + e.getMessage());
         }
     }
 
@@ -517,7 +519,7 @@ public class FacturacionController {
         importarBtn.setOnAction(e -> {
             PresupuestoService.PresupuestoResumen sel = table.getSelectionModel().getSelectedItem();
             if (sel == null) {
-                mostrarAlerta("Aviso", "Selecciona un presupuesto.");
+                FxAlerts.showInfo("Aviso", "Selecciona un presupuesto.");
                 return;
             }
             rellenarFormularioDesdePresupuesto(sel.id);
@@ -543,7 +545,7 @@ public class FacturacionController {
     private void rellenarFormularioDesdePresupuesto(int presupuestoId) {
         PresupuestoService.PresupuestoDetalle d = presupuestoService.obtenerPresupuestoPorId(presupuestoId);
         if (d == null) {
-            mostrarAlertaError("Error", "No se pudo cargar el presupuesto.");
+            FxAlerts.showError("Error", "No se pudo cargar el presupuesto.");
             return;
         }
         itemsFactura.clear();
@@ -592,24 +594,24 @@ public class FacturacionController {
     private void onCrearFactura() {
         String txt = presupuestoIdField.getText();
         if (txt == null || txt.trim().isEmpty()) {
-            mostrarAlerta("Validación", "Introduce un ID de presupuesto.");
+            FxAlerts.showInfo("Validación", "Introduce un ID de presupuesto.");
             return;
         }
         int presupuestoId;
         try {
             presupuestoId = Integer.parseInt(txt.trim());
         } catch (NumberFormatException e) {
-            mostrarAlerta("Validación", "ID de presupuesto inválido.");
+            FxAlerts.showInfo("Validación", "ID de presupuesto inválido.");
             return;
         }
         try {
             int facturaId = facturaService.crearFacturaDesdePresupuesto(presupuestoId);
-            mostrarAlerta("Factura creada", "Factura creada con ID " + facturaId + ".");
+            FxAlerts.showInfo("Factura creada", "Factura creada con ID " + facturaId + ".");
             presupuestoIdField.clear();
             recargar();
         } catch (SQLException e) {
             log.log(Level.SEVERE, "Error en operación", e);
-            mostrarAlerta("Error", "No se pudo crear la factura: " + e.getMessage());
+            FxAlerts.showInfo("Error", "No se pudo crear la factura: " + e.getMessage());
         }
     }
 
@@ -647,45 +649,29 @@ public class FacturacionController {
         ));
     }
 
-    private void mostrarAlerta(String titulo, String mensaje) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(titulo);
-        alert.setHeaderText(null);
-        alert.setContentText(mensaje);
-        alert.showAndWait();
-    }
-
-    private void mostrarAlertaError(String titulo, String mensaje) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(titulo);
-        alert.setHeaderText(null);
-        alert.setContentText(mensaje);
-        alert.showAndWait();
-    }
-
     private void marcarEstadoPagoFactura(String estadoPago) {
         FacturaResumen sel = facturasTable.getSelectionModel().getSelectedItem();
         if (sel == null) {
-            mostrarAlerta("Aviso", "Seleccione una factura para cambiar su estado de pago.");
+            FxAlerts.showInfo("Aviso", "Seleccione una factura para cambiar su estado de pago.");
             return;
         }
         if (facturaService.actualizarEstadoPago(sel.id, estadoPago)) {
-            mostrarAlerta("Éxito", "Factura " + sel.numeroFactura + " marcada como " + estadoPago + ".");
+            FxAlerts.showInfo("Éxito", "Factura " + sel.numeroFactura + " marcada como " + estadoPago + ".");
             recargar();
         } else {
-            mostrarAlertaError("Error", "No se pudo actualizar el estado de pago.");
+            FxAlerts.showError("Error", "No se pudo actualizar el estado de pago.");
         }
     }
 
     private void verDetalleFactura() {
         FacturaResumen sel = facturasTable.getSelectionModel().getSelectedItem();
         if (sel == null) {
-            mostrarAlerta("Aviso", "Seleccione una factura para ver el detalle.");
+            FxAlerts.showInfo("Aviso", "Seleccione una factura para ver el detalle.");
             return;
         }
         FacturaDetalle detalle = facturaService.obtenerFacturaPorId(sel.id);
         if (detalle == null) {
-            mostrarAlerta("Error", "No se pudo cargar la factura.");
+            FxAlerts.showError("Error", "No se pudo cargar la factura.");
             return;
         }
         mostrarDialogoDetalleFactura(detalle);
@@ -694,16 +680,16 @@ public class FacturacionController {
     private void mostrarDialogoDetalleFactura(FacturaDetalle d) {
         Stage stage = new Stage();
         stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setTitle("Detalle Factura " + nullToEmpty(d.numeroFactura));
+        stage.setTitle("Detalle Factura " + StringUtils.nullToEmpty(d.numeroFactura));
 
         VBox infoBox = new VBox(4);
         infoBox.setPadding(new Insets(10));
         infoBox.getChildren().addAll(
-                new Label("Número: " + nullToEmpty(d.numeroFactura)),
-                new Label("Fecha: " + nullToEmpty(d.fechaCreacion)),
-                new Label("Vencimiento: " + nullToEmpty(d.fechaVencimiento)),
-                new Label("Método de pago: " + nullToEmpty(d.metodoPago)),
-                new Label("Estado: " + nullToEmpty(d.estadoPago))
+                new Label("Número: " + StringUtils.nullToEmpty(d.numeroFactura)),
+                new Label("Fecha: " + StringUtils.nullToEmpty(d.fechaCreacion)),
+                new Label("Vencimiento: " + StringUtils.nullToEmpty(d.fechaVencimiento)),
+                new Label("Método de pago: " + StringUtils.nullToEmpty(d.metodoPago)),
+                new Label("Estado: " + StringUtils.nullToEmpty(d.estadoPago))
         );
         TitledPane infoPane = new TitledPane("Información de la factura", infoBox);
         infoPane.setExpanded(true);
@@ -711,10 +697,10 @@ public class FacturacionController {
         VBox clientBox = new VBox(4);
         clientBox.setPadding(new Insets(10));
         clientBox.getChildren().addAll(
-                new Label("Cliente: " + nullToEmpty(d.clienteNombre)),
-                new Label("Teléfono: " + nullToEmpty(d.telefono)),
-                new Label("Email: " + nullToEmpty(d.email)),
-                new Label("Dirección: " + nullToEmpty(d.direccion))
+                new Label("Cliente: " + StringUtils.nullToEmpty(d.clienteNombre)),
+                new Label("Teléfono: " + StringUtils.nullToEmpty(d.telefono)),
+                new Label("Email: " + StringUtils.nullToEmpty(d.email)),
+                new Label("Dirección: " + StringUtils.nullToEmpty(d.direccion))
         );
         TitledPane clientePane = new TitledPane("Cliente", clientBox);
 
@@ -723,8 +709,8 @@ public class FacturacionController {
             for (FacturaItemDetalle it : d.items) {
                 FacturaItemDetalleRow row = new FacturaItemDetalleRow();
                 row.tipo = it.esTareaManual ? "Tarea" : "Material";
-                row.descripcion = it.esTareaManual ? nullToEmpty(it.tareaManual)
-                        : nullToEmpty(it.materialNombre) + (it.unidadMedida != null && !it.unidadMedida.isEmpty() ? " (" + it.unidadMedida + ")" : "");
+                row.descripcion = it.esTareaManual ? StringUtils.nullToEmpty(it.tareaManual)
+                        : StringUtils.nullToEmpty(it.materialNombre) + (it.unidadMedida != null && !it.unidadMedida.isEmpty() ? " (" + it.unidadMedida + ")" : "");
                 row.cantidad = it.cantidad;
                 row.precioUnitario = it.precioUnitario;
                 row.subtotal = it.subtotal;
@@ -782,11 +768,11 @@ public class FacturacionController {
 
     private void marcarEstadoPagoFacturaDesdeDetalle(int facturaId, String estadoPago, Stage stage) {
         if (facturaService.actualizarEstadoPago(facturaId, estadoPago)) {
-            mostrarAlerta("Éxito", "Factura actualizada como " + estadoPago + ".");
+            FxAlerts.showInfo("Éxito", "Factura actualizada como " + estadoPago + ".");
             recargar();
             stage.close();
         } else {
-            mostrarAlertaError("Error", "No se pudo actualizar el estado de pago.");
+            FxAlerts.showError("Error", "No se pudo actualizar el estado de pago.");
         }
     }
 
@@ -802,17 +788,13 @@ public class FacturacionController {
         try {
             java.nio.file.Path path = file.toPath();
             pdfGenerator.generateFacturaPdf(d, path);
-            mostrarAlerta("Éxito", "PDF generado correctamente:\n" + path.toAbsolutePath());
+            FxAlerts.showInfo("Éxito", "PDF generado correctamente:\n" + path.toAbsolutePath());
             if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
                 Desktop.getDesktop().open(file);
             }
         } catch (IOException | DocumentException ex) {
-            mostrarAlertaError("Error", "No se pudo generar el PDF: " + ex.getMessage());
+            FxAlerts.showError("Error", "No se pudo generar el PDF: " + ex.getMessage());
         }
-    }
-
-    private static String nullToEmpty(String s) {
-        return s == null ? "" : s;
     }
 
     private static class FacturaItemDetalleRow {

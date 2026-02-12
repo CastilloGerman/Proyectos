@@ -4,6 +4,8 @@ import appgestion.service.ConfigService;
 import appgestion.service.PdfGeneratorService;
 import com.lowagie.text.DocumentException;
 import appgestion.service.PresupuestoService;
+import appgestion.util.FxAlerts;
+import appgestion.util.StringUtils;
 import appgestion.service.PresupuestoService.PresupuestoDetalle;
 import appgestion.service.PresupuestoService.PresupuestoItemDetalle;
 import appgestion.service.PresupuestoService.PresupuestoResumen;
@@ -163,26 +165,26 @@ public class VerPresupuestosController {
     private void marcarEstadoPresupuesto(String estado) {
         PresupuestoResumen sel = table == null ? null : table.getSelectionModel().getSelectedItem();
         if (sel == null) {
-            mostrarAlerta("Aviso", "Seleccione un presupuesto para cambiar su estado.");
+            FxAlerts.showInfo("Aviso", "Seleccione un presupuesto para cambiar su estado.");
             return;
         }
         if (presupuestoService.actualizarEstadoPresupuesto(sel.id, estado)) {
-            mostrarAlerta("Éxito", "Presupuesto #" + sel.id + " marcado como " + estado + ".");
+            FxAlerts.showInfo("Éxito", "Presupuesto #" + sel.id + " marcado como " + estado + ".");
             recargar();
         } else {
-            mostrarAlertaError("Error", "No se pudo actualizar el estado.");
+            FxAlerts.showError("Error", "No se pudo actualizar el estado.");
         }
     }
 
     private void verDetallePresupuesto() {
         PresupuestoResumen sel = table == null ? null : table.getSelectionModel().getSelectedItem();
         if (sel == null) {
-            mostrarAlerta("Aviso", "Seleccione un presupuesto para ver el detalle.");
+            FxAlerts.showInfo("Aviso", "Seleccione un presupuesto para ver el detalle.");
             return;
         }
         PresupuestoDetalle detalle = presupuestoService.obtenerPresupuestoPorId(sel.id);
         if (detalle == null) {
-            mostrarAlerta("Error", "No se pudo cargar el presupuesto.");
+            FxAlerts.showInfo("Error", "No se pudo cargar el presupuesto.");
             return;
         }
         mostrarDialogoDetallePresupuesto(detalle);
@@ -196,11 +198,11 @@ public class VerPresupuestosController {
         VBox clientBox = new VBox(4);
         clientBox.setPadding(new Insets(10));
         clientBox.getChildren().addAll(
-                new Label("Estado: " + nullToEmpty(d.estado)),
-                new Label("Cliente: " + nullToEmpty(d.clienteNombre)),
-                new Label("Teléfono: " + nullToEmpty(d.telefono)),
-                new Label("Email: " + nullToEmpty(d.email)),
-                new Label("Dirección: " + nullToEmpty(d.direccion))
+                new Label("Estado: " + StringUtils.nullToEmpty(d.estado)),
+                new Label("Cliente: " + StringUtils.nullToEmpty(d.clienteNombre)),
+                new Label("Teléfono: " + StringUtils.nullToEmpty(d.telefono)),
+                new Label("Email: " + StringUtils.nullToEmpty(d.email)),
+                new Label("Dirección: " + StringUtils.nullToEmpty(d.direccion))
         );
         TitledPane clientePane = new TitledPane("Información del cliente", clientBox);
         clientePane.setExpanded(true);
@@ -210,8 +212,8 @@ public class VerPresupuestosController {
             for (PresupuestoItemDetalle it : d.items) {
                 ItemDetalleRow row = new ItemDetalleRow();
                 row.tipo = it.esTareaManual ? "Tarea" : "Material";
-                row.descripcion = it.esTareaManual ? nullToEmpty(it.tareaManual)
-                        : nullToEmpty(it.materialNombre) + (it.unidadMedida != null && !it.unidadMedida.isEmpty() ? " (" + it.unidadMedida + ")" : "");
+                row.descripcion = it.esTareaManual ? StringUtils.nullToEmpty(it.tareaManual)
+                        : StringUtils.nullToEmpty(it.materialNombre) + (it.unidadMedida != null && !it.unidadMedida.isEmpty() ? " (" + it.unidadMedida + ")" : "");
                 row.cantidad = it.cantidad;
                 row.precioUnitario = it.precioUnitario;
                 row.subtotal = it.subtotal;
@@ -267,11 +269,11 @@ public class VerPresupuestosController {
 
     private void marcarEstadoPresupuestoDesdeDetalle(int presupuestoId, String estado, Stage stage) {
         if (presupuestoService.actualizarEstadoPresupuesto(presupuestoId, estado)) {
-            mostrarAlerta("Éxito", "Presupuesto #" + presupuestoId + " marcado como " + estado + ".");
+            FxAlerts.showInfo("Éxito", "Presupuesto #" + presupuestoId + " marcado como " + estado + ".");
             recargar();
             stage.close();
         } else {
-            mostrarAlertaError("Error", "No se pudo actualizar el estado.");
+            FxAlerts.showError("Error", "No se pudo actualizar el estado.");
         }
     }
 
@@ -286,33 +288,13 @@ public class VerPresupuestosController {
         try {
             Path path = file.toPath();
             pdfGenerator.generatePresupuestoPdf(d, path);
-            mostrarAlerta("Éxito", "PDF generado correctamente:\n" + path.toAbsolutePath());
+            FxAlerts.showInfo("Éxito", "PDF generado correctamente:\n" + path.toAbsolutePath());
             if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
                 Desktop.getDesktop().open(file);
             }
         } catch (IOException | DocumentException ex) {
-            mostrarAlertaError("Error", "No se pudo generar el PDF: " + ex.getMessage());
+            FxAlerts.showError("Error", "No se pudo generar el PDF: " + ex.getMessage());
         }
-    }
-
-    private static String nullToEmpty(String s) {
-        return s == null ? "" : s;
-    }
-
-    private void mostrarAlerta(String titulo, String mensaje) {
-        Alert a = new Alert(Alert.AlertType.INFORMATION);
-        a.setTitle(titulo);
-        a.setHeaderText(null);
-        a.setContentText(mensaje);
-        a.showAndWait();
-    }
-
-    private void mostrarAlertaError(String titulo, String mensaje) {
-        Alert a = new Alert(Alert.AlertType.ERROR);
-        a.setTitle(titulo);
-        a.setHeaderText(null);
-        a.setContentText(mensaje);
-        a.showAndWait();
     }
 
     private static class ItemDetalleRow {

@@ -1,0 +1,24 @@
+# Build
+target/
+*.class
+*.jar
+*.war
+
+# IDE (launch.json and settings can be committed)
+.idea/
+*.iml
+.cursor/
+
+# Output & generated
+output/
+*.pdf
+
+# Local config (optional - uncomment if users customize)
+# config/plantilla_config.json
+
+# Database (optional - uncomment if you don't want to commit DB)
+# presupuestos.db
+
+# OS
+.DS_Store
+Thumbs.db

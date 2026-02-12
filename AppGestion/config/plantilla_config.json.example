@@ -1,0 +1,22 @@
+{
+  "empresa": {
+    "nombre": "Mi Empresa S.L.",
+    "direccion": "Calle Principal 123",
+    "codigo_postal": "28001",
+    "ciudad": "Madrid",
+    "provincia": "Madrid",
+    "pais": "España",
+    "telefono": "+34 123 456 789",
+    "email": "info@miempresa.com",
+    "web": "www.miempresa.com",
+    "cif": "B12345678"
+  },
+  "logo": {
+    "usar_logo": false,
+    "ruta_logo": "",
+    "texto_logo": "PRESUPUESTOS",
+    "tamaño_logo": 24
+  },
+  "carpeta_presupuestos_pdf": "output/presupuestos",
+  "carpeta_facturas_pdf": "output/facturas"
+}

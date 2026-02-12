@@ -6,6 +6,7 @@ import appgestion.model.PresupuestoItemRow;
 import appgestion.service.ClienteService;
 import appgestion.service.MaterialService;
 import appgestion.service.PresupuestoService;
+import appgestion.util.FxAlerts;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -254,18 +255,18 @@ public class PresupuestosController {
     private void onAgregarMaterial() {
         Material m = materialCombo.getValue();
         if (m == null) {
-            mostrarAlerta("Validación", "Selecciona un material.");
+            FxAlerts.showInfo("Validación", "Selecciona un material.");
             return;
         }
         double cantidad;
         try {
             cantidad = Double.parseDouble(cantidadField.getText().trim().replace(',', '.'));
         } catch (NumberFormatException e) {
-            mostrarAlerta("Validación", "Cantidad inválida.");
+            FxAlerts.showInfo("Validación", "Cantidad inválida.");
             return;
         }
         if (cantidad <= 0) {
-            mostrarAlerta("Validación", "La cantidad debe ser mayor que cero.");
+            FxAlerts.showInfo("Validación", "La cantidad debe ser mayor que cero.");
             return;
         }
         PresupuestoItemRow row = new PresupuestoItemRow();
@@ -284,7 +285,7 @@ public class PresupuestosController {
     private void onAgregarTarea() {
         String desc = tareaDescripcionField.getText().trim();
         if (desc.isEmpty()) {
-            mostrarAlerta("Validación", "La descripción de la tarea es obligatoria.");
+            FxAlerts.showInfo("Validación", "La descripción de la tarea es obligatoria.");
             return;
         }
         double cantidad;
@@ -293,11 +294,11 @@ public class PresupuestosController {
             cantidad = Double.parseDouble(tareaCantidadField.getText().trim().replace(',', '.'));
             precio = Double.parseDouble(tareaPrecioField.getText().trim().replace(',', '.'));
         } catch (NumberFormatException e) {
-            mostrarAlerta("Validación", "Cantidad y precio deben ser números válidos.");
+            FxAlerts.showInfo("Validación", "Cantidad y precio deben ser números válidos.");
             return;
         }
         if (cantidad <= 0 || precio < 0) {
-            mostrarAlerta("Validación", "Cantidad debe ser > 0 y precio >= 0.");
+            FxAlerts.showInfo("Validación", "Cantidad debe ser > 0 y precio >= 0.");
             return;
         }
         PresupuestoItemRow row = new PresupuestoItemRow();
@@ -346,11 +347,11 @@ public class PresupuestosController {
     private void onGuardarPresupuesto() {
         Cliente c = clienteCombo.getValue();
         if (c == null) {
-            mostrarAlerta("Validación", "Selecciona un cliente.");
+            FxAlerts.showInfo("Validación", "Selecciona un cliente.");
             return;
         }
         if (items.isEmpty()) {
-            mostrarAlerta("Validación", "Añade al menos un item al presupuesto.");
+            FxAlerts.showInfo("Validación", "Añade al menos un item al presupuesto.");
             return;
         }
         double descPct = parseDoubleOrZero(descuentoPorcentajeField.getText());
@@ -367,12 +368,12 @@ public class PresupuestosController {
                     descFijo,
                     descAntesIva
             );
-            mostrarAlerta("Presupuesto guardado", "Presupuesto creado con ID " + id + ".");
+            FxAlerts.showInfo("Presupuesto guardado", "Presupuesto creado con ID " + id + ".");
             items.clear();
             recalcularTotales();
         } catch (SQLException e) {
             log.log(Level.SEVERE, "Error en operación", e);
-            mostrarAlerta("Error", "No se pudo guardar el presupuesto: " + e.getMessage());
+            FxAlerts.showError("Error", "No se pudo guardar el presupuesto: " + e.getMessage());
         }
     }
 
@@ -383,14 +384,6 @@ public class PresupuestosController {
         } catch (NumberFormatException e) {
             return 0.0;
         }
-    }
-
-    private void mostrarAlerta(String titulo, String mensaje) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(titulo);
-        alert.setHeaderText(null);
-        alert.setContentText(mensaje);
-        alert.showAndWait();
     }
 
     private static class StringConverterCliente extends javafx.util.StringConverter<Cliente> {

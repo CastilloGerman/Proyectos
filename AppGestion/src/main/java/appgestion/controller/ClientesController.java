@@ -2,6 +2,7 @@ package appgestion.controller;
 
 import appgestion.model.Cliente;
 import appgestion.service.ClienteService;
+import appgestion.util.FxAlerts;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -174,7 +175,7 @@ public class ClientesController {
     private void onAgregar() {
         String nombre = nombreField.getText().trim();
         if (nombre.isEmpty()) {
-            mostrarAlerta("Validación", "El nombre es obligatorio.");
+            FxAlerts.showInfo("Validación", "El nombre es obligatorio.");
             return;
         }
         Cliente nuevo = clienteService.crear(
@@ -193,12 +194,12 @@ public class ClientesController {
     private void onActualizar() {
         Cliente seleccionado = tablaClientes.getSelectionModel().getSelectedItem();
         if (seleccionado == null) {
-            mostrarAlerta("Selección requerida", "Selecciona un cliente para actualizar.");
+            FxAlerts.showInfo("Selección requerida", "Selecciona un cliente para actualizar.");
             return;
         }
         String nombre = nombreField.getText().trim();
         if (nombre.isEmpty()) {
-            mostrarAlerta("Validación", "El nombre es obligatorio.");
+            FxAlerts.showInfo("Validación", "El nombre es obligatorio.");
             return;
         }
         Cliente actualizado = new Cliente(
@@ -221,7 +222,7 @@ public class ClientesController {
     private void onEliminar() {
         Cliente seleccionado = tablaClientes.getSelectionModel().getSelectedItem();
         if (seleccionado == null) {
-            mostrarAlerta("Selección requerida", "Selecciona un cliente para eliminar.");
+            FxAlerts.showInfo("Selección requerida", "Selecciona un cliente para eliminar.");
             return;
         }
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
@@ -238,12 +239,5 @@ public class ClientesController {
         });
     }
 
-    private void mostrarAlerta(String titulo, String mensaje) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(titulo);
-        alert.setHeaderText(null);
-        alert.setContentText(mensaje);
-        alert.showAndWait();
-    }
 }
 

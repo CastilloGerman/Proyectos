@@ -1,46 +1,90 @@
-# AppGestion (Java + JavaFX)
+# AppGestion
 
-Aplicación de gestión de presupuestos reimplementada en Java + JavaFX a partir del proyecto original en Python + Tkinter (`AppPresupuestos`).
-
-## Estructura del proyecto
-
-- `pom.xml`: Configuración Maven con dependencias de JavaFX y SQLite.
-- `src/main/java/appgestion/AppGestionApplication.java`: Punto de entrada principal de la aplicación JavaFX.
-- `src/main/java/appgestion/controller`:
-  - `ClientesController`: Gestión CRUD de clientes.
-  - `MaterialesController`: Gestión CRUD de materiales.
-  - `PresupuestosController`: Creación de presupuestos (items, descuentos, IVA).
-  - `VerPresupuestosController`: Listado de presupuestos.
-  - `FacturacionController`: Listado de facturas y creación desde presupuesto.
-- `src/main/java/appgestion/model`:
-  - `Cliente`, `Material`, `PresupuestoItemRow`.
-- `src/main/java/appgestion/service`:
-  - `Database`: Conexión SQLite contra `presupuestos.db`.
-  - `ClienteService`, `MaterialService`, `PresupuestoService`, `FacturaService`.
+Aplicación de gestión de presupuestos y facturación desarrollada en **Java 21 + JavaFX**. Reimplementa la funcionalidad del proyecto original en Python/Tkinter (`AppPresupuestos`), reutilizando la misma base de datos SQLite.
 
 ## Requisitos
 
-- Java 21 o superior.
-- Maven 3.9 o superior.
+- **Java 21** o superior
+- **Maven 3.9** o superior
 
 ## Ejecución
 
-**Desde el IDE (Cursor/VS Code):**  
-Abre "Run and Debug" (Ctrl+Shift+D), elige la configuración **"AppGestion (JavaFX)"** y pulsa F5 o el botón de ejecutar. (La configuración incluye los módulos de JavaFX necesarios.)
-
-**Desde terminal con Maven** (desde la carpeta `AppGestion`):
+### Desde Maven
 
 ```bash
 mvn clean javafx:run
 ```
 
-Esto lanzará la ventana principal de JavaFX con las pestañas base:
+### Desde el IDE
 
-- Gestión de Clientes (CRUD conectado a la BD existente).
-- Gestión de Materiales (CRUD conectado a la BD existente).
-- Gestión de Presupuestos (creación de presupuestos con descuentos e IVA).
-- Ver Presupuestos (listado de presupuestos creados).
-- Facturación (listado de facturas y creación desde un presupuesto).
+- **VS Code / Cursor**: Abre "Run and Debug" (Ctrl+Shift+D), selecciona **"AppGestion (JavaFX)"** y ejecuta.
+- **IntelliJ IDEA**: Configura el run con módulos JavaFX (`--add-modules javafx.controls,javafx.fxml,javafx.graphics`).
 
-La aplicación utiliza el mismo fichero `presupuestos.db` que la versión original en Python/Tkinter, por lo que puedes reutilizar los datos existentes.
+## Estructura del proyecto
 
+```
+AppGestion/
+├── config/
+│   ├── plantilla_config.json       # Configuración empresa/logo (generada si no existe)
+│   └── plantilla_config.json.example
+├── output/
+│   ├── presupuestos/               # PDFs de presupuestos
+│   └── facturas/                   # PDFs de facturas
+├── src/main/java/appgestion/
+│   ├── AppGestionApplication.java  # Punto de entrada
+│   ├── config/
+│   │   └── PlantillaConfig.java    # Modelo de configuración JSON
+│   ├── controller/
+│   │   ├── ClientesController.java
+│   │   ├── MaterialesController.java
+│   │   ├── PresupuestosController.java
+│   │   ├── VerPresupuestosController.java
+│   │   ├── FacturacionController.java
+│   │   └── MetricasController.java
+│   ├── model/
+│   │   ├── Cliente.java
+│   │   ├── Material.java
+│   │   └── PresupuestoItemRow.java
+│   ├── service/
+│   │   ├── Database.java           # Conexión SQLite
+│   │   ├── ConfigService.java
+│   │   ├── ClienteService.java
+│   │   ├── MaterialService.java
+│   │   ├── PresupuestoService.java
+│   │   ├── FacturaService.java
+│   │   ├── MetricasService.java
+│   │   └── PdfGeneratorService.java
+│   └── util/
+│       ├── FxAlerts.java           # Alertas JavaFX
+│       └── StringUtils.java
+└── src/main/resources/appgestion/
+    └── styles.css
+```
+
+## Funcionalidades
+
+| Pestaña | Descripción |
+|---------|-------------|
+| **Gestión de Clientes** | CRUD de clientes |
+| **Gestión de Materiales** | CRUD de materiales/servicios |
+| **Gestión de Presupuestos** | Crear presupuestos con items, descuentos e IVA |
+| **Ver Presupuestos** | Listar, filtrar, ver detalle, generar PDF, marcar Aprobado/Rechazado |
+| **Facturación** | Crear facturas manuales o desde presupuesto, marcar Pagada/No Pagada |
+| **Métricas** | Dashboard financiero, gráficos de presupuestos/facturas, top clientes/materiales |
+
+## Base de datos
+
+Utiliza `presupuestos.db` (SQLite) en el directorio de trabajo. Compatible con la app Python: los datos se comparten entre ambas versiones.
+
+## Configuración
+
+- **config/plantilla_config.json**: Datos de empresa, logo y carpetas de salida para PDFs.
+- Si no existe, se crea con valores por defecto al iniciar.
+- Usa `plantilla_config.json.example` como referencia para rutas relativas.
+
+## Dependencias (pom.xml)
+
+- JavaFX Controls, FXML, Graphics
+- SQLite JDBC
+- OpenPDF (generación de PDFs)
+- Gson (configuración JSON)

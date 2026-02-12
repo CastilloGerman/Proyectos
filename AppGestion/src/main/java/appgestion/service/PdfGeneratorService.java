@@ -1,6 +1,7 @@
 package appgestion.service;
 
 import appgestion.config.PlantillaConfig;
+import appgestion.util.StringUtils;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
@@ -57,10 +58,10 @@ public class PdfGeneratorService {
             PdfWriter.getInstance(doc, fos);
             doc.open();
                 addCabeceraEmpresa(doc, "PRESUPUESTO #" + presupuesto.id);
-                doc.add(new Paragraph("Cliente: " + nullToEmpty(presupuesto.clienteNombre), FONT_NORMAL));
-                doc.add(new Paragraph("Teléfono: " + nullToEmpty(presupuesto.telefono), FONT_NORMAL));
-                doc.add(new Paragraph("Email: " + nullToEmpty(presupuesto.email), FONT_NORMAL));
-                doc.add(new Paragraph("Dirección: " + nullToEmpty(presupuesto.direccion), FONT_NORMAL));
+                doc.add(new Paragraph("Cliente: " + StringUtils.nullToEmpty(presupuesto.clienteNombre), FONT_NORMAL));
+                doc.add(new Paragraph("Teléfono: " + StringUtils.nullToEmpty(presupuesto.telefono), FONT_NORMAL));
+                doc.add(new Paragraph("Email: " + StringUtils.nullToEmpty(presupuesto.email), FONT_NORMAL));
+                doc.add(new Paragraph("Dirección: " + StringUtils.nullToEmpty(presupuesto.direccion), FONT_NORMAL));
                 doc.add(Chunk.NEWLINE);
                 PdfPTable table = new PdfPTable(4);
                 table.setWidthPercentage(100f);
@@ -73,8 +74,8 @@ public class PdfGeneratorService {
                 if (items != null) {
                     for (PresupuestoService.PresupuestoItemDetalle it : items) {
                         String desc = it.esTareaManual
-                                ? nullToEmpty(it.tareaManual)
-                                : nullToEmpty(it.materialNombre) + (it.unidadMedida != null && !it.unidadMedida.isEmpty() ? " (" + it.unidadMedida + ")" : "");
+                                ? StringUtils.nullToEmpty(it.tareaManual)
+                                : StringUtils.nullToEmpty(it.materialNombre) + (it.unidadMedida != null && !it.unidadMedida.isEmpty() ? " (" + it.unidadMedida + ")" : "");
                         addCell(table, desc, false);
                         addCell(table, fmt(it.cantidad), false);
                         addCell(table, fmt(it.precioUnitario) + " €", false);
@@ -102,16 +103,16 @@ public class PdfGeneratorService {
              CloseableDocument doc = new CloseableDocument(PageSize.A4, 72, 72, 72, 72)) {
             PdfWriter.getInstance(doc, fos);
             doc.open();
-                addCabeceraEmpresa(doc, "FACTURA " + nullToEmpty(factura.numeroFactura));
-                doc.add(new Paragraph("Fecha: " + nullToEmpty(factura.fechaCreacion), FONT_NORMAL));
-                doc.add(new Paragraph("Vencimiento: " + nullToEmpty(factura.fechaVencimiento), FONT_NORMAL));
-                doc.add(new Paragraph("Método de pago: " + nullToEmpty(factura.metodoPago), FONT_NORMAL));
-                doc.add(new Paragraph("Estado: " + nullToEmpty(factura.estadoPago), FONT_NORMAL));
+                addCabeceraEmpresa(doc, "FACTURA " + StringUtils.nullToEmpty(factura.numeroFactura));
+                doc.add(new Paragraph("Fecha: " + StringUtils.nullToEmpty(factura.fechaCreacion), FONT_NORMAL));
+                doc.add(new Paragraph("Vencimiento: " + StringUtils.nullToEmpty(factura.fechaVencimiento), FONT_NORMAL));
+                doc.add(new Paragraph("Método de pago: " + StringUtils.nullToEmpty(factura.metodoPago), FONT_NORMAL));
+                doc.add(new Paragraph("Estado: " + StringUtils.nullToEmpty(factura.estadoPago), FONT_NORMAL));
                 doc.add(Chunk.NEWLINE);
-                doc.add(new Paragraph("Cliente: " + nullToEmpty(factura.clienteNombre), FONT_NORMAL));
-                doc.add(new Paragraph("Teléfono: " + nullToEmpty(factura.telefono), FONT_NORMAL));
-                doc.add(new Paragraph("Email: " + nullToEmpty(factura.email), FONT_NORMAL));
-                doc.add(new Paragraph("Dirección: " + nullToEmpty(factura.direccion), FONT_NORMAL));
+                doc.add(new Paragraph("Cliente: " + StringUtils.nullToEmpty(factura.clienteNombre), FONT_NORMAL));
+                doc.add(new Paragraph("Teléfono: " + StringUtils.nullToEmpty(factura.telefono), FONT_NORMAL));
+                doc.add(new Paragraph("Email: " + StringUtils.nullToEmpty(factura.email), FONT_NORMAL));
+                doc.add(new Paragraph("Dirección: " + StringUtils.nullToEmpty(factura.direccion), FONT_NORMAL));
                 doc.add(Chunk.NEWLINE);
                 PdfPTable table = new PdfPTable(4);
                 table.setWidthPercentage(100f);
@@ -124,8 +125,8 @@ public class PdfGeneratorService {
                 if (items != null) {
                     for (FacturaService.FacturaItemDetalle it : items) {
                         String desc = it.esTareaManual
-                                ? nullToEmpty(it.tareaManual)
-                                : nullToEmpty(it.materialNombre) + (it.unidadMedida != null && !it.unidadMedida.isEmpty() ? " (" + it.unidadMedida + ")" : "");
+                                ? StringUtils.nullToEmpty(it.tareaManual)
+                                : StringUtils.nullToEmpty(it.materialNombre) + (it.unidadMedida != null && !it.unidadMedida.isEmpty() ? " (" + it.unidadMedida + ")" : "");
                         addCell(table, desc, false);
                         addCell(table, fmt(it.cantidad), false);
                         addCell(table, fmt(it.precioUnitario) + " €", false);
@@ -188,7 +189,7 @@ public class PdfGeneratorService {
         if (e.nombre != null) sb.append(e.nombre).append("\n");
         if (e.direccion != null) sb.append(e.direccion).append("\n");
             if (e.codigoPostal != null || e.ciudad != null)
-                sb.append(nullToEmpty(e.codigoPostal)).append(" ").append(nullToEmpty(e.ciudad)).append("\n");
+                sb.append(StringUtils.nullToEmpty(e.codigoPostal)).append(" ").append(StringUtils.nullToEmpty(e.ciudad)).append("\n");
         if (e.telefono != null) sb.append("T. ").append(e.telefono).append("\n");
         if (e.email != null) sb.append(e.email);
         PdfPCell cellEmpresa = new PdfPCell(new Phrase(sb.toString(), FONT_NORMAL));
@@ -209,10 +210,6 @@ public class PdfGeneratorService {
         cell.setPadding(5);
         if (noBorder) cell.setBorder(Rectangle.NO_BORDER);
         table.addCell(cell);
-    }
-
-    private static String nullToEmpty(String s) {
-        return s == null ? "" : s;
     }
 
     private static void addCell(PdfPTable table, String text, boolean header) {

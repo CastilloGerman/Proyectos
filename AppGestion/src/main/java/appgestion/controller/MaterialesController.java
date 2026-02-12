@@ -2,6 +2,7 @@ package appgestion.controller;
 
 import appgestion.model.Material;
 import appgestion.service.MaterialService;
+import appgestion.util.FxAlerts;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -153,14 +154,14 @@ public class MaterialesController {
         String unidad = unidadField.getText().trim();
         String precioTxt = precioField.getText().trim();
         if (nombre.isEmpty() || unidad.isEmpty() || precioTxt.isEmpty()) {
-            mostrarAlerta("Validación", "Nombre, unidad y precio son obligatorios.");
+            FxAlerts.showInfo("Validación", "Nombre, unidad y precio son obligatorios.");
             return;
         }
         double precio;
         try {
             precio = Double.parseDouble(precioTxt.replace(',', '.'));
         } catch (NumberFormatException e) {
-            mostrarAlerta("Validación", "El precio debe ser un número válido.");
+            FxAlerts.showInfo("Validación", "El precio debe ser un número válido.");
             return;
         }
         Material nuevo = materialService.crear(nombre, unidad, precio);
@@ -173,21 +174,21 @@ public class MaterialesController {
     private void onActualizar() {
         Material seleccionado = tablaMateriales.getSelectionModel().getSelectedItem();
         if (seleccionado == null) {
-            mostrarAlerta("Selección requerida", "Selecciona un material para actualizar.");
+            FxAlerts.showInfo("Selección requerida", "Selecciona un material para actualizar.");
             return;
         }
         String nombre = nombreField.getText().trim();
         String unidad = unidadField.getText().trim();
         String precioTxt = precioField.getText().trim();
         if (nombre.isEmpty() || unidad.isEmpty() || precioTxt.isEmpty()) {
-            mostrarAlerta("Validación", "Nombre, unidad y precio son obligatorios.");
+            FxAlerts.showInfo("Validación", "Nombre, unidad y precio son obligatorios.");
             return;
         }
         double precio;
         try {
             precio = Double.parseDouble(precioTxt.replace(',', '.'));
         } catch (NumberFormatException e) {
-            mostrarAlerta("Validación", "El precio debe ser un número válido.");
+            FxAlerts.showInfo("Validación", "El precio debe ser un número válido.");
             return;
         }
         Material actualizado = new Material(seleccionado.getId(), nombre, unidad, precio);
@@ -203,7 +204,7 @@ public class MaterialesController {
     private void onEliminar() {
         Material seleccionado = tablaMateriales.getSelectionModel().getSelectedItem();
         if (seleccionado == null) {
-            mostrarAlerta("Selección requerida", "Selecciona un material para eliminar.");
+            FxAlerts.showInfo("Selección requerida", "Selecciona un material para eliminar.");
             return;
         }
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
@@ -220,12 +221,5 @@ public class MaterialesController {
         });
     }
 
-    private void mostrarAlerta(String titulo, String mensaje) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(titulo);
-        alert.setHeaderText(null);
-        alert.setContentText(mensaje);
-        alert.showAndWait();
-    }
 }
 
