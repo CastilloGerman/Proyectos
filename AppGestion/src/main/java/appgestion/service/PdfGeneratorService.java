@@ -97,57 +97,150 @@ public class PdfGeneratorService {
 
     /**
      * Genera un PDF de la factura y lo guarda en outputPath.
+     * Formato conforme al RD 1619/2012 (Reglamento de facturación español).
      */
     public Path generateFacturaPdf(FacturaService.FacturaDetalle factura, Path outputPath) throws DocumentException, IOException {
         try (FileOutputStream fos = new FileOutputStream(outputPath.toFile());
              CloseableDocument doc = new CloseableDocument(PageSize.A4, 72, 72, 72, 72)) {
             PdfWriter.getInstance(doc, fos);
             doc.open();
-                addCabeceraEmpresa(doc, "FACTURA " + StringUtils.nullToEmpty(factura.numeroFactura));
-                doc.add(new Paragraph("Fecha: " + StringUtils.nullToEmpty(factura.fechaCreacion), FONT_NORMAL));
-                doc.add(new Paragraph("Vencimiento: " + StringUtils.nullToEmpty(factura.fechaVencimiento), FONT_NORMAL));
-                doc.add(new Paragraph("Método de pago: " + StringUtils.nullToEmpty(factura.metodoPago), FONT_NORMAL));
-                doc.add(new Paragraph("Estado: " + StringUtils.nullToEmpty(factura.estadoPago), FONT_NORMAL));
-                doc.add(Chunk.NEWLINE);
-                doc.add(new Paragraph("Cliente: " + StringUtils.nullToEmpty(factura.clienteNombre), FONT_NORMAL));
-                doc.add(new Paragraph("Teléfono: " + StringUtils.nullToEmpty(factura.telefono), FONT_NORMAL));
-                doc.add(new Paragraph("Email: " + StringUtils.nullToEmpty(factura.email), FONT_NORMAL));
-                doc.add(new Paragraph("Dirección: " + StringUtils.nullToEmpty(factura.direccion), FONT_NORMAL));
-                doc.add(Chunk.NEWLINE);
-                PdfPTable table = new PdfPTable(4);
-                table.setWidthPercentage(100f);
-                table.setWidths(new float[]{3f, 1f, 1.5f, 1.5f});
-                addCell(table, "Descripción", true);
-                addCell(table, "Cant.", true);
-                addCell(table, "Precio unit.", true);
-                addCell(table, "Subtotal", true);
-                List<FacturaService.FacturaItemDetalle> items = factura.items;
-                if (items != null) {
-                    for (FacturaService.FacturaItemDetalle it : items) {
-                        String desc = it.esTareaManual
-                                ? StringUtils.nullToEmpty(it.tareaManual)
-                                : StringUtils.nullToEmpty(it.materialNombre) + (it.unidadMedida != null && !it.unidadMedida.isEmpty() ? " (" + it.unidadMedida + ")" : "");
-                        addCell(table, desc, false);
-                        addCell(table, fmt(it.cantidad), false);
-                        addCell(table, fmt(it.precioUnitario) + " €", false);
-                        addCell(table, fmt(it.subtotal) + " €", false);
-                    }
-                }
-                doc.add(table);
-                doc.add(Chunk.NEWLINE);
-                doc.add(new Paragraph("Subtotal: " + fmt(factura.subtotal) + " €", FONT_NORMAL));
-                if (factura.ivaHabilitado) {
-                    doc.add(new Paragraph("IVA (21%): " + fmt(factura.iva) + " €", FONT_NORMAL));
-                } else {
-                    doc.add(new Paragraph("IVA: No incluido", FONT_NORMAL));
-                }
-                doc.add(new Paragraph("Total: " + fmt(factura.total) + " €", FONT_HEADER));
-                if (factura.notas != null && !factura.notas.isEmpty()) {
-                    doc.add(Chunk.NEWLINE);
-                    doc.add(new Paragraph("Notas: " + factura.notas, FONT_NORMAL));
-                }
+            addCabeceraFacturaLegal(doc, factura);
+            addDatosEmisorDestinatario(doc, factura);
+            addDetalleFactura(doc, factura);
         }
         return outputPath;
+    }
+
+    /** Cabecera: título FACTURA + número + fecha expedición según RD 1619/2012 */
+    private void addCabeceraFacturaLegal(Document doc, FacturaService.FacturaDetalle factura) throws DocumentException, IOException {
+        if (plantilla != null && plantilla.empresa != null) {
+            PlantillaConfig.Empresa e = plantilla.empresa;
+            PlantillaConfig.Logo l = plantilla.logo != null ? plantilla.logo : new PlantillaConfig.Logo();
+            PdfPTable cabecera = new PdfPTable(2);
+            cabecera.setWidthPercentage(100f);
+            cabecera.setWidths(new float[]{1.5f, 3f});
+            cabecera.setSpacingAfter(15);
+            if (l.usarLogo && l.rutaLogo != null && !l.rutaLogo.isEmpty() && Files.isRegularFile(Paths.get(l.rutaLogo))) {
+                try {
+                    Image img = Image.getInstance(l.rutaLogo);
+                    img.scaleToFit(100, 50);
+                    PdfPCell cellLogo = new PdfPCell(img);
+                    cellLogo.setBorder(Rectangle.NO_BORDER);
+                    cabecera.addCell(cellLogo);
+                } catch (IOException | DocumentException ex) {
+                    addCell(cabecera, l.textoLogo != null ? l.textoLogo : e.nombre, true, true);
+                }
+            } else {
+                addCell(cabecera, l.textoLogo != null && !l.textoLogo.isEmpty() ? l.textoLogo : e.nombre, true, true);
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.append(StringUtils.nullToEmpty(e.nombre)).append("\n");
+            sb.append("CIF: ").append(StringUtils.nullToEmpty(e.cif)).append("\n");
+            sb.append(StringUtils.nullToEmpty(e.direccion)).append("\n");
+            sb.append(StringUtils.nullToEmpty(e.codigoPostal)).append(" ").append(StringUtils.nullToEmpty(e.ciudad)).append("\n");
+            sb.append("T. ").append(StringUtils.nullToEmpty(e.telefono)).append(" | ").append(StringUtils.nullToEmpty(e.email));
+            PdfPCell cellEmpresa = new PdfPCell(new Phrase(sb.toString(), FONT_NORMAL));
+            cellEmpresa.setBorder(Rectangle.NO_BORDER);
+            cellEmpresa.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            cabecera.addCell(cellEmpresa);
+            doc.add(cabecera);
+        }
+        PdfPTable titulo = new PdfPTable(2);
+        titulo.setWidthPercentage(100f);
+        titulo.setWidths(new float[]{3f, 2f});
+        addCell(titulo, "FACTURA", true, true);
+        StringBuilder sb = new StringBuilder();
+        sb.append("Nº ").append(StringUtils.nullToEmpty(factura.numeroFactura)).append("\n");
+        sb.append("Fecha expedición: ").append(StringUtils.nullToEmpty(factura.fechaCreacion)).append("\n");
+        sb.append("Vencimiento: ").append(StringUtils.nullToEmpty(factura.fechaVencimiento)).append("\n");
+        sb.append("Forma pago: ").append(StringUtils.nullToEmpty(factura.metodoPago));
+        PdfPCell cellNum = new PdfPCell(new Phrase(sb.toString(), FONT_NORMAL));
+        cellNum.setBorder(Rectangle.NO_BORDER);
+        cellNum.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        titulo.addCell(cellNum);
+        doc.add(titulo);
+        doc.add(Chunk.NEWLINE);
+    }
+
+    /** Datos emisor y destinatario (obligatorios RD 1619/2012) */
+    private void addDatosEmisorDestinatario(Document doc, FacturaService.FacturaDetalle factura) throws DocumentException {
+        if (plantilla == null || plantilla.empresa == null) return;
+        PlantillaConfig.Empresa e = plantilla.empresa;
+        PdfPTable bloques = new PdfPTable(2);
+        bloques.setWidthPercentage(100f);
+        bloques.setWidths(new float[]{1f, 1f});
+        bloques.setSpacingAfter(15);
+        String emisor = "EMISOR: " + StringUtils.nullToEmpty(e.nombre) + "\nCIF: " + StringUtils.nullToEmpty(e.cif) + "\n"
+                + StringUtils.nullToEmpty(e.direccion) + "\n" + StringUtils.nullToEmpty(e.codigoPostal) + " " + StringUtils.nullToEmpty(e.ciudad)
+                + "\nT. " + StringUtils.nullToEmpty(e.telefono) + "\n" + StringUtils.nullToEmpty(e.email);
+        String destinatario = "CLIENTE: " + StringUtils.nullToEmpty(factura.clienteNombre) + "\n"
+                + (factura.clienteDni != null && !factura.clienteDni.isEmpty() ? "NIF/CIF: " + factura.clienteDni + "\n" : "")
+                + StringUtils.nullToEmpty(factura.direccion) + "\n"
+                + (factura.telefono != null && !factura.telefono.isEmpty() ? "T. " + factura.telefono + "\n" : "")
+                + StringUtils.nullToEmpty(factura.email);
+        PdfPCell cell1 = new PdfPCell(new Phrase(emisor, FONT_NORMAL));
+        cell1.setBorder(Rectangle.NO_BORDER);
+        cell1.setPadding(8);
+        cell1.setBackgroundColor(new Color(0xf8, 0xf9, 0xfa));
+        PdfPCell cell2 = new PdfPCell(new Phrase(destinatario, FONT_NORMAL));
+        cell2.setBorder(Rectangle.NO_BORDER);
+        cell2.setPadding(8);
+        cell2.setBackgroundColor(new Color(0xf8, 0xf9, 0xfa));
+        bloques.addCell(cell1);
+        bloques.addCell(cell2);
+        doc.add(bloques);
+    }
+
+    /** Tabla de líneas y totales (RD 1619/2012: descripción, precio unit., IVA, total) */
+    private void addDetalleFactura(Document doc, FacturaService.FacturaDetalle factura) throws DocumentException {
+        PdfPTable table = new PdfPTable(5);
+        table.setWidthPercentage(100f);
+        table.setWidths(new float[]{3f, 1f, 1.5f, 1f, 1.5f});
+        addCell(table, "Descripción de la operación", true);
+        addCell(table, "Cant.", true);
+        addCell(table, "Precio unit. (€)", true);
+        addCell(table, "IVA %", true);
+        addCell(table, "Importe (€)", true);
+        List<FacturaService.FacturaItemDetalle> items = factura.items;
+        if (items != null) {
+            for (FacturaService.FacturaItemDetalle it : items) {
+                String desc = it.esTareaManual
+                        ? StringUtils.nullToEmpty(it.tareaManual)
+                        : StringUtils.nullToEmpty(it.materialNombre) + (it.unidadMedida != null && !it.unidadMedida.isEmpty() ? " (" + it.unidadMedida + ")" : "");
+                addCell(table, desc, false);
+                addCell(table, fmt(it.cantidad), false);
+                addCell(table, fmt(it.precioUnitario), false);
+                addCell(table, factura.ivaHabilitado ? "21" : "0", false);
+                addCell(table, fmt(it.subtotal), false);
+            }
+        }
+        doc.add(table);
+        doc.add(Chunk.NEWLINE);
+        PdfPTable totales = new PdfPTable(2);
+        totales.setWidthPercentage(50f);
+        totales.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        totales.setWidths(new float[]{2f, 1.5f});
+        addCell(totales, "Base imponible:", false);
+        addCell(totales, fmt(factura.subtotal) + " €", false);
+        if (factura.ivaHabilitado) {
+            addCell(totales, "IVA (21%):", false);
+            addCell(totales, fmt(factura.iva) + " €", false);
+        }
+        addCell(totales, "Total:", true);
+        addCell(totales, fmt(factura.total) + " €", true);
+        doc.add(totales);
+        if (factura.notas != null && !factura.notas.isEmpty()) {
+            doc.add(Chunk.NEWLINE);
+            doc.add(new Paragraph("Notas: " + factura.notas, FONT_NORMAL));
+        }
+        doc.add(Chunk.NEWLINE);
+        PdfPCell legal = new PdfPCell(new Phrase("Factura conforme al Reglamento de facturación (RD 1619/2012).", new Font(Font.HELVETICA, 8, Font.NORMAL, Color.GRAY)));
+        legal.setBorder(Rectangle.NO_BORDER);
+        legal.setPadding(5);
+        PdfPTable footer = new PdfPTable(1);
+        footer.setWidthPercentage(100f);
+        footer.addCell(legal);
+        doc.add(footer);
     }
 
     /** Añade cabecera con logo (si está configurado) y nombre de empresa, luego el título del documento. */

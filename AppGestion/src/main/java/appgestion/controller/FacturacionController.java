@@ -515,7 +515,17 @@ public class FacturacionController {
         table.getColumns().add(colTotal);
         Label avisoVacio = new Label("No hay presupuestos. Crea uno en la pestaña \"Gestión de Presupuestos\".");
         avisoVacio.setVisible(false);
-        Button importarBtn = new Button("Importar");
+        Button crearFacturaBtn = new Button("✓ Crear factura directamente");
+        crearFacturaBtn.getStyleClass().add("success-button");
+        crearFacturaBtn.setOnAction(e -> {
+            PresupuestoService.PresupuestoResumen sel = table.getSelectionModel().getSelectedItem();
+            if (sel == null) {
+                FxAlerts.showInfo("Aviso", "Selecciona un presupuesto.");
+                return;
+            }
+            crearFacturaDesdePresupuesto(sel.id, stage);
+        });
+        Button importarBtn = new Button("Importar y editar");
         importarBtn.setOnAction(e -> {
             PresupuestoService.PresupuestoResumen sel = table.getSelectionModel().getSelectedItem();
             if (sel == null) {
@@ -532,7 +542,7 @@ public class FacturacionController {
             items.setAll(presupuestoService.obtenerPresupuestos());
             avisoVacio.setVisible(items.isEmpty());
         });
-        VBox root = new VBox(10, table, avisoVacio, new HBox(10, importarBtn, refrescarBtn, cancelarBtn));
+        VBox root = new VBox(10, table, avisoVacio, new HBox(10, crearFacturaBtn, importarBtn, refrescarBtn, cancelarBtn));
         root.setPadding(new Insets(10));
         stage.setScene(new Scene(root, 560, 400));
         stage.setOnShown(e -> {
@@ -540,6 +550,20 @@ public class FacturacionController {
             avisoVacio.setVisible(items.isEmpty());
         });
         stage.show();
+    }
+
+    private void crearFacturaDesdePresupuesto(int presupuestoId, Stage stage) {
+        try {
+            PresupuestoService.PresupuestoDetalle detalle = presupuestoService.obtenerPresupuestoPorId(presupuestoId);
+            facturaService.crearFacturaDesdePresupuesto(presupuestoId);
+            String clienteNombre = detalle != null ? detalle.clienteNombre : "";
+            FxAlerts.showInfo("Factura creada", "Factura creada correctamente para " + clienteNombre + ".");
+            recargar();
+            stage.close();
+        } catch (SQLException ex) {
+            log.log(Level.SEVERE, "Error creando factura desde presupuesto", ex);
+            FxAlerts.showError("Error", "No se pudo crear la factura: " + ex.getMessage());
+        }
     }
 
     private void rellenarFormularioDesdePresupuesto(int presupuestoId) {

@@ -187,22 +187,24 @@ public class FacturaService {
                 }
 
                 String numeroFactura = generarNumeroFactura();
+                String fechaVencimiento = java.time.LocalDate.now().plusDays(30).format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE);
 
                 String insertFactura = """
                         INSERT INTO facturas
-                        (numero_factura, cliente_id, presupuesto_id, subtotal, iva, total,
+                        (numero_factura, cliente_id, presupuesto_id, fecha_vencimiento, subtotal, iva, total,
                          iva_habilitado, metodo_pago, estado_pago)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, 'Transferencia', 'No Pagada')
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Transferencia', 'No Pagada')
                         """;
                 int facturaId;
                 try (PreparedStatement ps = conn.prepareStatement(insertFactura, Statement.RETURN_GENERATED_KEYS)) {
                     ps.setString(1, numeroFactura);
                     ps.setInt(2, clienteId);
                     ps.setInt(3, presupuestoId);
-                    ps.setDouble(4, subtotal);
-                    ps.setDouble(5, iva);
-                    ps.setDouble(6, total);
-                    ps.setInt(7, ivaHabilitado ? 1 : 0);
+                    ps.setString(4, fechaVencimiento);
+                    ps.setDouble(5, subtotal);
+                    ps.setDouble(6, iva);
+                    ps.setDouble(7, total);
+                    ps.setInt(8, ivaHabilitado ? 1 : 0);
                     ps.executeUpdate();
                     try (ResultSet rs = ps.getGeneratedKeys()) {
                         if (!rs.next()) {
@@ -452,7 +454,7 @@ public class FacturaService {
         String cabSql = """
                 SELECT f.id, f.numero_factura, f.fecha_creacion, f.fecha_vencimiento, f.metodo_pago, f.estado_pago, f.notas,
                        f.subtotal, f.iva, f.total, f.iva_habilitado,
-                       c.nombre as cliente_nombre, c.telefono, c.email, c.direccion
+                       c.nombre as cliente_nombre, c.telefono, c.email, c.direccion, c.dni as cliente_dni
                 FROM facturas f
                 JOIN clientes c ON f.cliente_id = c.id
                 WHERE f.id = ?
@@ -483,6 +485,7 @@ public class FacturaService {
                 d.telefono = rsCab.getString("telefono");
                 d.email = rsCab.getString("email");
                 d.direccion = rsCab.getString("direccion");
+                d.clienteDni = rsCab.getString("cliente_dni");
                 d.subtotal = rsCab.getDouble("subtotal");
                 d.iva = rsCab.getDouble("iva");
                 d.total = rsCab.getDouble("total");
@@ -519,6 +522,7 @@ public class FacturaService {
         public String estadoPago;
         public String notas;
         public String clienteNombre;
+        public String clienteDni;
         public String telefono;
         public String email;
         public String direccion;
