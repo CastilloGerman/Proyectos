@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: appgestion-api
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/appgestion
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        default_schema: public
+    open-in-view: false
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+# Stripe
+stripe:
+  secret-key: ${STRIPE_SECRET_KEY:sk_test_xxx}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_xxx}
+  price-id-monthly: ${STRIPE_PRICE_MONTHLY:price_xxx}
+  success-url: ${STRIPE_SUCCESS_URL:http://localhost:4200/subscription/success}
+  cancel-url: ${STRIPE_CANCEL_URL:http://localhost:4200/subscription/cancel}
+  portal-return-url: ${STRIPE_PORTAL_RETURN_URL:http://localhost:4200/dashboard}
+
+# JWT
+app:
+  jwt:
+    secret: ${JWT_SECRET:tu-clave-secreta-muy-larga-minimo-256-bits-para-HS256}
+    expiration-ms: 86400000   # 24 horas
+    issuer: appgestion-api
+
+# Logging
+logging:
+  level:
+    com.appgestion: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG

@@ -1,90 +1,130 @@
 # AppGestion
 
-Aplicación de gestión de presupuestos y facturación desarrollada en **Java 21 + JavaFX**. Reimplementa la funcionalidad del proyecto original en Python/Tkinter (`AppPresupuestos`), reutilizando la misma base de datos SQLite.
+SaaS multiusuario para gestión de presupuestos y facturas. Aplicación web con Angular, API REST en Spring Boot y base de datos PostgreSQL.
+
+## Arquitectura
+
+```
+┌─────────────────────────────────────┐
+│   Angular 17 (Frontend SPA)         │
+│   - Login/Registro JWT              │
+│   - CRUD Clientes, Presupuestos,    │
+│     Facturas                        │
+│   - Suscripciones Stripe            │
+└─────────────────┬───────────────────┘
+                  │ HTTP/REST
+┌─────────────────▼───────────────────┐
+│   Spring Boot 3.2 (API REST)         │
+│   - Autenticación JWT                │
+│   - Seguridad por usuario            │
+│   - Integración Stripe               │
+└─────────────────┬───────────────────┘
+                  │
+┌─────────────────▼───────────────────┐
+│   PostgreSQL                        │
+└─────────────────────────────────────┘
+```
 
 ## Requisitos
 
-- **Java 21** o superior
-- **Maven 3.9** o superior
+- **Java 17**
+- **Maven 3.9+**
+- **Node.js 18+**
+- **PostgreSQL 14+**
 
-## Ejecución
+## Inicio rápido
 
-### Desde Maven
+### 1. Base de datos
 
-```bash
-mvn clean javafx:run
+Crear base de datos y usuario:
+
+```sql
+CREATE DATABASE appgestion;
+CREATE USER appgestion WITH PASSWORD 'tu_password';
+GRANT ALL PRIVILEGES ON DATABASE appgestion TO appgestion;
 ```
 
-### Desde el IDE
+### 2. API
 
-- **VS Code / Cursor**: Abre "Run and Debug" (Ctrl+Shift+D), selecciona **"AppGestion (JavaFX)"** y ejecuta.
-- **IntelliJ IDEA**: Configura el run con módulos JavaFX (`--add-modules javafx.controls,javafx.fxml,javafx.graphics`).
+```bash
+# Configurar variables de entorno (opcional)
+export SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/appgestion
+export SPRING_DATASOURCE_USERNAME=appgestion
+export SPRING_DATASOURCE_PASSWORD=tu_password
+export JWT_SECRET=tu-clave-secreta-minimo-32-caracteres
+
+# Compilar y ejecutar
+mvn clean compile
+cd api && mvn spring-boot:run
+```
+
+La API estará en `http://localhost:8080/api`.
+
+### 3. Frontend
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+La aplicación estará en `http://localhost:4200`. El proxy redirige `/api` a la API.
 
 ## Estructura del proyecto
 
 ```
 AppGestion/
-├── config/
-│   ├── plantilla_config.json       # Configuración empresa/logo (generada si no existe)
-│   └── plantilla_config.json.example
-├── output/
-│   ├── presupuestos/               # PDFs de presupuestos
-│   └── facturas/                   # PDFs de facturas
-├── src/main/java/appgestion/
-│   ├── AppGestionApplication.java  # Punto de entrada
-│   ├── config/
-│   │   └── PlantillaConfig.java    # Modelo de configuración JSON
-│   ├── controller/
-│   │   ├── ClientesController.java
-│   │   ├── MaterialesController.java
-│   │   ├── PresupuestosController.java
-│   │   ├── VerPresupuestosController.java
-│   │   ├── FacturacionController.java
-│   │   └── MetricasController.java
-│   ├── model/
-│   │   ├── Cliente.java
-│   │   ├── Material.java
-│   │   └── PresupuestoItemRow.java
-│   ├── service/
-│   │   ├── Database.java           # Conexión SQLite
-│   │   ├── ConfigService.java
-│   │   ├── ClienteService.java
-│   │   ├── MaterialService.java
-│   │   ├── PresupuestoService.java
-│   │   ├── FacturaService.java
-│   │   ├── MetricasService.java
-│   │   └── PdfGeneratorService.java
-│   └── util/
-│       ├── FxAlerts.java           # Alertas JavaFX
-│       └── StringUtils.java
-└── src/main/resources/appgestion/
-    └── styles.css
+├── api/                    # Backend Spring Boot
+│   ├── src/main/java/
+│   │   └── com/appgestion/api/
+│   │       ├── config/     # Security, Stripe
+│   │       ├── controller/
+│   │       ├── domain/entity/
+│   │       ├── dto/
+│   │       ├── repository/
+│   │       ├── security/   # JWT, guards
+│   │       └── service/
+│   └── src/main/resources/
+│       └── application.yml
+├── frontend/               # Angular SPA
+│   └── src/app/
+│       ├── core/           # Auth, services, models
+│       ├── features/       # Módulos por funcionalidad
+│       └── shared/
+├── pom.xml                 # Parent Maven
+└── README.md
 ```
-
-## Funcionalidades
-
-| Pestaña | Descripción |
-|---------|-------------|
-| **Gestión de Clientes** | CRUD de clientes |
-| **Gestión de Materiales** | CRUD de materiales/servicios |
-| **Gestión de Presupuestos** | Crear presupuestos con items, descuentos e IVA |
-| **Ver Presupuestos** | Listar, filtrar, ver detalle, generar PDF, marcar Aprobado/Rechazado |
-| **Facturación** | Crear facturas manuales o desde presupuesto, marcar Pagada/No Pagada |
-| **Métricas** | Dashboard financiero, gráficos de presupuestos/facturas, top clientes/materiales |
-
-## Base de datos
-
-Utiliza `presupuestos.db` (SQLite) en el directorio de trabajo. Compatible con la app Python: los datos se comparten entre ambas versiones.
 
 ## Configuración
 
-- **config/plantilla_config.json**: Datos de empresa, logo y carpetas de salida para PDFs.
-- Si no existe, se crea con valores por defecto al iniciar.
-- Usa `plantilla_config.json.example` como referencia para rutas relativas.
+### API (application.yml)
 
-## Dependencias (pom.xml)
+| Variable | Descripción | Default |
+|----------|-------------|---------|
+| `SPRING_DATASOURCE_URL` | JDBC URL PostgreSQL | `jdbc:postgresql://localhost:5432/appgestion` |
+| `JWT_SECRET` | Clave para firmar tokens | (requerido en producción) |
+| `STRIPE_SECRET_KEY` | Clave API Stripe | `sk_test_xxx` |
+| `STRIPE_WEBHOOK_SECRET` | Secreto webhook Stripe | `whsec_xxx` |
 
-- JavaFX Controls, FXML, Graphics
-- SQLite JDBC
-- OpenPDF (generación de PDFs)
-- Gson (configuración JSON)
+### Stripe (suscripciones)
+
+1. Crear producto y precio en [Stripe Dashboard](https://dashboard.stripe.com).
+2. Configurar `STRIPE_PRICE_MONTHLY` con el ID del precio.
+3. Para webhooks locales: `stripe listen --forward-to localhost:8080/api/webhook/stripe`
+
+## Funcionalidades
+
+- **Autenticación**: Registro, login, JWT, guard de rutas
+- **Multiusuario**: Cada usuario ve solo sus clientes, presupuestos y facturas
+- **Suscripciones**: Checkout Stripe, webhook, bloqueo sin suscripción activa
+- **CRUD**: Clientes, presupuestos (con líneas), facturas (con líneas)
+- **Customer Portal**: Gestión de facturación vía Stripe
+
+## Dependencias
+
+- **API**: Spring Boot 3.2, JWT (jjwt 0.12), Stripe Java, PostgreSQL. Ver `docs/DEPENDENCIES.md`.
+- **Frontend**: Angular 17, Angular Material, RxJS. Ver `frontend/README.md`.
+
+## Licencia
+
+Proyecto privado.

@@ -1,7 +1,17 @@
 {
   "java.configuration.updateBuildConfiguration": "automatic",
   "java.import.maven.enabled": true,
-  "java.project.importHint": true,
-  "java.server.launchMode": "Standard",
-  "java.compile.nullAnalysis.mode": "automatic"
+  "java.project.sourcePaths": [],
+  "java.project.referencedLibraries": [],
+  "java.compile.nullAnalysis.mode": "automatic",
+  "files.exclude": {
+    "**/.classpath": true,
+    "**/.project": true,
+    "**/.settings": true,
+    "**/target": true
+  },
+  "java.import.exclusions": [
+    "**/node_modules/**",
+    "**/frontend/**"
+  ]
 }

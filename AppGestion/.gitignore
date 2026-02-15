@@ -3,22 +3,19 @@ target/
 *.class
 *.jar
 *.war
+node_modules/
+dist/
 
-# IDE (launch.json and settings can be committed)
+# IDE
 .idea/
 *.iml
 .cursor/
 
-# Output & generated
-output/
-*.pdf
-
-# Local config (optional - uncomment if users customize)
-# config/plantilla_config.json
-
-# Database (optional - uncomment if you don't want to commit DB)
-# presupuestos.db
-
 # OS
 .DS_Store
 Thumbs.db
+
+# Env (no commitar secretos)
+.env
+.env.local
+*.env

@@ -1,0 +1,222 @@
+package com.appgestion.api.service;
+
+import com.appgestion.api.domain.entity.*;
+import com.appgestion.api.dto.request.FacturaItemRequest;
+import com.appgestion.api.dto.request.FacturaRequest;
+import com.appgestion.api.dto.response.FacturaItemResponse;
+import com.appgestion.api.dto.response.FacturaResponse;
+import com.appgestion.api.repository.ClienteRepository;
+import com.appgestion.api.repository.FacturaRepository;
+import com.appgestion.api.repository.MaterialRepository;
+import com.appgestion.api.repository.PresupuestoRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.time.Year;
+import java.util.List;
+
+@Service
+public class FacturaService {
+
+    private static final double IVA_RATE = 0.21;
+
+    private final FacturaRepository facturaRepository;
+    private final ClienteRepository clienteRepository;
+    private final PresupuestoRepository presupuestoRepository;
+    private final MaterialRepository materialRepository;
+
+    public FacturaService(FacturaRepository facturaRepository,
+                          ClienteRepository clienteRepository,
+                          PresupuestoRepository presupuestoRepository,
+                          MaterialRepository materialRepository) {
+        this.facturaRepository = facturaRepository;
+        this.clienteRepository = clienteRepository;
+        this.presupuestoRepository = presupuestoRepository;
+        this.materialRepository = materialRepository;
+    }
+
+    public List<FacturaResponse> listar(Long usuarioId) {
+        return facturaRepository.findByUsuarioIdOrderByFechaCreacionDesc(usuarioId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    public FacturaResponse obtenerPorId(Long id, Long usuarioId) {
+        Factura factura = facturaRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
+        return toResponse(factura);
+    }
+
+    @Transactional
+    public FacturaResponse crear(FacturaRequest request, Usuario usuario) {
+        Cliente cliente = clienteRepository.findByIdAndUsuarioId(request.clienteId(), usuario.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente no encontrado"));
+
+        Presupuesto presupuesto = null;
+        if (request.presupuestoId() != null) {
+            presupuesto = presupuestoRepository.findByIdAndUsuarioId(request.presupuestoId(), usuario.getId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
+        }
+
+        String numeroFactura = request.numeroFactura();
+        if (numeroFactura == null || numeroFactura.isBlank()) {
+            numeroFactura = generarNumeroFactura(usuario.getId());
+        } else {
+            if (facturaRepository.findByNumeroFacturaAndUsuarioId(numeroFactura, usuario.getId()).isPresent()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ya existe una factura con ese número");
+            }
+        }
+
+        Factura factura = new Factura();
+        factura.setUsuario(usuario);
+        factura.setNumeroFactura(numeroFactura);
+        factura.setCliente(cliente);
+        factura.setPresupuesto(presupuesto);
+        factura.setFechaVencimiento(request.fechaVencimiento());
+        factura.setMetodoPago(request.metodoPago());
+        factura.setEstadoPago(request.estadoPago());
+        factura.setNotas(request.notas());
+        factura.setIvaHabilitado(request.ivaHabilitado());
+
+        mapItems(request.items(), factura);
+        calcularTotales(factura);
+        factura = facturaRepository.save(factura);
+        return toResponse(factura);
+    }
+
+    @Transactional
+    public FacturaResponse actualizar(Long id, FacturaRequest request, Long usuarioId) {
+        Factura factura = facturaRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
+
+        Cliente cliente = clienteRepository.findByIdAndUsuarioId(request.clienteId(), usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente no encontrado"));
+
+        Presupuesto presupuesto = null;
+        if (request.presupuestoId() != null) {
+            presupuesto = presupuestoRepository.findByIdAndUsuarioId(request.presupuestoId(), usuarioId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
+        }
+
+        if (request.numeroFactura() != null && !request.numeroFactura().isBlank() && !request.numeroFactura().equals(factura.getNumeroFactura())) {
+            if (facturaRepository.findByNumeroFacturaAndUsuarioId(request.numeroFactura(), usuarioId).isPresent()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ya existe una factura con ese número");
+            }
+            factura.setNumeroFactura(request.numeroFactura());
+        }
+
+        factura.setCliente(cliente);
+        factura.setPresupuesto(presupuesto);
+        factura.setFechaVencimiento(request.fechaVencimiento());
+        factura.setMetodoPago(request.metodoPago());
+        factura.setEstadoPago(request.estadoPago());
+        factura.setNotas(request.notas());
+        factura.setIvaHabilitado(request.ivaHabilitado());
+
+        factura.getItems().clear();
+        mapItems(request.items(), factura);
+        calcularTotales(factura);
+        factura = facturaRepository.save(factura);
+        return toResponse(factura);
+    }
+
+    @Transactional
+    public void eliminar(Long id, Long usuarioId) {
+        if (!facturaRepository.existsByIdAndUsuarioId(id, usuarioId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada");
+        }
+        facturaRepository.deleteById(id);
+    }
+
+    private String generarNumeroFactura(Long usuarioId) {
+        long count = facturaRepository.countByUsuarioId(usuarioId);
+        int year = Year.now().getValue();
+        return String.format("FAC-%d-%04d", year, count + 1);
+    }
+
+    private void mapItems(List<FacturaItemRequest> itemRequests, Factura factura) {
+        for (FacturaItemRequest req : itemRequests) {
+            FacturaItem item = new FacturaItem();
+            item.setFactura(factura);
+            item.setCantidad(req.cantidad());
+            item.setPrecioUnitario(req.precioUnitario());
+            item.setAplicaIva(req.aplicaIva() != null ? req.aplicaIva() : true);
+
+            if (req.materialId() != null) {
+                materialRepository.findById(req.materialId()).ifPresent(item::setMaterial);
+                item.setEsTareaManual(false);
+                item.setTareaManual(null);
+            } else {
+                item.setEsTareaManual(true);
+                item.setTareaManual(req.tareaManual());
+            }
+
+            double itemSubtotal = req.cantidad() * req.precioUnitario();
+            item.setSubtotal(itemSubtotal);
+            item.setCuotaIva(0.0);
+
+            factura.getItems().add(item);
+        }
+    }
+
+    private void calcularTotales(Factura factura) {
+        double subtotal = 0;
+        double baseIva = 0;
+
+        for (FacturaItem item : factura.getItems()) {
+            subtotal += item.getSubtotal();
+            if (Boolean.TRUE.equals(item.getAplicaIva())) {
+                baseIva += item.getSubtotal();
+            }
+        }
+
+        factura.setSubtotal(subtotal);
+        double iva = Boolean.TRUE.equals(factura.getIvaHabilitado()) ? baseIva * IVA_RATE : 0;
+        factura.setIva(iva);
+        factura.setTotal(subtotal + iva);
+
+        if (Boolean.TRUE.equals(factura.getIvaHabilitado())) {
+            double totalIva = iva;
+            double totalBaseIva = baseIva;
+            for (FacturaItem item : factura.getItems()) {
+                if (Boolean.TRUE.equals(item.getAplicaIva()) && totalBaseIva > 0) {
+                    double cuotaIva = item.getSubtotal() * (totalIva / totalBaseIva);
+                    item.setCuotaIva(cuotaIva);
+                }
+            }
+        }
+    }
+
+    private FacturaResponse toResponse(Factura factura) {
+        List<FacturaItemResponse> items = factura.getItems().stream()
+                .map(item -> new FacturaItemResponse(
+                        item.getId(),
+                        item.getEsTareaManual() != null && item.getEsTareaManual() ? item.getTareaManual() : (item.getMaterial() != null ? item.getMaterial().getNombre() : ""),
+                        item.getEsTareaManual() != null && item.getEsTareaManual(),
+                        item.getCantidad(),
+                        item.getPrecioUnitario(),
+                        item.getSubtotal()
+                ))
+                .toList();
+
+        return new FacturaResponse(
+                factura.getId(),
+                factura.getNumeroFactura(),
+                factura.getCliente().getId(),
+                factura.getCliente().getNombre(),
+                factura.getPresupuesto() != null ? factura.getPresupuesto().getId() : null,
+                factura.getFechaCreacion(),
+                factura.getFechaVencimiento(),
+                factura.getSubtotal(),
+                factura.getIva(),
+                factura.getTotal(),
+                factura.getIvaHabilitado(),
+                factura.getMetodoPago(),
+                factura.getEstadoPago(),
+                factura.getNotas(),
+                items
+        );
+    }
+}
