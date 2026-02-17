@@ -5,6 +5,7 @@ import com.appgestion.api.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -21,7 +22,7 @@ public class SubscriptionService {
     @Transactional
     public void activateSubscription(Long usuarioId, String stripeCustomerId, String stripeSubscriptionId,
                                      String status, Instant currentPeriodEnd) {
-        Usuario usuario = usuarioRepository.findById(usuarioId)
+        Usuario usuario = usuarioRepository.findById(Objects.requireNonNull(usuarioId))
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado: " + usuarioId));
         usuario.setStripeCustomerId(stripeCustomerId);
         usuario.setStripeSubscriptionId(stripeSubscriptionId);

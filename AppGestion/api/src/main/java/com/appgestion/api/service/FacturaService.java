@@ -16,6 +16,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Year;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 @Service
 public class FacturaService {
@@ -124,14 +126,14 @@ public class FacturaService {
 
     @Transactional
     public void eliminar(Long id, Long usuarioId) {
-        if (!facturaRepository.existsByIdAndUsuarioId(id, usuarioId)) {
+        if (!facturaRepository.existsByIdAndUsuarioId(Objects.requireNonNull(id), Objects.requireNonNull(usuarioId))) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada");
         }
-        facturaRepository.deleteById(id);
+        facturaRepository.deleteById(Objects.requireNonNull(id));
     }
 
     private String generarNumeroFactura(Long usuarioId) {
-        long count = facturaRepository.countByUsuarioId(usuarioId);
+        long count = facturaRepository.countByUsuarioId(Objects.requireNonNull(usuarioId));
         int year = Year.now().getValue();
         return String.format("FAC-%d-%04d", year, count + 1);
     }
@@ -140,12 +142,14 @@ public class FacturaService {
         for (FacturaItemRequest req : itemRequests) {
             FacturaItem item = new FacturaItem();
             item.setFactura(factura);
-            item.setCantidad(req.cantidad());
-            item.setPrecioUnitario(req.precioUnitario());
-            item.setAplicaIva(req.aplicaIva() != null ? req.aplicaIva() : true);
+            double cantidad = Optional.ofNullable(req.cantidad()).orElse(0.0);
+            double precioUnitario = Optional.ofNullable(req.precioUnitario()).orElse(0.0);
+            item.setCantidad(cantidad);
+            item.setPrecioUnitario(precioUnitario);
+            item.setAplicaIva(Optional.ofNullable(req.aplicaIva()).orElse(true));
 
             if (req.materialId() != null) {
-                materialRepository.findById(req.materialId()).ifPresent(item::setMaterial);
+                materialRepository.findById(Objects.requireNonNull(req.materialId())).ifPresent(item::setMaterial);
                 item.setEsTareaManual(false);
                 item.setTareaManual(null);
             } else {
@@ -153,7 +157,7 @@ public class FacturaService {
                 item.setTareaManual(req.tareaManual());
             }
 
-            double itemSubtotal = req.cantidad() * req.precioUnitario();
+            double itemSubtotal = cantidad * precioUnitario;
             item.setSubtotal(itemSubtotal);
             item.setCuotaIva(0.0);
 

@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class ClienteService {
@@ -44,19 +45,20 @@ public class ClienteService {
 
     @Transactional
     public ClienteResponse actualizar(Long id, ClienteRequest request, Long usuarioId) {
-        Cliente cliente = clienteRepository.findByIdAndUsuarioId(id, usuarioId)
+        Cliente cliente = clienteRepository.findByIdAndUsuarioId(
+                Objects.requireNonNull(id), Objects.requireNonNull(usuarioId))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente no encontrado"));
-        mapRequestToEntity(request, cliente);
+        mapRequestToEntity(request, Objects.requireNonNull(cliente));
         cliente = clienteRepository.save(cliente);
         return toResponse(cliente);
     }
 
     @Transactional
     public void eliminar(Long id, Long usuarioId) {
-        if (!clienteRepository.existsByIdAndUsuarioId(id, usuarioId)) {
+        if (!clienteRepository.existsByIdAndUsuarioId(Objects.requireNonNull(id), Objects.requireNonNull(usuarioId))) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente no encontrado");
         }
-        clienteRepository.deleteById(id);
+        clienteRepository.deleteById(Objects.requireNonNull(id));
     }
 
     private void mapRequestToEntity(ClienteRequest request, Cliente cliente) {

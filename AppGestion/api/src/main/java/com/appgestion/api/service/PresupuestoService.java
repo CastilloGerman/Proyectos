@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 @Service
 public class PresupuestoService {
@@ -88,24 +90,26 @@ public class PresupuestoService {
 
     @Transactional
     public void eliminar(Long id, Long usuarioId) {
-        if (!presupuestoRepository.existsByIdAndUsuarioId(id, usuarioId)) {
+        if (!presupuestoRepository.existsByIdAndUsuarioId(Objects.requireNonNull(id), Objects.requireNonNull(usuarioId))) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado");
         }
-        presupuestoRepository.deleteById(id);
+        presupuestoRepository.deleteById(Objects.requireNonNull(id));
     }
 
     private void mapItems(List<PresupuestoItemRequest> itemRequests, Presupuesto presupuesto) {
         for (PresupuestoItemRequest req : itemRequests) {
             PresupuestoItem item = new PresupuestoItem();
             item.setPresupuesto(presupuesto);
-            item.setCantidad(req.cantidad());
-            item.setPrecioUnitario(req.precioUnitario());
-            item.setAplicaIva(req.aplicaIva() != null ? req.aplicaIva() : true);
-            item.setDescuentoPorcentaje(req.descuentoPorcentaje() != null ? req.descuentoPorcentaje() : 0.0);
-            item.setDescuentoFijo(req.descuentoFijo() != null ? req.descuentoFijo() : 0.0);
+            double cantidad = Optional.ofNullable(req.cantidad()).orElse(0.0);
+            double precioUnitario = Optional.ofNullable(req.precioUnitario()).orElse(0.0);
+            item.setCantidad(cantidad);
+            item.setPrecioUnitario(precioUnitario);
+            item.setAplicaIva(Optional.ofNullable(req.aplicaIva()).orElse(true));
+            item.setDescuentoPorcentaje(Optional.ofNullable(req.descuentoPorcentaje()).orElse(0.0));
+            item.setDescuentoFijo(Optional.ofNullable(req.descuentoFijo()).orElse(0.0));
 
             if (req.materialId() != null) {
-                materialRepository.findById(req.materialId()).ifPresent(item::setMaterial);
+                materialRepository.findById(Objects.requireNonNull(req.materialId())).ifPresent(item::setMaterial);
                 item.setEsTareaManual(false);
                 item.setTareaManual(null);
             } else {
@@ -113,9 +117,10 @@ public class PresupuestoService {
                 item.setTareaManual(req.tareaManual());
             }
 
-            double itemSubtotal = req.cantidad() * req.precioUnitario();
-            itemSubtotal *= (1 - (req.descuentoPorcentaje() != null ? req.descuentoPorcentaje() : 0) / 100);
-            itemSubtotal -= (req.descuentoFijo() != null ? req.descuentoFijo() : 0);
+            double descPctItem = Optional.ofNullable(req.descuentoPorcentaje()).orElse(0.0);
+            double descFijoItem = Optional.ofNullable(req.descuentoFijo()).orElse(0.0);
+            double itemSubtotal = cantidad * precioUnitario;
+            itemSubtotal = itemSubtotal * (1 - descPctItem / 100) - descFijoItem;
             item.setSubtotal(Math.max(0, itemSubtotal));
 
             presupuesto.getItems().add(item);
@@ -133,8 +138,8 @@ public class PresupuestoService {
             }
         }
 
-        double descPct = presupuesto.getDescuentoGlobalPorcentaje() != null ? presupuesto.getDescuentoGlobalPorcentaje() : 0;
-        double descFijo = presupuesto.getDescuentoGlobalFijo() != null ? presupuesto.getDescuentoGlobalFijo() : 0;
+        double descPct = Optional.ofNullable(presupuesto.getDescuentoGlobalPorcentaje()).orElse(0.0);
+        double descFijo = Optional.ofNullable(presupuesto.getDescuentoGlobalFijo()).orElse(0.0);
 
         if (Boolean.TRUE.equals(presupuesto.getDescuentoAntesIva())) {
             subtotal = subtotal * (1 - descPct / 100) - descFijo;
@@ -167,7 +172,7 @@ public class PresupuestoService {
 
         return new PresupuestoResponse(
                 presupuesto.getId(),
-                presupuesto.getCliente().getId(),
+                Objects.requireNonNull(Objects.requireNonNull(presupuesto.getCliente()).getId()),
                 presupuesto.getCliente().getNombre(),
                 presupuesto.getFechaCreacion(),
                 presupuesto.getSubtotal(),
