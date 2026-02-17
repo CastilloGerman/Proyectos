@@ -3,13 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 import { AuthResponse, LoginRequest, RegisterRequest } from './models/auth.model';
+import { environment } from '../../../environments/environment';
 
 const TOKEN_KEY = 'appgestion_token';
 const USER_KEY = 'appgestion_user';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly apiUrl = '/api/auth';
+  private readonly apiUrl = `${environment.apiUrl}/auth`;
 
   private tokenSignal = signal<string | null>(this.getStoredToken());
   private userSignal = signal<AuthResponse | null>(this.getStoredUser());

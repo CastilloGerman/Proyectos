@@ -129,8 +129,10 @@ export class RegisterComponent implements OnInit {
       },
       error: (err) => {
         this.loading = false;
+        const msg = err.error?.message ?? err.error ?? err.message ?? 'Error al registrarse';
+        console.error('Error en registro:', err);
         this.snackBar.open(
-          err.error?.message || 'Error al registrarse',
+          typeof msg === 'string' ? msg : 'Error al registrarse',
           'Cerrar',
           { duration: 4000 }
         );

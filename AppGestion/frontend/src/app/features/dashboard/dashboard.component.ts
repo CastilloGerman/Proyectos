@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,7 +12,7 @@ import { Factura } from '../../core/models/factura.model';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [MatCardModule, MatButtonModule, MatIconModule, RouterLink],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, RouterLink],
   template: `
     <div class="dashboard">
       <h1>Dashboard</h1>

@@ -37,7 +37,6 @@
             },
             "development": {
               "optimization": false,
-              "extractCss": true,
               "sourceMap": true
             }
           },
@@ -60,5 +59,8 @@
         }
       }
     }
+  },
+  "cli": {
+    "analytics": "fd40f194-0f4e-478d-aec4-0511a1a2556a"
   }
 }

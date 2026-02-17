@@ -19,3 +19,6 @@ Thumbs.db
 .env
 .env.local
 *.env
+
+# Config local con contraseñas (nunca subir a Git)
+**/application-local.yml

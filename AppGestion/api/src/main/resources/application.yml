@@ -1,11 +1,13 @@
 spring:
+  profiles:
+    active: local
   application:
     name: appgestion-api
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/appgestion
-    username: postgres
-    password: postgres
+    url: jdbc:postgresql://localhost:5433/appgestion
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -19,12 +21,12 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
-        default_schema: public
+        '[format_sql]': true
+        '[default_schema]': public
     open-in-view: false
 
 server:
-  port: 8080
+  port: 8081
   servlet:
     context-path: /api
 
@@ -47,6 +49,6 @@ app:
 # Logging
 logging:
   level:
-    com.appgestion: DEBUG
-    org.springframework.web: INFO
-    org.hibernate.SQL: DEBUG
+    '[com.appgestion]': DEBUG
+    '[org.springframework.web]': INFO
+    '[org.hibernate.SQL]': DEBUG

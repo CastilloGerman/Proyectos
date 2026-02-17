@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -20,6 +21,7 @@ import { FacturaItemRequest } from '../../../core/models/factura.model';
   selector: 'app-factura-form',
   standalone: true,
   imports: [
+    CommonModule,
     ReactiveFormsModule,
     RouterLink,
     MatCardModule,
@@ -94,7 +96,7 @@ import { FacturaItemRequest } from '../../../core/models/factura.model';
                   Añadir línea
                 </button>
               </div>
-              @for (item of items.controls; track $index; let i = $index) {
+              @for (item of items.controls; track item; let i = $index) {
                 <div [formGroupName]="i" class="item-row">
                   <mat-form-field appearance="outline">
                     <mat-label>Descripción</mat-label>

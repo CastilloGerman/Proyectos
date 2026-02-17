@@ -1,0 +1,49 @@
+{
+  "properties": [
+    {
+      "name": "stripe.secret-key",
+      "type": "java.lang.String",
+      "description": "Stripe API secret key."
+    },
+    {
+      "name": "stripe.webhook-secret",
+      "type": "java.lang.String",
+      "description": "Stripe webhook signing secret."
+    },
+    {
+      "name": "stripe.price-id-monthly",
+      "type": "java.lang.String",
+      "description": "Stripe price ID for monthly subscription."
+    },
+    {
+      "name": "stripe.success-url",
+      "type": "java.lang.String",
+      "description": "URL to redirect after successful subscription."
+    },
+    {
+      "name": "stripe.cancel-url",
+      "type": "java.lang.String",
+      "description": "URL to redirect when subscription is cancelled."
+    },
+    {
+      "name": "stripe.portal-return-url",
+      "type": "java.lang.String",
+      "description": "URL to return to from Stripe customer portal."
+    },
+    {
+      "name": "app.jwt.secret",
+      "type": "java.lang.String",
+      "description": "JWT signing secret key."
+    },
+    {
+      "name": "app.jwt.expiration-ms",
+      "type": "java.lang.Long",
+      "description": "JWT token expiration time in milliseconds."
+    },
+    {
+      "name": "app.jwt.issuer",
+      "type": "java.lang.String",
+      "description": "JWT token issuer."
+    }
+  ]
+}
