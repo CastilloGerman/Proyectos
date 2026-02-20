@@ -43,7 +43,7 @@ public class SecurityConfig {
                         .requestMatchers("/webhook/**").permitAll()
                         .requestMatchers("/auth/me").authenticated()
                         .requestMatchers("/usuarios/**").hasRole("ADMIN")
-                        .requestMatchers("/presupuestos/**", "/facturas/**", "/clientes/**", "/subscription/**").authenticated()
+                        .requestMatchers("/presupuestos/**", "/facturas/**", "/clientes/**", "/materiales/**", "/subscription/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

@@ -44,6 +44,12 @@
       "name": "app.jwt.issuer",
       "type": "java.lang.String",
       "description": "JWT token issuer."
+    },
+    {
+      "name": "app.subscription.skip-check",
+      "type": "java.lang.Boolean",
+      "description": "Si true, omite la comprobación de suscripción Stripe (solo para desarrollo local).",
+      "defaultValue": false
     }
   ]
 }

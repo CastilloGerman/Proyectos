@@ -109,7 +109,8 @@ public class PresupuestoService {
             item.setDescuentoFijo(Optional.ofNullable(req.descuentoFijo()).orElse(0.0));
 
             if (req.materialId() != null) {
-                materialRepository.findById(Objects.requireNonNull(req.materialId())).ifPresent(item::setMaterial);
+                Long usuarioId = Objects.requireNonNull(presupuesto.getUsuario()).getId();
+                materialRepository.findByIdAndUsuarioId(Objects.requireNonNull(req.materialId()), usuarioId).ifPresent(item::setMaterial);
                 item.setEsTareaManual(false);
                 item.setTareaManual(null);
             } else {

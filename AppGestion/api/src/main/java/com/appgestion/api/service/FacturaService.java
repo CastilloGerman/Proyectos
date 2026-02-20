@@ -149,7 +149,8 @@ public class FacturaService {
             item.setAplicaIva(Optional.ofNullable(req.aplicaIva()).orElse(true));
 
             if (req.materialId() != null) {
-                materialRepository.findById(Objects.requireNonNull(req.materialId())).ifPresent(item::setMaterial);
+                Long usuarioId = Objects.requireNonNull(factura.getUsuario()).getId();
+                materialRepository.findByIdAndUsuarioId(Objects.requireNonNull(req.materialId()), usuarioId).ifPresent(item::setMaterial);
                 item.setEsTareaManual(false);
                 item.setTareaManual(null);
             } else {
@@ -197,6 +198,7 @@ public class FacturaService {
         List<FacturaItemResponse> items = factura.getItems().stream()
                 .map(item -> new FacturaItemResponse(
                         item.getId(),
+                        item.getMaterial() != null ? item.getMaterial().getId() : null,
                         item.getEsTareaManual() != null && item.getEsTareaManual() ? item.getTareaManual() : (item.getMaterial() != null ? item.getMaterial().getNombre() : ""),
                         item.getEsTareaManual() != null && item.getEsTareaManual(),
                         item.getCantidad(),

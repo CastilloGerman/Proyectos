@@ -39,8 +39,10 @@ stripe:
   cancel-url: ${STRIPE_CANCEL_URL:http://localhost:4200/subscription/cancel}
   portal-return-url: ${STRIPE_PORTAL_RETURN_URL:http://localhost:4200/dashboard}
 
-# JWT
+# App config (subscription.skip-check: true en application-local.yml para desarrollo)
 app:
+  subscription:
+    skip-check: false
   jwt:
     secret: ${JWT_SECRET:tu-clave-secreta-muy-larga-minimo-256-bits-para-HS256}
     expiration-ms: 86400000   # 24 horas

@@ -11,11 +11,15 @@ public class Material {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private Usuario usuario;
+
     @Column(nullable = false, length = 200)
     private String nombre;
 
-    @Column(name = "unidad_medida", nullable = false, length = 50)
-    private String unidadMedida;
+    @Column(name = "unidad_medida", length = 50)
+    private String unidadMedida = "ud";
 
     @Column(name = "precio_unitario", nullable = false)
     private Double precioUnitario = 0.0;
@@ -30,6 +34,9 @@ public class Material {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public Usuario getUsuario() { return usuario; }
+    public void setUsuario(Usuario usuario) { this.usuario = usuario; }
 
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }

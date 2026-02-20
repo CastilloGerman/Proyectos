@@ -1,5 +1,6 @@
 export interface FacturaItem {
   id?: number;
+  materialId?: number;
   descripcion?: string;
   esTareaManual?: boolean;
   cantidad: number;

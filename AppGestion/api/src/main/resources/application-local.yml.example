@@ -1,0 +1,10 @@
+# INSTRUCCIONES:
+# 1. Copia este archivo y renómbralo a: application-local.yml
+# 2. Reemplaza TU_CONTRASEÑA_AQUI con tu contraseña real de PostgreSQL
+# 3. application-local.yml está en .gitignore - NUNCA se sube a Git
+# 4. Ejecuta la API con: mvn spring-boot:run -pl api -Dspring-boot.run.arguments="--spring.profiles.active=local"
+
+spring:
+  datasource:
+    username: postgres
+    password: 41182600Aa.

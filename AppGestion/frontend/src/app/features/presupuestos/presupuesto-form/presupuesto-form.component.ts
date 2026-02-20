@@ -12,7 +12,9 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
 import { ClienteService } from '../../../core/services/cliente.service';
+import { MaterialService } from '../../../core/services/material.service';
 import { Cliente } from '../../../core/models/cliente.model';
+import { Material } from '../../../core/models/material.model';
 import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
 
 @Component({
@@ -67,6 +69,15 @@ import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
               </div>
               @for (item of items.controls; track item; let i = $index) {
                 <div [formGroupName]="i" class="item-row">
+                  <mat-form-field appearance="outline" class="material-select">
+                    <mat-label>Material</mat-label>
+                    <mat-select formControlName="materialId" (selectionChange)="onMaterialSelect(i, $event.value)">
+                      <mat-option [value]="null">Ninguno</mat-option>
+                      @for (m of materiales; track m.id) {
+                        <mat-option [value]="m.id">{{ m.nombre }} ({{ m.precioUnitario | number:'1.2-2' }} €)</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
                   <mat-form-field appearance="outline">
                     <mat-label>Descripción</mat-label>
                     <input matInput formControlName="tareaManual" placeholder="Descripción del trabajo">
@@ -131,6 +142,10 @@ import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
       min-width: 150px;
     }
 
+    .item-row .material-select {
+      min-width: 200px;
+    }
+
     .item-row mat-checkbox {
       margin: 0 8px;
     }
@@ -145,6 +160,7 @@ import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
 export class PresupuestoFormComponent implements OnInit {
   form: FormGroup;
   clientes: Cliente[] = [];
+  materiales: Material[] = [];
   isEdit = false;
   id?: number;
 
@@ -158,6 +174,7 @@ export class PresupuestoFormComponent implements OnInit {
     private router: Router,
     private presupuestoService: PresupuestoService,
     private clienteService: ClienteService,
+    private materialService: MaterialService,
     private snackBar: MatSnackBar
   ) {
     this.form = this.fb.group({
@@ -170,6 +187,7 @@ export class PresupuestoFormComponent implements OnInit {
 
   ngOnInit(): void {
     this.clienteService.getAll().subscribe((data) => (this.clientes = data));
+    this.materialService.getAll().subscribe((data) => (this.materiales = data));
     const id = this.route.snapshot.paramMap.get('id');
     if (id && id !== 'nuevo') {
       this.isEdit = true;
@@ -185,7 +203,7 @@ export class PresupuestoFormComponent implements OnInit {
           p.items.forEach((it) =>
             this.items.push(
               this.fb.group({
-                materialId: [it.id],
+                materialId: [it.materialId ?? null],
                 tareaManual: [it.descripcion || ''],
                 cantidad: [it.cantidad, [Validators.required, Validators.min(0.001)]],
                 precioUnitario: [it.precioUnitario, [Validators.required, Validators.min(0)]],
@@ -219,6 +237,18 @@ export class PresupuestoFormComponent implements OnInit {
 
   removeItem(index: number): void {
     this.items.removeAt(index);
+  }
+
+  onMaterialSelect(index: number, materialId: number | null): void {
+    if (materialId == null) return;
+    const material = this.materiales.find((m) => m.id === materialId);
+    if (material) {
+      const item = this.items.at(index);
+      item.patchValue({
+        tareaManual: material.nombre,
+        precioUnitario: material.precioUnitario,
+      });
+    }
   }
 
   onSubmit(): void {

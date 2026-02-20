@@ -7,6 +7,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.NonNull;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,6 +22,9 @@ public class SubscriptionCheckFilter extends OncePerRequestFilter {
     private final SubscriptionService subscriptionService;
     private final UsuarioRepository usuarioRepository;
 
+    @Value("${app.subscription.skip-check:false}")
+    private boolean skipSubscriptionCheck;
+
     public SubscriptionCheckFilter(SubscriptionService subscriptionService, UsuarioRepository usuarioRepository) {
         this.subscriptionService = subscriptionService;
         this.usuarioRepository = usuarioRepository;
@@ -34,7 +38,7 @@ public class SubscriptionCheckFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         String path = request.getRequestURI();
 
-        if (isExcludedPath(path)) {
+        if (skipSubscriptionCheck || isExcludedPath(path)) {
             filterChain.doFilter(request, response);
             return;
         }

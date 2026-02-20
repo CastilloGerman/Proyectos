@@ -6,10 +6,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { ClienteService } from '../../../core/services/cliente.service';
+import { MaterialService } from '../../../core/services/material.service';
 
 @Component({
-  selector: 'app-cliente-form',
+  selector: 'app-material-form',
   standalone: true,
   imports: [
     ReactiveFormsModule,
@@ -21,36 +21,29 @@ import { ClienteService } from '../../../core/services/cliente.service';
     MatSnackBarModule,
   ],
   template: `
-    <div class="cliente-form">
+    <div class="material-form">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>{{ isEdit ? 'Editar cliente' : 'Nuevo cliente' }}</mat-card-title>
+          <mat-card-title>{{ isEdit ? 'Editar material' : 'Nuevo material' }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <form [formGroup]="form" (ngSubmit)="onSubmit()">
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Nombre</mat-label>
-              <input matInput formControlName="nombre" placeholder="Nombre del cliente">
+              <input matInput formControlName="nombre" placeholder="Nombre del material">
               <mat-error>El nombre es obligatorio</mat-error>
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Email</mat-label>
-              <input matInput formControlName="email" type="email" placeholder="email@ejemplo.com">
+              <mat-label>Precio unitario</mat-label>
+              <input matInput formControlName="precioUnitario" type="number" min="0" step="0.01" placeholder="0.00">
+              <mat-error>El precio es obligatorio y debe ser mayor o igual a 0</mat-error>
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Teléfono</mat-label>
-              <input matInput formControlName="telefono" placeholder="+34 600 000 000">
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Dirección</mat-label>
-              <input matInput formControlName="direccion" placeholder="Dirección">
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>DNI/CIF</mat-label>
-              <input matInput formControlName="dni" placeholder="DNI o CIF">
+              <mat-label>Unidad de medida</mat-label>
+              <input matInput formControlName="unidadMedida" placeholder="ud, kg, m, etc.">
             </mat-form-field>
             <div class="actions">
-              <button mat-button type="button" routerLink="/clientes">Cancelar</button>
+              <button mat-button type="button" routerLink="/materiales">Cancelar</button>
               <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid">
                 {{ isEdit ? 'Guardar' : 'Crear' }}
               </button>
@@ -74,7 +67,7 @@ import { ClienteService } from '../../../core/services/cliente.service';
     }
   `],
 })
-export class ClienteFormComponent implements OnInit {
+export class MaterialFormComponent implements OnInit {
   form: FormGroup;
   isEdit = false;
   id?: number;
@@ -83,15 +76,13 @@ export class ClienteFormComponent implements OnInit {
     private fb: FormBuilder,
     private route: ActivatedRoute,
     private router: Router,
-    private clienteService: ClienteService,
+    private materialService: MaterialService,
     private snackBar: MatSnackBar
   ) {
     this.form = this.fb.group({
       nombre: ['', Validators.required],
-      email: [''],
-      telefono: [''],
-      direccion: [''],
-      dni: [''],
+      precioUnitario: [0, [Validators.required, Validators.min(0)]],
+      unidadMedida: ['ud'],
     });
   }
 
@@ -100,17 +91,15 @@ export class ClienteFormComponent implements OnInit {
     if (id && id !== 'nuevo') {
       this.isEdit = true;
       this.id = +id;
-      this.clienteService.getById(this.id).subscribe({
-        next: (c) => {
+      this.materialService.getById(this.id).subscribe({
+        next: (m) => {
           this.form.patchValue({
-            nombre: c.nombre,
-            email: c.email || '',
-            telefono: c.telefono || '',
-            direccion: c.direccion || '',
-            dni: c.dni || '',
+            nombre: m.nombre,
+            precioUnitario: m.precioUnitario,
+            unidadMedida: m.unidadMedida || 'ud',
           });
         },
-        error: () => this.router.navigate(['/clientes']),
+        error: () => this.router.navigate(['/materiales']),
       });
     }
   }
@@ -119,18 +108,16 @@ export class ClienteFormComponent implements OnInit {
     if (this.form.invalid) return;
     const payload = {
       nombre: this.form.value.nombre,
-      email: this.form.value.email || undefined,
-      telefono: this.form.value.telefono || undefined,
-      direccion: this.form.value.direccion || undefined,
-      dni: this.form.value.dni || undefined,
+      precioUnitario: +this.form.value.precioUnitario,
+      unidadMedida: this.form.value.unidadMedida?.trim() || 'ud',
     };
     const req = this.isEdit && this.id
-      ? this.clienteService.update(this.id, payload)
-      : this.clienteService.create(payload);
+      ? this.materialService.update(this.id, payload)
+      : this.materialService.create(payload);
     req.subscribe({
       next: () => {
-        this.snackBar.open(this.isEdit ? 'Cliente actualizado' : 'Cliente creado', 'Cerrar', { duration: 3000 });
-        this.router.navigate(['/clientes']);
+        this.snackBar.open(this.isEdit ? 'Material actualizado' : 'Material creado', 'Cerrar', { duration: 3000 });
+        this.router.navigate(['/materiales']);
       },
       error: (err) => {
         const msg = err.error?.error || err.error?.message || 'Error al guardar';
