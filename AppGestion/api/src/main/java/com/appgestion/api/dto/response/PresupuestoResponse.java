@@ -13,5 +13,8 @@ public record PresupuestoResponse(
         Double total,
         Boolean ivaHabilitado,
         String estado,
+        Double descuentoGlobalPorcentaje,
+        Double descuentoGlobalFijo,
+        Boolean descuentoAntesIva,
         List<PresupuestoItemResponse> items
 ) {}

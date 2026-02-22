@@ -7,5 +7,6 @@ public record PresupuestoItemResponse(
         Boolean esTareaManual,
         Double cantidad,
         Double precioUnitario,
-        Double subtotal
+        Double subtotal,
+        Boolean visiblePdf
 ) {}

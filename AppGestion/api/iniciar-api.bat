@@ -1,5 +1,14 @@
 @echo off
 cd /d "%~dp0.."
+
+REM Liberar puerto 8081 si esta ocupado
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8081 ^| findstr LISTENING') do (
+  if not "%%a"=="0" taskkill /PID %%a /F >nul 2>&1
+)
+
+REM Omitir comprobacion Stripe en desarrollo
+set APP_SUBSCRIPTION_SKIP=true
+
 REM Ejecuta la API. Opciones:
 REM 1. Con variable: set DB_PASSWORD=tu_password antes de ejecutar
 REM 2. Con application-local.yml: crea el archivo desde application-local.yml.example

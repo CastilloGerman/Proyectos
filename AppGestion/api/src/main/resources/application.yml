@@ -1,6 +1,6 @@
 spring:
-  profiles:
-    active: local
+  # No definir profile activo por defecto → producción segura
+  # Para desarrollo: --spring.profiles.active=local (ver launch.json o iniciar-api.ps1)
   application:
     name: appgestion-api
 
@@ -39,10 +39,11 @@ stripe:
   cancel-url: ${STRIPE_CANCEL_URL:http://localhost:4200/subscription/cancel}
   portal-return-url: ${STRIPE_PORTAL_RETURN_URL:http://localhost:4200/dashboard}
 
-# App config (subscription.skip-check: true en application-local.yml para desarrollo)
+# App config: skip-check true por defecto para desarrollo (sin Stripe)
+# PRODUCCIÓN: definir SPRING_PROFILES_ACTIVE=prod para exigir suscripción
 app:
   subscription:
-    skip-check: false
+    skip-check: true
   jwt:
     secret: ${JWT_SECRET:tu-clave-secreta-muy-larga-minimo-256-bits-para-HS256}
     expiration-ms: 86400000   # 24 horas
@@ -54,3 +55,23 @@ logging:
     '[com.appgestion]': DEBUG
     '[org.springframework.web]': INFO
     '[org.hibernate.SQL]': DEBUG
+
+---
+# Perfil local: desarrollo sin Stripe (omitir comprobación de suscripción)
+spring:
+  config:
+    activate:
+      on-profile: local
+app:
+  subscription:
+    skip-check: true
+
+---
+# Perfil prod: exigir suscripción activa (para despliegue)
+spring:
+  config:
+    activate:
+      on-profile: prod
+app:
+  subscription:
+    skip-check: false

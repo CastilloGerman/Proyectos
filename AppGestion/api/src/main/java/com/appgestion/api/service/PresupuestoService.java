@@ -25,21 +25,26 @@ public class PresupuestoService {
     private final PresupuestoRepository presupuestoRepository;
     private final ClienteRepository clienteRepository;
     private final MaterialRepository materialRepository;
+    private final PresupuestoPdfService presupuestoPdfService;
 
     public PresupuestoService(PresupuestoRepository presupuestoRepository,
                               ClienteRepository clienteRepository,
-                              MaterialRepository materialRepository) {
+                              MaterialRepository materialRepository,
+                              PresupuestoPdfService presupuestoPdfService) {
         this.presupuestoRepository = presupuestoRepository;
         this.clienteRepository = clienteRepository;
         this.materialRepository = materialRepository;
+        this.presupuestoPdfService = presupuestoPdfService;
     }
 
+    @Transactional(readOnly = true)
     public List<PresupuestoResponse> listar(Long usuarioId) {
         return presupuestoRepository.findByUsuarioIdOrderByFechaCreacionDesc(usuarioId).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public PresupuestoResponse obtenerPorId(Long id, Long usuarioId) {
         Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(id, usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
@@ -96,6 +101,13 @@ public class PresupuestoService {
         presupuestoRepository.deleteById(Objects.requireNonNull(id));
     }
 
+    @Transactional(readOnly = true)
+    public byte[] generarPdf(Long id, Long usuarioId) {
+        Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
+        return presupuestoPdfService.generarPdf(presupuesto);
+    }
+
     private void mapItems(List<PresupuestoItemRequest> itemRequests, Presupuesto presupuesto) {
         for (PresupuestoItemRequest req : itemRequests) {
             PresupuestoItem item = new PresupuestoItem();
@@ -107,6 +119,7 @@ public class PresupuestoService {
             item.setAplicaIva(Optional.ofNullable(req.aplicaIva()).orElse(true));
             item.setDescuentoPorcentaje(Optional.ofNullable(req.descuentoPorcentaje()).orElse(0.0));
             item.setDescuentoFijo(Optional.ofNullable(req.descuentoFijo()).orElse(0.0));
+            item.setVisiblePdf(Optional.ofNullable(req.visiblePdf()).orElse(true));
 
             if (req.materialId() != null) {
                 Long usuarioId = Objects.requireNonNull(presupuesto.getUsuario()).getId();
@@ -167,7 +180,8 @@ public class PresupuestoService {
                         item.getEsTareaManual() != null && item.getEsTareaManual(),
                         item.getCantidad(),
                         item.getPrecioUnitario(),
-                        item.getSubtotal()
+                        item.getSubtotal(),
+                        Optional.ofNullable(item.getVisiblePdf()).orElse(true)
                 ))
                 .toList();
 
@@ -181,6 +195,9 @@ public class PresupuestoService {
                 presupuesto.getTotal(),
                 presupuesto.getIvaHabilitado(),
                 presupuesto.getEstado(),
+                Optional.ofNullable(presupuesto.getDescuentoGlobalPorcentaje()).orElse(0.0),
+                Optional.ofNullable(presupuesto.getDescuentoGlobalFijo()).orElse(0.0),
+                Optional.ofNullable(presupuesto.getDescuentoAntesIva()).orElse(true),
                 items
         );
     }

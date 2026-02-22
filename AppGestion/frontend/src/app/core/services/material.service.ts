@@ -14,6 +14,10 @@ export class MaterialService {
     return this.http.get<Material[]>(this.apiUrl);
   }
 
+  getTopUsados(): Observable<Material[]> {
+    return this.http.get<Material[]>(`${this.apiUrl}/top-usados`);
+  }
+
   getById(id: number): Observable<Material> {
     return this.http.get<Material>(`${this.apiUrl}/${id}`);
   }

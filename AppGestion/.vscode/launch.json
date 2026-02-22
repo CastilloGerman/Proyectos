@@ -6,7 +6,11 @@
       "name": "AppGestion API",
       "request": "launch",
       "mainClass": "com.appgestion.api.AppGestionApiApplication",
-      "projectName": "appgestion-api"
+      "projectName": "appgestion-api",
+      "args": "--spring.profiles.active=local",
+      "env": {
+        "APP_SUBSCRIPTION_SKIP": "true"
+      }
     }
   ]
 }

@@ -45,7 +45,7 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    return this.tokenSignal();
+    return localStorage.getItem(TOKEN_KEY);
   }
 
   private handleAuthSuccess(response: AuthResponse): void {

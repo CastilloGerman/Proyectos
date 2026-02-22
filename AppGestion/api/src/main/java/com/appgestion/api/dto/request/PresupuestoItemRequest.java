@@ -12,11 +12,13 @@ public record PresupuestoItemRequest(
         Double precioUnitario,
         Boolean aplicaIva,
         Double descuentoPorcentaje,
-        Double descuentoFijo
+        Double descuentoFijo,
+        Boolean visiblePdf
 ) {
     public PresupuestoItemRequest {
         if (aplicaIva == null) aplicaIva = true;
         if (descuentoPorcentaje == null) descuentoPorcentaje = 0.0;
         if (descuentoFijo == null) descuentoFijo = 0.0;
+        if (visiblePdf == null) visiblePdf = true;
     }
 }

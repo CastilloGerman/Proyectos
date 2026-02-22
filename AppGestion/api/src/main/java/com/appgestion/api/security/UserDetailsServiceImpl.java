@@ -1,7 +1,7 @@
 package com.appgestion.api.security;
 
-import com.appgestion.api.domain.entity.Usuario;
-import com.appgestion.api.repository.UsuarioRepository;
+import java.util.Collections;
+
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -9,7 +9,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
+import com.appgestion.api.domain.entity.Usuario;
+import com.appgestion.api.repository.UsuarioRepository;
 
 @Service
 public class UserDetailsServiceImpl implements UserDetailsService {
@@ -29,17 +30,20 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             throw new UsernameNotFoundException("Usuario desactivado: " + username);
         }
 
+        // 🔥 CORRECCIÓN IMPORTANTE: forzar mayúsculas y prefijo ROLE_
         String rol = usuario.getRol() != null ? usuario.getRol() : "USER";
-        String authority = rol.startsWith("ROLE_") ? rol : "ROLE_" + rol;
+        String authority = "ROLE_" + rol.toUpperCase();
 
         return User.builder()
                 .username(usuario.getEmail())
                 .password(usuario.getPasswordHash())
-                .authorities(Collections.singletonList(new SimpleGrantedAuthority(authority)))
+                .authorities(Collections.singletonList(
+                        new SimpleGrantedAuthority(authority)
+                ))
                 .accountExpired(false)
                 .accountLocked(false)
                 .credentialsExpired(false)
-                .disabled(!Boolean.TRUE.equals(usuario.getActivo()))
+                .disabled(false)
                 .build();
     }
 }

@@ -107,8 +107,14 @@ export class PresupuestoListComponent implements OnInit {
   }
 
   load(): void {
-    this.presupuestoService.getAll().subscribe((data) => {
-      this.dataSource.data = data;
+    this.presupuestoService.getAll().subscribe({
+      next: (data) => this.dataSource.data = data,
+      error: (err) => {
+        const msg = err.status === 403
+          ? 'Acceso denegado. Verifica que la API esté en modo desarrollo (perfil local).'
+          : 'Error al cargar presupuestos';
+        this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+      },
     });
   }
 

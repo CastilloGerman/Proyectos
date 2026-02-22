@@ -28,6 +28,12 @@ public class MaterialService {
                 .toList();
     }
 
+    public List<MaterialResponse> findTop5MasUsados(Long usuarioId) {
+        return materialRepository.findTop5MasUsadosByUsuarioId(usuarioId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     public MaterialResponse obtenerPorId(Long id, Long usuarioId) {
         Material material = materialRepository.findByIdAndUsuarioId(id, usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Material no encontrado"));

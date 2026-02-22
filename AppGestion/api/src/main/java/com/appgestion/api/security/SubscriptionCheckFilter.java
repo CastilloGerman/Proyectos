@@ -16,8 +16,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Component
 public class SubscriptionCheckFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(SubscriptionCheckFilter.class);
 
     private final SubscriptionService subscriptionService;
     private final UsuarioRepository usuarioRepository;
@@ -28,6 +33,11 @@ public class SubscriptionCheckFilter extends OncePerRequestFilter {
     public SubscriptionCheckFilter(SubscriptionService subscriptionService, UsuarioRepository usuarioRepository) {
         this.subscriptionService = subscriptionService;
         this.usuarioRepository = usuarioRepository;
+    }
+
+    @jakarta.annotation.PostConstruct
+    public void logConfig() {
+        log.info("SubscriptionCheckFilter: skip-check={} (true=omitir suscripción, false=exigir suscripción activa)", skipSubscriptionCheck);
     }
 
     @Override
@@ -61,6 +71,7 @@ public class SubscriptionCheckFilter extends OncePerRequestFilter {
             return;
         }
 
+        log.warn("403 Forbidden: usuario {} sin suscripción activa - {} {}", email, request.getMethod(), path);
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");

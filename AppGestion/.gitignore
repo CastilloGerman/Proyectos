@@ -5,6 +5,13 @@ target/
 *.war
 node_modules/
 dist/
+.angular/
+output/
+
+# Bases de datos locales (SQLite/H2 - residuos de migración)
+*.db
+*.sqlite
+*.sqlite3
 
 # IDE
 .idea/

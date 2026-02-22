@@ -6,6 +6,7 @@ export interface PresupuestoItem {
   cantidad: number;
   precioUnitario: number;
   subtotal?: number;
+  visiblePdf?: boolean;
 }
 
 export interface PresupuestoItemRequest {
@@ -16,6 +17,7 @@ export interface PresupuestoItemRequest {
   aplicaIva?: boolean;
   descuentoPorcentaje?: number;
   descuentoFijo?: number;
+  visiblePdf?: boolean;
 }
 
 export interface Presupuesto {
@@ -28,6 +30,9 @@ export interface Presupuesto {
   total: number;
   ivaHabilitado: boolean;
   estado: string;
+  descuentoGlobalPorcentaje?: number;
+  descuentoGlobalFijo?: number;
+  descuentoAntesIva?: boolean;
   items: PresupuestoItem[];
 }
 

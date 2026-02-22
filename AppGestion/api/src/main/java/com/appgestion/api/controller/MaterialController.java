@@ -29,7 +29,13 @@ public class MaterialController {
         return materialService.listar(usuarioId);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/top-usados")
+    public List<MaterialResponse> topUsados() {
+        Long usuarioId = SecurityUtils.getCurrentUsuario(usuarioRepository).getId();
+        return materialService.findTop5MasUsados(usuarioId);
+    }
+
+    @GetMapping("/{id:\\d+}")
     public MaterialResponse obtenerPorId(@PathVariable Long id) {
         Long usuarioId = SecurityUtils.getCurrentUsuario(usuarioRepository).getId();
         return materialService.obtenerPorId(id, usuarioId);

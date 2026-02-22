@@ -13,6 +13,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.security.SignatureException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+
 import java.io.IOException;
 
 @Component
@@ -48,7 +53,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
-        } catch (Exception e) {
+        } catch (ExpiredJwtException | MalformedJwtException | SignatureException
+                | IllegalArgumentException | UsernameNotFoundException e) {
             logger.debug("No se pudo establecer autenticación: " + e.getMessage());
         }
 
