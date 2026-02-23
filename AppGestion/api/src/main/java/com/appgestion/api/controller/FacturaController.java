@@ -7,6 +7,9 @@ import com.appgestion.api.repository.UsuarioRepository;
 import com.appgestion.api.security.SecurityUtils;
 import com.appgestion.api.service.FacturaService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,6 +37,18 @@ public class FacturaController {
     public FacturaResponse obtenerPorId(@PathVariable Long id) {
         Long usuarioId = SecurityUtils.getCurrentUsuario(usuarioRepository).getId();
         return facturaService.obtenerPorId(id, usuarioId);
+    }
+
+    @GetMapping(value = "/{id}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> descargarPdf(@PathVariable Long id) {
+        Long usuarioId = SecurityUtils.getCurrentUsuario(usuarioRepository).getId();
+        byte[] pdf = facturaService.generarPdf(id, usuarioId);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentDispositionFormData("attachment", "factura-" + id + ".pdf");
+        return ResponseEntity.ok()
+                .headers(headers)
+                .contentType(MediaType.parseMediaType("application/pdf"))
+                .body(pdf);
     }
 
     @PostMapping

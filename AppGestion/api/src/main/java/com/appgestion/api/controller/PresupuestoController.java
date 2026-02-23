@@ -2,9 +2,11 @@ package com.appgestion.api.controller;
 
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.request.PresupuestoRequest;
+import com.appgestion.api.dto.response.FacturaResponse;
 import com.appgestion.api.dto.response.PresupuestoResponse;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.appgestion.api.security.SecurityUtils;
+import com.appgestion.api.service.FacturaService;
 import com.appgestion.api.service.PresupuestoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
@@ -20,11 +22,14 @@ import java.util.List;
 public class PresupuestoController {
 
     private final PresupuestoService presupuestoService;
+    private final FacturaService facturaService;
     private final UsuarioRepository usuarioRepository;
 
     public PresupuestoController(PresupuestoService presupuestoService,
+                                 FacturaService facturaService,
                                  UsuarioRepository usuarioRepository) {
         this.presupuestoService = presupuestoService;
+        this.facturaService = facturaService;
         this.usuarioRepository = usuarioRepository;
     }
 
@@ -50,6 +55,13 @@ public class PresupuestoController {
                 .headers(headers)
                 .contentType(MediaType.parseMediaType("application/pdf"))
                 .body(pdf);
+    }
+
+    @PostMapping("/{id}/factura")
+    @ResponseStatus(HttpStatus.CREATED)
+    public FacturaResponse crearFacturaDesdePresupuesto(@PathVariable Long id) {
+        Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
+        return facturaService.crearDesdePresupuesto(id, usuario);
     }
 
     @PostMapping

@@ -28,17 +28,21 @@ public class FacturaService {
     private final ClienteRepository clienteRepository;
     private final PresupuestoRepository presupuestoRepository;
     private final MaterialRepository materialRepository;
+    private final FacturaPdfService facturaPdfService;
 
     public FacturaService(FacturaRepository facturaRepository,
                           ClienteRepository clienteRepository,
                           PresupuestoRepository presupuestoRepository,
-                          MaterialRepository materialRepository) {
+                          MaterialRepository materialRepository,
+                          FacturaPdfService facturaPdfService) {
         this.facturaRepository = facturaRepository;
         this.clienteRepository = clienteRepository;
         this.presupuestoRepository = presupuestoRepository;
         this.materialRepository = materialRepository;
+        this.facturaPdfService = facturaPdfService;
     }
 
+    @Transactional(readOnly = true)
     public List<FacturaResponse> listar(Long usuarioId) {
         return facturaRepository.findByUsuarioIdOrderByFechaCreacionDesc(usuarioId).stream()
                 .map(this::toResponse)
@@ -60,6 +64,7 @@ public class FacturaService {
         if (request.presupuestoId() != null) {
             presupuesto = presupuestoRepository.findByIdAndUsuarioId(request.presupuestoId(), usuario.getId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
+            presupuesto.setEstado("Aceptado");
         }
 
         String numeroFactura = request.numeroFactura();
@@ -100,6 +105,7 @@ public class FacturaService {
         if (request.presupuestoId() != null) {
             presupuesto = presupuestoRepository.findByIdAndUsuarioId(request.presupuestoId(), usuarioId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
+            presupuesto.setEstado("Aceptado");
         }
 
         if (request.numeroFactura() != null && !request.numeroFactura().isBlank() && !request.numeroFactura().equals(factura.getNumeroFactura())) {
@@ -122,6 +128,48 @@ public class FacturaService {
         calcularTotales(factura);
         factura = facturaRepository.save(factura);
         return toResponse(factura);
+    }
+
+    @Transactional
+    public FacturaResponse crearDesdePresupuesto(Long presupuestoId, Usuario usuario) {
+        Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(presupuestoId, usuario.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
+
+        String numeroFactura = generarNumeroFactura(usuario.getId());
+
+        Factura factura = new Factura();
+        factura.setUsuario(usuario);
+        factura.setNumeroFactura(numeroFactura);
+        factura.setCliente(presupuesto.getCliente());
+        factura.setPresupuesto(presupuesto);
+        factura.setIvaHabilitado(presupuesto.getIvaHabilitado());
+        factura.setMetodoPago("Transferencia");
+        factura.setEstadoPago("No Pagada");
+
+        for (PresupuestoItem pi : presupuesto.getItems()) {
+            FacturaItem item = new FacturaItem();
+            item.setFactura(factura);
+            item.setMaterial(pi.getMaterial());
+            item.setTareaManual(pi.getTareaManual());
+            item.setEsTareaManual(Optional.ofNullable(pi.getEsTareaManual()).orElse(false));
+            item.setCantidad(Optional.ofNullable(pi.getCantidad()).orElse(0.0));
+            item.setPrecioUnitario(Optional.ofNullable(pi.getPrecioUnitario()).orElse(0.0));
+            item.setSubtotal(Optional.ofNullable(pi.getSubtotal()).orElse(0.0));
+            item.setAplicaIva(Optional.ofNullable(pi.getAplicaIva()).orElse(true));
+            factura.getItems().add(item);
+        }
+
+        presupuesto.setEstado("Aceptado");
+        calcularTotales(factura);
+        factura = facturaRepository.save(factura);
+        return toResponse(factura);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] generarPdf(Long id, Long usuarioId) {
+        Factura factura = facturaRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
+        return facturaPdfService.generarPdf(factura, usuarioId);
     }
 
     @Transactional

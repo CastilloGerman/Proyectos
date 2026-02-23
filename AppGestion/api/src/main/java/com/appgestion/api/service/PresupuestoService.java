@@ -105,7 +105,7 @@ public class PresupuestoService {
     public byte[] generarPdf(Long id, Long usuarioId) {
         Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(id, usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
-        return presupuestoPdfService.generarPdf(presupuesto);
+        return presupuestoPdfService.generarPdf(presupuesto, usuarioId);
     }
 
     private void mapItems(List<PresupuestoItemRequest> itemRequests, Presupuesto presupuesto) {

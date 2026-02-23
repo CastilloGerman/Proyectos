@@ -1,5 +1,6 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.domain.entity.Empresa;
 import com.appgestion.api.domain.entity.Presupuesto;
 import com.appgestion.api.domain.entity.PresupuestoItem;
 import com.lowagie.text.*;
@@ -17,17 +18,22 @@ import java.util.Optional;
 public class PresupuestoPdfService {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private final EmpresaService empresaService;
+
+    public PresupuestoPdfService(EmpresaService empresaService) {
+        this.empresaService = empresaService;
+    }
     private static final Color HEADER_BG = new Color(45, 55, 72);
     private static final Color ROW_ALT = new Color(248, 250, 252);
     private static final Color BORDER = new Color(226, 232, 240);
     private static final float[] TABLE_WIDTHS = {3f, 1.5f, 1.5f, 1.5f};
 
-    public byte[] generarPdf(Presupuesto presupuesto) {
+    public byte[] generarPdf(Presupuesto presupuesto, Long usuarioId) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              Document document = new Document(PageSize.A4, 40, 40, 50, 50)) {
             PdfWriter.getInstance(document, baos);
             document.open();
-            agregarContenido(document, presupuesto);
+            agregarContenido(document, presupuesto, usuarioId);
             document.close();
             return baos.toByteArray();
         } catch (DocumentException | IOException e) {
@@ -35,15 +41,30 @@ public class PresupuestoPdfService {
         }
     }
 
-    private void agregarContenido(Document document, Presupuesto presupuesto) throws DocumentException {
+    private void agregarContenido(Document document, Presupuesto presupuesto, Long usuarioId) throws DocumentException {
         Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 22, Color.DARK_GRAY);
         Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.WHITE);
         Font cellFont = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.DARK_GRAY);
         Font smallFont = FontFactory.getFont(FontFactory.HELVETICA, 8, Color.GRAY);
 
+        Empresa empresa = usuarioId != null ? empresaService.getEmpresaOrNull(usuarioId) : null;
+
         Paragraph title = new Paragraph("PRESUPUESTO", titleFont);
         title.setSpacingAfter(4);
         document.add(title);
+
+        if (empresa != null && (empresa.getNombre() != null && !empresa.getNombre().isBlank()
+                || empresa.getDireccion() != null || empresa.getNif() != null)) {
+            StringBuilder emisor = new StringBuilder();
+            if (empresa.getNombre() != null && !empresa.getNombre().isBlank()) emisor.append(empresa.getNombre()).append("\n");
+            if (empresa.getDireccion() != null && !empresa.getDireccion().isBlank()) emisor.append(empresa.getDireccion()).append("\n");
+            if (empresa.getNif() != null && !empresa.getNif().isBlank()) emisor.append("NIF/CIF: ").append(empresa.getNif());
+            if (emisor.length() > 0) {
+                Paragraph pEmisor = new Paragraph(emisor.toString().trim(), smallFont);
+                pEmisor.setSpacingAfter(8);
+                document.add(pEmisor);
+            }
+        }
 
         String clienteNombre = presupuesto.getCliente() != null ? presupuesto.getCliente().getNombre() : "";
         String fecha = presupuesto.getFechaCreacion() != null
@@ -76,6 +97,12 @@ public class PresupuestoPdfService {
 
         PdfPTable totalesTable = crearTablaTotales(presupuesto, cellFont);
         document.add(totalesTable);
+
+        if (empresa != null && empresa.getNotasPiePresupuesto() != null && !empresa.getNotasPiePresupuesto().isBlank()) {
+            Paragraph notas = new Paragraph(empresa.getNotasPiePresupuesto(), smallFont);
+            notas.setSpacingBefore(20);
+            document.add(notas);
+        }
     }
 
     private void addTableHeader(PdfPTable table, Font font) {

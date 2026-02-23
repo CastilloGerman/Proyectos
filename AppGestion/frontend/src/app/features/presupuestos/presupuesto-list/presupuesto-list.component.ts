@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,6 +11,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
 import { Presupuesto } from '../../../core/models/presupuesto.model';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
+import { ConfigEmpresaDialogComponent } from '../../../shared/config-empresa-dialog/config-empresa-dialog.component';
 
 @Component({
   selector: 'app-presupuesto-list',
@@ -30,10 +31,15 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
     <div class="presupuesto-list">
       <div class="header">
         <h1>Presupuestos</h1>
-        <a mat-raised-button color="primary" routerLink="/presupuestos/nuevo">
-          <mat-icon>add</mat-icon>
-          Nuevo presupuesto
-        </a>
+        <div class="header-actions">
+          <button mat-icon-button (click)="openConfig()" matTooltip="Configuración plantillas">
+            <mat-icon>settings</mat-icon>
+          </button>
+          <a mat-raised-button color="primary" routerLink="/presupuestos/nuevo">
+            <mat-icon>add</mat-icon>
+            Nuevo presupuesto
+          </a>
+        </div>
       </div>
       <div class="table-container">
         <table mat-table [dataSource]="dataSource" class="full-width">
@@ -58,6 +64,14 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let row">
+              @if (row.estado === 'Pendiente') {
+                <button mat-icon-button (click)="crearFactura(row)" matTooltip="Crear factura">
+                  <mat-icon>receipt</mat-icon>
+                </button>
+              }
+              <button mat-icon-button (click)="downloadPdf(row)" matTooltip="Descargar PDF">
+                <mat-icon>picture_as_pdf</mat-icon>
+              </button>
               <button mat-icon-button [routerLink]="['/presupuestos', row.id]" matTooltip="Editar">
                 <mat-icon>edit</mat-icon>
               </button>
@@ -83,6 +97,12 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
       margin-bottom: 24px;
     }
 
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
     .table-container {
       overflow-x: auto;
     }
@@ -99,7 +119,8 @@ export class PresupuestoListComponent implements OnInit {
   constructor(
     private presupuestoService: PresupuestoService,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -144,5 +165,39 @@ export class PresupuestoListComponent implements OnInit {
     if (estado === 'Aceptado') return 'primary';
     if (estado === 'Rechazado') return 'warn';
     return undefined;
+  }
+
+  openConfig(): void {
+    this.dialog.open(ConfigEmpresaDialogComponent, {
+      width: '500px',
+      data: { context: 'presupuesto' },
+    });
+  }
+
+  crearFactura(presupuesto: Presupuesto): void {
+    this.presupuestoService.createFacturaFromPresupuesto(presupuesto.id).subscribe({
+      next: (factura) => {
+        this.snackBar.open('Factura creada. El presupuesto ha pasado a estado Aceptado.', 'Cerrar', { duration: 4000 });
+        this.load();
+        this.router.navigate(['/facturas', factura.id]);
+      },
+      error: (err) => {
+        this.snackBar.open(err.error?.message || 'Error al crear factura', 'Cerrar', { duration: 4000 });
+      },
+    });
+  }
+
+  downloadPdf(presupuesto: Presupuesto): void {
+    this.presupuestoService.downloadPdf(presupuesto.id).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `presupuesto-${presupuesto.id}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => this.snackBar.open('Error al descargar PDF', 'Cerrar', { duration: 3000 }),
+    });
   }
 }
