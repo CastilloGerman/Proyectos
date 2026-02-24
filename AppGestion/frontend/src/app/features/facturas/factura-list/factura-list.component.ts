@@ -77,9 +77,9 @@ import { ConfigEmpresaDialogComponent } from '../../../shared/config-empresa-dia
               <button mat-icon-button (click)="downloadPdf(row)" matTooltip="Descargar PDF">
                 <mat-icon>picture_as_pdf</mat-icon>
               </button>
-              <button mat-icon-button [routerLink]="['/facturas', row.id]" matTooltip="Editar">
+              <a mat-icon-button [routerLink]="['/facturas', row.id]" matTooltip="Editar">
                 <mat-icon>edit</mat-icon>
-              </button>
+              </a>
               <button mat-icon-button color="warn" (click)="delete(row)" matTooltip="Eliminar">
                 <mat-icon>delete</mat-icon>
               </button>

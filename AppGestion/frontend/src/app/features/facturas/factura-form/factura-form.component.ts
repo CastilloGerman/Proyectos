@@ -227,40 +227,62 @@ export class FacturaFormComponent implements OnInit {
     this.clienteService.getAll().subscribe((data) => (this.clientes = data));
     this.presupuestoService.getAll().subscribe((data) => (this.presupuestos = data));
     this.materialService.getAll().subscribe((data) => (this.materiales = data));
-    const id = this.route.snapshot.paramMap.get('id');
-    if (id && id !== 'nuevo') {
-      this.isEdit = true;
-      this.id = +id;
-      this.facturaService.getById(this.id).subscribe({
-        next: (f) => {
-          this.form.patchValue({
-            clienteId: f.clienteId,
-            presupuestoId: f.presupuestoId || null,
-            numeroFactura: f.numeroFactura,
-            fechaVencimiento: f.fechaVencimiento || '',
-            metodoPago: f.metodoPago,
-            estadoPago: f.estadoPago,
-            notas: f.notas || '',
-            ivaHabilitado: f.ivaHabilitado,
-          });
-          this.items.clear();
-          f.items.forEach((it) =>
-            this.items.push(
-              this.fb.group({
-                materialId: [it.materialId ?? null],
-                tareaManual: [it.descripcion || ''],
-                cantidad: [it.cantidad, [Validators.required, Validators.min(0.001)]],
-                precioUnitario: [it.precioUnitario, [Validators.required, Validators.min(0)]],
-                aplicaIva: [true],
-              })
-            )
-          );
-        },
-        error: () => this.router.navigate(['/facturas']),
-      });
-    } else {
-      this.addItem();
-    }
+    this.route.paramMap.subscribe((params) => {
+      const id = params.get('id');
+      if (id && id !== 'nuevo') {
+        const numId = +id;
+        if (isNaN(numId)) {
+          this.router.navigate(['/facturas']);
+          return;
+        }
+        this.loadFactura(numId);
+      } else {
+        this.isEdit = false;
+        this.id = undefined;
+        this.items.clear();
+        this.addItem();
+      }
+    });
+  }
+
+  private loadFactura(id: number): void {
+    this.isEdit = true;
+    this.id = id;
+    this.facturaService.getById(id).subscribe({
+      next: (f) => {
+        this.form.patchValue({
+          clienteId: f.clienteId,
+          presupuestoId: f.presupuestoId ?? null,
+          numeroFactura: f.numeroFactura,
+          fechaVencimiento: f.fechaVencimiento || '',
+          metodoPago: f.metodoPago,
+          estadoPago: f.estadoPago,
+          notas: f.notas || '',
+          ivaHabilitado: f.ivaHabilitado,
+        });
+        this.items.clear();
+        const itemList = f.items ?? [];
+        itemList.forEach((it) =>
+          this.items.push(
+            this.fb.group({
+              materialId: [it.materialId ?? null],
+              tareaManual: [it.descripcion || ''],
+              cantidad: [it.cantidad, [Validators.required, Validators.min(0.001)]],
+              precioUnitario: [it.precioUnitario, [Validators.required, Validators.min(0)]],
+              aplicaIva: [true],
+            })
+          )
+        );
+        if (itemList.length === 0) {
+          this.addItem();
+        }
+      },
+      error: (err) => {
+        const msg = err.error?.detail ?? err.error?.message ?? 'No se pudo cargar la factura';
+        this.snackBar.open(msg, 'Cerrar', { duration: 4000 });
+        this.router.navigate(['/facturas']);
+      },
+    });
   }
 
   addItem(): void {

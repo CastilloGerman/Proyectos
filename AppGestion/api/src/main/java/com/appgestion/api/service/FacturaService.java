@@ -49,6 +49,7 @@ public class FacturaService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public FacturaResponse obtenerPorId(Long id, Long usuarioId) {
         Factura factura = facturaRepository.findByIdAndUsuarioId(id, usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
