@@ -24,6 +24,7 @@ export interface Presupuesto {
   id: number;
   clienteId: number;
   clienteNombre: string;
+  clienteEmail?: string;
   fechaCreacion: string;
   subtotal: number;
   iva: number;

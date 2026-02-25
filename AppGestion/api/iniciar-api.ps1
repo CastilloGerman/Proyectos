@@ -3,14 +3,7 @@
 # La contraseña se pide al ejecutar (no se guarda en ningun archivo)
 
 # Liberar puerto 8081 si está ocupado (p. ej. instancia anterior de la API)
-$connections = Get-NetTCPConnection -LocalPort 8081 -ErrorAction SilentlyContinue | Where-Object { $_.OwningProcess -gt 0 }
-$pids = $connections | Select-Object -ExpandProperty OwningProcess -Unique
-foreach ($procId in $pids) {
-    try {
-        Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
-        Write-Host "Proceso $procId liberado (puerto 8081)"
-    } catch {}
-}
+& "$PSScriptRoot\liberar-puerto-8081.ps1"
 
 $password = Read-Host "Contrasena de PostgreSQL (usuario postgres)" -AsSecureString
 $env:DB_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($password))

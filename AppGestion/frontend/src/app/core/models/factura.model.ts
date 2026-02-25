@@ -21,6 +21,7 @@ export interface Factura {
   numeroFactura: string;
   clienteId: number;
   clienteNombre: string;
+  clienteEmail?: string;
   presupuestoId?: number;
   fechaCreacion: string;
   fechaVencimiento?: string;

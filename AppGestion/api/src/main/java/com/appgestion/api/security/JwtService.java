@@ -6,6 +6,8 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +17,8 @@ import java.util.Date;
 
 @Service
 public class JwtService {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtService.class);
 
     @Value("${app.jwt.secret}")
     private String secret;
@@ -56,7 +60,11 @@ public class JwtService {
         try {
             getClaims(token);
             return true;
-        } catch (ExpiredJwtException | MalformedJwtException | SignatureException | IllegalArgumentException e) {
+        } catch (ExpiredJwtException e) {
+            log.warn("JWT expirado: exp={}", e.getClaims().getExpiration());
+            return false;
+        } catch (MalformedJwtException | SignatureException | IllegalArgumentException e) {
+            log.warn("JWT inválido (firma/secret): {}", e.getMessage());
             return false;
         }
     }

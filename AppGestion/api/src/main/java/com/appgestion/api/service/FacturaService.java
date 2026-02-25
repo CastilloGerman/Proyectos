@@ -3,6 +3,7 @@ package com.appgestion.api.service;
 import com.appgestion.api.domain.entity.*;
 import com.appgestion.api.dto.request.FacturaItemRequest;
 import com.appgestion.api.dto.request.FacturaRequest;
+import com.appgestion.api.dto.request.EnviarEmailRequest;
 import com.appgestion.api.dto.response.FacturaItemResponse;
 import com.appgestion.api.dto.response.FacturaResponse;
 import com.appgestion.api.repository.ClienteRepository;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import jakarta.mail.MessagingException;
 import java.time.Year;
 import java.util.List;
 import java.util.Objects;
@@ -29,17 +31,20 @@ public class FacturaService {
     private final PresupuestoRepository presupuestoRepository;
     private final MaterialRepository materialRepository;
     private final FacturaPdfService facturaPdfService;
+    private final EmailService emailService;
 
     public FacturaService(FacturaRepository facturaRepository,
                           ClienteRepository clienteRepository,
                           PresupuestoRepository presupuestoRepository,
                           MaterialRepository materialRepository,
-                          FacturaPdfService facturaPdfService) {
+                          FacturaPdfService facturaPdfService,
+                          EmailService emailService) {
         this.facturaRepository = facturaRepository;
         this.clienteRepository = clienteRepository;
         this.presupuestoRepository = presupuestoRepository;
         this.materialRepository = materialRepository;
         this.facturaPdfService = facturaPdfService;
+        this.emailService = emailService;
     }
 
     @Transactional(readOnly = true)
@@ -173,6 +178,23 @@ public class FacturaService {
         return facturaPdfService.generarPdf(factura, usuarioId);
     }
 
+    @Transactional(readOnly = true)
+    public void enviarPorEmail(Long id, Long usuarioId, EnviarEmailRequest request) throws MessagingException {
+        Factura factura = facturaRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
+        String email = request != null && request.email() != null && !request.email().isBlank()
+                ? request.email().trim()
+                : (factura.getCliente() != null ? factura.getCliente().getEmail() : null);
+        if (email == null || email.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El cliente no tiene email registrado. Indique un email en el request.");
+        }
+        byte[] pdf = facturaPdfService.generarPdf(factura, usuarioId);
+        String nombreArchivo = "factura-" + (factura.getNumeroFactura() != null ? factura.getNumeroFactura() : id) + ".pdf";
+        String asunto = "Factura " + factura.getNumeroFactura() + " - " + (factura.getCliente() != null ? factura.getCliente().getNombre() : "");
+        String cuerpo = "<p>Adjunto encontrará la factura correspondiente.</p><p>Saludos cordiales.</p>";
+        emailService.enviarPdf(email, asunto, cuerpo, pdf, nombreArchivo);
+    }
+
     @Transactional
     public void eliminar(Long id, Long usuarioId) {
         if (!facturaRepository.existsByIdAndUsuarioId(Objects.requireNonNull(id), Objects.requireNonNull(usuarioId))) {
@@ -261,6 +283,7 @@ public class FacturaService {
                 factura.getNumeroFactura(),
                 factura.getCliente().getId(),
                 factura.getCliente().getNombre(),
+                factura.getCliente().getEmail(),
                 factura.getPresupuesto() != null ? factura.getPresupuesto().getId() : null,
                 factura.getFechaCreacion(),
                 factura.getFechaVencimiento(),

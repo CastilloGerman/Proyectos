@@ -15,6 +15,7 @@ import { Presupuesto } from '../../../core/models/presupuesto.model';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { ImportarPresupuestoDialogComponent } from '../../../shared/importar-presupuesto-dialog/importar-presupuesto-dialog.component';
 import { ConfigEmpresaDialogComponent } from '../../../shared/config-empresa-dialog/config-empresa-dialog.component';
+import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/enviar-email-dialog.component';
 
 @Component({
   selector: 'app-factura-list',
@@ -74,6 +75,9 @@ import { ConfigEmpresaDialogComponent } from '../../../shared/config-empresa-dia
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let row">
+              <button mat-icon-button (click)="enviarEmail(row)" matTooltip="Enviar por email">
+                <mat-icon>email</mat-icon>
+              </button>
               <button mat-icon-button (click)="downloadPdf(row)" matTooltip="Descargar PDF">
                 <mat-icon>picture_as_pdf</mat-icon>
               </button>
@@ -198,6 +202,29 @@ export class FacturaListComponent implements OnInit {
     this.dialog.open(ConfigEmpresaDialogComponent, {
       width: '500px',
       data: { context: 'factura' },
+    });
+  }
+
+  enviarEmail(factura: Factura): void {
+    const ref = this.dialog.open(EnviarEmailDialogComponent, {
+      width: '400px',
+      data: {
+        titulo: 'Enviar factura por email',
+        emailCliente: factura.clienteEmail || undefined,
+      },
+    });
+    ref.afterClosed().subscribe((email: string | undefined) => {
+      if (email !== undefined) {
+        this.facturaService.enviarPorEmail(factura.id, email || undefined).subscribe({
+          next: () => {
+            this.snackBar.open('Factura enviada por email correctamente', 'Cerrar', { duration: 3000 });
+          },
+          error: (err) => {
+            const msg = err.error?.detail ?? err.error?.message ?? 'Error al enviar el email';
+            this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+          },
+        });
+      }
     });
   }
 

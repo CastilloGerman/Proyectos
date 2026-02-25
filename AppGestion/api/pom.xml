@@ -79,6 +79,16 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Spring Mail para envío de PDFs -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.angus</groupId>
+            <artifactId>jakarta.mail</artifactId>
+        </dependency>
+
         <!-- OpenPDF para generación de PDF -->
         <dependency>
             <groupId>com.github.librepdf</groupId>

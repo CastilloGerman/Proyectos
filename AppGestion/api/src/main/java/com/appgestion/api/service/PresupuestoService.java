@@ -3,6 +3,7 @@ package com.appgestion.api.service;
 import com.appgestion.api.domain.entity.*;
 import com.appgestion.api.dto.request.PresupuestoItemRequest;
 import com.appgestion.api.dto.request.PresupuestoRequest;
+import com.appgestion.api.dto.request.EnviarEmailRequest;
 import com.appgestion.api.dto.response.PresupuestoItemResponse;
 import com.appgestion.api.dto.response.PresupuestoResponse;
 import com.appgestion.api.repository.ClienteRepository;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import jakarta.mail.MessagingException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -26,15 +28,18 @@ public class PresupuestoService {
     private final ClienteRepository clienteRepository;
     private final MaterialRepository materialRepository;
     private final PresupuestoPdfService presupuestoPdfService;
+    private final EmailService emailService;
 
     public PresupuestoService(PresupuestoRepository presupuestoRepository,
                               ClienteRepository clienteRepository,
                               MaterialRepository materialRepository,
-                              PresupuestoPdfService presupuestoPdfService) {
+                              PresupuestoPdfService presupuestoPdfService,
+                              EmailService emailService) {
         this.presupuestoRepository = presupuestoRepository;
         this.clienteRepository = clienteRepository;
         this.materialRepository = materialRepository;
         this.presupuestoPdfService = presupuestoPdfService;
+        this.emailService = emailService;
     }
 
     @Transactional(readOnly = true)
@@ -106,6 +111,23 @@ public class PresupuestoService {
         Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(id, usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
         return presupuestoPdfService.generarPdf(presupuesto, usuarioId);
+    }
+
+    @Transactional(readOnly = true)
+    public void enviarPorEmail(Long id, Long usuarioId, EnviarEmailRequest request) throws MessagingException {
+        Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
+        String email = request != null && request.email() != null && !request.email().isBlank()
+                ? request.email().trim()
+                : (presupuesto.getCliente() != null ? presupuesto.getCliente().getEmail() : null);
+        if (email == null || email.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El cliente no tiene email registrado. Indique un email en el request.");
+        }
+        byte[] pdf = presupuestoPdfService.generarPdf(presupuesto, usuarioId);
+        String nombreArchivo = "presupuesto-" + id + ".pdf";
+        String asunto = "Presupuesto - " + (presupuesto.getCliente() != null ? presupuesto.getCliente().getNombre() : "");
+        String cuerpo = "<p>Adjunto encontrará el presupuesto solicitado.</p><p>Saludos cordiales.</p>";
+        emailService.enviarPdf(email, asunto, cuerpo, pdf, nombreArchivo);
     }
 
     private void mapItems(List<PresupuestoItemRequest> itemRequests, Presupuesto presupuesto) {
@@ -189,6 +211,7 @@ public class PresupuestoService {
                 presupuesto.getId(),
                 Objects.requireNonNull(Objects.requireNonNull(presupuesto.getCliente()).getId()),
                 presupuesto.getCliente().getNombre(),
+                presupuesto.getCliente().getEmail(),
                 presupuesto.getFechaCreacion(),
                 presupuesto.getSubtotal(),
                 presupuesto.getIva(),

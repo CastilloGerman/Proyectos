@@ -9,6 +9,7 @@ public record FacturaResponse(
         String numeroFactura,
         Long clienteId,
         String clienteNombre,
+        String clienteEmail,
         Long presupuestoId,
         LocalDateTime fechaCreacion,
         LocalDate fechaVencimiento,

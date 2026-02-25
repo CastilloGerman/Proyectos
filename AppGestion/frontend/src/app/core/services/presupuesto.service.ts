@@ -38,4 +38,8 @@ export class PresupuestoService {
   downloadPdf(id: number): Observable<Blob> {
     return this.http.get(`${this.apiUrl}/${id}/pdf`, { responseType: 'blob' });
   }
+
+  enviarPorEmail(id: number, email?: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${id}/enviar-email`, email ? { email } : {});
+  }
 }

@@ -20,8 +20,13 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     private final JwtService jwtService;
     private final UserDetailsServiceImpl userDetailsService;
@@ -40,6 +45,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String token = extractTokenFromRequest(request);
 
+            if (!StringUtils.hasText(token)) {
+                log.debug("JWT: sin token en {} {}", request.getMethod(), request.getRequestURI());
+            } else if (!jwtService.validateToken(token)) {
+                log.warn("JWT: token inválido o expirado en {} {} - Authorization presente pero no válido", request.getMethod(), request.getRequestURI());
+            }
+
             if (StringUtils.hasText(token) && jwtService.validateToken(token)) {
                 String email = jwtService.extractEmail(token);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
@@ -53,9 +64,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
-        } catch (ExpiredJwtException | MalformedJwtException | SignatureException
-                | IllegalArgumentException | UsernameNotFoundException e) {
-            logger.debug("No se pudo establecer autenticación: " + e.getMessage());
+        } catch (ExpiredJwtException e) {
+            log.warn("JWT: token EXPIRADO en {} {} - exp: {}", request.getMethod(), request.getRequestURI(), e.getClaims().getExpiration());
+        } catch (MalformedJwtException | SignatureException | IllegalArgumentException e) {
+            log.warn("JWT: token INVÁLIDO (firma/secret) en {} {}: {}", request.getMethod(), request.getRequestURI(), e.getMessage());
+        } catch (UsernameNotFoundException e) {
+            log.warn("JWT: usuario no encontrado en {} {}: {}", request.getMethod(), request.getRequestURI(), e.getMessage());
         }
 
         filterChain.doFilter(request, response);

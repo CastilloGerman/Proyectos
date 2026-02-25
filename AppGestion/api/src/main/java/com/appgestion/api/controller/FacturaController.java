@@ -1,6 +1,7 @@
 package com.appgestion.api.controller;
 
 import com.appgestion.api.domain.entity.Usuario;
+import com.appgestion.api.dto.request.EnviarEmailRequest;
 import com.appgestion.api.dto.request.FacturaRequest;
 import com.appgestion.api.dto.response.FacturaResponse;
 import com.appgestion.api.repository.UsuarioRepository;
@@ -49,6 +50,19 @@ public class FacturaController {
                 .headers(headers)
                 .contentType(MediaType.parseMediaType("application/pdf"))
                 .body(pdf);
+    }
+
+    @PostMapping("/{id}/enviar-email")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void enviarPorEmail(@PathVariable Long id, @RequestBody(required = false) EnviarEmailRequest request) {
+        Long usuarioId = SecurityUtils.getCurrentUsuario(usuarioRepository).getId();
+        try {
+            facturaService.enviarPorEmail(id, usuarioId, request);
+        } catch (jakarta.mail.MessagingException e) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al enviar el email: " + e.getMessage());
+        }
     }
 
     @PostMapping

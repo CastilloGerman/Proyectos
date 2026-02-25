@@ -3,8 +3,11 @@ cd /d "%~dp0.."
 
 REM Liberar puerto 8081 si esta ocupado
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8081 ^| findstr LISTENING') do (
-  if not "%%a"=="0" taskkill /PID %%a /F >nul 2>&1
+  if not "%%a"=="0" (
+    taskkill /PID %%a /F >nul 2>&1
+  )
 )
+timeout /t 2 /nobreak >nul
 
 REM Omitir comprobacion Stripe en desarrollo
 set APP_SUBSCRIPTION_SKIP=true

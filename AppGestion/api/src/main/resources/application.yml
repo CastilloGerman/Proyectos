@@ -4,6 +4,20 @@ spring:
   application:
     name: appgestion-api
 
+  # Mail (SMTP) - configurar MAIL_USERNAME y MAIL_PASSWORD para envío de PDFs
+  # Gmail: usar contraseña de aplicación si tienes 2FA
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
   datasource:
     url: jdbc:postgresql://localhost:5433/appgestion
     username: ${DB_USERNAME:postgres}

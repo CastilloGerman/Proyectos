@@ -48,7 +48,7 @@
             "production": { "buildTarget": "appgestion-frontend:build:production" },
             "development": {
               "buildTarget": "appgestion-frontend:build:development",
-              "proxyConfig": "proxy.conf.json"
+              "proxyConfig": "proxy.conf.js"
             }
           },
           "defaultConfiguration": "development"

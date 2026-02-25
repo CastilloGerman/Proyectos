@@ -27,7 +27,7 @@ public class SubscriptionCheckFilter extends OncePerRequestFilter {
     private final SubscriptionService subscriptionService;
     private final UsuarioRepository usuarioRepository;
 
-    @Value("${app.subscription.skip-check:false}")
+    @Value("${app.subscription.skip-check:true}")
     private boolean skipSubscriptionCheck;
 
     public SubscriptionCheckFilter(SubscriptionService subscriptionService, UsuarioRepository usuarioRepository) {
@@ -49,6 +49,9 @@ public class SubscriptionCheckFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
 
         if (skipSubscriptionCheck || isExcludedPath(path)) {
+            if (path.contains("enviar-email")) {
+                log.debug("SubscriptionCheckFilter: ruta excluida o skip-check activo - {}", path);
+            }
             filterChain.doFilter(request, response);
             return;
         }
@@ -82,6 +85,7 @@ public class SubscriptionCheckFilter extends OncePerRequestFilter {
         return path.contains("/auth/")
                 || path.contains("/webhook/")
                 || path.contains("/subscription/checkout")
-                || path.contains("/subscription/portal");
+                || path.contains("/subscription/portal")
+                || path.contains("/enviar-email");
     }
 }

@@ -7,6 +7,7 @@ public record PresupuestoResponse(
         Long id,
         Long clienteId,
         String clienteNombre,
+        String clienteEmail,
         LocalDateTime fechaCreacion,
         Double subtotal,
         Double iva,

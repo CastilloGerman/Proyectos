@@ -12,6 +12,7 @@ import { PresupuestoService } from '../../../core/services/presupuesto.service';
 import { Presupuesto } from '../../../core/models/presupuesto.model';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfigEmpresaDialogComponent } from '../../../shared/config-empresa-dialog/config-empresa-dialog.component';
+import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/enviar-email-dialog.component';
 
 @Component({
   selector: 'app-presupuesto-list',
@@ -69,6 +70,9 @@ import { ConfigEmpresaDialogComponent } from '../../../shared/config-empresa-dia
                   <mat-icon>receipt</mat-icon>
                 </button>
               }
+              <button mat-icon-button (click)="enviarEmail(row)" matTooltip="Enviar por email">
+                <mat-icon>email</mat-icon>
+              </button>
               <button mat-icon-button (click)="downloadPdf(row)" matTooltip="Descargar PDF">
                 <mat-icon>picture_as_pdf</mat-icon>
               </button>
@@ -184,6 +188,29 @@ export class PresupuestoListComponent implements OnInit {
       error: (err) => {
         this.snackBar.open(err.error?.message || 'Error al crear factura', 'Cerrar', { duration: 4000 });
       },
+    });
+  }
+
+  enviarEmail(presupuesto: Presupuesto): void {
+    const ref = this.dialog.open(EnviarEmailDialogComponent, {
+      width: '400px',
+      data: {
+        titulo: 'Enviar presupuesto por email',
+        emailCliente: presupuesto.clienteEmail || undefined,
+      },
+    });
+    ref.afterClosed().subscribe((email: string | undefined) => {
+      if (email !== undefined) {
+        this.presupuestoService.enviarPorEmail(presupuesto.id, email || undefined).subscribe({
+          next: () => {
+            this.snackBar.open('Presupuesto enviado por email correctamente', 'Cerrar', { duration: 3000 });
+          },
+          error: (err) => {
+            const msg = err.error?.detail ?? err.error?.message ?? 'Error al enviar el email';
+            this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+          },
+        });
+      }
     });
   }
 
