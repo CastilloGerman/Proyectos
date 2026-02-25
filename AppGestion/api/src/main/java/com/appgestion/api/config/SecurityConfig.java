@@ -55,6 +55,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/auth/register", "/auth/login").permitAll()
                         .requestMatchers("/webhook/**").permitAll()
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers("/auth/me").authenticated()
                         .requestMatchers("/usuarios/**").hasRole("ADMIN");
                     // Siempre exigir autenticación para app endpoints.

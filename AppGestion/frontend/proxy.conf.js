@@ -4,7 +4,9 @@ const PROXY_CONFIG = {
     secure: false,
     changeOrigin: true,
     logLevel: "debug",
-    // Asegurar que el header Authorization se reenvíe al backend
+    // Reescribir /api/presupuestos -> /presupuestos (backend sin context-path)
+    pathRewrite: { "^/api": "" },
+    // Asegurar que Authorization y demás headers se reenvíen
     onProxyReq: (proxyReq, req) => {
       if (req.headers.authorization) {
         proxyReq.setHeader("Authorization", req.headers.authorization);

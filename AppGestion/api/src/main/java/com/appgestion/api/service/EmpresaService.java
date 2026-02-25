@@ -37,6 +37,10 @@ public class EmpresaService {
         emp.setEmail(request.email());
         emp.setNotasPiePresupuesto(request.notasPiePresupuesto());
         emp.setNotasPieFactura(request.notasPieFactura());
+        if (request.mailHost() != null) emp.setMailHost(request.mailHost());
+        if (request.mailPort() != null) emp.setMailPort(request.mailPort());
+        if (request.mailUsername() != null) emp.setMailUsername(request.mailUsername());
+        if (request.mailPassword() != null && !request.mailPassword().isBlank()) emp.setMailPassword(request.mailPassword());
         emp = empresaRepository.save(emp);
         return toResponse(emp);
     }
@@ -47,8 +51,10 @@ public class EmpresaService {
 
     private EmpresaResponse toResponse(Empresa emp) {
         if (emp == null) {
-            return new EmpresaResponse(null, "", null, null, null, null, null, null);
+            return new EmpresaResponse(null, "", null, null, null, null, null, null, null, null, null, false);
         }
+        boolean mailConfigurado = emp.getMailUsername() != null && !emp.getMailUsername().isBlank()
+                && emp.getMailPassword() != null && !emp.getMailPassword().isBlank();
         return new EmpresaResponse(
                 emp.getId(),
                 emp.getNombre(),
@@ -57,7 +63,11 @@ public class EmpresaService {
                 emp.getTelefono(),
                 emp.getEmail(),
                 emp.getNotasPiePresupuesto(),
-                emp.getNotasPieFactura()
+                emp.getNotasPieFactura(),
+                emp.getMailHost(),
+                emp.getMailPort(),
+                emp.getMailUsername(),
+                mailConfigurado
         );
     }
 }

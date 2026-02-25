@@ -1,41 +1,54 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.domain.entity.Empresa;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
 import java.util.Objects;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 @Service
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    private final EmpresaService empresaService;
 
-    @Value("${spring.mail.username:}")
-    private String fromEmail;
-
-    public EmailService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
+    public EmailService(EmpresaService empresaService) {
+        this.empresaService = empresaService;
     }
 
-    @SuppressWarnings("null")
-    public void enviarPdf(String to, String asunto, String cuerpo, byte[] pdf, String nombreArchivo) throws MessagingException {
-        if (fromEmail == null || fromEmail.isBlank()) {
-            throw new IllegalStateException("No está configurado el correo de envío (spring.mail.username)");
+    public void enviarPdf(Long usuarioId, String to, String asunto, String cuerpo, byte[] pdf, String nombreArchivo) throws MessagingException {
+        Empresa emp = empresaService.getEmpresaOrNull(usuarioId);
+        String fromEmail = emp != null ? emp.getMailUsername() : null;
+        String password = emp != null ? emp.getMailPassword() : null;
+
+        if (fromEmail == null || fromEmail.isBlank() || password == null || password.isBlank()) {
+            throw new IllegalStateException(
+                "Configure el correo de envío en Configuración → Correo de envío. Use su email y contraseña de aplicación (Gmail: si tiene 2FA, genere una en Google Account).");
         }
         if (to == null || to.isBlank()) {
             throw new IllegalArgumentException("El cliente no tiene email registrado");
         }
+
+        String host = emp.getMailHost() != null && !emp.getMailHost().isBlank() ? emp.getMailHost() : "smtp.gmail.com";
+        int port = emp.getMailPort() != null ? emp.getMailPort() : 587;
+
+        JavaMailSenderImpl sender = new JavaMailSenderImpl();
+        sender.setHost(host);
+        sender.setPort(port);
+        sender.setUsername(fromEmail);
+        sender.setPassword(password);
+        sender.getJavaMailProperties().put("mail.smtp.auth", "true");
+        sender.getJavaMailProperties().put("mail.smtp.starttls.enable", "true");
+
         String safeAsunto = Objects.requireNonNullElse(asunto, "");
         String safeCuerpo = Objects.requireNonNullElse(cuerpo, "");
         String safeNombreArchivo = Objects.requireNonNullElse(nombreArchivo, "documento.pdf");
         String toAddress = to.trim();
 
-        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessage message = sender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
         helper.setFrom(fromEmail);
         helper.setTo(toAddress);
@@ -46,6 +59,6 @@ public class EmailService {
             helper.addAttachment(safeNombreArchivo, () -> new java.io.ByteArrayInputStream(pdf), "application/pdf");
         }
 
-        mailSender.send(message);
+        sender.send(message);
     }
 }

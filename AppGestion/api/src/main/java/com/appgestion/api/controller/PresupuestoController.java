@@ -68,6 +68,10 @@ public class PresupuestoController {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
                     "Error al enviar el email: " + e.getMessage());
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    e.getMessage());
         }
     }
 

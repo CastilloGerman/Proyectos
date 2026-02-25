@@ -127,7 +127,7 @@ public class PresupuestoService {
         String nombreArchivo = "presupuesto-" + id + ".pdf";
         String asunto = "Presupuesto - " + (presupuesto.getCliente() != null ? presupuesto.getCliente().getNombre() : "");
         String cuerpo = "<p>Adjunto encontrará el presupuesto solicitado.</p><p>Saludos cordiales.</p>";
-        emailService.enviarPdf(email, asunto, cuerpo, pdf, nombreArchivo);
+        emailService.enviarPdf(usuarioId, email, asunto, cuerpo, pdf, nombreArchivo);
     }
 
     private void mapItems(List<PresupuestoItemRequest> itemRequests, Presupuesto presupuesto) {

@@ -35,6 +35,18 @@ public class Empresa {
     @Column(name = "notas_pie_factura", length = 1000)
     private String notasPieFactura;
 
+    @Column(name = "mail_host", length = 100)
+    private String mailHost;
+
+    @Column(name = "mail_port")
+    private Integer mailPort;
+
+    @Column(name = "mail_username", length = 150)
+    private String mailUsername;
+
+    @Column(name = "mail_password", length = 255)
+    private String mailPassword;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -61,4 +73,16 @@ public class Empresa {
 
     public String getNotasPieFactura() { return notasPieFactura; }
     public void setNotasPieFactura(String notasPieFactura) { this.notasPieFactura = notasPieFactura; }
+
+    public String getMailHost() { return mailHost; }
+    public void setMailHost(String mailHost) { this.mailHost = mailHost; }
+
+    public Integer getMailPort() { return mailPort; }
+    public void setMailPort(Integer mailPort) { this.mailPort = mailPort; }
+
+    public String getMailUsername() { return mailUsername; }
+    public void setMailUsername(String mailUsername) { this.mailUsername = mailUsername; }
+
+    public String getMailPassword() { return mailPassword; }
+    public void setMailPassword(String mailPassword) { this.mailPassword = mailPassword; }
 }

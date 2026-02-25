@@ -192,7 +192,7 @@ public class FacturaService {
         String nombreArchivo = "factura-" + (factura.getNumeroFactura() != null ? factura.getNumeroFactura() : id) + ".pdf";
         String asunto = "Factura " + factura.getNumeroFactura() + " - " + (factura.getCliente() != null ? factura.getCliente().getNombre() : "");
         String cuerpo = "<p>Adjunto encontrará la factura correspondiente.</p><p>Saludos cordiales.</p>";
-        emailService.enviarPdf(email, asunto, cuerpo, pdf, nombreArchivo);
+        emailService.enviarPdf(usuarioId, email, asunto, cuerpo, pdf, nombreArchivo);
     }
 
     @Transactional

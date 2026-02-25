@@ -10,7 +10,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ConfigService } from '../../core/services/config.service';
 import { Empresa } from '../../core/models/empresa.model';
 
-export type ConfigContext = 'presupuesto' | 'factura';
+export type ConfigContext = 'presupuesto' | 'factura' | 'mail';
 
 @Component({
   selector: 'app-config-empresa-dialog',
@@ -72,6 +72,29 @@ export type ConfigContext = 'presupuesto' | 'factura';
               </mat-form-field>
             </div>
           </mat-tab>
+          <mat-tab label="Correo de envío">
+            <div class="tab-content">
+              <p class="hint">Correo desde el que se enviarán presupuestos y facturas por email.</p>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Servidor SMTP</mat-label>
+                <input matInput formControlName="mailHost" placeholder="smtp.gmail.com">
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Puerto</mat-label>
+                <input matInput formControlName="mailPort" type="number" placeholder="587">
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Email (usuario)</mat-label>
+                <input matInput formControlName="mailUsername" type="email" placeholder="tu@email.com">
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Contraseña</mat-label>
+                <input matInput formControlName="mailPassword" type="password"
+                  placeholder="{{ mailConfigurado ? 'Dejar vacío para no cambiar' : 'Contraseña de aplicación' }}">
+                <mat-hint>Gmail: use contraseña de aplicación si tiene 2FA</mat-hint>
+              </mat-form-field>
+            </div>
+          </mat-tab>
         </mat-tab-group>
       </form>
     </mat-dialog-content>
@@ -91,12 +114,18 @@ export type ConfigContext = 'presupuesto' | 'factura';
       display: block;
       margin-bottom: 16px;
     }
+    .hint {
+      color: rgba(0,0,0,0.6);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
   `],
 })
 export class ConfigEmpresaDialogComponent implements OnInit {
   form: FormGroup;
   saving = false;
   initialTab = 0;
+  mailConfigurado = false;
 
   constructor(
     private fb: FormBuilder,
@@ -113,29 +142,44 @@ export class ConfigEmpresaDialogComponent implements OnInit {
       email: [''],
       notasPiePresupuesto: [''],
       notasPieFactura: [''],
+      mailHost: [''],
+      mailPort: [587],
+      mailUsername: [''],
+      mailPassword: [''],
     });
     if (data?.context === 'factura') this.initialTab = 2;
     else if (data?.context === 'presupuesto') this.initialTab = 1;
+    else if (data?.context === 'mail') this.initialTab = 3;
   }
 
   ngOnInit(): void {
     this.configService.getEmpresa().subscribe({
-      next: (e: Empresa) => this.form.patchValue({
-        nombre: e.nombre ?? '',
-        direccion: e.direccion ?? '',
-        nif: e.nif ?? '',
-        telefono: e.telefono ?? '',
-        email: e.email ?? '',
-        notasPiePresupuesto: e.notasPiePresupuesto ?? '',
-        notasPieFactura: e.notasPieFactura ?? '',
-      }),
+      next: (e: Empresa) => {
+        this.mailConfigurado = e.mailConfigurado ?? false;
+        this.form.patchValue({
+          nombre: e.nombre ?? '',
+          direccion: e.direccion ?? '',
+          nif: e.nif ?? '',
+          telefono: e.telefono ?? '',
+          email: e.email ?? '',
+          notasPiePresupuesto: e.notasPiePresupuesto ?? '',
+          notasPieFactura: e.notasPieFactura ?? '',
+          mailHost: e.mailHost ?? '',
+          mailPort: e.mailPort ?? 587,
+          mailUsername: e.mailUsername ?? '',
+          mailPassword: '',
+        });
+      },
       error: () => this.snackBar.open('Error al cargar configuración', 'Cerrar', { duration: 3000 }),
     });
   }
 
   save(): void {
     this.saving = true;
-    this.configService.saveEmpresa(this.form.value).subscribe({
+    const val = this.form.value;
+    const payload = { ...val };
+    if (!val.mailPassword?.trim()) delete payload.mailPassword;
+    this.configService.saveEmpresa(payload).subscribe({
       next: () => {
         this.snackBar.open('Configuración guardada', 'Cerrar', { duration: 3000 });
         this.ref.close(true);

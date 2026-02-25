@@ -8,5 +8,9 @@ public record EmpresaResponse(
         String telefono,
         String email,
         String notasPiePresupuesto,
-        String notasPieFactura
+        String notasPieFactura,
+        String mailHost,
+        Integer mailPort,
+        String mailUsername,
+        Boolean mailConfigurado
 ) {}

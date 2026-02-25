@@ -7,5 +7,9 @@ public record EmpresaRequest(
         String telefono,
         String email,
         String notasPiePresupuesto,
-        String notasPieFactura
+        String notasPieFactura,
+        String mailHost,
+        Integer mailPort,
+        String mailUsername,
+        String mailPassword
 ) {}

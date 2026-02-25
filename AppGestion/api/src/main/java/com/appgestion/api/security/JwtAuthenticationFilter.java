@@ -46,7 +46,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = extractTokenFromRequest(request);
 
             if (!StringUtils.hasText(token)) {
-                log.debug("JWT: sin token en {} {}", request.getMethod(), request.getRequestURI());
+                log.warn("JWT: SIN TOKEN - {} {} (¿proxy no reenvía Authorization?)", request.getMethod(), request.getRequestURI());
             } else if (!jwtService.validateToken(token)) {
                 log.warn("JWT: token inválido o expirado en {} {} - Authorization presente pero no válido", request.getMethod(), request.getRequestURI());
             }

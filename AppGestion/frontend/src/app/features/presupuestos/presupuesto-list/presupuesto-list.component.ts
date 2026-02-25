@@ -207,7 +207,13 @@ export class PresupuestoListComponent implements OnInit {
           },
           error: (err) => {
             const msg = err.error?.detail ?? err.error?.message ?? 'Error al enviar el email';
-            this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+            const needsConfig = msg.includes('Configure') || msg.includes('correo de envío');
+            this.snackBar.open(msg, needsConfig ? 'Configurar' : 'Cerrar', { duration: needsConfig ? 8000 : 5000 })
+              .onAction().subscribe(() => {
+                if (needsConfig) {
+                  this.dialog.open(ConfigEmpresaDialogComponent, { width: '500px', data: { context: 'mail' } });
+                }
+              });
           },
         });
       }
