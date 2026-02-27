@@ -4,6 +4,9 @@ export interface Cliente {
   telefono: string;
   email: string;
   direccion: string;
+  codigoPostal?: string;
+  provincia?: string;
+  pais?: string;
   dni: string;
   fechaCreacion: string;
 }
@@ -13,5 +16,8 @@ export interface ClienteRequest {
   telefono?: string;
   email?: string;
   direccion?: string;
+  codigoPostal?: string;
+  provincia?: string;
+  pais?: string;
   dni?: string;
 }

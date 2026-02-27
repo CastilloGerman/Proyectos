@@ -5,6 +5,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -19,6 +20,7 @@ public class EmailService {
         this.empresaService = empresaService;
     }
 
+    @SuppressWarnings("null")
     public void enviarPdf(Long usuarioId, String to, String asunto, String cuerpo, byte[] pdf, String nombreArchivo) throws MessagingException {
         Empresa emp = empresaService.getEmpresaOrNull(usuarioId);
         String fromEmail = emp != null ? emp.getMailUsername() : null;
@@ -32,16 +34,26 @@ public class EmailService {
             throw new IllegalArgumentException("El cliente no tiene email registrado");
         }
 
-        String host = emp.getMailHost() != null && !emp.getMailHost().isBlank() ? emp.getMailHost() : "smtp.gmail.com";
-        int port = emp.getMailPort() != null ? emp.getMailPort() : 587;
+        String host = "smtp.gmail.com";
+        int port = 587;
+        if (emp != null) {
+            host = (emp.getMailHost() != null && !emp.getMailHost().isBlank()) ? emp.getMailHost() : "smtp.gmail.com";
+            port = Optional.ofNullable(emp.getMailPort()).orElse(587);
+        }
+
+        String from = Objects.requireNonNull(fromEmail);
+        String pwd = Objects.requireNonNull(password);
 
         JavaMailSenderImpl sender = new JavaMailSenderImpl();
         sender.setHost(host);
         sender.setPort(port);
-        sender.setUsername(fromEmail);
-        sender.setPassword(password);
-        sender.getJavaMailProperties().put("mail.smtp.auth", "true");
-        sender.getJavaMailProperties().put("mail.smtp.starttls.enable", "true");
+        sender.setUsername(from);
+        sender.setPassword(pwd);
+        var props = sender.getJavaMailProperties();
+        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.starttls.required", "true");
+        props.put("mail.smtp.ssl.trust", host);
 
         String safeAsunto = Objects.requireNonNullElse(asunto, "");
         String safeCuerpo = Objects.requireNonNullElse(cuerpo, "");
@@ -50,7 +62,7 @@ public class EmailService {
 
         MimeMessage message = sender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-        helper.setFrom(fromEmail);
+        helper.setFrom(from);
         helper.setTo(toAddress);
         helper.setSubject(safeAsunto);
         helper.setText(safeCuerpo, true);

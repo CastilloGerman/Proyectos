@@ -6,6 +6,7 @@ export interface FacturaItem {
   cantidad: number;
   precioUnitario: number;
   subtotal?: number;
+  aplicaIva?: boolean;
 }
 
 export interface FacturaItemRequest {
@@ -24,11 +25,15 @@ export interface Factura {
   clienteEmail?: string;
   presupuestoId?: number;
   fechaCreacion: string;
+  fechaExpedicion?: string;
+  fechaOperacion?: string;
   fechaVencimiento?: string;
   subtotal: number;
   iva: number;
   total: number;
   ivaHabilitado: boolean;
+  regimenFiscal?: string;
+  condicionesPago?: string;
   metodoPago: string;
   estadoPago: string;
   notas?: string;
@@ -40,7 +45,11 @@ export interface FacturaRequest {
   presupuestoId?: number;
   items: FacturaItemRequest[];
   numeroFactura?: string;
+  fechaExpedicion?: string;
+  fechaOperacion?: string;
   fechaVencimiento?: string;
+  regimenFiscal?: string;
+  condicionesPago?: string;
   metodoPago?: string;
   estadoPago?: string;
   notas?: string;

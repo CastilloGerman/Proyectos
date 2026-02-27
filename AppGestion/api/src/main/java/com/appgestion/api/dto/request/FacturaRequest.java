@@ -18,7 +18,11 @@ public record FacturaRequest(
         List<FacturaItemRequest> items,
 
         String numeroFactura,
+        LocalDate fechaExpedicion,
+        LocalDate fechaOperacion,
         LocalDate fechaVencimiento,
+        String regimenFiscal,
+        String condicionesPago,
         String metodoPago,
         String estadoPago,
         String notas,

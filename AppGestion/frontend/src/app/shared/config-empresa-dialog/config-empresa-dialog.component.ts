@@ -1,6 +1,7 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { nifValidator } from '../validators/nif.validator';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -41,8 +42,24 @@ export type ConfigContext = 'presupuesto' | 'factura' | 'mail';
                 <input matInput formControlName="direccion">
               </mat-form-field>
               <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Código postal</mat-label>
+                <input matInput formControlName="codigoPostal" placeholder="28001">
+                <mat-error>Código postal obligatorio para facturación</mat-error>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Provincia</mat-label>
+                <input matInput formControlName="provincia" placeholder="Madrid">
+                <mat-error>Provincia obligatoria para facturación</mat-error>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>País</mat-label>
+                <input matInput formControlName="pais" placeholder="España">
+                <mat-error>País obligatorio para facturación</mat-error>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="full-width">
                 <mat-label>NIF/CIF</mat-label>
-                <input matInput formControlName="nif">
+                <input matInput formControlName="nif" placeholder="12345678A">
+                <mat-error>NIF/CIF no válido</mat-error>
               </mat-form-field>
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Teléfono</mat-label>
@@ -135,9 +152,12 @@ export class ConfigEmpresaDialogComponent implements OnInit {
     @Inject(MAT_DIALOG_DATA) public data: { context?: ConfigContext }
   ) {
     this.form = this.fb.group({
-      nombre: [''],
-      direccion: [''],
-      nif: [''],
+      nombre: ['', Validators.required],
+      direccion: ['', Validators.required],
+      codigoPostal: ['', Validators.required],
+      provincia: ['', Validators.required],
+      pais: ['España', Validators.required],
+      nif: ['', [Validators.required, nifValidator()]],
       telefono: [''],
       email: [''],
       notasPiePresupuesto: [''],
@@ -147,7 +167,7 @@ export class ConfigEmpresaDialogComponent implements OnInit {
       mailUsername: [''],
       mailPassword: [''],
     });
-    if (data?.context === 'factura') this.initialTab = 2;
+    if (data?.context === 'factura') this.initialTab = 0;
     else if (data?.context === 'presupuesto') this.initialTab = 1;
     else if (data?.context === 'mail') this.initialTab = 3;
   }
@@ -159,6 +179,9 @@ export class ConfigEmpresaDialogComponent implements OnInit {
         this.form.patchValue({
           nombre: e.nombre ?? '',
           direccion: e.direccion ?? '',
+          codigoPostal: e.codigoPostal ?? '',
+          provincia: e.provincia ?? '',
+          pais: e.pais ?? 'España',
           nif: e.nif ?? '',
           telefono: e.telefono ?? '',
           email: e.email ?? '',

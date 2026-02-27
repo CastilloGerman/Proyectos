@@ -7,16 +7,21 @@ import com.appgestion.api.dto.request.EnviarEmailRequest;
 import com.appgestion.api.dto.response.FacturaItemResponse;
 import com.appgestion.api.dto.response.FacturaResponse;
 import com.appgestion.api.repository.ClienteRepository;
+import com.appgestion.api.repository.EmpresaRepository;
 import com.appgestion.api.repository.FacturaRepository;
 import com.appgestion.api.repository.MaterialRepository;
 import com.appgestion.api.repository.PresupuestoRepository;
+import com.appgestion.api.util.NifValidator;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import jakarta.mail.MessagingException;
-import java.time.Year;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -24,26 +29,34 @@ import java.util.Optional;
 @Service
 public class FacturaService {
 
-    private static final double IVA_RATE = 0.21;
+    private static final BigDecimal IVA_RATE = new BigDecimal("0.21");
+    private static final int SCALE = 2;
+    private static final RoundingMode ROUNDING = RoundingMode.HALF_UP;
 
     private final FacturaRepository facturaRepository;
     private final ClienteRepository clienteRepository;
+    private final EmpresaRepository empresaRepository;
     private final PresupuestoRepository presupuestoRepository;
     private final MaterialRepository materialRepository;
     private final FacturaPdfService facturaPdfService;
+    private final FacturaNumeroService facturaNumeroService;
     private final EmailService emailService;
 
     public FacturaService(FacturaRepository facturaRepository,
                           ClienteRepository clienteRepository,
+                          EmpresaRepository empresaRepository,
                           PresupuestoRepository presupuestoRepository,
                           MaterialRepository materialRepository,
                           FacturaPdfService facturaPdfService,
+                          FacturaNumeroService facturaNumeroService,
                           EmailService emailService) {
         this.facturaRepository = facturaRepository;
         this.clienteRepository = clienteRepository;
+        this.empresaRepository = empresaRepository;
         this.presupuestoRepository = presupuestoRepository;
         this.materialRepository = materialRepository;
         this.facturaPdfService = facturaPdfService;
+        this.facturaNumeroService = facturaNumeroService;
         this.emailService = emailService;
     }
 
@@ -73,9 +86,11 @@ public class FacturaService {
             presupuesto.setEstado("Aceptado");
         }
 
+        validarDatosFactura(usuario.getId(), cliente);
+
         String numeroFactura = request.numeroFactura();
         if (numeroFactura == null || numeroFactura.isBlank()) {
-            numeroFactura = generarNumeroFactura(usuario.getId());
+            numeroFactura = facturaNumeroService.generarSiguienteNumero(usuario.getId());
         } else {
             if (facturaRepository.findByNumeroFacturaAndUsuarioId(numeroFactura, usuario.getId()).isPresent()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ya existe una factura con ese número");
@@ -114,6 +129,8 @@ public class FacturaService {
             presupuesto.setEstado("Aceptado");
         }
 
+        validarDatosFactura(usuarioId, cliente);
+
         if (request.numeroFactura() != null && !request.numeroFactura().isBlank() && !request.numeroFactura().equals(factura.getNumeroFactura())) {
             if (facturaRepository.findByNumeroFacturaAndUsuarioId(request.numeroFactura(), usuarioId).isPresent()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ya existe una factura con ese número");
@@ -123,6 +140,10 @@ public class FacturaService {
 
         factura.setCliente(cliente);
         factura.setPresupuesto(presupuesto);
+        factura.setFechaExpedicion(request.fechaExpedicion() != null ? request.fechaExpedicion() : (factura.getFechaExpedicion() != null ? factura.getFechaExpedicion() : LocalDate.now()));
+        factura.setFechaOperacion(request.fechaOperacion());
+        factura.setRegimenFiscal(request.regimenFiscal());
+        factura.setCondicionesPago(request.condicionesPago());
         factura.setFechaVencimiento(request.fechaVencimiento());
         factura.setMetodoPago(request.metodoPago());
         factura.setEstadoPago(request.estadoPago());
@@ -141,13 +162,18 @@ public class FacturaService {
         Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(presupuestoId, usuario.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
 
-        String numeroFactura = generarNumeroFactura(usuario.getId());
+        validarDatosFactura(usuario.getId(), presupuesto.getCliente());
+
+        String numeroFactura = facturaNumeroService.generarSiguienteNumero(usuario.getId());
 
         Factura factura = new Factura();
         factura.setUsuario(usuario);
         factura.setNumeroFactura(numeroFactura);
         factura.setCliente(presupuesto.getCliente());
         factura.setPresupuesto(presupuesto);
+        factura.setFechaExpedicion(LocalDate.now());
+        factura.setRegimenFiscal("Régimen general del IVA");
+        factura.setMoneda("EUR");
         factura.setIvaHabilitado(presupuesto.getIvaHabilitado());
         factura.setMetodoPago("Transferencia");
         factura.setEstadoPago("No Pagada");
@@ -158,9 +184,13 @@ public class FacturaService {
             item.setMaterial(pi.getMaterial());
             item.setTareaManual(pi.getTareaManual());
             item.setEsTareaManual(Optional.ofNullable(pi.getEsTareaManual()).orElse(false));
-            item.setCantidad(Optional.ofNullable(pi.getCantidad()).orElse(0.0));
-            item.setPrecioUnitario(Optional.ofNullable(pi.getPrecioUnitario()).orElse(0.0));
-            item.setSubtotal(Optional.ofNullable(pi.getSubtotal()).orElse(0.0));
+            BigDecimal cant = BigDecimal.valueOf(Optional.ofNullable(pi.getCantidad()).orElse(0.0));
+            BigDecimal precio = BigDecimal.valueOf(Optional.ofNullable(pi.getPrecioUnitario()).orElse(0.0));
+            item.setCantidad(cant.doubleValue());
+            item.setPrecioUnitario(precio.doubleValue());
+            BigDecimal st = cant.multiply(precio).setScale(SCALE, ROUNDING);
+            item.setSubtotal(st.doubleValue());
+            item.setCuotaIva(0.0);
             item.setAplicaIva(Optional.ofNullable(pi.getAplicaIva()).orElse(true));
             factura.getItems().add(item);
         }
@@ -203,20 +233,47 @@ public class FacturaService {
         facturaRepository.deleteById(Objects.requireNonNull(id));
     }
 
-    private String generarNumeroFactura(Long usuarioId) {
-        long count = facturaRepository.countByUsuarioId(Objects.requireNonNull(usuarioId));
-        int year = Year.now().getValue();
-        return String.format("FAC-%d-%04d", year, count + 1);
+    private void validarDatosFactura(Long usuarioId, Cliente cliente) {
+        Empresa empresa = empresaRepository.findByUsuarioId(usuarioId).orElse(null);
+        if (empresa == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe configurar los datos de la empresa antes de emitir facturas");
+        }
+        if (empresa.getCodigoPostal() == null || empresa.getCodigoPostal().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El código postal de la empresa es obligatorio para facturación");
+        }
+        if (empresa.getProvincia() == null || empresa.getProvincia().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La provincia de la empresa es obligatoria para facturación");
+        }
+        if (empresa.getPais() == null || empresa.getPais().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El país de la empresa es obligatorio para facturación");
+        }
+        if (empresa.getNif() != null && !empresa.getNif().isBlank() && !NifValidator.esValido(empresa.getNif())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El NIF de la empresa no es válido");
+        }
+
+        if (cliente.getCodigoPostal() == null || cliente.getCodigoPostal().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El código postal del cliente es obligatorio para facturación");
+        }
+        if (cliente.getProvincia() == null || cliente.getProvincia().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La provincia del cliente es obligatoria para facturación");
+        }
+        if (cliente.getPais() == null || cliente.getPais().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El país del cliente es obligatorio para facturación");
+        }
+        String nifCliente = cliente.getDni();
+        if (nifCliente != null && !nifCliente.isBlank() && !NifValidator.esValido(nifCliente)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El NIF del cliente no es válido");
+        }
     }
 
     private void mapItems(List<FacturaItemRequest> itemRequests, Factura factura) {
         for (FacturaItemRequest req : itemRequests) {
             FacturaItem item = new FacturaItem();
             item.setFactura(factura);
-            double cantidad = Optional.ofNullable(req.cantidad()).orElse(0.0);
-            double precioUnitario = Optional.ofNullable(req.precioUnitario()).orElse(0.0);
-            item.setCantidad(cantidad);
-            item.setPrecioUnitario(precioUnitario);
+            BigDecimal cantidad = BigDecimal.valueOf(Optional.ofNullable(req.cantidad()).orElse(0.0));
+            BigDecimal precioUnitario = BigDecimal.valueOf(Optional.ofNullable(req.precioUnitario()).orElse(0.0));
+            item.setCantidad(cantidad.doubleValue());
+            item.setPrecioUnitario(precioUnitario.doubleValue());
             item.setAplicaIva(Optional.ofNullable(req.aplicaIva()).orElse(true));
 
             if (req.materialId() != null) {
@@ -229,8 +286,8 @@ public class FacturaService {
                 item.setTareaManual(req.tareaManual());
             }
 
-            double itemSubtotal = cantidad * precioUnitario;
-            item.setSubtotal(itemSubtotal);
+            BigDecimal itemSubtotal = cantidad.multiply(precioUnitario).setScale(SCALE, ROUNDING);
+            item.setSubtotal(itemSubtotal.doubleValue());
             item.setCuotaIva(0.0);
 
             factura.getItems().add(item);
@@ -238,28 +295,31 @@ public class FacturaService {
     }
 
     private void calcularTotales(Factura factura) {
-        double subtotal = 0;
-        double baseIva = 0;
+        BigDecimal subtotal = BigDecimal.ZERO;
+        BigDecimal baseIva = BigDecimal.ZERO;
 
         for (FacturaItem item : factura.getItems()) {
-            subtotal += item.getSubtotal();
+            BigDecimal itemSubtotal = BigDecimal.valueOf(item.getSubtotal()).setScale(SCALE, ROUNDING);
+            subtotal = subtotal.add(itemSubtotal);
             if (Boolean.TRUE.equals(item.getAplicaIva())) {
-                baseIva += item.getSubtotal();
+                baseIva = baseIva.add(itemSubtotal);
             }
         }
 
-        factura.setSubtotal(subtotal);
-        double iva = Boolean.TRUE.equals(factura.getIvaHabilitado()) ? baseIva * IVA_RATE : 0;
-        factura.setIva(iva);
-        factura.setTotal(subtotal + iva);
+        factura.setSubtotal(subtotal.setScale(SCALE, ROUNDING).doubleValue());
 
-        if (Boolean.TRUE.equals(factura.getIvaHabilitado())) {
-            double totalIva = iva;
-            double totalBaseIva = baseIva;
+        BigDecimal cuotaIvaTotal = Boolean.TRUE.equals(factura.getIvaHabilitado())
+                ? baseIva.multiply(IVA_RATE).setScale(SCALE, ROUNDING)
+                : BigDecimal.ZERO;
+        factura.setIva(cuotaIvaTotal.doubleValue());
+        factura.setTotal(subtotal.add(cuotaIvaTotal).setScale(SCALE, ROUNDING).doubleValue());
+
+        if (Boolean.TRUE.equals(factura.getIvaHabilitado()) && baseIva.compareTo(BigDecimal.ZERO) > 0) {
             for (FacturaItem item : factura.getItems()) {
-                if (Boolean.TRUE.equals(item.getAplicaIva()) && totalBaseIva > 0) {
-                    double cuotaIva = item.getSubtotal() * (totalIva / totalBaseIva);
-                    item.setCuotaIva(cuotaIva);
+                if (Boolean.TRUE.equals(item.getAplicaIva())) {
+                    BigDecimal proporcion = BigDecimal.valueOf(item.getSubtotal()).divide(baseIva, 10, ROUNDING);
+                    BigDecimal cuotaIva = cuotaIvaTotal.multiply(proporcion).setScale(SCALE, ROUNDING);
+                    item.setCuotaIva(cuotaIva.doubleValue());
                 }
             }
         }
@@ -274,7 +334,8 @@ public class FacturaService {
                         item.getEsTareaManual() != null && item.getEsTareaManual(),
                         item.getCantidad(),
                         item.getPrecioUnitario(),
-                        item.getSubtotal()
+                        item.getSubtotal(),
+                        Boolean.TRUE.equals(item.getAplicaIva()) || item.getAplicaIva() == null
                 ))
                 .toList();
 
@@ -286,11 +347,15 @@ public class FacturaService {
                 factura.getCliente().getEmail(),
                 factura.getPresupuesto() != null ? factura.getPresupuesto().getId() : null,
                 factura.getFechaCreacion(),
+                factura.getFechaExpedicion(),
+                factura.getFechaOperacion(),
                 factura.getFechaVencimiento(),
                 factura.getSubtotal(),
                 factura.getIva(),
                 factura.getTotal(),
                 factura.getIvaHabilitado(),
+                factura.getRegimenFiscal(),
+                factura.getCondicionesPago(),
                 factura.getMetodoPago(),
                 factura.getEstadoPago(),
                 factura.getNotas(),

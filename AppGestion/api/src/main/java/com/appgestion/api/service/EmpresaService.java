@@ -32,6 +32,9 @@ public class EmpresaService {
                 });
         emp.setNombre(request.nombre() != null ? request.nombre() : "");
         emp.setDireccion(request.direccion());
+        emp.setCodigoPostal(request.codigoPostal());
+        emp.setProvincia(request.provincia());
+        emp.setPais(request.pais() != null ? request.pais() : "España");
         emp.setNif(request.nif());
         emp.setTelefono(request.telefono());
         emp.setEmail(request.email());
@@ -51,7 +54,7 @@ public class EmpresaService {
 
     private EmpresaResponse toResponse(Empresa emp) {
         if (emp == null) {
-            return new EmpresaResponse(null, "", null, null, null, null, null, null, null, null, null, false);
+            return new EmpresaResponse(null, "", null, null, null, null, null, null, null, null, null, null, null, null, false);
         }
         boolean mailConfigurado = emp.getMailUsername() != null && !emp.getMailUsername().isBlank()
                 && emp.getMailPassword() != null && !emp.getMailPassword().isBlank();
@@ -59,6 +62,9 @@ public class EmpresaService {
                 emp.getId(),
                 emp.getNombre(),
                 emp.getDireccion(),
+                emp.getCodigoPostal(),
+                emp.getProvincia(),
+                emp.getPais(),
                 emp.getNif(),
                 emp.getTelefono(),
                 emp.getEmail(),

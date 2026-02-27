@@ -8,6 +8,9 @@ public record ClienteResponse(
         String telefono,
         String email,
         String direccion,
+        String codigoPostal,
+        String provincia,
+        String pais,
         String dni,
         LocalDateTime fechaCreacion
 ) {}

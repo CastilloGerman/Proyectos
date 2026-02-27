@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { nifValidator } from '../../../shared/validators/nif.validator';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -46,8 +47,24 @@ import { ClienteService } from '../../../core/services/cliente.service';
               <input matInput formControlName="direccion" placeholder="Dirección">
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>DNI/CIF</mat-label>
-              <input matInput formControlName="dni" placeholder="DNI o CIF">
+              <mat-label>Código postal</mat-label>
+              <input matInput formControlName="codigoPostal" placeholder="28001">
+              <mat-error>Código postal obligatorio para facturación</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Provincia</mat-label>
+              <input matInput formControlName="provincia" placeholder="Madrid">
+              <mat-error>Provincia obligatoria para facturación</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>País</mat-label>
+              <input matInput formControlName="pais" placeholder="España">
+              <mat-error>País obligatorio para facturación</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>NIF/CIF</mat-label>
+              <input matInput formControlName="dni" placeholder="12345678A o B12345678">
+              <mat-error>NIF/CIF no válido</mat-error>
             </mat-form-field>
             <div class="actions">
               <button mat-button type="button" routerLink="/clientes">Cancelar</button>
@@ -91,7 +108,10 @@ export class ClienteFormComponent implements OnInit {
       email: [''],
       telefono: [''],
       direccion: [''],
-      dni: [''],
+      codigoPostal: ['', Validators.required],
+      provincia: ['', Validators.required],
+      pais: ['España', Validators.required],
+      dni: ['', [Validators.required, nifValidator()]],
     });
   }
 
@@ -107,6 +127,9 @@ export class ClienteFormComponent implements OnInit {
             email: c.email || '',
             telefono: c.telefono || '',
             direccion: c.direccion || '',
+            codigoPostal: c.codigoPostal || '',
+            provincia: c.provincia || '',
+            pais: c.pais || 'España',
             dni: c.dni || '',
           });
         },
@@ -122,6 +145,9 @@ export class ClienteFormComponent implements OnInit {
       email: this.form.value.email || undefined,
       telefono: this.form.value.telefono || undefined,
       direccion: this.form.value.direccion || undefined,
+      codigoPostal: this.form.value.codigoPostal || undefined,
+      provincia: this.form.value.provincia || undefined,
+      pais: this.form.value.pais || undefined,
       dni: this.form.value.dni || undefined,
     };
     const req = this.isEdit && this.id

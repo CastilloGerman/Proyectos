@@ -7,5 +7,6 @@ public record FacturaItemResponse(
         Boolean esTareaManual,
         Double cantidad,
         Double precioUnitario,
-        Double subtotal
+        Double subtotal,
+        Boolean aplicaIva
 ) {}

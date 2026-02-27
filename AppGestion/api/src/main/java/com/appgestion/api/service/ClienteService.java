@@ -66,6 +66,9 @@ public class ClienteService {
         cliente.setTelefono(request.telefono() != null ? request.telefono() : "");
         cliente.setEmail(request.email() != null ? request.email() : "");
         cliente.setDireccion(request.direccion() != null ? request.direccion() : "");
+        cliente.setCodigoPostal(request.codigoPostal());
+        cliente.setProvincia(request.provincia());
+        cliente.setPais(request.pais() != null ? request.pais() : "España");
         cliente.setDni(request.dni() != null ? request.dni() : "");
     }
 
@@ -76,6 +79,9 @@ public class ClienteService {
                 cliente.getTelefono(),
                 cliente.getEmail(),
                 cliente.getDireccion(),
+                cliente.getCodigoPostal(),
+                cliente.getProvincia(),
+                cliente.getPais(),
                 cliente.getDni(),
                 cliente.getFechaCreacion()
         );

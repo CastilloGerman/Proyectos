@@ -22,4 +22,7 @@ public interface FacturaRepository extends JpaRepository<Factura, Long> {
     Optional<Factura> findByNumeroFacturaAndUsuarioId(String numeroFactura, Long usuarioId);
 
     long countByUsuarioId(Long usuarioId);
+
+    @Query(value = "SELECT COALESCE(MAX(CAST(SUBSTRING(numero_factura FROM '[0-9]+$') AS INTEGER)), 0) FROM facturas WHERE usuario_id = :usuarioId AND numero_factura LIKE :pattern", nativeQuery = true)
+    int findMaxNumeroInYear(@Param("usuarioId") Long usuarioId, @Param("pattern") String pattern);
 }

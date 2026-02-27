@@ -66,8 +66,31 @@ import { FacturaItemRequest } from '../../../core/models/factura.model';
               <input matInput formControlName="numeroFactura" placeholder="Se genera automático si se deja vacío">
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Fecha expedición</mat-label>
+              <input matInput formControlName="fechaExpedicion" type="date">
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Fecha operación (opcional)</mat-label>
+              <input matInput formControlName="fechaOperacion" type="date">
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
               <mat-label>Fecha vencimiento</mat-label>
               <input matInput formControlName="fechaVencimiento" type="date">
+              <mat-hint>Opciones rápidas:</mat-hint>
+            </mat-form-field>
+            <div class="vencimiento-buttons">
+              <button type="button" mat-stroked-button (click)="setVencimiento(15)">15 días</button>
+              <button type="button" mat-stroked-button (click)="setVencimiento(30)">30 días</button>
+              <button type="button" mat-stroked-button (click)="setVencimiento(60)">60 días</button>
+              <button type="button" mat-stroked-button (click)="setVencimiento(90)">90 días</button>
+            </div>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Régimen fiscal</mat-label>
+              <input matInput formControlName="regimenFiscal" placeholder="Régimen general del IVA">
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Condiciones de pago</mat-label>
+              <input matInput formControlName="condicionesPago" placeholder="30 días">
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Método de pago</mat-label>
@@ -186,6 +209,17 @@ import { FacturaItemRequest } from '../../../core/models/factura.model';
       gap: 16px;
       margin-top: 24px;
     }
+
+    .vencimiento-buttons {
+      display: flex;
+      gap: 8px;
+      margin: -8px 0 16px 0;
+      flex-wrap: wrap;
+    }
+
+    .vencimiento-buttons button {
+      font-size: 12px;
+    }
   `],
 })
 export class FacturaFormComponent implements OnInit {
@@ -214,7 +248,11 @@ export class FacturaFormComponent implements OnInit {
       clienteId: [null, Validators.required],
       presupuestoId: [null],
       numeroFactura: [''],
+      fechaExpedicion: [new Date().toISOString().split('T')[0], Validators.required],
+      fechaOperacion: [''],
       fechaVencimiento: [''],
+      regimenFiscal: ['Régimen general del IVA'],
+      condicionesPago: [''],
       metodoPago: ['Transferencia'],
       estadoPago: ['No Pagada'],
       notas: [''],
@@ -254,7 +292,11 @@ export class FacturaFormComponent implements OnInit {
           clienteId: f.clienteId,
           presupuestoId: f.presupuestoId ?? null,
           numeroFactura: f.numeroFactura,
+          fechaExpedicion: f.fechaExpedicion || new Date().toISOString().split('T')[0],
+          fechaOperacion: f.fechaOperacion || '',
           fechaVencimiento: f.fechaVencimiento || '',
+          regimenFiscal: f.regimenFiscal || 'Régimen general del IVA',
+          condicionesPago: f.condicionesPago || '',
           metodoPago: f.metodoPago,
           estadoPago: f.estadoPago,
           notas: f.notas || '',
@@ -269,7 +311,7 @@ export class FacturaFormComponent implements OnInit {
               tareaManual: [it.descripcion || ''],
               cantidad: [it.cantidad, [Validators.required, Validators.min(0.001)]],
               precioUnitario: [it.precioUnitario, [Validators.required, Validators.min(0)]],
-              aplicaIva: [true],
+              aplicaIva: [it.aplicaIva ?? true],
             })
           )
         );
@@ -299,6 +341,13 @@ export class FacturaFormComponent implements OnInit {
 
   removeItem(index: number): void {
     this.items.removeAt(index);
+  }
+
+  setVencimiento(dias: number): void {
+    const hoy = new Date();
+    hoy.setDate(hoy.getDate() + dias);
+    const fecha = hoy.toISOString().split('T')[0];
+    this.form.patchValue({ fechaVencimiento: fecha });
   }
 
   onMaterialSelect(index: number, materialId: number | null): void {
@@ -337,7 +386,11 @@ export class FacturaFormComponent implements OnInit {
     };
     if (value.presupuestoId) payload.presupuestoId = value.presupuestoId;
     if (value.numeroFactura?.trim()) payload.numeroFactura = value.numeroFactura.trim();
+    if (value.fechaExpedicion) payload.fechaExpedicion = value.fechaExpedicion;
+    if (value.fechaOperacion) payload.fechaOperacion = value.fechaOperacion || undefined;
     if (value.fechaVencimiento) payload.fechaVencimiento = value.fechaVencimiento;
+    if (value.regimenFiscal) payload.regimenFiscal = value.regimenFiscal;
+    if (value.condicionesPago) payload.condicionesPago = value.condicionesPago || undefined;
     const req = this.isEdit && this.id
       ? this.facturaService.update(this.id, payload)
       : this.facturaService.create(payload);

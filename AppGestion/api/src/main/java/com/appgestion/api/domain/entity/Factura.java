@@ -32,8 +32,23 @@ public class Factura {
     @Column(name = "fecha_creacion", updatable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
 
+    @Column(name = "fecha_expedicion")
+    private LocalDate fechaExpedicion;
+
+    @Column(name = "fecha_operacion")
+    private LocalDate fechaOperacion;
+
     @Column(name = "fecha_vencimiento")
     private LocalDate fechaVencimiento;
+
+    @Column(name = "regimen_fiscal", length = 100)
+    private String regimenFiscal = "Régimen general del IVA";
+
+    @Column(name = "condiciones_pago", length = 100)
+    private String condicionesPago;
+
+    @Column(length = 10)
+    private String moneda = "EUR";
 
     @Column(nullable = false)
     private Double subtotal = 0.0;
@@ -82,6 +97,12 @@ public class Factura {
     public LocalDateTime getFechaCreacion() { return fechaCreacion; }
     public void setFechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
 
+    public LocalDate getFechaExpedicion() { return fechaExpedicion; }
+    public void setFechaExpedicion(LocalDate fechaExpedicion) { this.fechaExpedicion = fechaExpedicion; }
+
+    public LocalDate getFechaOperacion() { return fechaOperacion; }
+    public void setFechaOperacion(LocalDate fechaOperacion) { this.fechaOperacion = fechaOperacion; }
+
     public LocalDate getFechaVencimiento() { return fechaVencimiento; }
     public void setFechaVencimiento(LocalDate fechaVencimiento) { this.fechaVencimiento = fechaVencimiento; }
 
@@ -105,6 +126,15 @@ public class Factura {
 
     public String getNotas() { return notas; }
     public void setNotas(String notas) { this.notas = notas; }
+
+    public String getRegimenFiscal() { return regimenFiscal; }
+    public void setRegimenFiscal(String regimenFiscal) { this.regimenFiscal = regimenFiscal != null ? regimenFiscal : "Régimen general del IVA"; }
+
+    public String getCondicionesPago() { return condicionesPago; }
+    public void setCondicionesPago(String condicionesPago) { this.condicionesPago = condicionesPago; }
+
+    public String getMoneda() { return moneda; }
+    public void setMoneda(String moneda) { this.moneda = moneda != null ? moneda : "EUR"; }
 
     public List<FacturaItem> getItems() { return items; }
     public void setItems(List<FacturaItem> items) { this.items = items; }

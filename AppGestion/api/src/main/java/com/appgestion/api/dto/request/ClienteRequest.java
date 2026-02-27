@@ -17,6 +17,15 @@ public record ClienteRequest(
         @Size(max = 255)
         String direccion,
 
+        @Size(max = 10)
+        String codigoPostal,
+
+        @Size(max = 100)
+        String provincia,
+
+        @Size(max = 100)
+        String pais,
+
         @Size(max = 50)
         String dni
 ) {}

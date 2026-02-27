@@ -58,14 +58,15 @@ public class FacturaController {
         Long usuarioId = SecurityUtils.getCurrentUsuario(usuarioRepository).getId();
         try {
             facturaService.enviarPorEmail(id, usuarioId, request);
-        } catch (jakarta.mail.MessagingException e) {
-            throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error al enviar el email: " + e.getMessage());
         } catch (IllegalStateException | IllegalArgumentException e) {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.BAD_REQUEST,
                     e.getMessage());
+        } catch (jakarta.mail.MessagingException | RuntimeException e) {
+            org.slf4j.LoggerFactory.getLogger(FacturaController.class).warn("Error al enviar email factura {}: {}", id, e.getMessage(), e);
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al enviar el email: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
         }
     }
 

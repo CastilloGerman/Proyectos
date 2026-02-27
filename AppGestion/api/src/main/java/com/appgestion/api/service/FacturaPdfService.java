@@ -19,7 +19,6 @@ import java.util.Optional;
 @Service
 public class FacturaPdfService {
 
-    private static final DateTimeFormatter DATETIME_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final Color HEADER_BG = new Color(45, 55, 72);
     private static final Color ROW_ALT = new Color(248, 250, 252);
     private static final Color BORDER = new Color(226, 232, 240);
@@ -44,53 +43,93 @@ public class FacturaPdfService {
         }
     }
 
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
     private void agregarContenido(Document document, Factura factura, Long usuarioId) throws DocumentException {
         Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 22, Color.DARK_GRAY);
         Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.WHITE);
         Font cellFont = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.DARK_GRAY);
         Font smallFont = FontFactory.getFont(FontFactory.HELVETICA, 8, Color.GRAY);
+        Font labelFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, Color.DARK_GRAY);
 
         Empresa empresa = empresaService.getEmpresaOrNull(usuarioId);
         Cliente cliente = factura.getCliente();
 
-        // Cabecera: FACTURA + número
+        // Cabecera: FACTURA + número (RD 1619/2012 - número y serie)
         Paragraph title = new Paragraph("FACTURA " + (factura.getNumeroFactura() != null ? factura.getNumeroFactura() : ""), titleFont);
-        title.setSpacingAfter(4);
+        title.setSpacingAfter(20);
         document.add(title);
 
-        // Datos del emisor (obligatorio RD 1619/2012)
+        // Tabla de dos columnas: Emisor (izq) y Cliente/Destinatario (der) - RD 1619/2012
+        PdfPTable headerTable = new PdfPTable(2);
+        headerTable.setWidthPercentage(100);
+        headerTable.setWidths(new float[]{1f, 1f});
+        headerTable.setSpacingAfter(15);
+
+        // Columna emisor
+        PdfPCell cellEmisor = new PdfPCell();
+        cellEmisor.setBorder(Rectangle.NO_BORDER);
+        cellEmisor.setPadding(0);
+        StringBuilder emisor = new StringBuilder();
         if (empresa != null) {
-            StringBuilder emisor = new StringBuilder();
             if (empresa.getNombre() != null && !empresa.getNombre().isBlank()) emisor.append(empresa.getNombre()).append("\n");
             if (empresa.getDireccion() != null && !empresa.getDireccion().isBlank()) emisor.append(empresa.getDireccion()).append("\n");
+            String cpProvPais = buildCpProvinciaPais(empresa.getCodigoPostal(), empresa.getProvincia(), empresa.getPais());
+            if (!cpProvPais.isBlank()) emisor.append(cpProvPais).append("\n");
             if (empresa.getNif() != null && !empresa.getNif().isBlank()) emisor.append("NIF/CIF: ").append(empresa.getNif()).append("\n");
             if (empresa.getTelefono() != null && !empresa.getTelefono().isBlank()) emisor.append("Tel: ").append(empresa.getTelefono()).append("\n");
             if (empresa.getEmail() != null && !empresa.getEmail().isBlank()) emisor.append(empresa.getEmail());
-            if (emisor.length() > 0) {
-                Paragraph pEmisor = new Paragraph("EMISOR:\n" + emisor.toString().trim(), smallFont);
-                pEmisor.setSpacingAfter(8);
-                document.add(pEmisor);
-            }
         }
+        if (emisor.length() > 0) {
+            Paragraph pEmisor = new Paragraph("EMISOR:\n" + emisor.toString().trim(), smallFont);
+            cellEmisor.addElement(pEmisor);
+        }
+        headerTable.addCell(cellEmisor);
 
-        // Datos del receptor (obligatorio)
+        // Columna destinatario
+        PdfPCell cellReceptor = new PdfPCell();
+        cellReceptor.setBorder(Rectangle.NO_BORDER);
+        cellReceptor.setPadding(0);
         StringBuilder receptor = new StringBuilder();
-        receptor.append("CLIENTE: ").append(cliente != null ? cliente.getNombre() : "").append("\n");
+        receptor.append("DESTINATARIO:\n");
+        receptor.append(cliente != null ? cliente.getNombre() : "").append("\n");
         if (cliente != null) {
             if (cliente.getDireccion() != null && !cliente.getDireccion().isBlank()) receptor.append(cliente.getDireccion()).append("\n");
+            String cpProvPais = buildCpProvinciaPais(cliente.getCodigoPostal(), cliente.getProvincia(), cliente.getPais());
+            if (!cpProvPais.isBlank()) receptor.append(cpProvPais).append("\n");
             if (cliente.getDni() != null && !cliente.getDni().isBlank()) receptor.append("NIF/CIF: ").append(cliente.getDni()).append("\n");
             if (cliente.getEmail() != null && !cliente.getEmail().isBlank()) receptor.append(cliente.getEmail());
         }
         Paragraph pReceptor = new Paragraph(receptor.toString().trim(), smallFont);
-        pReceptor.setSpacingAfter(12);
-        document.add(pReceptor);
+        cellReceptor.addElement(pReceptor);
+        headerTable.addCell(cellReceptor);
+        document.add(headerTable);
 
-        // Fecha de expedición (obligatorio)
-        String fechaExp = factura.getFechaCreacion() != null
-                ? factura.getFechaCreacion().format(DATETIME_FORMAT) : "";
-        Paragraph info = new Paragraph("Fecha de expedición: " + fechaExp, smallFont);
-        info.setSpacingAfter(15);
-        document.add(info);
+        // Datos de factura (obligatorios RD 1619/2012)
+        PdfPTable infoTable = new PdfPTable(2);
+        infoTable.setWidthPercentage(60);
+        infoTable.setWidths(new float[]{1.5f, 2f});
+        infoTable.setSpacingAfter(15);
+        infoTable.getDefaultCell().setBorder(Rectangle.NO_BORDER);
+        infoTable.getDefaultCell().setPadding(2);
+
+        String fechaExp = factura.getFechaExpedicion() != null ? factura.getFechaExpedicion().format(DATE_FORMAT) : "";
+        addInfoRow(infoTable, "Fecha de expedición:", fechaExp, labelFont, smallFont);
+        if (factura.getFechaOperacion() != null && !factura.getFechaOperacion().equals(factura.getFechaExpedicion())) {
+            addInfoRow(infoTable, "Fecha de operación:", factura.getFechaOperacion().format(DATE_FORMAT), labelFont, smallFont);
+        }
+        if (factura.getFechaVencimiento() != null) {
+            addInfoRow(infoTable, "Fecha de vencimiento:", factura.getFechaVencimiento().format(DATE_FORMAT), labelFont, smallFont);
+        }
+        String regimen = factura.getRegimenFiscal() != null ? factura.getRegimenFiscal() : "";
+        if (!regimen.isBlank()) addInfoRow(infoTable, "Régimen fiscal:", regimen, labelFont, smallFont);
+        String metodoPago = factura.getMetodoPago() != null ? factura.getMetodoPago() : "";
+        if (!metodoPago.isBlank()) addInfoRow(infoTable, "Forma de pago:", metodoPago, labelFont, smallFont);
+        String condicionesPago = factura.getCondicionesPago() != null ? factura.getCondicionesPago() : "";
+        if (!condicionesPago.isBlank()) addInfoRow(infoTable, "Condiciones de pago:", condicionesPago, labelFont, smallFont);
+        addInfoRow(infoTable, "Moneda:", factura.getMoneda() != null ? factura.getMoneda() : "EUR", labelFont, smallFont);
+        addInfoRow(infoTable, "Estado:", factura.getEstadoPago() != null ? factura.getEstadoPago() : "", labelFont, smallFont);
+        document.add(infoTable);
 
         // Tabla de líneas (descripción, cantidad, precio unitario, IVA, subtotal)
         List<FacturaItem> items = factura.getItems();
@@ -124,6 +163,17 @@ public class FacturaPdfService {
             notasFactura.setSpacingBefore(8);
             document.add(notasFactura);
         }
+    }
+
+    private void addInfoRow(PdfPTable table, String label, String value, Font labelFont, Font valueFont) {
+        PdfPCell cellLabel = new PdfPCell(new Phrase(label, labelFont));
+        cellLabel.setBorder(Rectangle.NO_BORDER);
+        cellLabel.setPadding(2);
+        table.addCell(cellLabel);
+        PdfPCell cellValue = new PdfPCell(new Phrase(value != null ? value : "", valueFont));
+        cellValue.setBorder(Rectangle.NO_BORDER);
+        cellValue.setPadding(2);
+        table.addCell(cellValue);
     }
 
     private void addTableHeader(PdfPTable table, Font font) {
@@ -183,9 +233,23 @@ public class FacturaPdfService {
             totalesTable.addCell(new Phrase(String.format("%.2f €", iva), cellFont));
         }
         Font boldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.DARK_GRAY);
-        totalesTable.addCell(new Phrase("TOTAL:", boldFont));
+        totalesTable.addCell(new Phrase("TOTAL (" + (factura.getMoneda() != null ? factura.getMoneda() : "EUR") + "):", boldFont));
         totalesTable.addCell(new Phrase(String.format("%.2f €", total), boldFont));
 
         return totalesTable;
+    }
+
+    private static String buildCpProvinciaPais(String cp, String provincia, String pais) {
+        StringBuilder sb = new StringBuilder();
+        if (cp != null && !cp.isBlank()) sb.append(cp);
+        if (provincia != null && !provincia.isBlank()) {
+            if (sb.length() > 0) sb.append(" ");
+            sb.append(provincia);
+        }
+        if (pais != null && !pais.isBlank()) {
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(pais);
+        }
+        return sb.toString();
     }
 }

@@ -27,6 +27,15 @@ public class Cliente {
     @Column(length = 255)
     private String direccion;
 
+    @Column(name = "codigo_postal", length = 10)
+    private String codigoPostal;
+
+    @Column(length = 100)
+    private String provincia;
+
+    @Column(length = 100)
+    private String pais = "España";
+
     @Column(length = 50)
     private String dni;
 
@@ -55,6 +64,15 @@ public class Cliente {
 
     public String getDireccion() { return direccion; }
     public void setDireccion(String direccion) { this.direccion = direccion; }
+
+    public String getCodigoPostal() { return codigoPostal; }
+    public void setCodigoPostal(String codigoPostal) { this.codigoPostal = codigoPostal; }
+
+    public String getProvincia() { return provincia; }
+    public void setProvincia(String provincia) { this.provincia = provincia; }
+
+    public String getPais() { return pais; }
+    public void setPais(String pais) { this.pais = pais != null ? pais : "España"; }
 
     public String getDni() { return dni; }
     public void setDni(String dni) { this.dni = dni; }

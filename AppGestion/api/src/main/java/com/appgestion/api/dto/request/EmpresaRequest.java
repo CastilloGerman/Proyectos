@@ -3,6 +3,9 @@ package com.appgestion.api.dto.request;
 public record EmpresaRequest(
         String nombre,
         String direccion,
+        String codigoPostal,
+        String provincia,
+        String pais,
         String nif,
         String telefono,
         String email,
