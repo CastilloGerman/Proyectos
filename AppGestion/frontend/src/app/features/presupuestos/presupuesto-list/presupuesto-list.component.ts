@@ -8,6 +8,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { AuthService } from '../../../core/auth/auth.service';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
 import { Presupuesto } from '../../../core/models/presupuesto.model';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
@@ -36,10 +37,12 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
           <button mat-icon-button (click)="openConfig()" matTooltip="Configuración plantillas">
             <mat-icon>settings</mat-icon>
           </button>
+          @if (auth.canWrite()) {
           <a mat-raised-button color="primary" routerLink="/presupuestos/nuevo">
             <mat-icon>add</mat-icon>
             Nuevo presupuesto
           </a>
+          }
         </div>
       </div>
       <div class="table-container">
@@ -65,7 +68,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let row">
-              @if (row.estado === 'Pendiente') {
+              @if (auth.canWrite() && row.estado === 'Pendiente') {
                 <button mat-icon-button (click)="crearFactura(row)" matTooltip="Crear factura">
                   <mat-icon>receipt</mat-icon>
                 </button>
@@ -76,12 +79,14 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
               <button mat-icon-button (click)="downloadPdf(row)" matTooltip="Descargar PDF">
                 <mat-icon>picture_as_pdf</mat-icon>
               </button>
+              @if (auth.canWrite()) {
               <button mat-icon-button [routerLink]="['/presupuestos', row.id]" matTooltip="Editar">
                 <mat-icon>edit</mat-icon>
               </button>
               <button mat-icon-button color="warn" (click)="delete(row)" matTooltip="Eliminar">
                 <mat-icon>delete</mat-icon>
               </button>
+              }
             </td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
@@ -121,6 +126,7 @@ export class PresupuestoListComponent implements OnInit {
   dataSource = new MatTableDataSource<Presupuesto>([]);
 
   constructor(
+    public auth: AuthService,
     private presupuestoService: PresupuestoService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,

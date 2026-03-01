@@ -1,5 +1,6 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.constant.TaxConstants;
 import com.appgestion.api.domain.entity.*;
 import com.appgestion.api.dto.request.FacturaItemRequest;
 import com.appgestion.api.dto.request.FacturaRequest;
@@ -29,7 +30,6 @@ import java.util.Optional;
 @Service
 public class FacturaService {
 
-    private static final BigDecimal IVA_RATE = new BigDecimal("0.21");
     private static final int SCALE = 2;
     private static final RoundingMode ROUNDING = RoundingMode.HALF_UP;
 
@@ -309,7 +309,7 @@ public class FacturaService {
         factura.setSubtotal(subtotal.setScale(SCALE, ROUNDING).doubleValue());
 
         BigDecimal cuotaIvaTotal = Boolean.TRUE.equals(factura.getIvaHabilitado())
-                ? baseIva.multiply(IVA_RATE).setScale(SCALE, ROUNDING)
+                ? baseIva.multiply(TaxConstants.IVA_RATE).setScale(SCALE, ROUNDING)
                 : BigDecimal.ZERO;
         factura.setIva(cuotaIvaTotal.doubleValue());
         factura.setTotal(subtotal.add(cuotaIvaTotal).setScale(SCALE, ROUNDING).doubleValue());

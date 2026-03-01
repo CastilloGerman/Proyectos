@@ -8,6 +8,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { AuthService } from '../../../core/auth/auth.service';
 import { FacturaService } from '../../../core/services/factura.service';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
 import { Factura } from '../../../core/models/factura.model';
@@ -38,6 +39,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
           <button mat-icon-button (click)="openConfig()" matTooltip="Configuración plantillas">
             <mat-icon>settings</mat-icon>
           </button>
+          @if (auth.canWrite()) {
           <button mat-stroked-button (click)="openImportarPresupuesto()">
             <mat-icon>file_download</mat-icon>
             Importar presupuesto
@@ -46,6 +48,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
             <mat-icon>add</mat-icon>
             Nueva factura
           </a>
+          }
         </div>
       </div>
       <div class="table-container">
@@ -81,12 +84,14 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
               <button mat-icon-button (click)="downloadPdf(row)" matTooltip="Descargar PDF">
                 <mat-icon>picture_as_pdf</mat-icon>
               </button>
+              @if (auth.canWrite()) {
               <a mat-icon-button [routerLink]="['/facturas', row.id]" matTooltip="Editar">
                 <mat-icon>edit</mat-icon>
               </a>
               <button mat-icon-button color="warn" (click)="delete(row)" matTooltip="Eliminar">
                 <mat-icon>delete</mat-icon>
               </button>
+              }
             </td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
@@ -126,6 +131,7 @@ export class FacturaListComponent implements OnInit {
   dataSource = new MatTableDataSource<Factura>([]);
 
   constructor(
+    public auth: AuthService,
     private facturaService: FacturaService,
     private presupuestoService: PresupuestoService,
     private dialog: MatDialog,

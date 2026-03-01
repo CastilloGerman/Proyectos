@@ -4,8 +4,10 @@ import com.appgestion.api.domain.entity.ProcessedStripeEvent;
 import com.appgestion.api.repository.ProcessedStripeEventRepository;
 import com.appgestion.api.service.SubscriptionService;
 import com.stripe.exception.SignatureVerificationException;
+import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
 import com.stripe.model.StripeObject;
+import com.stripe.model.Invoice;
 import com.stripe.model.checkout.Session;
 import com.stripe.model.Subscription;
 import com.stripe.net.Webhook;
@@ -58,6 +60,8 @@ public class StripeWebhookController {
             case "checkout.session.completed" -> handleCheckoutSessionCompleted((Session) dataObject);
             case "customer.subscription.updated" -> handleSubscriptionUpdated((Subscription) dataObject);
             case "customer.subscription.deleted" -> handleSubscriptionDeleted((Subscription) dataObject);
+            case "invoice.paid" -> handleInvoicePaid((Invoice) dataObject);
+            case "invoice.payment_failed" -> handleInvoicePaymentFailed((Invoice) dataObject);
             default -> { /* Ignore other events */ }
         }
 
@@ -72,7 +76,7 @@ public class StripeWebhookController {
         String usuarioIdStr = session.getMetadata() != null ? session.getMetadata().get("usuario_id") : null;
         if (usuarioIdStr == null) return;
 
-        Long usuarioId = Long.parseLong(usuarioIdStr);
+        Long usuarioId = Long.valueOf(usuarioIdStr);
         String customerId = session.getCustomer();
         String subscriptionId = session.getSubscription();
 
@@ -81,7 +85,7 @@ public class StripeWebhookController {
         Subscription subscription;
         try {
             subscription = Subscription.retrieve(subscriptionId);
-        } catch (Exception e) {
+        } catch (StripeException e) {
             return;
         }
 
@@ -105,5 +109,17 @@ public class StripeWebhookController {
 
     private void handleSubscriptionDeleted(Subscription subscription) {
         subscriptionService.cancelSubscription(subscription.getId());
+    }
+
+    private void handleInvoicePaid(Invoice invoice) {
+        String subscriptionId = invoice.getSubscription();
+        if (subscriptionId == null || subscriptionId.isBlank()) return;
+        subscriptionService.updateSubscription(subscriptionId, "active", null);
+    }
+
+    private void handleInvoicePaymentFailed(Invoice invoice) {
+        String subscriptionId = invoice.getSubscription();
+        if (subscriptionId == null || subscriptionId.isBlank()) return;
+        subscriptionService.updateSubscription(subscriptionId, "past_due", null);
     }
 }

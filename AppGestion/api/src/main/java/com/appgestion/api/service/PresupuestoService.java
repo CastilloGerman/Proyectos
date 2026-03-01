@@ -1,5 +1,6 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.constant.TaxConstants;
 import com.appgestion.api.domain.entity.*;
 import com.appgestion.api.dto.request.PresupuestoItemRequest;
 import com.appgestion.api.dto.request.PresupuestoRequest;
@@ -21,8 +22,6 @@ import java.util.Optional;
 
 @Service
 public class PresupuestoService {
-
-    private static final double IVA_RATE = 0.21;
 
     private final PresupuestoRepository presupuestoRepository;
     private final ClienteRepository clienteRepository;
@@ -188,7 +187,7 @@ public class PresupuestoService {
         baseIva = Math.max(0, baseIva);
 
         presupuesto.setSubtotal(subtotal);
-        double iva = Boolean.TRUE.equals(presupuesto.getIvaHabilitado()) ? baseIva * IVA_RATE : 0;
+        double iva = Boolean.TRUE.equals(presupuesto.getIvaHabilitado()) ? baseIva * TaxConstants.IVA_RATE_DOUBLE : 0;
         presupuesto.setIva(iva);
         presupuesto.setTotal(subtotal + iva);
     }

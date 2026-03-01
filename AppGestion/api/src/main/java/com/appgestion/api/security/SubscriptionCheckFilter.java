@@ -69,16 +69,22 @@ public class SubscriptionCheckFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (subscriptionService.hasActiveSubscription(usuario)) {
+        String method = request.getMethod();
+        if ("GET".equalsIgnoreCase(method) || "HEAD".equalsIgnoreCase(method) || "OPTIONS".equalsIgnoreCase(method)) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        log.warn("403 Forbidden: usuario {} sin suscripción activa - {} {}", email, request.getMethod(), path);
+        if (subscriptionService.canWrite(usuario)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        log.warn("403 Forbidden: usuario {} en modo solo lectura - {} {}", email, method, path);
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
-        response.getWriter().write("{\"error\":\"Suscripción requerida. Activa tu suscripción para acceder.\"}");
+        response.getWriter().write("{\"error\":\"Cuenta en modo solo lectura. Activa tu suscripción para crear o editar.\"}");
     }
 
     private boolean isExcludedPath(String path) {

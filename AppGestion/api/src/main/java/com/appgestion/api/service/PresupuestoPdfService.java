@@ -1,5 +1,6 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.constant.TaxConstants;
 import com.appgestion.api.domain.entity.Empresa;
 import com.appgestion.api.domain.entity.Presupuesto;
 import com.appgestion.api.domain.entity.PresupuestoItem;
@@ -158,7 +159,7 @@ public class PresupuestoPdfService {
         totalesTable.addCell(new Phrase("Subtotal:", cellFont));
         totalesTable.addCell(new Phrase(String.format("%.2f €", subtotal), cellFont));
         if (Boolean.TRUE.equals(presupuesto.getIvaHabilitado()) && iva > 0) {
-            totalesTable.addCell(new Phrase("IVA (21%):", cellFont));
+            totalesTable.addCell(new Phrase("IVA (" + TaxConstants.IVA_PERCENT_LABEL + "):", cellFont));
             totalesTable.addCell(new Phrase(String.format("%.2f €", iva), cellFont));
         }
         Font boldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.DARK_GRAY);

@@ -1,5 +1,6 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.constant.TaxConstants;
 import com.appgestion.api.domain.entity.*;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
@@ -195,7 +196,7 @@ public class FacturaPdfService {
         double cantidad = Optional.ofNullable(item.getCantidad()).orElse(0.0);
         double precioUnit = Optional.ofNullable(item.getPrecioUnitario()).orElse(0.0);
         double subtotal = Optional.ofNullable(item.getSubtotal()).orElse(cantidad * precioUnit);
-        String ivaStr = ivaHabilitado && Boolean.TRUE.equals(item.getAplicaIva()) ? "21%" : "0%";
+        String ivaStr = ivaHabilitado && Boolean.TRUE.equals(item.getAplicaIva()) ? TaxConstants.IVA_PERCENT_LABEL : "0%";
 
         PdfPCell[] cells = {
                 new PdfPCell(new Phrase(descripcion, font)),
@@ -229,7 +230,7 @@ public class FacturaPdfService {
         totalesTable.addCell(new Phrase("Base imponible:", cellFont));
         totalesTable.addCell(new Phrase(String.format("%.2f €", subtotal), cellFont));
         if (Boolean.TRUE.equals(factura.getIvaHabilitado()) && iva > 0) {
-            totalesTable.addCell(new Phrase("IVA (21%):", cellFont));
+            totalesTable.addCell(new Phrase("IVA (" + TaxConstants.IVA_PERCENT_LABEL + "):", cellFont));
             totalesTable.addCell(new Phrase(String.format("%.2f €", iva), cellFont));
         }
         Font boldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.DARK_GRAY);

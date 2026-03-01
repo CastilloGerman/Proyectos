@@ -4,9 +4,8 @@ import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.request.EnviarEmailRequest;
 import com.appgestion.api.dto.request.FacturaRequest;
 import com.appgestion.api.dto.response.FacturaResponse;
-import com.appgestion.api.repository.UsuarioRepository;
-import com.appgestion.api.security.SecurityUtils;
 import com.appgestion.api.service.FacturaService;
+import com.appgestion.api.service.CurrentUserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -21,28 +20,28 @@ import java.util.List;
 public class FacturaController {
 
     private final FacturaService facturaService;
-    private final UsuarioRepository usuarioRepository;
+    private final CurrentUserService currentUserService;
 
-    public FacturaController(FacturaService facturaService, UsuarioRepository usuarioRepository) {
+    public FacturaController(FacturaService facturaService, CurrentUserService currentUserService) {
         this.facturaService = facturaService;
-        this.usuarioRepository = usuarioRepository;
+        this.currentUserService = currentUserService;
     }
 
     @GetMapping
     public List<FacturaResponse> listar() {
-        Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
+        Usuario usuario = currentUserService.getCurrentUsuario();
         return facturaService.listar(usuario.getId());
     }
 
     @GetMapping("/{id}")
     public FacturaResponse obtenerPorId(@PathVariable Long id) {
-        Long usuarioId = SecurityUtils.getCurrentUsuario(usuarioRepository).getId();
+        Long usuarioId = currentUserService.getCurrentUsuario().getId();
         return facturaService.obtenerPorId(id, usuarioId);
     }
 
     @GetMapping(value = "/{id}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> descargarPdf(@PathVariable Long id) {
-        Long usuarioId = SecurityUtils.getCurrentUsuario(usuarioRepository).getId();
+        Long usuarioId = currentUserService.getCurrentUsuario().getId();
         byte[] pdf = facturaService.generarPdf(id, usuarioId);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentDispositionFormData("attachment", "factura-" + id + ".pdf");
@@ -55,7 +54,7 @@ public class FacturaController {
     @PostMapping("/{id}/enviar-email")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void enviarPorEmail(@PathVariable Long id, @RequestBody(required = false) EnviarEmailRequest request) {
-        Long usuarioId = SecurityUtils.getCurrentUsuario(usuarioRepository).getId();
+        Long usuarioId = currentUserService.getCurrentUsuario().getId();
         try {
             facturaService.enviarPorEmail(id, usuarioId, request);
         } catch (IllegalStateException | IllegalArgumentException e) {
@@ -73,20 +72,20 @@ public class FacturaController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public FacturaResponse crear(@Valid @RequestBody FacturaRequest request) {
-        Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
+        Usuario usuario = currentUserService.getCurrentUsuario();
         return facturaService.crear(request, usuario);
     }
 
     @PutMapping("/{id}")
     public FacturaResponse actualizar(@PathVariable Long id, @Valid @RequestBody FacturaRequest request) {
-        Long usuarioId = SecurityUtils.getCurrentUsuario(usuarioRepository).getId();
+        Long usuarioId = currentUserService.getCurrentUsuario().getId();
         return facturaService.actualizar(id, request, usuarioId);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void eliminar(@PathVariable Long id) {
-        Long usuarioId = SecurityUtils.getCurrentUsuario(usuarioRepository).getId();
+        Long usuarioId = currentUserService.getCurrentUsuario().getId();
         facturaService.eliminar(id, usuarioId);
     }
 }

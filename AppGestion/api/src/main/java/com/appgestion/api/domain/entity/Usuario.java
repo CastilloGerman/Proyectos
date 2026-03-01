@@ -1,6 +1,8 @@
 package com.appgestion.api.domain.entity;
 
+import com.appgestion.api.domain.enums.SubscriptionStatus;
 import jakarta.persistence.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -35,11 +37,18 @@ public class Usuario {
     @Column(name = "stripe_subscription_id", length = 100)
     private String stripeSubscriptionId;
 
+    @Convert(converter = SubscriptionStatusConverter.class)
     @Column(name = "subscription_status", length = 30)
-    private String subscriptionStatus;
+    private SubscriptionStatus subscriptionStatus;
 
     @Column(name = "subscription_current_period_end")
     private LocalDateTime subscriptionCurrentPeriodEnd;
+
+    @Column(name = "trial_start_date")
+    private LocalDate trialStartDate;
+
+    @Column(name = "trial_end_date")
+    private LocalDate trialEndDate;
 
     @PrePersist
     protected void onCreate() {
@@ -74,9 +83,15 @@ public class Usuario {
     public String getStripeSubscriptionId() { return stripeSubscriptionId; }
     public void setStripeSubscriptionId(String stripeSubscriptionId) { this.stripeSubscriptionId = stripeSubscriptionId; }
 
-    public String getSubscriptionStatus() { return subscriptionStatus; }
-    public void setSubscriptionStatus(String subscriptionStatus) { this.subscriptionStatus = subscriptionStatus; }
+    public SubscriptionStatus getSubscriptionStatus() { return subscriptionStatus; }
+    public void setSubscriptionStatus(SubscriptionStatus subscriptionStatus) { this.subscriptionStatus = subscriptionStatus; }
 
     public LocalDateTime getSubscriptionCurrentPeriodEnd() { return subscriptionCurrentPeriodEnd; }
     public void setSubscriptionCurrentPeriodEnd(LocalDateTime subscriptionCurrentPeriodEnd) { this.subscriptionCurrentPeriodEnd = subscriptionCurrentPeriodEnd; }
+
+    public LocalDate getTrialStartDate() { return trialStartDate; }
+    public void setTrialStartDate(LocalDate trialStartDate) { this.trialStartDate = trialStartDate; }
+
+    public LocalDate getTrialEndDate() { return trialEndDate; }
+    public void setTrialEndDate(LocalDate trialEndDate) { this.trialEndDate = trialEndDate; }
 }

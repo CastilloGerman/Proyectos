@@ -19,7 +19,7 @@ npm install
 npm start
 ```
 
-Abre `http://localhost:4200`. El proxy envía las peticiones a `/api` al backend en `http://localhost:8080`.
+Abre `http://localhost:4200`. El proxy envía las peticiones a `/api` al backend en `http://localhost:8081`.
 
 ## Build
 

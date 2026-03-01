@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,6 +8,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AsyncPipe } from '@angular/common';
 import { AuthService } from './core/auth/auth.service';
+import { SubscriptionService } from './core/services/subscription.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-root',
@@ -53,6 +55,24 @@ import { AuthService } from './core/auth/auth.service';
           </mat-nav-list>
         </mat-sidenav>
         <mat-sidenav-content>
+          @if (!auth.canWrite()) {
+            <div class="banner-readonly">
+              <mat-icon>lock</mat-icon>
+              <span>Modo solo lectura. Activa tu suscripción para crear o editar.</span>
+              <button mat-stroked-button color="warn" (click)="activarSuscripcion()">
+                Activar suscripción
+              </button>
+            </div>
+          }
+          @if (auth.canWrite() && auth.user()?.subscriptionStatus === 'TRIAL_ACTIVE' && daysLeftInTrial() <= 7 && daysLeftInTrial() >= 0) {
+            <div class="banner-trial">
+              <mat-icon>schedule</mat-icon>
+              <span>Tu prueba termina en {{ daysLeftInTrial() }} días.</span>
+              <button mat-stroked-button (click)="activarSuscripcion()">
+                Activar suscripción
+              </button>
+            </div>
+          }
           <mat-toolbar color="primary" class="header-toolbar">
             <span class="spacer"></span>
             <span class="user-email">{{ auth.user()?.email }}</span>
@@ -104,8 +124,74 @@ import { AuthService } from './core/auth/auth.service';
     .active {
       background-color: rgba(0, 0, 0, 0.04);
     }
+
+    .banner-readonly {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 24px;
+      background: #ffebee;
+      color: #c62828;
+      font-size: 14px;
+    }
+
+    .banner-readonly mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    .banner-trial {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 24px;
+      background: #fff3e0;
+      color: #e65100;
+      font-size: 14px;
+    }
+
+    .banner-trial mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
   `],
 })
-export class AppComponent {
-  constructor(public auth: AuthService) {}
+export class AppComponent implements OnInit {
+  constructor(
+    public auth: AuthService,
+    private subscriptionService: SubscriptionService,
+    private snackBar: MatSnackBar
+  ) {}
+
+  ngOnInit(): void {
+    if (this.auth.isAuthenticated()) {
+      this.auth.refreshUser().subscribe();
+    }
+  }
+
+  daysLeftInTrial(): number {
+    const end = this.auth.user()?.trialEndDate;
+    if (!end) return 99;
+    const endDate = new Date(end);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
+    const diff = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    return diff;
+  }
+
+  activarSuscripcion(): void {
+    this.subscriptionService.createCheckoutSession().subscribe({
+      next: (res) => {
+        if (res.checkoutUrl) {
+          window.location.href = res.checkoutUrl;
+        }
+      },
+      error: (err) => {
+        this.snackBar.open(err.error?.error || 'Error al crear sesión de pago', 'Cerrar', { duration: 4000 });
+      },
+    });
+  }
 }

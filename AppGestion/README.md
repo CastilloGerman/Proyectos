@@ -14,7 +14,7 @@ SaaS multiusuario para gestión de presupuestos y facturas. Aplicación web con 
 └─────────────────┬───────────────────┘
                   │ HTTP/REST
 ┌─────────────────▼───────────────────┐
-│   Spring Boot 3.2 (API REST)         │
+│   Spring Boot 3.5 (API REST)         │
 │   - Autenticación JWT                │
 │   - Seguridad por usuario            │
 │   - Integración Stripe               │
@@ -54,11 +54,10 @@ export SPRING_DATASOURCE_PASSWORD=tu_password
 export JWT_SECRET=tu-clave-secreta-minimo-32-caracteres
 
 # Compilar y ejecutar
-mvn clean compile
-cd api && mvn spring-boot:run
+cd api && mvn clean compile spring-boot:run
 ```
 
-La API estará en `http://localhost:8080/api`.
+La API estará en `http://localhost:8081/api`.
 
 ### 3. Frontend
 
@@ -77,12 +76,16 @@ AppGestion/
 ├── api/                    # Backend Spring Boot
 │   ├── src/main/java/
 │   │   └── com/appgestion/api/
-│   │       ├── config/     # Security, Stripe
+│   │       ├── config/     # Security, Stripe, migration
+│   │       ├── constant/   # Constantes fiscales (IVA)
 │   │       ├── controller/
-│   │       ├── domain/entity/
+│   │       ├── domain/
+│   │       │   ├── entity/
+│   │       │   └── enums/
 │   │       ├── dto/
 │   │       ├── repository/
-│   │       ├── security/   # JWT, guards
+│   │       ├── scheduler/  # Jobs programados
+│   │       ├── security/  # JWT, filters
 │   │       └── service/
 │   └── src/main/resources/
 │       └── application.yml
@@ -110,7 +113,7 @@ AppGestion/
 
 1. Crear producto y precio en [Stripe Dashboard](https://dashboard.stripe.com).
 2. Configurar `STRIPE_PRICE_MONTHLY` con el ID del precio.
-3. Para webhooks locales: `stripe listen --forward-to localhost:8080/api/webhook/stripe`
+3. Para webhooks locales: `stripe listen --forward-to localhost:8081/api/webhook/stripe`
 
 ## Funcionalidades
 
@@ -122,7 +125,7 @@ AppGestion/
 
 ## Dependencias
 
-- **API**: Spring Boot 3.2, JWT (jjwt 0.12), Stripe Java, PostgreSQL. Ver `docs/DEPENDENCIES.md`.
+- **API**: Spring Boot 3.5, JWT (jjwt 0.12), Stripe Java, PostgreSQL. Ver `docs/DEPENDENCIES.md`.
 - **Frontend**: Angular 17, Angular Material, RxJS. Ver `frontend/README.md`.
 
 ## Licencia

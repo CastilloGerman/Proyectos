@@ -16,4 +16,7 @@ export interface AuthResponse {
   email: string;
   rol: string;
   expiresAt: string;
+  subscriptionStatus?: string;
+  trialEndDate?: string;
+  canWrite?: boolean;
 }

@@ -1,8 +1,7 @@
 package com.appgestion.api.controller;
 
 import com.appgestion.api.domain.entity.Usuario;
-import com.appgestion.api.repository.UsuarioRepository;
-import com.appgestion.api.security.SecurityUtils;
+import com.appgestion.api.service.CurrentUserService;
 import com.appgestion.api.service.StripeService;
 import com.stripe.exception.StripeException;
 import org.springframework.http.ResponseEntity;
@@ -15,17 +14,17 @@ import java.util.Map;
 public class SubscriptionController {
 
     private final StripeService stripeService;
-    private final UsuarioRepository usuarioRepository;
+    private final CurrentUserService currentUserService;
 
-    public SubscriptionController(StripeService stripeService, UsuarioRepository usuarioRepository) {
+    public SubscriptionController(StripeService stripeService, CurrentUserService currentUserService) {
         this.stripeService = stripeService;
-        this.usuarioRepository = usuarioRepository;
+        this.currentUserService = currentUserService;
     }
 
     @PostMapping("/checkout")
     public ResponseEntity<?> createCheckoutSession() {
         try {
-            Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
+            Usuario usuario = currentUserService.getCurrentUsuario();
             String checkoutUrl = stripeService.createCheckoutSession(usuario);
             return ResponseEntity.ok(Map.of("checkoutUrl", checkoutUrl));
         } catch (StripeException e) {
@@ -36,7 +35,7 @@ public class SubscriptionController {
     @PostMapping("/portal")
     public ResponseEntity<?> createPortalSession() {
         try {
-            Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
+            Usuario usuario = currentUserService.getCurrentUsuario();
             String stripeCustomerId = usuario.getStripeCustomerId();
             if (stripeCustomerId == null || stripeCustomerId.isBlank()) {
                 return ResponseEntity.badRequest()

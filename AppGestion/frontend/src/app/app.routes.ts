@@ -9,6 +9,8 @@ export const routes: Routes = [
     path: '',
     canActivate: [authGuard],
     children: [
+      { path: 'subscription/success', loadComponent: () => import('./features/subscription/subscription-success/subscription-success.component').then(m => m.SubscriptionSuccessComponent) },
+      { path: 'subscription/cancel', loadComponent: () => import('./features/subscription/subscription-cancel/subscription-cancel.component').then(m => m.SubscriptionCancelComponent) },
       { path: 'dashboard', loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent) },
       { path: 'presupuestos', loadComponent: () => import('./features/presupuestos/presupuesto-list/presupuesto-list.component').then(m => m.PresupuestoListComponent) },
       { path: 'presupuestos/nuevo', loadComponent: () => import('./features/presupuestos/presupuesto-form/presupuesto-form.component').then(m => m.PresupuestoFormComponent) },

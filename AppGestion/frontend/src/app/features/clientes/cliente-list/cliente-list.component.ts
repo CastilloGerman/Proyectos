@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { AuthService } from '../../../core/auth/auth.service';
 import { ClienteService } from '../../../core/services/cliente.service';
 import { Cliente } from '../../../core/models/cliente.model';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
@@ -25,10 +26,12 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
     <div class="cliente-list">
       <div class="header">
         <h1>Clientes</h1>
+        @if (auth.canWrite()) {
         <a mat-raised-button color="primary" routerLink="/clientes/nuevo">
           <mat-icon>add</mat-icon>
           Nuevo cliente
         </a>
+        }
       </div>
       <div class="table-container">
         <table mat-table [dataSource]="dataSource" class="full-width">
@@ -47,12 +50,14 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let row">
+              @if (auth.canWrite()) {
               <button mat-icon-button [routerLink]="['/clientes', row.id]" matTooltip="Editar">
                 <mat-icon>edit</mat-icon>
               </button>
               <button mat-icon-button color="warn" (click)="delete(row)" matTooltip="Eliminar">
                 <mat-icon>delete</mat-icon>
               </button>
+              }
             </td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
@@ -86,6 +91,7 @@ export class ClienteListComponent implements OnInit {
   dataSource = new MatTableDataSource<Cliente>([]);
 
   constructor(
+    public auth: AuthService,
     private clienteService: ClienteService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar
