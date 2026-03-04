@@ -23,9 +23,9 @@ public class ClienteController {
     }
 
     @GetMapping
-    public List<ClienteResponse> listar() {
+    public List<ClienteResponse> listar(@RequestParam(required = false) String q) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
-        return clienteService.listar(usuarioId);
+        return clienteService.listar(usuarioId, q);
     }
 
     @GetMapping("/{id}")

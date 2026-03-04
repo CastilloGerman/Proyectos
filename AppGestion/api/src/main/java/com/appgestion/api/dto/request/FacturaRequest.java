@@ -25,6 +25,7 @@ public record FacturaRequest(
         String condicionesPago,
         String metodoPago,
         String estadoPago,
+        Double montoCobrado,
         String notas,
         Boolean ivaHabilitado
 ) {

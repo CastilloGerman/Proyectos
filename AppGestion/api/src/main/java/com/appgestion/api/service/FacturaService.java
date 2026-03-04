@@ -61,10 +61,18 @@ public class FacturaService {
     }
 
     @Transactional(readOnly = true)
-    public List<FacturaResponse> listar(Long usuarioId) {
-        return facturaRepository.findByUsuarioIdOrderByFechaCreacionDesc(usuarioId).stream()
-                .map(this::toResponse)
-                .toList();
+    public List<FacturaResponse> listar(Long usuarioId, String q) {
+        var stream = facturaRepository.findByUsuarioIdOrderByFechaCreacionDesc(usuarioId).stream()
+                .map(this::toResponse);
+        if (q != null && !q.isBlank()) {
+            String lower = q.strip().toLowerCase();
+            stream = stream.filter(f ->
+                    (f.numeroFactura() != null && f.numeroFactura().toLowerCase().contains(lower)) ||
+                    (f.clienteNombre() != null && f.clienteNombre().toLowerCase().contains(lower)) ||
+                    (f.notas() != null && f.notas().toLowerCase().contains(lower))
+            );
+        }
+        return stream.toList();
     }
 
     @Transactional(readOnly = true)
@@ -105,6 +113,7 @@ public class FacturaService {
         factura.setFechaVencimiento(request.fechaVencimiento());
         factura.setMetodoPago(request.metodoPago());
         factura.setEstadoPago(request.estadoPago());
+        factura.setMontoCobrado(request.montoCobrado());
         factura.setNotas(request.notas());
         factura.setIvaHabilitado(request.ivaHabilitado());
 
@@ -147,6 +156,7 @@ public class FacturaService {
         factura.setFechaVencimiento(request.fechaVencimiento());
         factura.setMetodoPago(request.metodoPago());
         factura.setEstadoPago(request.estadoPago());
+        factura.setMontoCobrado(request.montoCobrado());
         factura.setNotas(request.notas());
         factura.setIvaHabilitado(request.ivaHabilitado());
 
@@ -358,6 +368,7 @@ public class FacturaService {
                 factura.getCondicionesPago(),
                 factura.getMetodoPago(),
                 factura.getEstadoPago(),
+                factura.getMontoCobrado(),
                 factura.getNotas(),
                 items
         );

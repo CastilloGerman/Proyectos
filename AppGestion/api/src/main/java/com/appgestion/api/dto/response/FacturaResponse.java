@@ -23,6 +23,7 @@ public record FacturaResponse(
         String condicionesPago,
         String metodoPago,
         String estadoPago,
+        Double montoCobrado,
         String notas,
         List<FacturaItemResponse> items
 ) {}

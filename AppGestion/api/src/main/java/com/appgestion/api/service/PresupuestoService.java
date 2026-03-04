@@ -42,10 +42,17 @@ public class PresupuestoService {
     }
 
     @Transactional(readOnly = true)
-    public List<PresupuestoResponse> listar(Long usuarioId) {
-        return presupuestoRepository.findByUsuarioIdOrderByFechaCreacionDesc(usuarioId).stream()
-                .map(this::toResponse)
-                .toList();
+    public List<PresupuestoResponse> listar(Long usuarioId, String q) {
+        var stream = presupuestoRepository.findByUsuarioIdOrderByFechaCreacionDesc(usuarioId).stream()
+                .map(this::toResponse);
+        if (q != null && !q.isBlank()) {
+            String lower = q.strip().toLowerCase();
+            stream = stream.filter(p ->
+                    (p.clienteNombre() != null && p.clienteNombre().toLowerCase().contains(lower)) ||
+                    (p.estado() != null && p.estado().toLowerCase().contains(lower))
+            );
+        }
+        return stream.toList();
     }
 
     @Transactional(readOnly = true)

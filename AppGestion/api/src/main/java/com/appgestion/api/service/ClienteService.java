@@ -22,10 +22,18 @@ public class ClienteService {
         this.clienteRepository = clienteRepository;
     }
 
-    public List<ClienteResponse> listar(Long usuarioId) {
-        return clienteRepository.findByUsuarioId(usuarioId).stream()
-                .map(this::toResponse)
-                .toList();
+    public List<ClienteResponse> listar(Long usuarioId, String q) {
+        var stream = clienteRepository.findByUsuarioId(usuarioId).stream()
+                .map(this::toResponse);
+        if (q != null && !q.isBlank()) {
+            String lower = q.strip().toLowerCase();
+            stream = stream.filter(c ->
+                    (c.nombre() != null && c.nombre().toLowerCase().contains(lower)) ||
+                    (c.email() != null && c.email().toLowerCase().contains(lower)) ||
+                    (c.dni() != null && c.dni().toLowerCase().contains(lower))
+            );
+        }
+        return stream.toList();
     }
 
     public ClienteResponse obtenerPorId(Long id, Long usuarioId) {

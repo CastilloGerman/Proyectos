@@ -10,6 +10,7 @@ import { PresupuestoService } from '../../core/services/presupuesto.service';
 import { FacturaService } from '../../core/services/factura.service';
 import { Presupuesto } from '../../core/models/presupuesto.model';
 import { Factura } from '../../core/models/factura.model';
+import { EstadoBadgeComponent } from '../../shared/estado-badge/estado-badge.component';
 
 interface PresupuestoStats {
   pendientes: number;
@@ -27,6 +28,14 @@ interface FacturaStats {
   totalPendiente: number;
 }
 
+interface SaludCobros {
+  vencidas: number;
+  importeVencido: number;
+  proximasAVencer: number;
+  importeProximas: number;
+  ratioCobro: number;
+}
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -38,6 +47,7 @@ interface FacturaStats {
     MatProgressBarModule,
     MatTooltipModule,
     RouterLink,
+    EstadoBadgeComponent,
   ],
   template: `
     <div class="dashboard">
@@ -174,6 +184,49 @@ interface FacturaStats {
         </mat-card>
       </section>
 
+      <section class="salud-section">
+        <div class="salud-card salud-vencidas" [class.salud-alert]="saludCobros.vencidas > 0">
+          <div class="salud-icon">
+            <mat-icon>warning</mat-icon>
+          </div>
+          <div class="salud-content">
+            <span class="salud-value">{{ saludCobros.vencidas }}</span>
+            <span class="salud-label">Facturas vencidas</span>
+            @if (saludCobros.importeVencido > 0) {
+              <span class="salud-importe">{{ saludCobros.importeVencido | number:'1.2-2' }} €</span>
+            }
+          </div>
+          <a mat-button routerLink="/facturas" class="salud-cta">Ver facturas</a>
+        </div>
+
+        <div class="salud-card salud-proximas" [class.salud-warn]="saludCobros.proximasAVencer > 0">
+          <div class="salud-icon">
+            <mat-icon>schedule</mat-icon>
+          </div>
+          <div class="salud-content">
+            <span class="salud-value">{{ saludCobros.proximasAVencer }}</span>
+            <span class="salud-label">Vencen en 7 días</span>
+            @if (saludCobros.importeProximas > 0) {
+              <span class="salud-importe">{{ saludCobros.importeProximas | number:'1.2-2' }} €</span>
+            }
+          </div>
+          <a mat-button routerLink="/facturas" class="salud-cta">Ver facturas</a>
+        </div>
+
+        <div class="salud-card salud-ratio">
+          <div class="salud-icon">
+            <mat-icon>show_chart</mat-icon>
+          </div>
+          <div class="salud-content">
+            <span class="salud-value">{{ saludCobros.ratioCobro | number:'1.0-0' }}%</span>
+            <span class="salud-label">Ratio de cobro</span>
+          </div>
+          <div class="salud-bar-wrap">
+            <mat-progress-bar mode="determinate" [value]="saludCobros.ratioCobro" color="primary"></mat-progress-bar>
+          </div>
+        </div>
+      </section>
+
       <section class="recent-section">
         <mat-card class="recent-card">
           <mat-card-header>
@@ -190,7 +243,7 @@ interface FacturaStats {
                     <a [routerLink]="['/presupuestos', p.id]">
                       <span class="recent-name">{{ p.clienteNombre }}</span>
                       <span class="recent-meta">
-                        <span class="estado-badge" [class]="getPresupuestoEstadoClass(p.estado)">{{ p.estado }}</span>
+                        <app-estado-badge [estado]="p.estado ?? ''"></app-estado-badge>
                         {{ p.total | number:'1.2-2' }} €
                       </span>
                     </a>
@@ -215,7 +268,7 @@ interface FacturaStats {
                     <a [routerLink]="['/facturas', f.id]">
                       <span class="recent-name">{{ f.numeroFactura }} · {{ f.clienteNombre }}</span>
                       <span class="recent-meta">
-                        <span class="pago-badge" [class]="getFacturaPagoClass(f.estadoPago)">{{ f.estadoPago }}</span>
+                        <app-estado-badge [estado]="f.estadoPago ?? ''"></app-estado-badge>
                         {{ f.total | number:'1.2-2' }} €
                       </span>
                     </a>
@@ -506,6 +559,80 @@ interface FacturaStats {
       font-style: italic;
       padding: 24px 0;
     }
+
+    .salud-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+
+    .salud-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      border-left: 4px solid transparent;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .salud-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+
+    .salud-vencidas { border-left-color: #e0e0e0; }
+    .salud-vencidas.salud-alert { border-left-color: #f44336; background: #fff8f8; }
+    .salud-proximas { border-left-color: #e0e0e0; }
+    .salud-proximas.salud-warn { border-left-color: #ff9800; background: #fffaf5; }
+    .salud-ratio { border-left-color: #1976d2; }
+
+    .salud-icon mat-icon {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+    }
+
+    .salud-vencidas.salud-alert .salud-icon mat-icon { color: #f44336; }
+    .salud-proximas.salud-warn .salud-icon mat-icon { color: #ff9800; }
+    .salud-ratio .salud-icon mat-icon { color: #1976d2; }
+    .salud-icon mat-icon { color: #9e9e9e; }
+
+    .salud-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .salud-value {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: rgba(0,0,0,0.87);
+      line-height: 1.2;
+    }
+
+    .salud-label {
+      font-size: 0.85rem;
+      color: rgba(0,0,0,0.6);
+    }
+
+    .salud-importe {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: rgba(0,0,0,0.75);
+    }
+
+    .salud-cta {
+      align-self: flex-start;
+      margin-top: 4px;
+    }
+
+    .salud-bar-wrap {
+      margin-top: 4px;
+    }
   `],
 })
 export class DashboardComponent implements OnInit {
@@ -525,6 +652,13 @@ export class DashboardComponent implements OnInit {
     totalCobrado: 0,
     totalPendiente: 0,
   };
+  saludCobros: SaludCobros = {
+    vencidas: 0,
+    importeVencido: 0,
+    proximasAVencer: 0,
+    importeProximas: 0,
+    ratioCobro: 0,
+  };
   recentPresupuestos: Presupuesto[] = [];
   recentFacturas: Factura[] = [];
 
@@ -536,12 +670,16 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     this.presupuestoService.getAll().subscribe((data) => {
       this.presupuestosCount = data.length;
-      this.recentPresupuestos = data.slice(0, 5);
+      this.recentPresupuestos = [...data]
+        .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
+        .slice(0, 5);
       this.computePresupuestoStats(data);
     });
     this.facturaService.getAll().subscribe((data) => {
       this.facturasCount = data.length;
-      this.recentFacturas = data.slice(0, 5);
+      this.recentFacturas = [...data]
+        .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
+        .slice(0, 5);
       this.computeFacturaStats(data);
     });
   }
@@ -562,14 +700,6 @@ export class DashboardComponent implements OnInit {
     this.presupuestoStats = { pendientes, aceptados, rechazados, totalValor };
   }
 
-  getPresupuestoEstadoClass(estado: string | undefined): string {
-    return 'estado-' + (estado ?? '').toLowerCase();
-  }
-
-  getFacturaPagoClass(estadoPago: string | undefined): string {
-    return 'pago-' + (estadoPago ?? '').replace(/\s/g, '-').toLowerCase();
-  }
-
   private computeFacturaStats(facturas: Factura[]): void {
     let pagadas = 0;
     let noPagadas = 0;
@@ -584,10 +714,10 @@ export class DashboardComponent implements OnInit {
         totalCobrado += f.total ?? 0;
       } else if (e === 'parcial') {
         parciales++;
-        totalCobrado += (f.total ?? 0) * 0.5;
-      } else {
-        noPagadas++;
+        totalCobrado += f.montoCobrado ?? (f.total ?? 0) * 0.5;
       }
+      // else: no cobrado — noPagadas no suma a totalCobrado
+      if (e !== 'pagada' && e !== 'parcial') noPagadas++;
     }
     this.facturaStats = {
       pagadas,
@@ -596,6 +726,44 @@ export class DashboardComponent implements OnInit {
       totalFacturado,
       totalCobrado,
       totalPendiente: totalFacturado - totalCobrado,
+    };
+    this.computeSaludCobros(facturas, totalFacturado, totalCobrado);
+  }
+
+  private computeSaludCobros(facturas: Factura[], totalFacturado: number, totalCobrado: number): void {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const enSieteDias = new Date(hoy);
+    enSieteDias.setDate(hoy.getDate() + 7);
+
+    let vencidas = 0;
+    let importeVencido = 0;
+    let proximasAVencer = 0;
+    let importeProximas = 0;
+
+    for (const f of facturas) {
+      const e = (f.estadoPago ?? '').toLowerCase();
+      if (e === 'pagada') continue;
+      if (!f.fechaVencimiento) continue;
+      const venc = new Date(f.fechaVencimiento);
+      venc.setHours(0, 0, 0, 0);
+      if (venc < hoy) {
+        vencidas++;
+        importeVencido += f.total ?? 0;
+      } else if (venc <= enSieteDias) {
+        proximasAVencer++;
+        importeProximas += f.total ?? 0;
+      }
+    }
+
+    const ratioCobro = totalFacturado > 0 ? (totalCobrado / totalFacturado) * 100 : 0;
+
+    this.saludCobros = {
+      vencidas,
+      importeVencido,
+      proximasAVencer,
+      importeProximas,
+      ratioCobro: Math.min(ratioCobro, 100),
     };
   }
 }

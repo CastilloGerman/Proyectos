@@ -10,8 +10,9 @@ export class ClienteService {
 
   constructor(private http: HttpClient) {}
 
-  getAll(): Observable<Cliente[]> {
-    return this.http.get<Cliente[]>(this.apiUrl);
+  getAll(q?: string): Observable<Cliente[]> {
+    const params = q ? { params: { q } } : {};
+    return this.http.get<Cliente[]>(this.apiUrl, params);
   }
 
   getById(id: number): Observable<Cliente> {

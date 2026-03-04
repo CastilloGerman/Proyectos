@@ -10,6 +10,7 @@ import { AsyncPipe } from '@angular/common';
 import { AuthService } from './core/auth/auth.service';
 import { SubscriptionService } from './core/services/subscription.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { SearchBarComponent } from './shared/search-bar/search-bar.component';
 
 @Component({
   selector: 'app-root',
@@ -25,6 +26,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
     MatIconModule,
     MatTooltipModule,
     AsyncPipe,
+    SearchBarComponent,
   ],
   template: `
     @if (auth.isAuthenticated()) {
@@ -75,6 +77,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
           }
           <mat-toolbar color="primary" class="header-toolbar">
             <span class="spacer"></span>
+            <app-search-bar></app-search-bar>
             <span class="user-email">{{ auth.user()?.email }}</span>
             <button mat-icon-button (click)="auth.logout()" matTooltip="Cerrar sesión">
               <mat-icon>logout</mat-icon>

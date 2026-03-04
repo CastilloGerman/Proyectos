@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,6 +23,13 @@ public interface FacturaRepository extends JpaRepository<Factura, Long> {
     Optional<Factura> findByNumeroFacturaAndUsuarioId(String numeroFactura, Long usuarioId);
 
     long countByUsuarioId(Long usuarioId);
+
+    @Query("SELECT f FROM Factura f JOIN FETCH f.usuario JOIN FETCH f.cliente " +
+           "WHERE f.estadoPago NOT IN ('Pagada') " +
+           "AND f.fechaVencimiento IS NOT NULL " +
+           "AND f.fechaVencimiento <= :hasta " +
+           "AND (f.recordatorioEnviado IS NULL OR f.recordatorioEnviado = false)")
+    List<Factura> findFacturasParaRecordatorio(@Param("hasta") LocalDate hasta);
 
     @Query(value = "SELECT COALESCE(MAX(CAST(SUBSTRING(numero_factura FROM '[0-9]+$') AS INTEGER)), 0) FROM facturas WHERE usuario_id = :usuarioId AND numero_factura LIKE :pattern", nativeQuery = true)
     int findMaxNumeroInYear(@Param("usuarioId") Long usuarioId, @Param("pattern") String pattern);

@@ -10,8 +10,9 @@ export class FacturaService {
 
   constructor(private http: HttpClient) {}
 
-  getAll(): Observable<Factura[]> {
-    return this.http.get<Factura[]>(this.apiUrl);
+  getAll(q?: string): Observable<Factura[]> {
+    const params = q ? { params: { q } } : {};
+    return this.http.get<Factura[]>(this.apiUrl, params);
   }
 
   getById(id: number): Observable<Factura> {

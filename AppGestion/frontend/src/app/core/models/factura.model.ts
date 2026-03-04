@@ -36,6 +36,7 @@ export interface Factura {
   condicionesPago?: string;
   metodoPago: string;
   estadoPago: string;
+  montoCobrado?: number;
   notas?: string;
   items: FacturaItem[];
 }
@@ -52,6 +53,7 @@ export interface FacturaRequest {
   condicionesPago?: string;
   metodoPago?: string;
   estadoPago?: string;
+  montoCobrado?: number;
   notas?: string;
   ivaHabilitado?: boolean;
 }

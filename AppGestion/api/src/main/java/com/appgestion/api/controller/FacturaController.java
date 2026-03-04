@@ -28,9 +28,9 @@ public class FacturaController {
     }
 
     @GetMapping
-    public List<FacturaResponse> listar() {
+    public List<FacturaResponse> listar(@RequestParam(required = false) String q) {
         Usuario usuario = currentUserService.getCurrentUsuario();
-        return facturaService.listar(usuario.getId());
+        return facturaService.listar(usuario.getId(), q);
     }
 
     @GetMapping("/{id}")

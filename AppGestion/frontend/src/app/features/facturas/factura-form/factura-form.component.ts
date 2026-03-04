@@ -108,6 +108,13 @@ import { FacturaItemRequest } from '../../../core/models/factura.model';
                 <mat-option value="Parcial">Parcial</mat-option>
               </mat-select>
             </mat-form-field>
+            @if (form.get('estadoPago')?.value === 'Parcial') {
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Importe cobrado (€)</mat-label>
+                <input matInput type="number" formControlName="montoCobrado" min="0" step="0.01" placeholder="Importe real cobrado hasta ahora">
+                <mat-hint>Introduce el importe ya recibido para un cálculo preciso</mat-hint>
+              </mat-form-field>
+            }
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Notas</mat-label>
               <textarea matInput formControlName="notas" rows="2"></textarea>
@@ -255,6 +262,7 @@ export class FacturaFormComponent implements OnInit {
       condicionesPago: [''],
       metodoPago: ['Transferencia'],
       estadoPago: ['No Pagada'],
+      montoCobrado: [null],
       notas: [''],
       ivaHabilitado: [true],
       items: this.fb.array([], Validators.required),
@@ -299,6 +307,7 @@ export class FacturaFormComponent implements OnInit {
           condicionesPago: f.condicionesPago || '',
           metodoPago: f.metodoPago,
           estadoPago: f.estadoPago,
+          montoCobrado: f.montoCobrado ?? null,
           notas: f.notas || '',
           ivaHabilitado: f.ivaHabilitado,
         });
@@ -381,6 +390,7 @@ export class FacturaFormComponent implements OnInit {
       items,
       metodoPago: value.metodoPago,
       estadoPago: value.estadoPago,
+      montoCobrado: value.estadoPago === 'Parcial' && value.montoCobrado != null ? +value.montoCobrado : undefined,
       notas: value.notas || undefined,
       ivaHabilitado: value.ivaHabilitado,
     };

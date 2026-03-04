@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
@@ -8,6 +8,12 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSortModule, MatSort } from '@angular/material/sort';
+import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
+import { EstadoBadgeComponent } from '../../../shared/estado-badge/estado-badge.component';
 import { AuthService } from '../../../core/auth/auth.service';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
 import { Presupuesto } from '../../../core/models/presupuesto.model';
@@ -28,6 +34,12 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
     MatDialogModule,
     MatSnackBarModule,
     MatTooltipModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatSortModule,
+    MatPaginatorModule,
+    EstadoBadgeComponent,
   ],
   template: `
     <div class="presupuesto-list">
@@ -45,25 +57,42 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
           }
         </div>
       </div>
+      <div class="filters-bar">
+        <mat-form-field appearance="outline" class="filter-text">
+          <mat-label>Buscar</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput (input)="applyTextFilter($event)" placeholder="Cliente…">
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="filter-estado">
+          <mat-label>Estado</mat-label>
+          <mat-select (selectionChange)="applyEstadoFilter($event.value)" value="">
+            <mat-option value="">Todos</mat-option>
+            <mat-option value="Pendiente">Pendiente</mat-option>
+            <mat-option value="Aceptado">Aceptado</mat-option>
+            <mat-option value="Rechazado">Rechazado</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
       <div class="table-container">
-        <table mat-table [dataSource]="dataSource" class="full-width">
+        <table mat-table [dataSource]="dataSource" matSort class="full-width">
           <ng-container matColumnDef="clienteNombre">
-            <th mat-header-cell *matHeaderCellDef>Cliente</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Cliente</th>
             <td mat-cell *matCellDef="let row">{{ row.clienteNombre }}</td>
           </ng-container>
           <ng-container matColumnDef="fechaCreacion">
-            <th mat-header-cell *matHeaderCellDef>Fecha</th>
-            <td mat-cell *matCellDef="let row">{{ row.fechaCreacion | date:'short' }}</td>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha</th>
+            <td mat-cell *matCellDef="let row">{{ row.fechaCreacion | date:'dd/MM/yyyy' }}</td>
           </ng-container>
           <ng-container matColumnDef="estado">
-            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado</th>
             <td mat-cell *matCellDef="let row">
-              <mat-chip [color]="getEstadoColor(row.estado)">{{ row.estado }}</mat-chip>
+              <app-estado-badge [estado]="row.estado"></app-estado-badge>
             </td>
           </ng-container>
           <ng-container matColumnDef="total">
-            <th mat-header-cell *matHeaderCellDef>Total</th>
-            <td mat-cell *matCellDef="let row">{{ row.total | number:'1.2-2' }} €</td>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Total</th>
+            <td mat-cell *matCellDef="let row" class="text-right">{{ row.total | number:'1.2-2' }} €</td>
           </ng-container>
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
@@ -92,9 +121,10 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
           <tr class="mat-row" *matNoDataRow>
-            <td class="mat-cell" colspan="5">No hay presupuestos</td>
+            <td class="mat-cell" colspan="5">No hay presupuestos que coincidan con el filtro</td>
           </tr>
         </table>
+        <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons></mat-paginator>
       </div>
     </div>
   `,
@@ -112,6 +142,22 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
       align-items: center;
     }
 
+    .filters-bar {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .filter-text {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .filter-estado {
+      min-width: 160px;
+    }
+
     .table-container {
       overflow-x: auto;
     }
@@ -119,11 +165,33 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
     .full-width {
       width: 100%;
     }
+
+    .text-right {
+      text-align: right;
+    }
+
+    .estado-chip {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.78rem;
+      font-weight: 500;
+    }
+
+    .estado-pendiente { background: #fff3e0; color: #e65100; }
+    .estado-aceptado { background: #e8f5e9; color: #2e7d32; }
+    .estado-rechazado { background: #ffebee; color: #c62828; }
   `],
 })
-export class PresupuestoListComponent implements OnInit {
+export class PresupuestoListComponent implements OnInit, AfterViewInit {
   displayedColumns = ['clienteNombre', 'fechaCreacion', 'estado', 'total', 'actions'];
   dataSource = new MatTableDataSource<Presupuesto>([]);
+
+  @ViewChild(MatSort) sort!: MatSort;
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
+
+  private textFilter = '';
+  private estadoFilter = '';
 
   constructor(
     public auth: AuthService,
@@ -131,10 +199,22 @@ export class PresupuestoListComponent implements OnInit {
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
     private router: Router
-  ) {}
+  ) {
+    this.dataSource.filterPredicate = (data: Presupuesto, filter: string) => {
+      const [text, estado] = filter.split('||');
+      const textMatch = !text || data.clienteNombre?.toLowerCase().includes(text);
+      const estadoMatch = !estado || data.estado === estado;
+      return !!(textMatch && estadoMatch);
+    };
+  }
 
   ngOnInit(): void {
     this.load();
+  }
+
+  ngAfterViewInit(): void {
+    this.dataSource.sort = this.sort;
+    this.dataSource.paginator = this.paginator;
   }
 
   load(): void {
@@ -147,6 +227,21 @@ export class PresupuestoListComponent implements OnInit {
         this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
       },
     });
+  }
+
+  applyTextFilter(event: Event): void {
+    this.textFilter = (event.target as HTMLInputElement).value.trim().toLowerCase();
+    this.updateFilter();
+  }
+
+  applyEstadoFilter(estado: string): void {
+    this.estadoFilter = estado;
+    this.updateFilter();
+  }
+
+  private updateFilter(): void {
+    this.dataSource.filter = `${this.textFilter}||${this.estadoFilter}`;
+    if (this.dataSource.paginator) this.dataSource.paginator.firstPage();
   }
 
   delete(presupuesto: Presupuesto): void {
@@ -169,12 +264,6 @@ export class PresupuestoListComponent implements OnInit {
         });
       }
     });
-  }
-
-  getEstadoColor(estado: string): 'primary' | 'accent' | 'warn' | undefined {
-    if (estado === 'Aceptado') return 'primary';
-    if (estado === 'Rechazado') return 'warn';
-    return undefined;
   }
 
   openConfig(): void {

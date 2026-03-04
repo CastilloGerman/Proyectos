@@ -15,8 +15,9 @@ export class PresupuestoService {
     return this.http.post<Factura>(`${this.apiUrl}/${presupuestoId}/factura`, {});
   }
 
-  getAll(): Observable<Presupuesto[]> {
-    return this.http.get<Presupuesto[]>(this.apiUrl);
+  getAll(q?: string): Observable<Presupuesto[]> {
+    const params = q ? { params: { q } } : {};
+    return this.http.get<Presupuesto[]>(this.apiUrl, params);
   }
 
   getById(id: number): Observable<Presupuesto> {

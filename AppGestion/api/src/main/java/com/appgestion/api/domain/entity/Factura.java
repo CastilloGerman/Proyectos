@@ -68,6 +68,12 @@ public class Factura {
     @Column(name = "estado_pago", length = 50)
     private String estadoPago = "No Pagada";
 
+    @Column(name = "monto_cobrado")
+    private Double montoCobrado;
+
+    @Column(name = "recordatorio_enviado")
+    private Boolean recordatorioEnviado = false;
+
     @Column(length = 1000)
     private String notas;
 
@@ -123,6 +129,12 @@ public class Factura {
 
     public String getEstadoPago() { return estadoPago; }
     public void setEstadoPago(String estadoPago) { this.estadoPago = estadoPago; }
+
+    public Double getMontoCobrado() { return montoCobrado; }
+    public void setMontoCobrado(Double montoCobrado) { this.montoCobrado = montoCobrado; }
+
+    public Boolean getRecordatorioEnviado() { return recordatorioEnviado; }
+    public void setRecordatorioEnviado(Boolean recordatorioEnviado) { this.recordatorioEnviado = recordatorioEnviado; }
 
     public String getNotas() { return notas; }
     public void setNotas(String notas) { this.notas = notas; }

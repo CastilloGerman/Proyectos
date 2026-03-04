@@ -38,9 +38,9 @@ public class PresupuestoController {
     }
 
     @GetMapping
-    public List<PresupuestoResponse> listar() {
+    public List<PresupuestoResponse> listar(@RequestParam(required = false) String q) {
         Usuario usuario = currentUserService.getCurrentUsuario();
-        return presupuestoService.listar(usuario.getId());
+        return presupuestoService.listar(usuario.getId(), q);
     }
 
     @GetMapping("/{id}")
