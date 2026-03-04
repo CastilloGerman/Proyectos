@@ -8,6 +8,7 @@
       "mainClass": "com.appgestion.api.AppGestionApiApplication",
       "projectName": "appgestion-api",
       "args": "--spring.profiles.active=local",
+      "envFile": "${workspaceFolder}/.env",
       "env": { "APP_SUBSCRIPTION_SKIP": "true" },
       "preLaunchTask": "liberar-puerto-8081"
     }

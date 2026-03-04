@@ -32,11 +32,29 @@ SaaS multiusuario para gestión de presupuestos y facturas. Aplicación web con 
 - **Node.js 18+**
 - **PostgreSQL 14+**
 
+## Orden de activación
+
+Sigue este orden para arrancar la aplicación (cada paso depende del anterior):
+
+```
+1. PostgreSQL (base de datos)
+       ↓
+2. API (Spring Boot)
+       ↓
+3. Frontend (Angular)
+       ↓
+4. [Opcional] Stripe CLI (solo si usas webhooks)
+```
+
+---
+
 ## Inicio rápido
 
-### 1. Base de datos
+### 1. Base de datos (PostgreSQL)
 
-Crear base de datos y usuario:
+**PostgreSQL debe estar en ejecución antes que la API.**
+
+Crear base de datos y usuario (ajusta puerto si usas 5433):
 
 ```sql
 CREATE DATABASE appgestion;
@@ -44,30 +62,53 @@ CREATE USER appgestion WITH PASSWORD 'tu_password';
 GRANT ALL PRIVILEGES ON DATABASE appgestion TO appgestion;
 ```
 
-### 2. API
-
-```bash
-# Configurar variables de entorno (opcional)
-export SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/appgestion
-export SPRING_DATASOURCE_USERNAME=appgestion
-export SPRING_DATASOURCE_PASSWORD=tu_password
-export JWT_SECRET=tu-clave-secreta-minimo-32-caracteres
-
-# Compilar y ejecutar
-cd api && mvn clean compile spring-boot:run
+Por defecto la API usa `localhost:5433`. Si tu PostgreSQL está en 5432, configura:
+```powershell
+$env:SPRING_DATASOURCE_URL = "jdbc:postgresql://localhost:5432/appgestion"
 ```
 
-La API estará en `http://localhost:8081/api`.
+### 2. API (Spring Boot)
 
-### 3. Frontend
+```powershell
+cd api
+mvn clean compile spring-boot:run
+```
 
-```bash
+O con el script: `.\api\iniciar-api.ps1`
+
+**Variables opcionales** (PowerShell):
+```powershell
+$env:DB_USERNAME = "postgres"
+$env:DB_PASSWORD = "postgres"
+$env:JWT_SECRET = "tu-clave-secreta-minimo-32-caracteres"
+# Para suscripciones Stripe:
+$env:STRIPE_SECRET_KEY = "sk_test_..."
+$env:STRIPE_PRICE_MONTHLY = "price_..."
+```
+
+La API estará en `http://localhost:8081`. Espera a ver "Started AppGestionApiApplication" antes de continuar.
+
+### 3. Frontend (Angular)
+
+**La API debe estar corriendo antes de usar el frontend.**
+
+```powershell
 cd frontend
 npm install
 npm start
 ```
 
-La aplicación estará en `http://localhost:4200`. El proxy redirige `/api` a la API.
+La aplicación estará en `http://localhost:4200`. El proxy redirige `/api` a la API en 8081.
+
+### 4. [Opcional] Webhooks Stripe
+
+Solo si quieres que el estado de suscripción se actualice automáticamente tras pagar/cancelar:
+
+```bash
+stripe listen --forward-to localhost:8081/api/webhook/stripe
+```
+
+Copia el `whsec_...` y configura `STRIPE_WEBHOOK_SECRET`.
 
 ## Estructura del proyecto
 
@@ -104,16 +145,60 @@ AppGestion/
 
 | Variable | Descripción | Default |
 |----------|-------------|---------|
+| Variable | Descripción | Default |
+|----------|-------------|---------|
 | `SPRING_DATASOURCE_URL` | JDBC URL PostgreSQL | `jdbc:postgresql://localhost:5432/appgestion` |
 | `JWT_SECRET` | Clave para firmar tokens | (requerido en producción) |
-| `STRIPE_SECRET_KEY` | Clave API Stripe | `sk_test_xxx` |
+| `STRIPE_SECRET_KEY` | Clave API Stripe | `sk_test_xxx` (placeholder, **debe configurarse**) |
 | `STRIPE_WEBHOOK_SECRET` | Secreto webhook Stripe | `whsec_xxx` |
+| `STRIPE_PRICE_MONTHLY` | ID del precio mensual | `price_xxx` |
 
 ### Stripe (suscripciones)
 
-1. Crear producto y precio en [Stripe Dashboard](https://dashboard.stripe.com).
-2. Configurar `STRIPE_PRICE_MONTHLY` con el ID del precio.
-3. Para webhooks locales: `stripe listen --forward-to localhost:8081/api/webhook/stripe`
+Para que el botón "Activar suscripción" funcione, debes configurar credenciales reales de Stripe. Los valores por defecto (`sk_test_xxx`, `price_xxx`) son placeholders y provocan error 400.
+
+#### 1. Obtener la Secret Key
+
+1. Entra en [Stripe Dashboard](https://dashboard.stripe.com) (crea cuenta si no tienes).
+2. Ve a **Developers → API keys**.
+3. Copia la **Secret key** (empieza por `sk_test_` en modo test).
+
+#### 2. Crear producto y precio
+
+1. En Stripe: **Products → Add product**.
+2. Crea un producto (ej. "Suscripción mensual AppGestion").
+3. Añade un precio recurrente (mensual).
+4. Copia el **Price ID** (empieza por `price_`).
+
+#### 3. Configurar variables de entorno
+
+**PowerShell (Windows):**
+```powershell
+$env:STRIPE_SECRET_KEY = "sk_test_TU_CLAVE_REAL_AQUI"
+$env:STRIPE_PRICE_MONTHLY = "price_TU_ID_REAL"
+```
+
+**Bash (Linux/Mac):**
+```bash
+export STRIPE_SECRET_KEY="sk_test_TU_CLAVE_REAL_AQUI"
+export STRIPE_PRICE_MONTHLY="price_TU_ID_REAL"
+```
+
+Reinicia la API después de definir las variables.
+
+#### 4. Webhooks (opcional, para actualizar estado de suscripción)
+
+Para que el estado de suscripción se actualice automáticamente tras pagar o cancelar:
+
+```bash
+stripe listen --forward-to localhost:8081/api/webhook/stripe
+```
+
+Copia el `whsec_...` que muestra el comando y configúralo:
+
+```powershell
+$env:STRIPE_WEBHOOK_SECRET = "whsec_..."
+```
 
 ## Funcionalidades
 
