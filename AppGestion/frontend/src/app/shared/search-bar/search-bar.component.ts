@@ -55,7 +55,7 @@ export interface SearchResult {
       </mat-form-field>
 
       <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onSelect($event.option.value)">
-        @if (results.length === 0 && searchCtrl.value?.length >= 2 && !loading) {
+        @if (results.length === 0 && (searchCtrl.value?.length ?? 0) >= 2 && !loading) {
           <mat-option disabled>Sin resultados</mat-option>
         }
         @for (group of groupedResults; track group.type) {

@@ -32,7 +32,11 @@ import { SearchBarComponent } from './shared/search-bar/search-bar.component';
     @if (auth.isAuthenticated()) {
       <mat-sidenav-container class="sidenav-container">
         <mat-sidenav #drawer mode="side" opened class="sidenav">
-          <mat-toolbar color="primary">AppGestion</mat-toolbar>
+          <mat-toolbar color="primary">
+            <span class="brand-logo">
+              <img src="assets/noemi-logo.png" alt="Noemí" class="brand-logo-img" />
+            </span>
+          </mat-toolbar>
           <mat-nav-list>
             <a mat-list-item routerLink="/dashboard" routerLinkActive="active">
               <mat-icon matListItemIcon>dashboard</mat-icon>
@@ -105,6 +109,18 @@ import { SearchBarComponent } from './shared/search-bar/search-bar.component';
       background: inherit;
     }
 
+    .brand-logo {
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .brand-logo-img {
+      height: 52px;
+      width: auto;
+      object-fit: contain;
+      display: block;
+    }
+
     .header-toolbar {
       position: sticky;
       top: 0;
@@ -120,8 +136,17 @@ import { SearchBarComponent } from './shared/search-bar/search-bar.component';
       margin-right: 8px;
     }
 
+    mat-sidenav-content {
+      background: linear-gradient(160deg, #e8ecf4 0%, #e2e7f0 50%, #dce1eb 100%);
+    }
+
     .content {
       padding: 24px;
+      min-height: calc(100vh - 64px);
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 24px 0 0 0;
+      box-shadow: 0 0 40px rgba(30, 58, 138, 0.04);
+      transition: box-shadow 0.3s ease;
     }
 
     .active {

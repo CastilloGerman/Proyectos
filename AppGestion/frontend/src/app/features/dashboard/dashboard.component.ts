@@ -227,6 +227,12 @@ interface SaludCobros {
         </div>
       </section>
 
+      <section class="chart-placeholder-section">
+        <div class="chart-placeholder">
+          <p class="chart-placeholder-text">[Área de Gráfico de Ingresos - Ngx-Charts]</p>
+        </div>
+      </section>
+
       <section class="recent-section">
         <mat-card class="recent-card">
           <mat-card-header>
@@ -243,7 +249,7 @@ interface SaludCobros {
                     <a [routerLink]="['/presupuestos', p.id]">
                       <span class="recent-name">{{ p.clienteNombre }}</span>
                       <span class="recent-meta">
-                        <app-estado-badge [estado]="p.estado ?? ''"></app-estado-badge>
+                        <app-estado-badge [estado]="p.estado"></app-estado-badge>
                         {{ p.total | number:'1.2-2' }} €
                       </span>
                     </a>
@@ -268,7 +274,7 @@ interface SaludCobros {
                     <a [routerLink]="['/facturas', f.id]">
                       <span class="recent-name">{{ f.numeroFactura }} · {{ f.clienteNombre }}</span>
                       <span class="recent-meta">
-                        <app-estado-badge [estado]="f.estadoPago ?? ''"></app-estado-badge>
+                        <app-estado-badge [estado]="f.estadoPago"></app-estado-badge>
                         {{ f.total | number:'1.2-2' }} €
                       </span>
                     </a>
@@ -486,6 +492,27 @@ interface SaludCobros {
 
     .payment-summary .cobrado { color: #4caf50; font-weight: 500; }
     .payment-summary .pendiente { color: #f57c00; font-weight: 500; }
+
+    .chart-placeholder-section {
+      margin-bottom: 32px;
+    }
+
+    .chart-placeholder {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      min-height: 280px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .chart-placeholder-text {
+      margin: 0;
+      color: #9ca3af;
+      font-size: 0.95rem;
+    }
 
     .recent-section {
       display: grid;

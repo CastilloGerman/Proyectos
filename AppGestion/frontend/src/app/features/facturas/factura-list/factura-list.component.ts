@@ -1,5 +1,6 @@
 import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { trigger, transition, query, stagger, animate, style } from '@angular/animations';
 import { RouterLink } from '@angular/router';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,6 +15,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSortModule, MatSort } from '@angular/material/sort';
 import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
 import { EstadoBadgeComponent } from '../../../shared/estado-badge/estado-badge.component';
+import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import { AuthService } from '../../../core/auth/auth.service';
 import { FacturaService } from '../../../core/services/factura.service';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
@@ -42,6 +44,19 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
     MatSortModule,
     MatPaginatorModule,
     EstadoBadgeComponent,
+    SkeletonComponent,
+  ],
+  animations: [
+    trigger('listAnimation', [
+      transition(':enter', [
+        query('tr.mat-row', [
+          style({ opacity: 0, transform: 'translateY(12px)' }),
+          stagger('50ms', [
+            animate('200ms ease-out', style({ opacity: 1, transform: 'translateY(0)' })),
+          ]),
+        ], { optional: true }),
+      ]),
+    ]),
   ],
   template: `
     <div class="factura-list">
@@ -80,7 +95,11 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
         </mat-form-field>
       </div>
 
-      <div class="table-container">
+      @if (isLoading) {
+        <app-skeleton [rows]="10"></app-skeleton>
+      } @else {
+      <div class="invoice-card" [@listAnimation]>
+        <div class="table-container">
         <table mat-table [dataSource]="dataSource" matSort class="full-width">
           <ng-container matColumnDef="numeroFactura">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Nº Factura</th>
@@ -115,8 +134,14 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
             <td mat-cell *matCellDef="let row" class="text-right">{{ row.total | number:'1.2-2' }} €</td>
           </ng-container>
           <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let row">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let row" class="actions-cell">
+              @if (auth.canWrite()) {
+              <a mat-stroked-button [routerLink]="['/facturas', row.id]" matTooltip="Editar factura y estado de pago (pendiente, parcial, pagada)" class="action-edit">
+                <mat-icon>edit</mat-icon>
+                Editar
+              </a>
+              }
               <button mat-icon-button (click)="enviarEmail(row)" matTooltip="Enviar por email">
                 <mat-icon>email</mat-icon>
               </button>
@@ -124,9 +149,6 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
                 <mat-icon>picture_as_pdf</mat-icon>
               </button>
               @if (auth.canWrite()) {
-              <a mat-icon-button [routerLink]="['/facturas', row.id]" matTooltip="Editar">
-                <mat-icon>edit</mat-icon>
-              </a>
               <button mat-icon-button color="warn" (click)="delete(row)" matTooltip="Eliminar">
                 <mat-icon>delete</mat-icon>
               </button>
@@ -140,7 +162,9 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
           </tr>
         </table>
         <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons></mat-paginator>
+        </div>
       </div>
+      }
     </div>
   `,
   styles: [`
@@ -173,8 +197,25 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
       min-width: 160px;
     }
 
+    .invoice-card {
+      background: #fff;
+      border-radius: 1rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
     .table-container {
       overflow-x: auto;
+    }
+
+    tr.mat-row {
+      transition: all 0.3s ease;
+    }
+
+    tr.mat-row:hover {
+      background: rgba(30, 58, 138, 0.03);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     }
 
     .full-width {
@@ -183,6 +224,17 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
 
     .text-right {
       text-align: right;
+    }
+
+    .actions-cell {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .action-edit {
+      white-space: nowrap;
     }
 
     .text-muted {
@@ -209,6 +261,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
 export class FacturaListComponent implements OnInit, AfterViewInit {
   displayedColumns = ['numeroFactura', 'clienteNombre', 'fechaCreacion', 'fechaVencimiento', 'estadoPago', 'total', 'actions'];
   dataSource = new MatTableDataSource<Factura>([]);
+  isLoading = false;
 
   @ViewChild(MatSort) sort!: MatSort;
   @ViewChild(MatPaginator) paginator!: MatPaginator;
@@ -240,13 +293,24 @@ export class FacturaListComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    this.dataSource.sort = this.sort;
-    this.dataSource.paginator = this.paginator;
+    if (this.sort) this.dataSource.sort = this.sort;
+    if (this.paginator) this.dataSource.paginator = this.paginator;
   }
 
   load(): void {
-    this.facturaService.getAll().subscribe((data) => {
-      this.dataSource.data = data;
+    this.isLoading = true;
+    this.facturaService.getAll().subscribe({
+      next: (data) => {
+        this.dataSource.data = data;
+        this.isLoading = false;
+        setTimeout(() => {
+          this.dataSource.paginator = this.paginator;
+          this.dataSource.sort = this.sort;
+        }, 0);
+      },
+      error: () => {
+        this.isLoading = false;
+      },
     });
   }
 

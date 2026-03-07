@@ -2,8 +2,33 @@
 
 @include mat.core();
 
-$appgestion-primary: mat.define-palette(mat.$indigo-palette);
-$appgestion-accent: mat.define-palette(mat.$pink-palette, A200, A100, A400);
+$noemi-primary: (
+  50: #e8eaf0,
+  100: #c5cadf,
+  200: #9fa7cb,
+  300: #7984b6,
+  400: #5c69a6,
+  500: #3f4f96,
+  600: #39488e,
+  700: #313f83,
+  800: #293679,
+  900: #1e3a8a,
+  contrast: (
+    50: rgba(black, 0.87),
+    100: rgba(black, 0.87),
+    200: rgba(black, 0.87),
+    300: white,
+    400: white,
+    500: white,
+    600: white,
+    700: white,
+    800: white,
+    900: white,
+  ),
+);
+
+$appgestion-primary: mat.define-palette($noemi-primary, 900, 700, 500);
+$appgestion-accent: mat.define-palette(mat.$deep-orange-palette, A400, A200, A700);
 $appgestion-warn: mat.define-palette(mat.$red-palette);
 
 $appgestion-theme: mat.define-light-theme((
@@ -31,4 +56,19 @@ body {
   padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
+}
+
+mat-card,
+.kpi-card,
+.invoice-card,
+button {
+  transition: all 0.3s ease;
+}
+
+.mat-mdc-form-field.mat-form-field-appearance-outline .mat-mdc-text-field-wrapper {
+  border-radius: 14px;
+}
+
+.mat-mdc-form-field.mat-form-field-appearance-outline .mdc-notched-outline__notch {
+  min-width: 64px;
 }

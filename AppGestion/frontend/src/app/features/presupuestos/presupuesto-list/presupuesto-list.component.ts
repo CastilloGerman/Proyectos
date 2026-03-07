@@ -95,8 +95,14 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
             <td mat-cell *matCellDef="let row" class="text-right">{{ row.total | number:'1.2-2' }} €</td>
           </ng-container>
           <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let row">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let row" class="actions-cell">
+              @if (auth.canWrite()) {
+              <a mat-stroked-button [routerLink]="['/presupuestos', row.id]" matTooltip="Editar presupuesto y estado (pendiente, aceptado, rechazado)" class="action-edit">
+                <mat-icon>edit</mat-icon>
+                Editar
+              </a>
+              }
               @if (auth.canWrite() && row.estado === 'Pendiente') {
                 <button mat-icon-button (click)="crearFactura(row)" matTooltip="Crear factura">
                   <mat-icon>receipt</mat-icon>
@@ -109,9 +115,6 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
                 <mat-icon>picture_as_pdf</mat-icon>
               </button>
               @if (auth.canWrite()) {
-              <button mat-icon-button [routerLink]="['/presupuestos', row.id]" matTooltip="Editar">
-                <mat-icon>edit</mat-icon>
-              </button>
               <button mat-icon-button color="warn" (click)="delete(row)" matTooltip="Eliminar">
                 <mat-icon>delete</mat-icon>
               </button>
@@ -168,6 +171,17 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
 
     .text-right {
       text-align: right;
+    }
+
+    .actions-cell {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .action-edit {
+      white-space: nowrap;
     }
 
     .estado-chip {
