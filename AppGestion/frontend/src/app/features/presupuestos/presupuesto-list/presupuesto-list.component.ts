@@ -74,7 +74,8 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
         </mat-form-field>
       </div>
 
-      <div class="table-container">
+      <div class="saas-table-card">
+        <div class="table-container">
         <table mat-table [dataSource]="dataSource" matSort class="full-width">
           <ng-container matColumnDef="clienteNombre">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Cliente</th>
@@ -128,27 +129,40 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
           </tr>
         </table>
         <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons></mat-paginator>
+        </div>
       </div>
     </div>
   `,
   styles: [`
+    .presupuesto-list {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 24px;
+      margin-bottom: var(--app-space-lg, 24px);
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--app-text-primary, #0f172a);
+      margin: 0;
     }
 
     .header-actions {
       display: flex;
-      gap: 8px;
+      gap: var(--app-space-sm, 8px);
       align-items: center;
     }
 
     .filters-bar {
       display: flex;
-      gap: 16px;
-      margin-bottom: 16px;
+      gap: var(--app-space-md, 16px);
+      margin-bottom: var(--app-space-md, 16px);
       flex-wrap: wrap;
     }
 
@@ -161,8 +175,21 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
       min-width: 160px;
     }
 
+    .saas-table-card {
+      background: var(--app-bg-card);
+      border-radius: var(--app-radius-lg, 16px);
+      box-shadow: var(--app-shadow-md);
+      border: 1px solid var(--app-border);
+      overflow: hidden;
+      transition: all var(--app-transition);
+    }
+
     .table-container {
       overflow-x: auto;
+    }
+
+    tr.mat-row:hover .mat-mdc-cell {
+      background: rgba(30, 58, 138, 0.03);
     }
 
     .full-width {

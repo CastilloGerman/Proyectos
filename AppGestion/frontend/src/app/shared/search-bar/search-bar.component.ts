@@ -80,7 +80,7 @@ export interface SearchResult {
     }
 
     .search-field {
-      width: 280px;
+      width: 360px;
     }
 
     .search-field ::ng-deep .mat-mdc-form-field-subscript-wrapper {
@@ -91,8 +91,29 @@ export interface SearchResult {
       background: rgba(255, 255, 255, 0.15);
     }
 
+    /* Reducir sangría: contenedor del icono e infix con mínimo padding */
+    .search-field ::ng-deep .mat-mdc-form-field-infix {
+      padding-left: 4px !important;
+      padding-right: 8px !important;
+    }
+    .search-field ::ng-deep .mat-mdc-form-field-infix > *:first-child {
+      padding-left: 4px !important;
+      padding-right: 4px !important;
+      min-width: auto !important;
+    }
+    .search-field ::ng-deep input,
+    .search-field ::ng-deep .mdc-text-field__input {
+      padding-left: 0 !important;
+    }
+
+    .search-field ::ng-deep input,
+    .search-field ::ng-deep .mat-mdc-input {
+      text-align: left !important;
+    }
+
     .search-field ::ng-deep input::placeholder {
       color: rgba(255, 255, 255, 0.7);
+      text-align: left !important;
     }
 
     .search-field ::ng-deep .mat-mdc-form-field-outline {

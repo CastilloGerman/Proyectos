@@ -42,7 +42,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        var appEndpoints = new String[]{"/presupuestos/**", "/facturas/**", "/clientes/**", "/materiales/**", "/subscription/**", "/config/**"};
+        var appEndpoints = new String[]{"/presupuestos/**", "/facturas/**", "/clientes/**", "/materiales/**", "/subscription/**", "/config/**", "/dev/**"};
 
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))

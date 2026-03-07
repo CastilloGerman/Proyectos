@@ -77,6 +77,21 @@ public class SubscriptionService {
         return canWrite(usuario);
     }
 
+    /**
+     * Para desarrollo: marca al usuario como ACTIVE (premium) sin Stripe.
+     * Útil para probar todas las funciones en local.
+     */
+    @Transactional
+    public void grantPremiumForDev(Usuario usuario) {
+        if (usuario == null) return;
+        usuario.setSubscriptionStatus(SubscriptionStatus.ACTIVE);
+        usuario.setStripeCustomerId(null);
+        usuario.setStripeSubscriptionId(null);
+        usuario.setSubscriptionCurrentPeriodEnd(null);
+        usuarioRepository.save(usuario);
+        log.info("Dev: usuario {} marcado como ACTIVE (premium)", usuario.getEmail());
+    }
+
     @Transactional
     public void activateSubscription(Long usuarioId, String stripeCustomerId, String stripeSubscriptionId,
                                      String stripeStatus, Instant currentPeriodEnd) {

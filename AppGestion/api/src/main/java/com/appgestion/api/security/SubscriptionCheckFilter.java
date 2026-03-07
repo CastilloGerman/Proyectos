@@ -92,6 +92,7 @@ public class SubscriptionCheckFilter extends OncePerRequestFilter {
                 || path.contains("/webhook/")
                 || path.contains("/subscription/checkout")
                 || path.contains("/subscription/portal")
-                || path.contains("/enviar-email");
+                || path.contains("/enviar-email")
+                || path.contains("/dev/");
     }
 }

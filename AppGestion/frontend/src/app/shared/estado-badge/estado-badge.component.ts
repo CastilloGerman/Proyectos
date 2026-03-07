@@ -39,11 +39,12 @@ const BADGE_CONFIG: Record<string, BadgeConfig> = {
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      padding: 3px 10px 3px 6px;
-      border-radius: 14px;
-      font-size: 0.78rem;
+      padding: 4px 10px 4px 8px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
       font-weight: 500;
       white-space: nowrap;
+      border: 1px solid transparent;
     }
 
     .badge-icon {
@@ -52,12 +53,12 @@ const BADGE_CONFIG: Record<string, BadgeConfig> = {
       height: 14px;
     }
 
-    .badge-pagada    { background: #e8f5e9; color: #2e7d32; }
-    .badge-no-pagada { background: #fff3e0; color: #e65100; }
-    .badge-parcial   { background: #fff8e1; color: #f9a825; }
-    .badge-pendiente { background: #f3f4fd; color: #3f51b5; }
-    .badge-aceptado  { background: #e8f5e9; color: #2e7d32; }
-    .badge-rechazado { background: #ffebee; color: #c62828; }
+    .badge-pagada    { background: #dcfce7; color: #166534; }
+    .badge-no-pagada { background: #ffedd5; color: #c2410c; }
+    .badge-parcial   { background: #fef9c3; color: #a16207; }
+    .badge-pendiente { background: #e0e7ff; color: #3730a3; }
+    .badge-aceptado  { background: #dcfce7; color: #166534; }
+    .badge-rechazado { background: #fee2e2; color: #b91c1c; }
   `],
 })
 export class EstadoBadgeComponent {

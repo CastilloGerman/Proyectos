@@ -43,17 +43,41 @@ $appgestion-theme: mat.define-light-theme((
 
 @include mat.all-component-themes($appgestion-theme);
 
+:root {
+  --app-radius-sm: 8px;
+  --app-radius-md: 12px;
+  --app-radius-lg: 16px;
+  --app-radius-xl: 20px;
+  --app-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --app-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --app-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --app-bg-page: #f8fafc;
+  --app-bg-card: #ffffff;
+  --app-border: rgba(0, 0, 0, 0.06);
+  --app-text-primary: #0f172a;
+  --app-text-secondary: #64748b;
+  --app-text-muted: #94a3b8;
+  --app-space-xs: 4px;
+  --app-space-sm: 8px;
+  --app-space-md: 16px;
+  --app-space-lg: 24px;
+  --app-space-xl: 32px;
+  --app-transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 html, body {
   height: 100%;
 }
 
 body {
   margin: 0;
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--app-bg-page);
+  color: var(--app-text-primary);
 }
 
 .container {
-  padding: 24px;
+  padding: var(--app-space-lg);
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -61,14 +85,98 @@ body {
 mat-card,
 .kpi-card,
 .invoice-card,
-button {
-  transition: all 0.3s ease;
+.saas-card,
+button,
+a[mat-button],
+a[mat-raised-button],
+a[mat-stroked-button] {
+  transition: all var(--app-transition);
+}
+
+mat-card {
+  border-radius: var(--app-radius-lg) !important;
+  box-shadow: var(--app-shadow-md) !important;
+  border: 1px solid var(--app-border);
 }
 
 .mat-mdc-form-field.mat-form-field-appearance-outline .mat-mdc-text-field-wrapper {
-  border-radius: 14px;
+  border-radius: var(--app-radius-md);
 }
 
 .mat-mdc-form-field.mat-form-field-appearance-outline .mdc-notched-outline__notch {
   min-width: 64px;
+}
+
+/* Buscador topbar: quitar sangría para que el texto no se corte */
+app-search-bar .mat-mdc-form-field .mdc-notched-outline__notch {
+  min-width: 0 !important;
+  max-width: 0 !important;
+}
+app-search-bar .mat-mdc-form-field .mdc-notched-outline__leading {
+  flex: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+}
+app-search-bar .mat-mdc-form-field-infix {
+  padding-left: 4px !important;
+  padding-right: 8px !important;
+}
+/* Contenedor del icono de búsqueda: mínimo espacio a la izquierda */
+app-search-bar .mat-mdc-form-field-icon-prefix,
+app-search-bar .mat-mdc-form-field-infix > .mat-mdc-form-field-icon-prefix,
+app-search-bar [class*='prefix'] {
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+  min-width: 0 !important;
+}
+app-search-bar .mat-mdc-form-field-icon-prefix .mat-icon {
+  margin: 0 !important;
+}
+app-search-bar input,
+app-search-bar .mat-mdc-input,
+app-search-bar .mdc-text-field__input {
+  text-align: left !important;
+  padding-left: 0 !important;
+}
+app-search-bar input::placeholder {
+  text-align: left !important;
+}
+
+.mat-mdc-raised-button,
+.mat-mdc-unelevated-button {
+  border-radius: var(--app-radius-md) !important;
+  text-transform: none;
+  font-weight: 500;
+}
+
+.mat-mdc-stroked-button {
+  border-radius: var(--app-radius-md) !important;
+  text-transform: none;
+}
+
+.mat-mdc-table {
+  background: transparent !important;
+}
+
+.mat-mdc-header-row {
+  background: var(--app-bg-page) !important;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-text-secondary);
+}
+
+.mat-mdc-header-cell {
+  border-bottom: 1px solid var(--app-border) !important;
+  padding: var(--app-space-md) var(--app-space-lg) !important;
+}
+
+.mat-mdc-cell {
+  padding: var(--app-space-md) var(--app-space-lg) !important;
+  border-bottom: 1px solid var(--app-border) !important;
+}
+
+.mat-mdc-row:hover .mat-mdc-cell {
+  background: rgba(30, 58, 138, 0.02);
 }

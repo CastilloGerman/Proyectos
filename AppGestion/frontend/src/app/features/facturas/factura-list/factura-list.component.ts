@@ -168,23 +168,35 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
     </div>
   `,
   styles: [`
+    .factura-list {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 24px;
+      margin-bottom: var(--app-space-lg, 24px);
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--app-text-primary, #0f172a);
+      margin: 0;
     }
 
     .header-actions {
       display: flex;
-      gap: 8px;
+      gap: var(--app-space-sm, 8px);
       align-items: center;
     }
 
     .filters-bar {
       display: flex;
-      gap: 16px;
-      margin-bottom: 16px;
+      gap: var(--app-space-md, 16px);
+      margin-bottom: var(--app-space-md, 16px);
       flex-wrap: wrap;
     }
 
@@ -198,11 +210,12 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
     }
 
     .invoice-card {
-      background: #fff;
-      border-radius: 1rem;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      background: var(--app-bg-card);
+      border-radius: var(--app-radius-lg, 16px);
+      box-shadow: var(--app-shadow-md);
+      border: 1px solid var(--app-border);
       overflow: hidden;
-      transition: all 0.3s ease;
+      transition: all var(--app-transition);
     }
 
     .table-container {
@@ -210,12 +223,11 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
     }
 
     tr.mat-row {
-      transition: all 0.3s ease;
+      transition: background var(--app-transition);
     }
 
-    tr.mat-row:hover {
+    tr.mat-row:hover .mat-mdc-cell {
       background: rgba(30, 58, 138, 0.03);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     }
 
     .full-width {

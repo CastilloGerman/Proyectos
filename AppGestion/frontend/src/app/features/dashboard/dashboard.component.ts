@@ -291,82 +291,70 @@ interface SaludCobros {
     .dashboard {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 0 24px 48px;
+      padding: 0 var(--app-space-lg, 24px) var(--app-space-xl, 32px);
     }
 
     .dashboard-header {
-      margin-bottom: 32px;
+      margin-bottom: var(--app-space-xl, 32px);
     }
 
     .dashboard-header h1 {
-      margin: 0 0 4px 0;
+      margin: 0 0 var(--app-space-xs, 4px) 0;
       font-size: 1.75rem;
-      font-weight: 500;
+      font-weight: 600;
+      color: var(--app-text-primary, #0f172a);
+      letter-spacing: -0.02em;
     }
 
     .subtitle {
       margin: 0;
-      color: rgba(0, 0, 0, 0.6);
-      font-size: 0.95rem;
+      color: var(--app-text-secondary, #64748b);
+      font-size: 0.9375rem;
     }
 
     .kpi-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 20px;
-      margin-bottom: 32px;
+      gap: var(--app-space-lg, 24px);
+      margin-bottom: var(--app-space-xl, 32px);
     }
 
     .kpi-card {
-      background: linear-gradient(135deg, var(--kpi-bg) 0%, var(--kpi-bg-end) 100%);
-      border-radius: 16px;
-      padding: 24px;
+      background: var(--app-bg-card);
+      border-radius: var(--app-radius-lg, 16px);
+      padding: var(--app-space-lg, 24px);
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-      transition: transform 0.2s, box-shadow 0.2s;
+      gap: var(--app-space-md, 16px);
+      box-shadow: var(--app-shadow-md);
+      border: 1px solid var(--app-border);
+      transition: transform var(--app-transition), box-shadow var(--app-transition);
     }
 
     .kpi-card:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+      box-shadow: var(--app-shadow-lg);
     }
 
-    .kpi-presupuestos {
-      --kpi-bg: #e8eaf6;
-      --kpi-bg-end: #c5cae9;
-    }
-
-    .kpi-facturas {
-      --kpi-bg: #e3f2fd;
-      --kpi-bg-end: #bbdefb;
-    }
-
-    .kpi-facturado {
-      --kpi-bg: #e8f5e9;
-      --kpi-bg-end: #c8e6c9;
-    }
-
-    .kpi-pendiente {
-      --kpi-bg: #fff3e0;
-      --kpi-bg-end: #ffe0b2;
-    }
+    .kpi-presupuestos { border-top: 3px solid #6366f1; }
+    .kpi-facturas { border-top: 3px solid #0ea5e9; }
+    .kpi-facturado { border-top: 3px solid #22c55e; }
+    .kpi-pendiente { border-top: 3px solid #f59e0b; }
 
     .kpi-icon {
       width: 48px;
       height: 48px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.8);
+      border-radius: var(--app-radius-md, 12px);
+      background: var(--app-bg-page, #f8fafc);
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    .kpi-presupuestos .kpi-icon mat-icon { color: #3f51b5; }
-    .kpi-facturas .kpi-icon mat-icon { color: #1976d2; }
-    .kpi-facturado .kpi-icon mat-icon { color: #388e3c; }
-    .kpi-pendiente .kpi-icon mat-icon { color: #f57c00; }
+    .kpi-presupuestos .kpi-icon mat-icon { color: #6366f1; }
+    .kpi-facturas .kpi-icon mat-icon { color: #0ea5e9; }
+    .kpi-facturado .kpi-icon mat-icon { color: #22c55e; }
+    .kpi-pendiente .kpi-icon mat-icon { color: #f59e0b; }
 
     .kpi-icon mat-icon {
       font-size: 28px;
@@ -382,61 +370,66 @@ interface SaludCobros {
       display: block;
       font-size: 1.75rem;
       font-weight: 600;
-      color: rgba(0, 0, 0, 0.87);
+      color: var(--app-text-primary, #0f172a);
       line-height: 1.2;
+      letter-spacing: -0.02em;
     }
 
     .kpi-label {
       font-size: 0.875rem;
-      color: rgba(0, 0, 0, 0.6);
+      color: var(--app-text-secondary, #64748b);
     }
 
     .kpi-link {
       align-self: flex-start;
-      margin-top: 4px;
+      margin-top: var(--app-space-xs, 4px);
     }
 
     .stats-section {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 24px;
-      margin-bottom: 32px;
+      gap: var(--app-space-lg, 24px);
+      margin-bottom: var(--app-space-xl, 32px);
+    }
+
+    .stats-card {
+      border: 1px solid var(--app-border);
     }
 
     .stats-card mat-card-header {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
+      gap: var(--app-space-md, 16px);
+      margin-bottom: var(--app-space-md, 16px);
     }
 
     .section-icon {
       width: 40px;
       height: 40px;
       font-size: 40px;
-      border-radius: 10px;
+      border-radius: var(--app-radius-md, 12px);
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
     .section-icon.presupuesto {
-      background: #e8eaf6;
-      color: #3f51b5;
+      background: #eef2ff;
+      color: #6366f1;
     }
 
     .section-icon.factura {
-      background: #e3f2fd;
-      color: #1976d2;
+      background: #ecfeff;
+      color: #0ea5e9;
     }
 
     .distribution-bar {
       display: flex;
-      height: 12px;
-      border-radius: 6px;
+      height: 10px;
+      border-radius: var(--app-radius-sm, 8px);
       overflow: hidden;
-      background: #e0e0e0;
-      margin-bottom: 16px;
+      background: var(--app-bg-page, #f1f5f9);
+      margin-bottom: var(--app-space-md, 16px);
     }
 
     .bar-segment {
@@ -498,26 +491,31 @@ interface SaludCobros {
     }
 
     .chart-placeholder {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      background: var(--app-bg-card);
+      border-radius: var(--app-radius-lg, 16px);
+      box-shadow: var(--app-shadow-md);
+      border: 1px solid var(--app-border);
       min-height: 280px;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: var(--app-space-lg, 24px);
     }
 
     .chart-placeholder-text {
       margin: 0;
-      color: #9ca3af;
-      font-size: 0.95rem;
+      color: var(--app-text-muted, #94a3b8);
+      font-size: 0.9375rem;
     }
 
     .recent-section {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-      gap: 24px;
+      gap: var(--app-space-lg, 24px);
+    }
+
+    .recent-card {
+      border: 1px solid var(--app-border);
     }
 
     .recent-card mat-card-header {
@@ -533,7 +531,7 @@ interface SaludCobros {
     }
 
     .recent-list li {
-      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      border-bottom: 1px solid var(--app-border);
     }
 
     .recent-list li:last-child {
@@ -544,21 +542,20 @@ interface SaludCobros {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 0;
+      padding: var(--app-space-md, 16px) 0;
       text-decoration: none;
       color: inherit;
-      transition: background 0.15s;
+      transition: background var(--app-transition);
+      border-radius: var(--app-radius-md, 12px);
     }
 
     .recent-list a:hover {
-      background: rgba(0, 0, 0, 0.04);
-      margin: 0 -16px;
-      padding: 12px 16px;
+      background: var(--app-bg-page, #f8fafc);
     }
 
     .recent-name {
       font-weight: 500;
-      color: #3f51b5;
+      color: #1e3a8a;
     }
 
     .recent-meta {
@@ -590,32 +587,33 @@ interface SaludCobros {
     .salud-section {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 20px;
-      margin-bottom: 32px;
+      gap: var(--app-space-lg, 24px);
+      margin-bottom: var(--app-space-xl, 32px);
     }
 
     .salud-card {
-      background: #fff;
-      border-radius: 16px;
-      padding: 20px 24px;
+      background: var(--app-bg-card);
+      border-radius: var(--app-radius-lg, 16px);
+      padding: var(--app-space-lg, 24px);
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
-      border-left: 4px solid transparent;
-      transition: transform 0.2s, box-shadow 0.2s;
+      gap: var(--app-space-sm, 8px);
+      box-shadow: var(--app-shadow-md);
+      border: 1px solid var(--app-border);
+      border-left: 4px solid var(--app-border);
+      transition: transform var(--app-transition), box-shadow var(--app-transition);
     }
 
     .salud-card:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+      box-shadow: var(--app-shadow-lg);
     }
 
-    .salud-vencidas { border-left-color: #e0e0e0; }
-    .salud-vencidas.salud-alert { border-left-color: #f44336; background: #fff8f8; }
-    .salud-proximas { border-left-color: #e0e0e0; }
-    .salud-proximas.salud-warn { border-left-color: #ff9800; background: #fffaf5; }
-    .salud-ratio { border-left-color: #1976d2; }
+    .salud-vencidas { border-left-color: #e2e8f0; }
+    .salud-vencidas.salud-alert { border-left-color: #ef4444; background: #fef2f2; }
+    .salud-proximas { border-left-color: #e2e8f0; }
+    .salud-proximas.salud-warn { border-left-color: #f59e0b; background: #fffbeb; }
+    .salud-ratio { border-left-color: #1e3a8a; }
 
     .salud-icon mat-icon {
       font-size: 28px;
@@ -623,10 +621,10 @@ interface SaludCobros {
       height: 28px;
     }
 
-    .salud-vencidas.salud-alert .salud-icon mat-icon { color: #f44336; }
-    .salud-proximas.salud-warn .salud-icon mat-icon { color: #ff9800; }
-    .salud-ratio .salud-icon mat-icon { color: #1976d2; }
-    .salud-icon mat-icon { color: #9e9e9e; }
+    .salud-vencidas.salud-alert .salud-icon mat-icon { color: #ef4444; }
+    .salud-proximas.salud-warn .salud-icon mat-icon { color: #f59e0b; }
+    .salud-ratio .salud-icon mat-icon { color: #1e3a8a; }
+    .salud-icon mat-icon { color: #94a3b8; }
 
     .salud-content {
       display: flex;
