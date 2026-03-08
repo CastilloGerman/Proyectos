@@ -39,20 +39,22 @@ export interface SearchResult {
   ],
   template: `
     <div class="search-wrap">
-      <mat-form-field appearance="outline" class="search-field">
-        <mat-icon matPrefix>search</mat-icon>
-        <input
-          matInput
-          type="search"
-          placeholder="Buscar factura, cliente, presupuesto…"
-          [formControl]="searchCtrl"
-          [matAutocomplete]="auto"
-          (focus)="onFocus()"
-        >
-        @if (loading) {
-          <mat-spinner matSuffix diameter="18"></mat-spinner>
-        }
-      </mat-form-field>
+      <div class="search-box">
+        <mat-icon class="search-icon">search</mat-icon>
+        <mat-form-field appearance="outline" class="search-field">
+          <input
+            matInput
+            type="search"
+            placeholder="Buscar factura, cliente, presupuesto…"
+            [formControl]="searchCtrl"
+            [matAutocomplete]="auto"
+            (focus)="onFocus()"
+          >
+          @if (loading) {
+            <mat-spinner matSuffix diameter="18"></mat-spinner>
+          }
+        </mat-form-field>
+      </div>
 
       <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onSelect($event.option.value)">
         @if (results.length === 0 && (searchCtrl.value?.length ?? 0) >= 2 && !loading) {
@@ -79,8 +81,30 @@ export interface SearchResult {
       align-items: center;
     }
 
-    .search-field {
+    .search-box {
+      display: flex;
+      align-items: center;
       width: 360px;
+      max-width: 100%;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: var(--app-radius-md, 12px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      overflow: hidden;
+    }
+
+    .search-icon {
+      flex-shrink: 0;
+      margin: 0;
+      padding: 0 8px;
+      color: white;
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+
+    .search-field {
+      flex: 1;
+      min-width: 0;
     }
 
     .search-field ::ng-deep .mat-mdc-form-field-subscript-wrapper {
@@ -88,27 +112,27 @@ export interface SearchResult {
     }
 
     .search-field ::ng-deep .mat-mdc-text-field-wrapper {
-      background: rgba(255, 255, 255, 0.15);
+      background: transparent !important;
     }
 
-    /* Reducir sangría: contenedor del icono e infix con mínimo padding */
     .search-field ::ng-deep .mat-mdc-form-field-infix {
+      padding-top: 12px;
+      padding-bottom: 12px;
       padding-left: 4px !important;
-      padding-right: 8px !important;
+      padding-right: 12px !important;
     }
-    .search-field ::ng-deep .mat-mdc-form-field-infix > *:first-child {
-      padding-left: 4px !important;
-      padding-right: 4px !important;
-      min-width: auto !important;
-    }
-    .search-field ::ng-deep input,
-    .search-field ::ng-deep .mdc-text-field__input {
-      padding-left: 0 !important;
+
+    .search-field ::ng-deep .mdc-notched-outline .mdc-notched-outline__leading,
+    .search-field ::ng-deep .mdc-notched-outline .mdc-notched-outline__notch,
+    .search-field ::ng-deep .mdc-notched-outline .mdc-notched-outline__trailing {
+      border: none !important;
     }
 
     .search-field ::ng-deep input,
     .search-field ::ng-deep .mat-mdc-input {
+      color: white;
       text-align: left !important;
+      padding-left: 0 !important;
     }
 
     .search-field ::ng-deep input::placeholder {
@@ -117,12 +141,7 @@ export interface SearchResult {
     }
 
     .search-field ::ng-deep .mat-mdc-form-field-outline {
-      color: rgba(255, 255, 255, 0.5) !important;
-    }
-
-    .search-field ::ng-deep input,
-    .search-field ::ng-deep mat-icon {
-      color: white;
+      color: transparent !important;
     }
 
     .result-label {

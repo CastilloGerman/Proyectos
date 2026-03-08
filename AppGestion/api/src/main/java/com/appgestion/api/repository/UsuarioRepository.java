@@ -16,10 +16,14 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     Optional<Usuario> findByEmail(String email);
 
+    Optional<Usuario> findByEmailIgnoreCase(String email);
+
     boolean existsByEmail(String email);
 
     Optional<Usuario> findByStripeSubscriptionId(String stripeSubscriptionId);
 
     @Query("SELECT u FROM Usuario u WHERE u.subscriptionStatus = :status AND u.trialEndDate < :today")
     List<Usuario> findExpiredTrials(@Param("status") SubscriptionStatus status, @Param("today") LocalDate today);
+
+    Optional<Usuario> findByPasswordResetToken(String token);
 }

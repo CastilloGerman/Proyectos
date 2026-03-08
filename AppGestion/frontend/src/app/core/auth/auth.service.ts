@@ -49,6 +49,20 @@ export class AuthService {
     );
   }
 
+  loginWithGoogle(idToken: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.apiUrl}/google`, { idToken }).pipe(
+      tap((response) => this.handleAuthSuccess(response))
+    );
+  }
+
+  forgotPassword(email: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/forgot-password`, { email });
+  }
+
+  resetPassword(token: string, newPassword: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/reset-password`, { token, newPassword });
+  }
+
   refreshUser(): Observable<UsuarioResponse | null> {
     return this.http.get<UsuarioResponse>(`${this.apiUrl}/me`).pipe(
       tap((me) => {

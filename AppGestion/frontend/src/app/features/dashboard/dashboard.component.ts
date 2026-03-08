@@ -36,6 +36,12 @@ interface SaludCobros {
   ratioCobro: number;
 }
 
+/** Ingresos por mes para el gráfico (nombre del mes/año y total facturado). */
+export interface IngresoPorMes {
+  name: string;
+  value: number;
+}
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -227,10 +233,58 @@ interface SaludCobros {
         </div>
       </section>
 
-      <section class="chart-placeholder-section">
-        <div class="chart-placeholder">
-          <p class="chart-placeholder-text">[Área de Gráfico de Ingresos - Ngx-Charts]</p>
-        </div>
+      <section class="chart-section">
+        <mat-card class="chart-card">
+          <mat-card-header>
+            <mat-icon class="section-icon chart">show_chart</mat-icon>
+            <div class="chart-header-text">
+              <mat-card-title>Ingresos por mes</mat-card-title>
+              <p class="chart-subtitle">Suma del total facturado en cada mes según la fecha de emisión de las facturas.</p>
+            </div>
+          </mat-card-header>
+          <mat-card-content>
+            @if (ingresosPorMes.length === 0) {
+              <p class="chart-empty">No hay datos de facturación para mostrar. Crea facturas para ver el gráfico.</p>
+            } @else {
+              <div class="chart-wrap" [attr.aria-label]="'Gráfico de ingresos por mes'">
+                <svg class="area-chart" viewBox="0 0 620 240" preserveAspectRatio="xMidYMid meet">
+                  <defs>
+                    <linearGradient id="ingresosGradient" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stop-color="#1e3a8a" stop-opacity="0.35"/>
+                      <stop offset="100%" stop-color="#1e3a8a" stop-opacity="0.02"/>
+                    </linearGradient>
+                  </defs>
+                  <!-- Eje Y: línea y etiqueta -->
+                  <line x1="70" y1="20" x2="70" y2="180" stroke="var(--app-border)" stroke-width="1"/>
+                  <text x="24" y="100" class="chart-axis-label" text-anchor="middle" transform="rotate(-90 24 100)">Importe (€)</text>
+                  <!-- Marcas y valores del eje Y -->
+                  @for (tick of chartYTicks; track tick.value) {
+                    <line [attr.x1]="70" [attr.y1]="tick.y" [attr.x2]="578" [attr.y2]="tick.y" stroke="var(--app-border)" stroke-width="0.5" stroke-dasharray="4 2"/>
+                    <text x="62" [attr.y]="tick.y + 4" class="chart-tick-label" text-anchor="end">{{ tick.label }}</text>
+                  }
+                  <!-- Eje X: línea -->
+                  <line x1="70" y1="180" x2="578" y2="180" stroke="var(--app-border)" stroke-width="1"/>
+                  <text x="324" y="218" class="chart-axis-label" text-anchor="middle">Mes</text>
+                  <!-- Área de ingresos (path ajustado al nuevo origen 70) -->
+                  <path [attr.d]="ingresosAreaPath" fill="url(#ingresosGradient)" stroke="#1e3a8a" stroke-width="2" stroke-linejoin="round"/>
+                  <!-- Etiquetas de meses -->
+                  @for (item of ingresosPorMes; track item.name; let i = $index) {
+                    <text
+                      [attr.x]="70 + (i + 0.5) * chartStepX"
+                      y="198"
+                      class="chart-label"
+                      text-anchor="middle"
+                    >{{ item.name }}</text>
+                  }
+                </svg>
+                <div class="chart-legend">
+                  <span class="chart-legend-desc">Suma total del periodo mostrado:</span>
+                  <span class="chart-legend-total">{{ chartTotal | number:'1.2-2' }} €</span>
+                </div>
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
       </section>
 
       <section class="recent-section">
@@ -486,24 +540,97 @@ interface SaludCobros {
     .payment-summary .cobrado { color: #4caf50; font-weight: 500; }
     .payment-summary .pendiente { color: #f57c00; font-weight: 500; }
 
-    .chart-placeholder-section {
-      margin-bottom: 32px;
+    .chart-section {
+      margin-bottom: var(--app-space-xl, 32px);
     }
 
-    .chart-placeholder {
-      background: var(--app-bg-card);
-      border-radius: var(--app-radius-lg, 16px);
-      box-shadow: var(--app-shadow-md);
+    .chart-card {
       border: 1px solid var(--app-border);
-      min-height: 280px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: var(--app-space-lg, 24px);
     }
 
-    .chart-placeholder-text {
+    .chart-card mat-card-header {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--app-space-md, 16px);
+      margin-bottom: var(--app-space-md, 16px);
+    }
+
+    .chart-header-text {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .chart-header-text .mat-mdc-card-title {
+      margin-bottom: 4px;
+    }
+
+    .chart-subtitle {
       margin: 0;
+      font-size: 0.8125rem;
+      color: var(--app-text-secondary, #64748b);
+      line-height: 1.4;
+    }
+
+    .section-icon.chart {
+      width: 40px;
+      height: 40px;
+      font-size: 40px;
+      border-radius: var(--app-radius-md, 12px);
+      background: #eef2ff;
+      color: #1e3a8a;
+    }
+
+    .chart-wrap {
+      min-height: 280px;
+    }
+
+    .area-chart {
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .chart-axis-label {
+      font-size: 11px;
+      fill: var(--app-text-secondary, #64748b);
+      font-weight: 500;
+    }
+
+    .chart-tick-label {
+      font-size: 10px;
+      fill: var(--app-text-muted, #94a3b8);
+    }
+
+    .chart-label {
+      font-size: 11px;
+      fill: var(--app-text-secondary, #64748b);
+    }
+
+    .chart-legend {
+      margin-top: var(--app-space-md, 16px);
+      padding-top: var(--app-space-sm, 8px);
+      border-top: 1px solid var(--app-border);
+      font-size: 0.875rem;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .chart-legend-desc {
+      color: var(--app-text-secondary, #64748b);
+    }
+
+    .chart-legend-total {
+      font-weight: 600;
+      color: var(--app-text-primary, #0f172a);
+    }
+
+    .chart-empty {
+      margin: 0;
+      padding: var(--app-space-xl, 32px);
+      text-align: center;
       color: var(--app-text-muted, #94a3b8);
       font-size: 0.9375rem;
     }
@@ -686,6 +813,73 @@ export class DashboardComponent implements OnInit {
   };
   recentPresupuestos: Presupuesto[] = [];
   recentFacturas: Factura[] = [];
+  /** Últimos 12 meses: ingresos (total facturado) por mes para el gráfico. */
+  ingresosPorMes: IngresoPorMes[] = [];
+
+  /** Origen X del gráfico (espacio para eje Y y etiquetas). */
+  private readonly chartPadLeft = 70;
+  private readonly chartPadRight = 42;
+  private readonly chartTopY = 20;
+  private readonly chartBottomY = 180;
+
+  /** Ancho útil para el área (viewBox 620). */
+  get chartWidth(): number {
+    return 620 - this.chartPadLeft - this.chartPadRight;
+  }
+
+  get chartStepX(): number {
+    const n = this.ingresosPorMes.length;
+    return n <= 1 ? this.chartWidth : this.chartWidth / (n - 1);
+  }
+
+  get chartTotal(): number {
+    return this.ingresosPorMes.reduce((s, d) => s + d.value, 0);
+  }
+
+  /** Valor máximo del eje Y para la escala. */
+  get chartMaxValue(): number {
+    const vals = this.ingresosPorMes.map((d) => d.value);
+    return vals.length === 0 ? 1 : Math.max(...vals);
+  }
+
+  /** Marcas del eje Y: valor, posición y etiqueta formateada. */
+  get chartYTicks(): { value: number; y: number; label: string }[] {
+    const maxVal = this.chartMaxValue;
+    const rangeY = this.chartBottomY - this.chartTopY;
+    const steps = 4;
+    const ticks: { value: number; y: number; label: string }[] = [];
+    for (let i = 0; i <= steps; i++) {
+      const value = (maxVal * i) / steps;
+      const y = this.chartBottomY - (value / maxVal) * rangeY;
+      const label = this.formatChartTick(value);
+      ticks.push({ value, y, label });
+    }
+    return ticks;
+  }
+
+  private formatChartTick(value: number): string {
+    if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+    if (value >= 1000) return (value / 1000).toFixed(0) + 'k';
+    return value.toFixed(0);
+  }
+
+  /** Path SVG del área de ingresos. */
+  get ingresosAreaPath(): string {
+    const data = this.ingresosPorMes;
+    if (data.length === 0) return '';
+    const maxVal = this.chartMaxValue;
+    const rangeY = this.chartBottomY - this.chartTopY;
+    const stepX = this.chartStepX;
+    const points: string[] = [];
+    data.forEach((d, i) => {
+      const x = this.chartPadLeft + i * stepX;
+      const y = this.chartBottomY - (d.value / maxVal) * rangeY;
+      points.push(`${x},${y}`);
+    });
+    const first = points[0];
+    const lastX = this.chartPadLeft + (data.length <= 1 ? 0 : (data.length - 1) * stepX);
+    return `M ${first} L ${points.slice(1).join(' L ')} L ${lastX},${this.chartBottomY} L ${this.chartPadLeft},${this.chartBottomY} Z`;
+  }
 
   constructor(
     private presupuestoService: PresupuestoService,
@@ -706,6 +900,7 @@ export class DashboardComponent implements OnInit {
         .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
         .slice(0, 5);
       this.computeFacturaStats(data);
+      this.ingresosPorMes = this.computeIngresosPorMes(data);
     });
   }
 
@@ -790,5 +985,24 @@ export class DashboardComponent implements OnInit {
       importeProximas,
       ratioCobro: Math.min(ratioCobro, 100),
     };
+  }
+
+  private static readonly MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+  private computeIngresosPorMes(facturas: Factura[]): IngresoPorMes[] {
+    const byMonth = new Map<string, number>();
+    for (const f of facturas) {
+      const d = new Date(f.fechaCreacion);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      byMonth.set(key, (byMonth.get(key) ?? 0) + (f.total ?? 0));
+    }
+    const entries = Array.from(byMonth.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .slice(-12);
+    return entries.map(([key, value]) => {
+      const [y, m] = key.split('-').map(Number);
+      const name = `${DashboardComponent.MESES[m - 1]} ${y}`;
+      return { name, value };
+    });
   }
 }

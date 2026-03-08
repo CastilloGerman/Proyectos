@@ -107,36 +107,11 @@ mat-card {
   min-width: 64px;
 }
 
-/* Buscador topbar: quitar sangría para que el texto no se corte */
-app-search-bar .mat-mdc-form-field .mdc-notched-outline__notch {
-  min-width: 0 !important;
-  max-width: 0 !important;
-}
-app-search-bar .mat-mdc-form-field .mdc-notched-outline__leading {
-  flex: none !important;
-  width: 0 !important;
-  min-width: 0 !important;
-}
-app-search-bar .mat-mdc-form-field-infix {
-  padding-left: 4px !important;
-  padding-right: 8px !important;
-}
-/* Contenedor del icono de búsqueda: mínimo espacio a la izquierda */
-app-search-bar .mat-mdc-form-field-icon-prefix,
-app-search-bar .mat-mdc-form-field-infix > .mat-mdc-form-field-icon-prefix,
-app-search-bar [class*='prefix'] {
-  padding-left: 4px !important;
-  padding-right: 4px !important;
-  min-width: 0 !important;
-}
-app-search-bar .mat-mdc-form-field-icon-prefix .mat-icon {
-  margin: 0 !important;
-}
+/* Buscador topbar: texto alineado a la izquierda (icono ya está fuera del campo) */
 app-search-bar input,
 app-search-bar .mat-mdc-input,
 app-search-bar .mdc-text-field__input {
   text-align: left !important;
-  padding-left: 0 !important;
 }
 app-search-bar input::placeholder {
   text-align: left !important;

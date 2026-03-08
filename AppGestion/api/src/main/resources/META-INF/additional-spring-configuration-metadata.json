@@ -50,6 +50,12 @@
       "type": "java.lang.Boolean",
       "description": "Si true, omite la comprobación de suscripción Stripe (solo para desarrollo local).",
       "defaultValue": false
+    },
+    {
+      "name": "app.frontend-url",
+      "type": "java.lang.String",
+      "description": "URL base del frontend (para enlaces de correo, p. ej. recuperación de contraseña).",
+      "defaultValue": "http://localhost:4200"
     }
   ]
 }

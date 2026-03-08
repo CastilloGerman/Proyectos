@@ -50,6 +50,12 @@ public class Usuario {
     @Column(name = "trial_end_date")
     private LocalDate trialEndDate;
 
+    @Column(name = "password_reset_token", length = 255)
+    private String passwordResetToken;
+
+    @Column(name = "password_reset_expires_at")
+    private LocalDateTime passwordResetExpiresAt;
+
     @PrePersist
     protected void onCreate() {
         fechaCreacion = LocalDateTime.now();
@@ -94,4 +100,10 @@ public class Usuario {
 
     public LocalDate getTrialEndDate() { return trialEndDate; }
     public void setTrialEndDate(LocalDate trialEndDate) { this.trialEndDate = trialEndDate; }
+
+    public String getPasswordResetToken() { return passwordResetToken; }
+    public void setPasswordResetToken(String passwordResetToken) { this.passwordResetToken = passwordResetToken; }
+
+    public LocalDateTime getPasswordResetExpiresAt() { return passwordResetExpiresAt; }
+    public void setPasswordResetExpiresAt(LocalDateTime passwordResetExpiresAt) { this.passwordResetExpiresAt = passwordResetExpiresAt; }
 }

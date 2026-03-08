@@ -1,5 +1,6 @@
 export const environment = {
   production: false,
-  // Llamar directo al backend (evita problemas del proxy con Authorization)
-  apiUrl: 'http://localhost:8081'
+  apiUrl: 'http://localhost:8081',
+  /** Google OAuth 2.0 Client ID (tipo "Aplicación web") para "Iniciar con Google". Opcional. */
+  googleClientId: '' as string,
 };

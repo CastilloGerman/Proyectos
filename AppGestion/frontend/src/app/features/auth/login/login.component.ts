@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { AfterViewInit, Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -7,6 +7,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AuthService } from '../../../core/auth/auth.service';
+
+/** Client ID de Google para el botón "Iniciar con Google" (mismo que en environment). */
+const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.apps.googleusercontent.com';
 
 @Component({
   selector: 'app-login',
@@ -27,8 +30,9 @@ import { AuthService } from '../../../core/auth/auth.service';
           <div class="login-logo">
             <img src="assets/noemi-logo.png" alt="Noemí" class="login-logo-img" />
           </div>
+          <p class="login-tagline">Tu facturación en 30 segundos</p>
+          <p class="login-subtitle">Gestiona clientes, presupuestos y facturas en un solo lugar.</p>
           <h1 class="login-title">Iniciar sesión</h1>
-          <p class="login-subtitle">Accede a tu cuenta</p>
           <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form">
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Email</mat-label>
@@ -55,6 +59,19 @@ import { AuthService } from '../../../core/auth/auth.service';
               }
             </button>
           </form>
+          <div class="login-divider">
+            <span>o</span>
+          </div>
+          <div class="google-button-wrap">
+            <div #googleButtonRef class="google-button-inner"></div>
+            @if (!googleClientId) {
+              <button type="button" class="google-fallback-btn" (click)="onGoogleFallback()">
+                <span class="google-g-letter">G</span>
+                Continuar con Google
+              </button>
+            }
+          </div>
+          <a routerLink="/forgot-password" class="forgot-link">¿Olvidaste tu contraseña?</a>
           <a routerLink="/register" class="register-link">¿No tienes cuenta? Regístrate</a>
         </div>
       </div>
@@ -112,7 +129,7 @@ import { AuthService } from '../../../core/auth/auth.service';
     }
 
     .login-title {
-      margin: 0 0 4px 0;
+      margin: 20px 0 20px 0;
       font-size: 1.6rem;
       font-weight: 600;
       color: #1e293b;
@@ -120,11 +137,93 @@ import { AuthService } from '../../../core/auth/auth.service';
       letter-spacing: -0.02em;
     }
 
+    .login-tagline {
+      margin: 0 0 4px 0;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1e3a8a;
+      text-align: center;
+    }
+
     .login-subtitle {
-      margin: 0 0 28px 0;
+      margin: 0 0 24px 0;
       font-size: 0.95rem;
       color: #64748b;
       text-align: center;
+    }
+
+    .login-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0 16px 0;
+    }
+
+    .login-divider::before,
+    .login-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--app-border, rgba(0,0,0,0.08));
+    }
+
+    .login-divider span {
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+
+    .google-button-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 8px;
+      min-height: 44px;
+    }
+
+    .google-button-inner {
+      min-height: 44px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .google-button-inner ::ng-deep iframe {
+      margin: 0;
+    }
+
+    .google-fallback-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      max-width: 320px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      font-weight: 500;
+      color: #3c4043;
+      background: #fff;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+
+    .google-fallback-btn:hover {
+      background: #f8f9fa;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    .google-g-letter {
+      width: 20px;
+      height: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #4285f4;
+      font-family: inherit;
     }
 
     .login-form {
@@ -170,10 +269,24 @@ import { AuthService } from '../../../core/auth/auth.service';
       box-shadow: 0 8px 24px rgba(30, 58, 138, 0.25);
     }
 
+    .forgot-link {
+      display: block;
+      text-align: center;
+      padding-top: 12px;
+      color: #64748b;
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.25s ease;
+    }
+
+    .forgot-link:hover {
+      color: #1e3a8a;
+    }
+
     .register-link {
       display: block;
       text-align: center;
-      padding: 20px 0 0;
+      padding: 16px 0 0;
       color: #64748b;
       text-decoration: none;
       font-size: 0.9rem;
@@ -191,9 +304,12 @@ import { AuthService } from '../../../core/auth/auth.service';
     }
   `],
 })
-export class LoginComponent implements OnInit {
+export class LoginComponent implements OnInit, AfterViewInit {
+  @ViewChild('googleButtonRef') googleButtonRef!: ElementRef<HTMLDivElement>;
   form: FormGroup;
   loading = false;
+  /** Valor fijo para evitar que el chunk lazy reciba un environment sin googleClientId; el botón real siempre se muestra. */
+  readonly googleClientId = DEFAULT_GOOGLE_CLIENT_ID;
 
   constructor(
     private fb: FormBuilder,
@@ -211,6 +327,73 @@ export class LoginComponent implements OnInit {
     if (this.auth.isAuthenticated()) {
       this.router.navigate(['/dashboard']);
     }
+  }
+
+  ngAfterViewInit(): void {
+    if (this.googleClientId && this.googleButtonRef?.nativeElement) {
+      setTimeout(() => this.initGoogleButton(), 100);
+    } else {
+      if (!this.googleClientId) {
+        console.warn('[Login] googleClientId vacío: no se cargará el botón de Google. Usa http://localhost:4200 y configura environment.googleClientId.');
+      }
+    }
+  }
+
+  private initGoogleButton(): void {
+    const scriptId = 'google-gsi';
+    if (document.getElementById(scriptId)) {
+      this.renderGoogleButton();
+      return;
+    }
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => setTimeout(() => this.renderGoogleButton(), 50);
+    script.onerror = () => console.error('[Login] Error al cargar el script de Google Identity.');
+    document.head.appendChild(script);
+  }
+
+  private renderGoogleButton(): void {
+    const win = window as Window & { google?: { accounts: { id: { initialize: (c: unknown) => void; renderButton: (el: HTMLElement, o: unknown) => void } } } };
+    if (!win.google?.accounts?.id || !this.googleButtonRef?.nativeElement) {
+      console.warn('[Login] Google GSI no disponible o contenedor no listo.');
+      return;
+    }
+    win.google.accounts.id.initialize({
+      client_id: this.googleClientId,
+      callback: (response: { credential: string }) => this.onGoogleCredential(response.credential),
+    });
+    win.google.accounts.id.renderButton(this.googleButtonRef.nativeElement, {
+      type: 'standard',
+      theme: 'outline',
+      size: 'large',
+      text: 'continue_with',
+      width: 320,
+    });
+  }
+
+  onGoogleFallback(): void {
+    console.warn('[Login] Botón de respaldo pulsado: googleClientId no está configurado en esta sesión.');
+    this.snackBar.open('Configura googleClientId en environment para habilitar inicio con Google.', 'Cerrar', { duration: 4000 });
+  }
+
+  onGoogleCredential(idToken: string): void {
+    console.log('[Login] Credencial de Google recibida, llamando a la API...');
+    this.loading = true;
+    this.auth.loginWithGoogle(idToken).subscribe({
+      next: () => {
+        console.log('[Login] Inicio con Google correcto.');
+        this.router.navigate(['/dashboard']);
+      },
+      error: (err) => {
+        this.loading = false;
+        console.error('[Login] Error al iniciar con Google:', err?.status, err?.error ?? err?.message, err);
+        const msg = err?.error?.message ?? err?.error?.detail ?? err?.message ?? 'Error al iniciar sesión con Google';
+        this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+      },
+    });
   }
 
   onSubmit(): void {

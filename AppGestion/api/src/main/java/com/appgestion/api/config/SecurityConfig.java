@@ -53,7 +53,7 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
-                    auth.requestMatchers("/auth/register", "/auth/login").permitAll()
+                    auth.requestMatchers("/auth/register", "/auth/login", "/auth/google", "/auth/forgot-password", "/auth/reset-password").permitAll()
                         .requestMatchers("/webhook/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/auth/me").authenticated()

@@ -67,8 +67,8 @@ import { environment } from '../environments/environment';
             <button mat-icon-button (click)="sidebarCollapsed = !sidebarCollapsed" matTooltip="{{ sidebarCollapsed ? 'Abrir menú' : 'Cerrar menú' }}">
               <mat-icon>menu</mat-icon>
             </button>
-            <span class="spacer"></span>
             <app-search-bar></app-search-bar>
+            <span class="spacer"></span>
             <span class="user-email">{{ auth.user()?.email }}</span>
             <button mat-icon-button (click)="auth.logout()" matTooltip="Cerrar sesión">
               <mat-icon>logout</mat-icon>
