@@ -10,8 +10,14 @@ import io
 import os
 import re
 from datetime import datetime, timedelta
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from decimal import Decimal, ROUND_DOWN
+
+
+def _get_default_logo_path() -> str:
+    """Ruta del logo por defecto (Noemí) en presupuestos y facturas."""
+    return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "logo_default.png")
+
 
 class PDFGenerator:
     def __init__(self, plantilla_config=None):
@@ -172,13 +178,23 @@ class PDFGenerator:
         )
         self.styles.add(total_style)
     
+    def _get_logo_path(self) -> Optional[str]:
+        """Ruta del logo: config del usuario si existe, si no logo por defecto (Noemí)."""
+        logo_cfg = self.plantilla_config.get('logo', {})
+        if logo_cfg.get('usar_logo'):
+            ruta = logo_cfg.get('ruta_logo', '')
+            if ruta and os.path.exists(ruta):
+                return ruta
+        # Sin logo configurado: usar logo por defecto si existe
+        default = _get_default_logo_path()
+        return default if os.path.exists(default) else None
+
     def create_logo(self):
         """Crea un logo usando imagen o texto según la configuración"""
-        if self.plantilla_config['logo']['usar_logo'] and self.plantilla_config['logo']['ruta_logo']:
-            # Usar imagen de logo
+        path = self._get_logo_path()
+        if path:
             try:
-                if os.path.exists(self.plantilla_config['logo']['ruta_logo']):
-                    return Image(self.plantilla_config['logo']['ruta_logo'], width=2*inch, height=1*inch)
+                return Image(path, width=2*inch, height=1*inch)
             except Exception as e:
                 print(f"Error cargando logo: {e}")
         
@@ -262,10 +278,10 @@ class PDFGenerator:
     
     def create_logo_element(self):
         """Crea el elemento del logo"""
-        if self.plantilla_config['logo']['usar_logo'] and self.plantilla_config['logo']['ruta_logo']:
+        path = self._get_logo_path()
+        if path:
             try:
-                if os.path.exists(self.plantilla_config['logo']['ruta_logo']):
-                    return Image(self.plantilla_config['logo']['ruta_logo'], width=1.5*inch, height=0.8*inch)
+                return Image(path, width=1.5*inch, height=0.8*inch)
             except Exception as e:
                 print(f"Error cargando logo: {e}")
         
@@ -858,10 +874,10 @@ class PDFGenerator:
     
     def create_factura_logo(self):
         """Crea el logo para la factura"""
-        if self.plantilla_config['logo']['usar_logo'] and self.plantilla_config['logo']['ruta_logo']:
+        path = self._get_logo_path()
+        if path:
             try:
-                if os.path.exists(self.plantilla_config['logo']['ruta_logo']):
-                    return Image(self.plantilla_config['logo']['ruta_logo'], width=1*inch, height=1*inch)
+                return Image(path, width=1*inch, height=1*inch)
             except Exception as e:
                 print(f"Error cargando logo: {e}")
         

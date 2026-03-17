@@ -74,20 +74,48 @@ except ImportError as e:
         def add_subplot(self, *args, **kwargs):
             return None
 
+def _get_project_root():
+    """Raíz del proyecto (donde está main.py)."""
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _get_default_logo_path():
+    """Ruta del logo por defecto (Noemí)."""
+    return os.path.join(_get_project_root(), "assets", "logo_default.png")
+
+
 class AppPresupuestos:
     def __init__(self, root):
         self.root = root
         self.root.title("Sistema de Gestión de Presupuestos")
         self.root.geometry("1200x800")
-        self.root.configure(bg='#ecf0f1')
+        self.root.minsize(900, 600)
         
         # Configurar el estilo
-        from .styles import setup_styles
+        from .styles import setup_styles, get_palette
+        self.palette = get_palette()
         setup_styles()
+        self.root.configure(bg=self.palette["app_bg"])
         
-        # Crear el notebook para las pestañas
-        self.notebook = ttk.Notebook(root)
-        self.notebook.pack(fill='both', expand=True, padx=10, pady=10)
+        # Cargar configuración temprano (para header y plantilla)
+        self.config_file = "config/config.json"
+        self.plantilla_config_file = "config/plantilla_config.json"
+        config = self.cargar_configuracion()
+        self.carpeta_pdfs = config.get('carpeta_pdfs', os.path.join(os.getcwd(), 'output', 'presupuestos'))
+        self.carpeta_facturas = config.get('carpeta_facturas', os.path.join(os.getcwd(), 'output', 'facturas'))
+        self.plantilla_config = self.cargar_configuracion_plantilla()
+        self.pdf_generator = PDFGenerator(self.plantilla_config)
+        
+        # Contenedor principal
+        main_container = ttk.Frame(root)
+        main_container.pack(fill='both', expand=True, padx=0, pady=0)
+        
+        # Header con logo (minimalista y moderno)
+        self._create_header(main_container)
+        
+        # Notebook para las pestañas
+        self.notebook = ttk.Notebook(main_container)
+        self.notebook.pack(fill='both', expand=True, padx=12, pady=(0, 12))
         
         # Crear las pestañas
         self.create_clientes_tab()
@@ -103,8 +131,98 @@ class AppPresupuestos:
         self.refresh_presupuestos()
         self.refresh_facturas()
         
+        # Apply hover effects
+        from .styles import apply_hover_effects
+        self.root.after(500, lambda: apply_hover_effects(self.root))
+        
         # Configurar evento de cierre para guardar configuración
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+    
+    def _get_logo_path_for_app(self):
+        """Ruta del logo: plantilla si el usuario configuró uno, si no logo por defecto (Noemí)."""
+        logo_cfg = self.plantilla_config.get('logo', {})
+        if logo_cfg.get('usar_logo'):
+            ruta = logo_cfg.get('ruta_logo', '')
+            if ruta and os.path.exists(ruta):
+                return ruta
+        # Sin logo configurado: usar logo por defecto
+        default = _get_default_logo_path()
+        return default if os.path.exists(default) else None
+    
+    def _create_header(self, parent):
+        """Crea el header con logo (configurable por el usuario)."""
+        header_container = tk.Frame(parent, bg=self.palette["app_bg"])
+        header_container.pack(fill='x', padx=12, pady=(12, 0))
+        
+        self.header_frame = tk.Frame(header_container, bg=self.palette["surface"], height=64)
+        self.header_frame.pack(fill='x')
+        self.header_frame.pack_propagate(False)
+        
+        # Línea sutil de separación
+        sep = tk.Frame(header_container, height=1, bg=self.palette["border"])
+        sep.pack(fill='x', pady=(0, 8))
+        sep.pack_propagate(False)
+        
+        # Logo (izquierda)
+        logo_container = tk.Frame(self.header_frame, bg=self.palette["surface"])
+        logo_container.pack(side='left', padx=(16, 0), pady=8)
+        
+        self.header_logo_label = tk.Label(logo_container, bg=self.palette["surface"])
+        self.header_logo_label.pack(side='left')
+        
+        # Título (centro-izquierda)
+        title_label = tk.Label(
+            self.header_frame,
+            text="Gestión de Presupuestos",
+            font=("Segoe UI Semibold", 14),
+            fg=self.palette["text"],
+            bg=self.palette["surface"]
+        )
+        title_label.pack(side='left', padx=(20, 0), pady=0)
+        
+        # Botón para cambiar logo (derecha)
+        change_logo_btn = ttk.Button(
+            self.header_frame,
+            text="Cambiar logo",
+            style='Small.TButton',
+            command=self._abrir_config_logo
+        )
+        change_logo_btn.pack(side='right', padx=(0, 16), pady=12)
+        
+        self._refresh_header_logo()
+    
+    def _refresh_header_logo(self):
+        """Actualiza el logo del header según la configuración."""
+        path = self._get_logo_path_for_app()
+        if path:
+            try:
+                from PIL import Image
+                from PIL import ImageTk
+                img = Image.open(path).convert("RGBA")
+                img.thumbnail((140, 48), Image.Resampling.LANCZOS)
+                self._header_photo = ImageTk.PhotoImage(img)
+                self.header_logo_label.configure(image=self._header_photo)
+                self.header_logo_label.image = self._header_photo
+            except ImportError:
+                try:
+                    self._header_photo = tk.PhotoImage(file=path)
+                    self.header_logo_label.configure(image=self._header_photo)
+                    self.header_logo_label.image = self._header_photo
+                except Exception:
+                    self.header_logo_label.configure(image='', text="Logo")
+            except Exception:
+                try:
+                    self._header_photo = tk.PhotoImage(file=path)
+                    self.header_logo_label.configure(image=self._header_photo)
+                    self.header_logo_label.image = self._header_photo
+                except Exception:
+                    self.header_logo_label.configure(image='', text="Logo")
+        else:
+            self.header_logo_label.configure(image='', text="Logo")
+    
+    def _abrir_config_logo(self):
+        """Abre el diálogo de plantilla en la sección de logo."""
+        self.editar_plantilla_pdf()
     
     def create_clientes_tab(self):
         """Crea la pestaña de gestión de clientes"""
@@ -252,7 +370,7 @@ class AppPresupuestos:
         main_frame.pack(fill='both', expand=True, padx=10, pady=10)
         
         # Canvas y scrollbar para toda la ventana
-        canvas = tk.Canvas(main_frame, bg='#ecf0f1')
+        canvas = tk.Canvas(main_frame, bg=self.palette["app_bg"], highlightthickness=0)
         scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
         
@@ -399,7 +517,7 @@ class AppPresupuestos:
         descuentos_frame.pack(fill='x', pady=(0, 10))
         
         # Descuentos globales
-        ttk.Label(descuentos_frame, text="Descuento Global:", font=('Arial', 9, 'bold')).pack(side='left', padx=(0, 10))
+        ttk.Label(descuentos_frame, text="Descuento Global:", font=('Segoe UI Semibold', 9)).pack(side='left', padx=(0, 10))
         
         ttk.Label(descuentos_frame, text="%:").pack(side='left', padx=(0, 5))
         self.descuento_porcentaje_var = tk.StringVar(value="0")
@@ -425,7 +543,7 @@ class AppPresupuestos:
         totales_linea_frame.pack(fill='x')
         
         # Información de items
-        self.items_info_label = ttk.Label(totales_linea_frame, text="Items: 0", font=('Arial', 9), foreground='gray')
+        self.items_info_label = ttk.Label(totales_linea_frame, text="Items: 0", font=('Segoe UI', 9), foreground='#6c6f80')
         self.items_info_label.pack(side='left', padx=(0, 20))
         
         # Checkbox para activar/desactivar IVA
@@ -437,21 +555,21 @@ class AppPresupuestos:
         
         # Subtotal
         ttk.Label(totales_linea_frame, text="Subtotal:").pack(side='left', padx=(0, 5))
-        self.subtotal_label = ttk.Label(totales_linea_frame, text="€0.00", font=('Arial', 10, 'bold'))
+        self.subtotal_label = ttk.Label(totales_linea_frame, text="€0.00", font=('Segoe UI Semibold', 10))
         self.subtotal_label.pack(side='left', padx=(0, 20))
         
         # Descuentos (si hay)
-        self.descuento_label = ttk.Label(totales_linea_frame, text="", font=('Arial', 9), foreground='green')
+        self.descuento_label = ttk.Label(totales_linea_frame, text="", font=('Segoe UI', 9), foreground='#22c55e')
         self.descuento_label.pack(side='left', padx=(0, 20))
         
         # IVA
         ttk.Label(totales_linea_frame, text="IVA (21%):").pack(side='left', padx=(0, 5))
-        self.iva_label = ttk.Label(totales_linea_frame, text="€0.00", font=('Arial', 10, 'bold'))
+        self.iva_label = ttk.Label(totales_linea_frame, text="€0.00", font=('Segoe UI Semibold', 10))
         self.iva_label.pack(side='left', padx=(0, 20))
         
         # TOTAL (destacado)
-        ttk.Label(totales_linea_frame, text="TOTAL:", font=('Arial', 12, 'bold')).pack(side='left', padx=(0, 5))
-        self.total_label = ttk.Label(totales_linea_frame, text="€0.00", font=('Arial', 16, 'bold'), foreground='blue')
+        ttk.Label(totales_linea_frame, text="TOTAL:", font=('Segoe UI Semibold', 12)).pack(side='left', padx=(0, 5))
+        self.total_label = ttk.Label(totales_linea_frame, text="€0.00", font=('Segoe UI Semibold', 18), foreground=self.palette["accent_hover"])
         self.total_label.pack(side='left', padx=(0, 20))
         
         # Botones principales
@@ -472,14 +590,6 @@ class AppPresupuestos:
         self.presupuesto_items = []
         self.materiales_data = {}  # Para almacenar datos de materiales
         
-        # Carpeta para guardar PDFs (cargar desde configuración)
-        self.config_file = "config/config.json"
-        self.plantilla_config_file = "config/plantilla_config.json"
-        config = self.cargar_configuracion()
-        self.carpeta_pdfs = config.get('carpeta_pdfs', os.path.join(os.getcwd(), 'output', 'presupuestos'))
-        self.carpeta_facturas = config.get('carpeta_facturas', os.path.join(os.getcwd(), 'output', 'facturas'))
-        self.plantilla_config = self.cargar_configuracion_plantilla()
-        self.pdf_generator = PDFGenerator(self.plantilla_config)
         self.actualizar_label_carpeta_pdfs()
     
     def create_ver_presupuestos_tab(self):
@@ -488,7 +598,7 @@ class AppPresupuestos:
         self.notebook.add(self.ver_presupuestos_frame, text="Ver Presupuestos")
         
         # Canvas y scrollbar para permitir desplazamiento
-        canvas = tk.Canvas(self.ver_presupuestos_frame, bg='#ecf0f1', highlightthickness=0)
+        canvas = tk.Canvas(self.ver_presupuestos_frame, bg=self.palette["app_bg"], highlightthickness=0)
         scrollbar = ttk.Scrollbar(self.ver_presupuestos_frame, orient='vertical', command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
 
@@ -627,7 +737,7 @@ class AppPresupuestos:
         
         # Label para mostrar la carpeta actual
         self.carpeta_pdfs_label = ttk.Label(button_row2, text="Carpeta PDFs: No configurada", 
-                                          font=('Arial', 8), foreground='gray')
+                                          font=('Segoe UI', 8), foreground='#6c6f80')
         self.carpeta_pdfs_label.pack(side='left', padx=(15, 0))
 
         # Configurar desplazamiento con rueda del mouse en toda la vista
@@ -1210,10 +1320,10 @@ class AppPresupuestos:
         
         # Cambiar color del IVA según si está habilitado o no
         if iva_realmente_habilitado:
-            self.iva_label.config(foreground='black')
+            self.iva_label.config(foreground='#e4e5ea')
             self.iva_checkbox.config(state='normal')
         else:
-            self.iva_label.config(foreground='gray')
+            self.iva_label.config(foreground='#6c6f80')
             # Si ningún item tiene IVA, desactivar el checkbox
             if len(items_con_iva) == 0 and self.presupuesto_items:
                 self.iva_checkbox.config(state='disabled')
@@ -1233,6 +1343,7 @@ class AppPresupuestos:
         
         # Crear ventana de diálogo
         dialog = tk.Toplevel(self.root)
+        dialog.configure(bg=self.palette["app_bg"])
         dialog.title("Editar Item")
         dialog.geometry("500x400")
         dialog.resizable(False, False)
@@ -1256,7 +1367,7 @@ class AppPresupuestos:
         
         # Información del item
         ttk.Label(main_frame, text=f"Item: {item_data.get('tarea_manual', item_data.get('material_nombre', 'Sin nombre'))}", 
-                 font=('Arial', 10, 'bold')).pack(pady=(0, 20))
+                 font=('Segoe UI Semibold', 10)).pack(pady=(0, 20))
         
         # IVA
         iva_frame = ttk.Frame(main_frame)
@@ -1278,7 +1389,7 @@ class AppPresupuestos:
         ttk.Label(descuentos_frame, text="€").grid(row=1, column=2, sticky='w', padx=(5, 0))
         
         ttk.Label(descuentos_frame, text="Nota: El porcentaje tiene prioridad sobre el descuento fijo", 
-                 font=('Arial', 8), foreground='gray').grid(row=2, column=0, columnspan=3, sticky='w', pady=(10, 0))
+                 font=('Segoe UI', 8), foreground='#6c6f80').grid(row=2, column=0, columnspan=3, sticky='w', pady=(10, 0))
         
         # Botones
         button_frame = ttk.Frame(main_frame)
@@ -1373,6 +1484,7 @@ class AppPresupuestos:
             
             # Crear ventana de diálogo para el nombre del archivo
             nombre_dialog = tk.Toplevel(self.root)
+            nombre_dialog.configure(bg=self.palette["app_bg"])
             nombre_dialog.title("Nombre del archivo PDF")
             nombre_dialog.geometry("600x250")
             nombre_dialog.resizable(False, False)
@@ -1392,18 +1504,18 @@ class AppPresupuestos:
             # Información del presupuesto
             info_label = ttk.Label(main_frame, 
                                  text=f"Presupuesto #{presupuesto_id} - {presupuesto['cliente_nombre']}", 
-                                 font=('Arial', 10, 'bold'))
+                                 font=('Segoe UI Semibold', 10))
             info_label.pack(pady=(0, 15))
             
             # Label y entry para el nombre del archivo
-            ttk.Label(main_frame, text="Nombre del archivo PDF:", font=('Arial', 9)).pack(anchor='w', pady=(0, 5))
+            ttk.Label(main_frame, text="Nombre del archivo PDF:", font=('Segoe UI', 9)).pack(anchor='w', pady=(0, 5))
             
             # Generar nombre sugerido
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             nombre_sugerido = f"presupuesto_{presupuesto_id}_{presupuesto['cliente_nombre'].replace(' ', '_')}_{timestamp}"
             
             nombre_var = tk.StringVar(value=nombre_sugerido)
-            nombre_entry = ttk.Entry(main_frame, textvariable=nombre_var, width=50, font=('Arial', 9))
+            nombre_entry = ttk.Entry(main_frame, textvariable=nombre_var, width=50, font=('Segoe UI', 9))
             nombre_entry.pack(fill='x', pady=(0, 10))
             nombre_entry.select_range(0, tk.END)
             nombre_entry.focus()
@@ -1411,8 +1523,8 @@ class AppPresupuestos:
             # Información adicional
             info_text = ttk.Label(main_frame, 
                                 text="• El archivo se guardará en la carpeta configurada\n• No incluya la extensión .pdf (se agregará automáticamente)", 
-                                font=('Arial', 8), 
-                                foreground='gray')
+                                font=('Segoe UI', 8), 
+                                foreground='#6c6f80')
             info_text.pack(anchor='w', pady=(0, 15))
             
             # Variables para el resultado
@@ -1625,6 +1737,7 @@ class AppPresupuestos:
     def mostrar_detalle_presupuesto(self, presupuesto):
         # Crear ventana de detalle
         detalle_window = tk.Toplevel(self.root)
+        detalle_window.configure(bg='#0f1117')
         detalle_window.title(f"Detalle Presupuesto #{presupuesto['id']}")
         detalle_window.geometry("900x700")
         
@@ -1684,16 +1797,16 @@ class AppPresupuestos:
         totales_frame = ttk.LabelFrame(main_frame, text="Totales", padding=10)
         totales_frame.pack(fill='x')
         
-        ttk.Label(totales_frame, text=f"Subtotal: €{presupuesto['subtotal']:.2f}", font=('Arial', 10, 'bold')).pack(anchor='w')
+        ttk.Label(totales_frame, text=f"Subtotal: €{presupuesto['subtotal']:.2f}", font=('Segoe UI Semibold', 10)).pack(anchor='w')
         
         # Mostrar IVA solo si está habilitado
         iva_habilitado = presupuesto.get('iva_habilitado', True)
         if iva_habilitado:
-            ttk.Label(totales_frame, text=f"IVA (21%): €{presupuesto['iva']:.2f}", font=('Arial', 10, 'bold')).pack(anchor='w')
+            ttk.Label(totales_frame, text=f"IVA (21%): €{presupuesto['iva']:.2f}", font=('Segoe UI Semibold', 10)).pack(anchor='w')
         else:
-            ttk.Label(totales_frame, text="IVA: No incluido", font=('Arial', 10, 'bold'), foreground='gray').pack(anchor='w')
+            ttk.Label(totales_frame, text="IVA: No incluido", font=('Segoe UI Semibold', 10), foreground='#6c6f80').pack(anchor='w')
         
-        ttk.Label(totales_frame, text=f"Total: €{presupuesto['total']:.2f}", font=('Arial', 12, 'bold'), foreground='blue').pack(anchor='w')
+        ttk.Label(totales_frame, text=f"Total: €{presupuesto['total']:.2f}", font=('Segoe UI Semibold', 12), foreground='#818cf8').pack(anchor='w')
         
         # Botones de acción
         botones_frame = ttk.Frame(main_frame)
@@ -2120,7 +2233,7 @@ class AppPresupuestos:
                 }
             },
             "logo": {
-                "usar_logo": False,
+                "usar_logo": True,
                 "ruta_logo": "",
                 "texto_logo": "PRESUPUESTOS",
                 "tamaño_logo": 24
@@ -2213,10 +2326,11 @@ class AppPresupuestos:
         # Crear ventana de edición
         plantilla_window = tk.Toplevel(self.root)
         plantilla_window.title("Editar Plantilla PDF")
-        plantilla_window.geometry("700x750")
+        plantilla_window.geometry("720x780")
         plantilla_window.resizable(True, True)
         plantilla_window.transient(self.root)
         plantilla_window.grab_set()
+        plantilla_window.configure(bg=self.palette["app_bg"])
         
         # Centrar la ventana
         plantilla_window.geometry("+%d+%d" % (
@@ -2229,7 +2343,7 @@ class AppPresupuestos:
         main_frame.pack(fill='both', expand=True)
         
         # Canvas y scrollbar
-        canvas = tk.Canvas(main_frame, bg='#ecf0f1')
+        canvas = tk.Canvas(main_frame, bg=self.palette["app_bg"], highlightthickness=0)
         scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
         
@@ -2294,28 +2408,56 @@ class AppPresupuestos:
         
         empresa_frame.columnconfigure(1, weight=1)
         
-        # Sección de logo
-        logo_frame = ttk.LabelFrame(scrollable_frame, text="Configuración del Logo", padding=10)
+        # Sección de logo – diseño moderno
+        logo_frame = ttk.LabelFrame(scrollable_frame, text="Logo (App y PDFs)", padding=10)
         logo_frame.pack(fill='x', pady=(0, 10))
         
-        vars_logo['usar_logo'] = tk.BooleanVar(value=self.plantilla_config['logo'].get('usar_logo', False))
-        ttk.Checkbutton(logo_frame, text="Usar imagen de logo", variable=vars_logo['usar_logo']).pack(anchor='w', pady=(0, 10))
+        vars_logo['usar_logo'] = tk.BooleanVar(value=self.plantilla_config['logo'].get('usar_logo', True))
+        ttk.Checkbutton(logo_frame, text="Usar imagen de logo (personalizado o por defecto)", variable=vars_logo['usar_logo']).pack(anchor='w', pady=(0, 10))
         
-        ttk.Label(logo_frame, text="Ruta del logo:").pack(anchor='w')
+        logo_preview_frame = ttk.Frame(logo_frame)
+        logo_preview_frame.pack(fill='x', pady=(0, 10))
+        
+        def _actualizar_preview_logo():
+            ruta = vars_logo['ruta_logo'].get()
+            if not ruta or not os.path.exists(ruta):
+                ruta = _get_default_logo_path()
+            if ruta and os.path.exists(ruta):
+                try:
+                    from PIL import Image
+                    from PIL import ImageTk
+                    img = Image.open(ruta).convert("RGBA")
+                    img.thumbnail((100, 50), Image.Resampling.LANCZOS)
+                    photo = ImageTk.PhotoImage(img)
+                    preview_label.configure(image=photo)
+                    preview_label.image = photo
+                except Exception:
+                    preview_label.configure(image='', text="Vista previa")
+            else:
+                preview_label.configure(image='', text="Vista previa")
+        
+        preview_label = tk.Label(logo_preview_frame, text="Vista previa", bg=self.palette["surface"], fg=self.palette["text_secondary"])
+        preview_label.pack(side='left', padx=(0, 15))
+        
+        ttk.Label(logo_frame, text="Ruta del logo (dejar vacío para usar el por defecto):").pack(anchor='w')
         logo_path_frame = ttk.Frame(logo_frame)
         logo_path_frame.pack(fill='x', pady=(5, 10))
         
         vars_logo['ruta_logo'] = tk.StringVar(value=self.plantilla_config['logo'].get('ruta_logo', ''))
-        ttk.Entry(logo_path_frame, textvariable=vars_logo['ruta_logo'], width=35).pack(side='left', fill='x', expand=True)
-        ttk.Button(logo_path_frame, text="Examinar", command=lambda: self.seleccionar_logo(vars_logo['ruta_logo'])).pack(side='right', padx=(10, 0))
+        logo_entry = ttk.Entry(logo_path_frame, textvariable=vars_logo['ruta_logo'], width=35, style='TEntry')
+        logo_entry.pack(side='left', fill='x', expand=True)
+        ttk.Button(logo_path_frame, text="Subir logo...", command=lambda: (self.seleccionar_logo(vars_logo['ruta_logo']), _actualizar_preview_logo()), style='Accent.TButton').pack(side='right', padx=(10, 0))
+        logo_entry.bind('<KeyRelease>', lambda e: _actualizar_preview_logo())
         
         ttk.Label(logo_frame, text="Texto del logo (si no usa imagen):").pack(anchor='w', pady=(10, 0))
         vars_logo['texto_logo'] = tk.StringVar(value=self.plantilla_config['logo'].get('texto_logo', 'PRESUPUESTOS'))
-        ttk.Entry(logo_frame, textvariable=vars_logo['texto_logo'], width=30).pack(anchor='w', pady=(5, 0))
+        ttk.Entry(logo_frame, textvariable=vars_logo['texto_logo'], width=30, style='TEntry').pack(anchor='w', pady=(5, 0))
         
         ttk.Label(logo_frame, text="Tamaño del logo:").pack(anchor='w', pady=(10, 0))
         vars_logo['tamaño_logo'] = tk.IntVar(value=self.plantilla_config['logo'].get('tamaño_logo', 24))
         ttk.Scale(logo_frame, from_=12, to=48, variable=vars_logo['tamaño_logo'], orient='horizontal').pack(fill='x', pady=(5, 0))
+        
+        plantilla_window.after(100, _actualizar_preview_logo)
         
         # Sección de colores
         colores_frame = ttk.LabelFrame(scrollable_frame, text="Colores", padding=10)
@@ -2384,6 +2526,10 @@ class AppPresupuestos:
                 
                 # Actualizar el generador de PDFs con la nueva configuración
                 self.pdf_generator = PDFGenerator(self.plantilla_config)
+                
+                # Actualizar logo en el header de la app
+                if hasattr(self, '_refresh_header_logo'):
+                    self._refresh_header_logo()
                 
                 messagebox.showinfo("Éxito", "Configuración de plantilla guardada correctamente")
                 plantilla_window.destroy()
@@ -2474,7 +2620,7 @@ class AppPresupuestos:
         main_frame.pack(fill='both', expand=True, padx=10, pady=10)
         
         # Canvas y scrollbar
-        canvas = tk.Canvas(main_frame, bg='#ecf0f1')
+        canvas = tk.Canvas(main_frame, bg=self.palette["app_bg"], highlightthickness=0)
         scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
         
@@ -2562,13 +2708,13 @@ class AppPresupuestos:
         self.fecha_vencimiento_var = tk.StringVar()
         self.fecha_vencimiento_entry = ttk.Entry(datos_frame, textvariable=self.fecha_vencimiento_var, width=15)
         self.fecha_vencimiento_entry.grid(row=0, column=4, pady=8, sticky='w')
-        ttk.Label(datos_frame, text="(AAAA-MM-DD)", font=('Arial', 8), foreground='gray').grid(row=0, column=5, sticky='w', padx=(5, 0), pady=8)
+        ttk.Label(datos_frame, text="(AAAA-MM-DD)", font=('Segoe UI', 8), foreground='#6c6f80').grid(row=0, column=5, sticky='w', padx=(5, 0), pady=8)
         
         # Botones rápidos para fecha de vencimiento
         vencimiento_buttons_frame = ttk.Frame(datos_frame)
         vencimiento_buttons_frame.grid(row=1, column=3, columnspan=3, sticky='w', padx=(20, 0), pady=(5, 8))
         
-        ttk.Label(vencimiento_buttons_frame, text="Rápido:", font=('Arial', 8)).pack(side='left', padx=(0, 5))
+        ttk.Label(vencimiento_buttons_frame, text="Rápido:", font=('Segoe UI', 8)).pack(side='left', padx=(0, 5))
         ttk.Button(vencimiento_buttons_frame, text="+15 días", command=lambda: self.set_fecha_vencimiento(15), 
                   style='Small.TButton').pack(side='left', padx=(0, 3))
         ttk.Button(vencimiento_buttons_frame, text="+30 días", command=lambda: self.set_fecha_vencimiento(30), 
@@ -2599,7 +2745,7 @@ class AppPresupuestos:
         self.retencion_irpf_var = tk.StringVar()
         self.retencion_irpf_entry = ttk.Entry(datos_frame, textvariable=self.retencion_irpf_var, width=10)
         self.retencion_irpf_entry.grid(row=2, column=4, pady=8, sticky='w')
-        ttk.Label(datos_frame, text="(opcional, ej: 15)", font=('Arial', 8), foreground='gray').grid(row=2, column=5, sticky='w', padx=(5, 0), pady=8)
+        ttk.Label(datos_frame, text="(opcional, ej: 15)", font=('Segoe UI', 8), foreground='#6c6f80').grid(row=2, column=5, sticky='w', padx=(5, 0), pady=8)
         self.retencion_irpf_entry.bind('<KeyRelease>', self.calcular_totales_factura)
         
         # Notas
@@ -2703,7 +2849,7 @@ class AppPresupuestos:
         descuentos_frame.pack(fill='x', pady=(0, 10))
         
         # Descuentos globales
-        ttk.Label(descuentos_frame, text="Descuento Global:", font=('Arial', 9, 'bold')).pack(side='left', padx=(0, 10))
+        ttk.Label(descuentos_frame, text="Descuento Global:", font=('Segoe UI Semibold', 9)).pack(side='left', padx=(0, 10))
         
         ttk.Label(descuentos_frame, text="%:").pack(side='left', padx=(0, 5))
         self.factura_descuento_porcentaje_var = tk.StringVar(value="0")
@@ -2728,7 +2874,7 @@ class AppPresupuestos:
         totales_linea_frame.pack(fill='x')
         
         # Información de items
-        self.factura_items_info_label = ttk.Label(totales_linea_frame, text="Items: 0", font=('Arial', 9), foreground='gray')
+        self.factura_items_info_label = ttk.Label(totales_linea_frame, text="Items: 0", font=('Segoe UI', 9), foreground='#6c6f80')
         self.factura_items_info_label.pack(side='left', padx=(0, 20))
         
         # Checkbox para IVA
@@ -2740,21 +2886,21 @@ class AppPresupuestos:
         
         # Subtotal
         ttk.Label(totales_linea_frame, text="Subtotal:").pack(side='left', padx=(0, 5))
-        self.factura_subtotal_label = ttk.Label(totales_linea_frame, text="€0.00", font=('Arial', 10, 'bold'))
+        self.factura_subtotal_label = ttk.Label(totales_linea_frame, text="€0.00", font=('Segoe UI Semibold', 10))
         self.factura_subtotal_label.pack(side='left', padx=(0, 20))
         
         # Descuentos (si hay)
-        self.factura_descuento_label = ttk.Label(totales_linea_frame, text="", font=('Arial', 9), foreground='green')
+        self.factura_descuento_label = ttk.Label(totales_linea_frame, text="", font=('Segoe UI', 9), foreground='#22c55e')
         self.factura_descuento_label.pack(side='left', padx=(0, 20))
         
         # IVA
         ttk.Label(totales_linea_frame, text="IVA (21%):").pack(side='left', padx=(0, 5))
-        self.factura_iva_label = ttk.Label(totales_linea_frame, text="€0.00", font=('Arial', 10, 'bold'))
+        self.factura_iva_label = ttk.Label(totales_linea_frame, text="€0.00", font=('Segoe UI Semibold', 10))
         self.factura_iva_label.pack(side='left', padx=(0, 20))
         
         # TOTAL
-        ttk.Label(totales_linea_frame, text="TOTAL:", font=('Arial', 12, 'bold')).pack(side='left', padx=(0, 5))
-        self.factura_total_label = ttk.Label(totales_linea_frame, text="€0.00", font=('Arial', 16, 'bold'), foreground='blue')
+        ttk.Label(totales_linea_frame, text="TOTAL:", font=('Segoe UI Semibold', 12)).pack(side='left', padx=(0, 5))
+        self.factura_total_label = ttk.Label(totales_linea_frame, text="€0.00", font=('Segoe UI Semibold', 18), foreground='#818cf8')
         self.factura_total_label.pack(side='left', padx=(0, 20))
         
         # Botones principales
@@ -2779,7 +2925,7 @@ class AppPresupuestos:
         
         # Label para mostrar la carpeta actual de facturas
         self.carpeta_facturas_crear_label = ttk.Label(button_row2, text="Carpeta Facturas: No configurada",
-                                                      font=('Arial', 8), foreground='gray')
+                                                      font=('Segoe UI', 8), foreground='#6c6f80')
         self.carpeta_facturas_crear_label.pack(side='left', padx=(15, 0))
         
         # Lista para almacenar items de la factura
@@ -2803,7 +2949,7 @@ class AppPresupuestos:
     def create_ver_facturas_section(self):
         """Crea la sección para ver facturas existentes"""
         # Canvas y scrollbar para scroll vertical
-        canvas = tk.Canvas(self.ver_facturas_frame, bg='#ecf0f1', highlightthickness=0)
+        canvas = tk.Canvas(self.ver_facturas_frame, bg=self.palette["app_bg"], highlightthickness=0)
         scrollbar = ttk.Scrollbar(self.ver_facturas_frame, orient='vertical', command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
         
@@ -2944,7 +3090,7 @@ class AppPresupuestos:
         
         # Label para mostrar la carpeta actual
         self.carpeta_facturas_label = ttk.Label(button_row2, text="Carpeta Facturas: No configurada",
-                                               font=('Arial', 8), foreground='gray')
+                                               font=('Segoe UI', 8), foreground='#6c6f80')
         self.carpeta_facturas_label.pack(side='left', padx=(15, 0))
         
         self.actualizar_label_carpeta_facturas()
@@ -3273,10 +3419,10 @@ class AppPresupuestos:
         
         # Cambiar color del IVA según si está habilitado o no
         if iva_realmente_habilitado:
-            self.factura_iva_label.config(foreground='black')
+            self.factura_iva_label.config(foreground='#e4e5ea')
             self.factura_iva_checkbox.config(state='normal')
         else:
-            self.factura_iva_label.config(foreground='gray')
+            self.factura_iva_label.config(foreground='#6c6f80')
             # Si ningún item tiene IVA, desactivar el checkbox
             if len(items_con_iva) == 0 and self.factura_items:
                 self.factura_iva_checkbox.config(state='disabled')
@@ -3296,6 +3442,7 @@ class AppPresupuestos:
         
         # Crear ventana de diálogo
         dialog = tk.Toplevel(self.root)
+        dialog.configure(bg=self.palette["app_bg"])
         dialog.title("Editar Item de Factura")
         dialog.geometry("500x400")
         dialog.resizable(False, False)
@@ -3319,7 +3466,7 @@ class AppPresupuestos:
         
         # Información del item
         ttk.Label(main_frame, text=f"Item: {item_data.get('tarea_manual', item_data.get('material_nombre', 'Sin nombre'))}", 
-                 font=('Arial', 10, 'bold')).pack(pady=(0, 20))
+                 font=('Segoe UI Semibold', 10)).pack(pady=(0, 20))
         
         # IVA
         iva_frame = ttk.Frame(main_frame)
@@ -3341,7 +3488,7 @@ class AppPresupuestos:
         ttk.Label(descuentos_frame, text="€").grid(row=1, column=2, sticky='w', padx=(5, 0))
         
         ttk.Label(descuentos_frame, text="Nota: El porcentaje tiene prioridad sobre el descuento fijo", 
-                 font=('Arial', 8), foreground='gray').grid(row=2, column=0, columnspan=3, sticky='w', pady=(10, 0))
+                 font=('Segoe UI', 8), foreground='#6c6f80').grid(row=2, column=0, columnspan=3, sticky='w', pady=(10, 0))
         
         # Botones
         button_frame = ttk.Frame(main_frame)
@@ -3535,6 +3682,7 @@ class AppPresupuestos:
         """Importa datos desde un presupuesto existente"""
         # Crear ventana de diálogo
         dialog = tk.Toplevel(self.root)
+        dialog.configure(bg=self.palette["app_bg"])
         dialog.title("Importar desde Presupuesto")
         dialog.geometry("900x600")
         dialog.transient(self.root)
@@ -3551,7 +3699,7 @@ class AppPresupuestos:
         main_frame.pack(fill='both', expand=True)
         
         ttk.Label(main_frame, text="Seleccione un presupuesto para convertir en factura:", 
-                 font=('Arial', 10, 'bold')).pack(pady=(0, 10))
+                 font=('Segoe UI Semibold', 10)).pack(pady=(0, 10))
         
         # Treeview para presupuestos
         columns = ('ID', 'Cliente', 'Fecha', 'Total', 'Estado')
@@ -3768,6 +3916,7 @@ class AppPresupuestos:
             
             # Crear ventana de diálogo para el nombre
             nombre_dialog = tk.Toplevel(self.root)
+            nombre_dialog.configure(bg=self.palette["app_bg"])
             nombre_dialog.title("Nombre del archivo PDF")
             nombre_dialog.geometry("600x250")
             nombre_dialog.resizable(False, False)
@@ -3787,11 +3936,11 @@ class AppPresupuestos:
             # Información
             info_label = ttk.Label(main_frame,
                                   text=f"Factura {factura['numero_factura']} - {factura['cliente_nombre']}",
-                                  font=('Arial', 10, 'bold'))
+                                  font=('Segoe UI Semibold', 10))
             info_label.pack(pady=(0, 15))
             
             # Label y entry para el nombre
-            ttk.Label(main_frame, text="Nombre del archivo PDF:", font=('Arial', 9)).pack(anchor='w', pady=(0, 5))
+            ttk.Label(main_frame, text="Nombre del archivo PDF:", font=('Segoe UI', 9)).pack(anchor='w', pady=(0, 5))
             
             # Generar nombre sugerido
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -3799,7 +3948,7 @@ class AppPresupuestos:
             nombre_sugerido = f"factura_{numero_limpio}_{factura['cliente_nombre'].replace(' ', '_')}_{timestamp}"
             
             nombre_var = tk.StringVar(value=nombre_sugerido)
-            nombre_entry = ttk.Entry(main_frame, textvariable=nombre_var, width=50, font=('Arial', 9))
+            nombre_entry = ttk.Entry(main_frame, textvariable=nombre_var, width=50, font=('Segoe UI', 9))
             nombre_entry.pack(fill='x', pady=(0, 10))
             nombre_entry.select_range(0, tk.END)
             nombre_entry.focus()
@@ -3807,8 +3956,8 @@ class AppPresupuestos:
             # Información adicional
             info_text = ttk.Label(main_frame,
                                 text="• El archivo se guardará en la carpeta configurada\n• No incluya la extensión .pdf (se agregará automáticamente)",
-                                font=('Arial', 8),
-                                foreground='gray')
+                                font=('Segoe UI', 8),
+                                foreground='#6c6f80')
             info_text.pack(anchor='w', pady=(0, 15))
             
             # Variable para resultado
@@ -4013,6 +4162,7 @@ class AppPresupuestos:
         """Muestra una ventana con el detalle de la factura"""
         # Crear ventana
         detalle_window = tk.Toplevel(self.root)
+        detalle_window.configure(bg='#0f1117')
         detalle_window.title(f"Detalle Factura {factura.get('numero_factura', factura['id'])}")
         detalle_window.geometry("950x750")
         
@@ -4024,14 +4174,14 @@ class AppPresupuestos:
         info_frame = ttk.LabelFrame(main_frame, text="Información de la Factura", padding=8)
         info_frame.pack(fill='x', pady=(0, 8))
         
-        ttk.Label(info_frame, text=f"Número de Factura: {factura.get('numero_factura', 'N/A')}", font=('Arial', 10, 'bold')).pack(anchor='w')
+        ttk.Label(info_frame, text=f"Número de Factura: {factura.get('numero_factura', 'N/A')}", font=('Segoe UI Semibold', 10)).pack(anchor='w')
         ttk.Label(info_frame, text=f"Fecha: {factura['fecha_creacion'][:10]}").pack(anchor='w')
         ttk.Label(info_frame, text=f"Vencimiento: {factura.get('fecha_vencimiento', 'N/A')}").pack(anchor='w')
         ttk.Label(info_frame, text=f"Método de Pago: {factura.get('metodo_pago', 'N/A')}").pack(anchor='w')
         
         estado = factura.get('estado_pago', 'No Pagada')
-        color = '#27ae60' if estado == 'Pagada' else '#e74c3c'
-        estado_label = ttk.Label(info_frame, text=f"Estado: {estado}", foreground=color, font=('Arial', 10, 'bold'))
+        color = '#22c55e' if estado == 'Pagada' else '#ef4444'
+        estado_label = ttk.Label(info_frame, text=f"Estado: {estado}", foreground=color, font=('Segoe UI Semibold', 10))
         estado_label.pack(anchor='w')
         
         # Información del cliente
@@ -4086,15 +4236,15 @@ class AppPresupuestos:
         totales_frame = ttk.LabelFrame(main_frame, text="Totales", padding=8)
         totales_frame.pack(fill='x', pady=(0, 8))
         
-        ttk.Label(totales_frame, text=f"Subtotal: €{factura['subtotal']:.2f}", font=('Arial', 10, 'bold')).pack(anchor='w')
+        ttk.Label(totales_frame, text=f"Subtotal: €{factura['subtotal']:.2f}", font=('Segoe UI Semibold', 10)).pack(anchor='w')
         
         iva_habilitado = factura.get('iva_habilitado', True)
         if iva_habilitado:
-            ttk.Label(totales_frame, text=f"IVA (21%): €{factura['iva']:.2f}", font=('Arial', 10, 'bold')).pack(anchor='w')
+            ttk.Label(totales_frame, text=f"IVA (21%): €{factura['iva']:.2f}", font=('Segoe UI Semibold', 10)).pack(anchor='w')
         else:
-            ttk.Label(totales_frame, text="IVA: No incluido", font=('Arial', 10, 'bold'), foreground='gray').pack(anchor='w')
+            ttk.Label(totales_frame, text="IVA: No incluido", font=('Segoe UI Semibold', 10), foreground='#6c6f80').pack(anchor='w')
         
-        ttk.Label(totales_frame, text=f"Total: €{factura['total']:.2f}", font=('Arial', 12, 'bold'), foreground='blue').pack(anchor='w')
+        ttk.Label(totales_frame, text=f"Total: €{factura['total']:.2f}", font=('Segoe UI Semibold', 12), foreground='#818cf8').pack(anchor='w')
         
         # Notas
         if factura.get('notas'):
@@ -4328,7 +4478,7 @@ class AppPresupuestos:
         main_frame.pack(fill='both', expand=True, padx=10, pady=10)
         
         # Canvas y scrollbar
-        canvas = tk.Canvas(main_frame, bg='#ecf0f1')
+        canvas = tk.Canvas(main_frame, bg=self.palette["app_bg"], highlightthickness=0)
         scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
         
@@ -4367,53 +4517,53 @@ class AppPresupuestos:
         empresa_frame.pack(fill='x', pady=(0, 20))
         
         # Nombre de la empresa
-        ttk.Label(empresa_frame, text="🏷️ Nombre de la Empresa:", font=('Arial', 9, 'bold')).grid(row=0, column=0, sticky='w', padx=(0, 10), pady=8)
+        ttk.Label(empresa_frame, text="🏷️ Nombre de la Empresa:", font=('Segoe UI Semibold', 9)).grid(row=0, column=0, sticky='w', padx=(0, 10), pady=8)
         self.config_empresa_nombre_var = tk.StringVar()
         self.config_empresa_nombre_entry = ttk.Entry(empresa_frame, textvariable=self.config_empresa_nombre_var, width=40)
         self.config_empresa_nombre_entry.grid(row=0, column=1, columnspan=2, sticky='ew', pady=8)
         
         # CIF
-        ttk.Label(empresa_frame, text="🆔 CIF:", font=('Arial', 9, 'bold')).grid(row=1, column=0, sticky='w', padx=(0, 10), pady=8)
+        ttk.Label(empresa_frame, text="🆔 CIF:", font=('Segoe UI Semibold', 9)).grid(row=1, column=0, sticky='w', padx=(0, 10), pady=8)
         self.config_empresa_cif_var = tk.StringVar()
         self.config_empresa_cif_entry = ttk.Entry(empresa_frame, textvariable=self.config_empresa_cif_var, width=25)
         self.config_empresa_cif_entry.grid(row=1, column=1, padx=(0, 10), pady=8, sticky='w')
         
         # Ciudad
-        ttk.Label(empresa_frame, text="🏙️ Ciudad:", font=('Arial', 9, 'bold')).grid(row=1, column=2, sticky='w', padx=(20, 10), pady=8)
+        ttk.Label(empresa_frame, text="🏙️ Ciudad:", font=('Segoe UI Semibold', 9)).grid(row=1, column=2, sticky='w', padx=(20, 10), pady=8)
         self.config_empresa_ciudad_var = tk.StringVar()
         self.config_empresa_ciudad_entry = ttk.Entry(empresa_frame, textvariable=self.config_empresa_ciudad_var, width=20)
         self.config_empresa_ciudad_entry.grid(row=1, column=3, pady=8, sticky='w')
         
         # Dirección
-        ttk.Label(empresa_frame, text="📍 Dirección:", font=('Arial', 9, 'bold')).grid(row=2, column=0, sticky='w', padx=(0, 10), pady=8)
+        ttk.Label(empresa_frame, text="📍 Dirección:", font=('Segoe UI Semibold', 9)).grid(row=2, column=0, sticky='w', padx=(0, 10), pady=8)
         self.config_empresa_direccion_var = tk.StringVar()
         self.config_empresa_direccion_entry = ttk.Entry(empresa_frame, textvariable=self.config_empresa_direccion_var, width=60)
         self.config_empresa_direccion_entry.grid(row=2, column=1, columnspan=3, sticky='ew', pady=8)
         
         # Teléfono
-        ttk.Label(empresa_frame, text="📞 Teléfono:", font=('Arial', 9, 'bold')).grid(row=3, column=0, sticky='w', padx=(0, 10), pady=8)
+        ttk.Label(empresa_frame, text="📞 Teléfono:", font=('Segoe UI Semibold', 9)).grid(row=3, column=0, sticky='w', padx=(0, 10), pady=8)
         self.config_empresa_telefono_var = tk.StringVar()
         self.config_empresa_telefono_entry = ttk.Entry(empresa_frame, textvariable=self.config_empresa_telefono_var, width=25)
         self.config_empresa_telefono_entry.grid(row=3, column=1, padx=(0, 10), pady=8, sticky='w')
         
         # Email
-        ttk.Label(empresa_frame, text="📧 Email:", font=('Arial', 9, 'bold')).grid(row=3, column=2, sticky='w', padx=(20, 10), pady=8)
+        ttk.Label(empresa_frame, text="📧 Email:", font=('Segoe UI Semibold', 9)).grid(row=3, column=2, sticky='w', padx=(20, 10), pady=8)
         self.config_empresa_email_var = tk.StringVar()
         self.config_empresa_email_entry = ttk.Entry(empresa_frame, textvariable=self.config_empresa_email_var, width=25)
         self.config_empresa_email_entry.grid(row=3, column=3, pady=8, sticky='w')
         
         # Web
-        ttk.Label(empresa_frame, text="🌐 Sitio Web:", font=('Arial', 9, 'bold')).grid(row=4, column=0, sticky='w', padx=(0, 10), pady=8)
+        ttk.Label(empresa_frame, text="🌐 Sitio Web:", font=('Segoe UI Semibold', 9)).grid(row=4, column=0, sticky='w', padx=(0, 10), pady=8)
         self.config_empresa_web_var = tk.StringVar()
         self.config_empresa_web_entry = ttk.Entry(empresa_frame, textvariable=self.config_empresa_web_var, width=40)
         self.config_empresa_web_entry.grid(row=4, column=1, columnspan=2, sticky='ew', pady=8)
         
         # Registro Mercantil
-        ttk.Label(empresa_frame, text="📋 Registro Mercantil:", font=('Arial', 9, 'bold')).grid(row=5, column=0, sticky='w', padx=(0, 10), pady=8)
+        ttk.Label(empresa_frame, text="📋 Registro Mercantil:", font=('Segoe UI Semibold', 9)).grid(row=5, column=0, sticky='w', padx=(0, 10), pady=8)
         self.config_empresa_registro_mercantil_var = tk.StringVar()
         self.config_empresa_registro_mercantil_entry = ttk.Entry(empresa_frame, textvariable=self.config_empresa_registro_mercantil_var, width=40)
         self.config_empresa_registro_mercantil_entry.grid(row=5, column=1, columnspan=2, sticky='ew', pady=8)
-        ttk.Label(empresa_frame, text="(Opcional, solo para sociedades)", font=('Arial', 8), foreground='gray').grid(row=5, column=3, sticky='w', padx=(5, 0), pady=8)
+        ttk.Label(empresa_frame, text="(Opcional, solo para sociedades)", font=('Segoe UI', 8), foreground='#6c6f80').grid(row=5, column=3, sticky='w', padx=(5, 0), pady=8)
         
         self.config_mostrar_registro_var = tk.BooleanVar(value=self.plantilla_config.get('opciones_pdf', {}).get('mostrar_registro_mercantil', True))
         ttk.Checkbutton(empresa_frame, text="Mostrar Registro Mercantil en el PDF",
@@ -4427,31 +4577,31 @@ class AppPresupuestos:
         banco_frame.pack(fill='x', pady=(0, 20))
         
         # Método de pago
-        ttk.Label(banco_frame, text="💳 Método de Pago:", font=('Arial', 9, 'bold')).grid(row=0, column=0, sticky='w', padx=(0, 10), pady=8)
+        ttk.Label(banco_frame, text="💳 Método de Pago:", font=('Segoe UI Semibold', 9)).grid(row=0, column=0, sticky='w', padx=(0, 10), pady=8)
         self.config_banco_metodo_var = tk.StringVar()
         self.config_banco_metodo_entry = ttk.Entry(banco_frame, textvariable=self.config_banco_metodo_var, width=30)
         self.config_banco_metodo_entry.grid(row=0, column=1, columnspan=2, sticky='ew', pady=8)
         
         # Nombre del banco
-        ttk.Label(banco_frame, text="🏛️ Nombre del Banco:", font=('Arial', 9, 'bold')).grid(row=1, column=0, sticky='w', padx=(0, 10), pady=8)
+        ttk.Label(banco_frame, text="🏛️ Nombre del Banco:", font=('Segoe UI Semibold', 9)).grid(row=1, column=0, sticky='w', padx=(0, 10), pady=8)
         self.config_banco_nombre_var = tk.StringVar()
         self.config_banco_nombre_entry = ttk.Entry(banco_frame, textvariable=self.config_banco_nombre_var, width=40)
         self.config_banco_nombre_entry.grid(row=1, column=1, columnspan=2, sticky='ew', pady=8)
         
         # Titular de la cuenta
-        ttk.Label(banco_frame, text="👤 Titular de la Cuenta:", font=('Arial', 9, 'bold')).grid(row=2, column=0, sticky='w', padx=(0, 10), pady=8)
+        ttk.Label(banco_frame, text="👤 Titular de la Cuenta:", font=('Segoe UI Semibold', 9)).grid(row=2, column=0, sticky='w', padx=(0, 10), pady=8)
         self.config_banco_titular_var = tk.StringVar()
         self.config_banco_titular_entry = ttk.Entry(banco_frame, textvariable=self.config_banco_titular_var, width=40)
         self.config_banco_titular_entry.grid(row=2, column=1, columnspan=2, sticky='ew', pady=8)
         
         # Número de cuenta
-        ttk.Label(banco_frame, text="🔢 Número de Cuenta:", font=('Arial', 9, 'bold')).grid(row=3, column=0, sticky='w', padx=(0, 10), pady=8)
+        ttk.Label(banco_frame, text="🔢 Número de Cuenta:", font=('Segoe UI Semibold', 9)).grid(row=3, column=0, sticky='w', padx=(0, 10), pady=8)
         self.config_banco_cuenta_var = tk.StringVar()
         self.config_banco_cuenta_entry = ttk.Entry(banco_frame, textvariable=self.config_banco_cuenta_var, width=40)
         self.config_banco_cuenta_entry.grid(row=3, column=1, columnspan=2, sticky='ew', pady=8)
         
         # IBAN
-        ttk.Label(banco_frame, text="🏦 IBAN:", font=('Arial', 9, 'bold')).grid(row=4, column=0, sticky='w', padx=(0, 10), pady=8)
+        ttk.Label(banco_frame, text="🏦 IBAN:", font=('Segoe UI Semibold', 9)).grid(row=4, column=0, sticky='w', padx=(0, 10), pady=8)
         self.config_banco_iban_var = tk.StringVar()
         self.config_banco_iban_entry = ttk.Entry(banco_frame, textvariable=self.config_banco_iban_var, width=40)
         self.config_banco_iban_entry.grid(row=4, column=1, columnspan=2, sticky='ew', pady=8)
@@ -4472,7 +4622,7 @@ class AppPresupuestos:
         
         # Label de estado
         self.config_status_label = ttk.Label(botones_frame, text="Configuración lista para editar", 
-                                           font=('Arial', 9), foreground='gray')
+                                           font=('Segoe UI', 9), foreground='#6c6f80')
         self.config_status_label.pack(side='left', padx=(20, 0))
         
         # Cargar configuración inicial
@@ -4511,17 +4661,17 @@ class AppPresupuestos:
             self.config_banco_cuenta_var.set(pago.get('numero_cuenta', ''))
             self.config_banco_iban_var.set(pago.get('iban', pago.get('numero_cuenta', '')))
             
-            self.config_status_label.config(text="Configuración cargada correctamente", foreground='green')
+            self.config_status_label.config(text="Configuración cargada correctamente", foreground='#22c55e')
             
         except FileNotFoundError:
             messagebox.showwarning("Advertencia", "No se encontró el archivo config/plantilla_config.json")
-            self.config_status_label.config(text="Error: Archivo no encontrado", foreground='red')
+            self.config_status_label.config(text="Error: Archivo no encontrado", foreground='#ef4444')
         except json.JSONDecodeError:
             messagebox.showerror("Error", "Error al leer el archivo de configuración. Verifique el formato JSON.")
-            self.config_status_label.config(text="Error: Formato JSON inválido", foreground='red')
+            self.config_status_label.config(text="Error: Formato JSON inválido", foreground='#ef4444')
         except Exception as e:
             messagebox.showerror("Error", f"Error inesperado al cargar configuración: {str(e)}")
-            self.config_status_label.config(text="Error al cargar configuración", foreground='red')
+            self.config_status_label.config(text="Error al cargar configuración", foreground='#ef4444')
     
     def guardar_configuracion_empresa(self):
         """Guarda la configuración de empresa en plantilla_config.json"""
@@ -4583,12 +4733,12 @@ class AppPresupuestos:
             # Actualizar PDFGenerator con nueva configuración
             self.pdf_generator = PDFGenerator(self.plantilla_config)
             
-            self.config_status_label.config(text="✅ Configuración guardada exitosamente", foreground='green')
+            self.config_status_label.config(text="✅ Configuración guardada exitosamente", foreground='#22c55e')
             messagebox.showinfo("Éxito", "Configuración de empresa y banco guardada correctamente.\n\nLos cambios se aplicarán en las próximas facturas generadas.")
             
         except Exception as e:
             messagebox.showerror("Error", f"Error al guardar configuración: {str(e)}")
-            self.config_status_label.config(text="❌ Error al guardar", foreground='red')
+            self.config_status_label.config(text="❌ Error al guardar", foreground='#ef4444')
     
     def restaurar_configuracion_empresa(self):
         """Restaura la configuración desde el archivo"""
@@ -4689,7 +4839,7 @@ También puedes configurar tu IDE para usar el Python del venv:
                      text=error_text,
                      font=('Segoe UI', 11),
                      justify='left',
-                     foreground='#e74c3c').pack(expand=True, padx=20, pady=20)
+                     foreground='#ef4444').pack(expand=True, padx=20, pady=20)
             return
         
         # Frame principal con scrollbar
@@ -4697,7 +4847,7 @@ También puedes configurar tu IDE para usar el Python del venv:
         main_frame.pack(fill='both', expand=True, padx=10, pady=10)
         
         # Canvas y scrollbar para scroll vertical
-        canvas = tk.Canvas(main_frame, bg='#ecf0f1')
+        canvas = tk.Canvas(main_frame, bg=self.palette["app_bg"], highlightthickness=0)
         scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
         
@@ -4766,31 +4916,31 @@ También puedes configurar tu IDE para usar el Python del venv:
         kpi_frame.pack(fill='x', pady=10)
         
         # KPI Card 1: Facturación Total
-        kpi_card1 = ttk.Frame(kpi_frame, relief='raised', borderwidth=2)
+        kpi_card1 = ttk.Frame(kpi_frame, relief='flat', borderwidth=0)
         kpi_card1.pack(side='left', fill='both', expand=True, padx=5)
         ttk.Label(kpi_card1, text="Facturación Total", font=('Segoe UI', 10, 'bold')).pack(pady=(10, 5))
-        self.kpi_facturacion_total_label = ttk.Label(kpi_card1, text="€0.00", font=('Segoe UI', 18, 'bold'), foreground='#27ae60')
+        self.kpi_facturacion_total_label = ttk.Label(kpi_card1, text="€0.00", font=('Segoe UI', 18, 'bold'), foreground='#22c55e')
         self.kpi_facturacion_total_label.pack(pady=(0, 10))
         
         # KPI Card 2: Pendiente de Cobro
-        kpi_card2 = ttk.Frame(kpi_frame, relief='raised', borderwidth=2)
+        kpi_card2 = ttk.Frame(kpi_frame, relief='flat', borderwidth=0)
         kpi_card2.pack(side='left', fill='both', expand=True, padx=5)
         ttk.Label(kpi_card2, text="Pendiente de Cobro", font=('Segoe UI', 10, 'bold')).pack(pady=(10, 5))
-        self.kpi_pendiente_cobro_label = ttk.Label(kpi_card2, text="€0.00", font=('Segoe UI', 18, 'bold'), foreground='#e74c3c')
+        self.kpi_pendiente_cobro_label = ttk.Label(kpi_card2, text="€0.00", font=('Segoe UI', 18, 'bold'), foreground='#ef4444')
         self.kpi_pendiente_cobro_label.pack(pady=(0, 10))
         
         # KPI Card 3: Facturación Promedio
-        kpi_card3 = ttk.Frame(kpi_frame, relief='raised', borderwidth=2)
+        kpi_card3 = ttk.Frame(kpi_frame, relief='flat', borderwidth=0)
         kpi_card3.pack(side='left', fill='both', expand=True, padx=5)
         ttk.Label(kpi_card3, text="Facturación Promedio", font=('Segoe UI', 10, 'bold')).pack(pady=(10, 5))
-        self.kpi_promedio_label = ttk.Label(kpi_card3, text="€0.00", font=('Segoe UI', 18, 'bold'), foreground='#3498db')
+        self.kpi_promedio_label = ttk.Label(kpi_card3, text="€0.00", font=('Segoe UI', 18, 'bold'), foreground='#60a5fa')
         self.kpi_promedio_label.pack(pady=(0, 10))
         
         # KPI Card 4: Comparación Mes Anterior
-        kpi_card4 = ttk.Frame(kpi_frame, relief='raised', borderwidth=2)
+        kpi_card4 = ttk.Frame(kpi_frame, relief='flat', borderwidth=0)
         kpi_card4.pack(side='left', fill='both', expand=True, padx=5)
         ttk.Label(kpi_card4, text="vs Mes Anterior", font=('Segoe UI', 10, 'bold')).pack(pady=(10, 5))
-        self.kpi_comparacion_label = ttk.Label(kpi_card4, text="+0.0%", font=('Segoe UI', 18, 'bold'), foreground='#9b59b6')
+        self.kpi_comparacion_label = ttk.Label(kpi_card4, text="+0.0%", font=('Segoe UI', 18, 'bold'), foreground='#a78bfa')
         self.kpi_comparacion_label.pack(pady=(0, 10))
         
         # Sección de Presupuestos
@@ -4844,15 +4994,15 @@ También puedes configurar tu IDE para usar el Python del venv:
         
         # Métricas monetarias
         self.valor_total_emitidos_label = ttk.Label(stats_left_frame, text="Valor Total Emitido: €0.00", 
-                                                     font=('Segoe UI', 11, 'bold'), style='TLabel', foreground='#2c3e50')
+                                                     font=('Segoe UI', 11, 'bold'), style='TLabel', foreground='#e4e5ea')
         self.valor_total_emitidos_label.pack(anchor='w', pady=3)
         
         self.valor_aprobados_label = ttk.Label(stats_left_frame, text="Valor Aprobado: €0.00", 
-                                               font=('Segoe UI', 10), style='TLabel', foreground='#27ae60')
+                                               font=('Segoe UI', 10), style='TLabel', foreground='#22c55e')
         self.valor_aprobados_label.pack(anchor='w', pady=2)
         
         self.valor_pendientes_label = ttk.Label(stats_left_frame, text="Valor Pendiente: €0.00", 
-                                                font=('Segoe UI', 10), style='TLabel', foreground='#f39c12')
+                                                font=('Segoe UI', 10), style='TLabel', foreground='#fbbf24')
         self.valor_pendientes_label.pack(anchor='w', pady=2)
         
         self.promedio_presupuesto_label = ttk.Label(stats_left_frame, text="Promedio por Presupuesto: €0.00", 
@@ -4860,7 +5010,7 @@ También puedes configurar tu IDE para usar el Python del venv:
         self.promedio_presupuesto_label.pack(anchor='w', pady=2)
         
         self.tasa_conversion_label = ttk.Label(stats_left_frame, text="Tasa Conversión: 0.0%", 
-                                               font=('Segoe UI', 10, 'bold'), style='TLabel', foreground='#9b59b6')
+                                               font=('Segoe UI', 10, 'bold'), style='TLabel', foreground='#a78bfa')
         self.tasa_conversion_label.pack(anchor='w', pady=3)
         
         # Gráfico de presupuestos
@@ -4919,11 +5069,11 @@ También puedes configurar tu IDE para usar el Python del venv:
         
         # Métricas monetarias
         self.total_facturado_label = ttk.Label(stats_left_frame_facturas, text="Total Facturado: €0.00", 
-                                               font=('Segoe UI', 11, 'bold'), style='TLabel', foreground='#27ae60')
+                                               font=('Segoe UI', 11, 'bold'), style='TLabel', foreground='#22c55e')
         self.total_facturado_label.pack(anchor='w', pady=3)
         
         self.pendiente_cobro_label = ttk.Label(stats_left_frame_facturas, text="Pendiente de Cobro: €0.00", 
-                                               font=('Segoe UI', 10), style='TLabel', foreground='#e74c3c')
+                                               font=('Segoe UI', 10), style='TLabel', foreground='#ef4444')
         self.pendiente_cobro_label.pack(anchor='w', pady=2)
         
         self.promedio_factura_label = ttk.Label(stats_left_frame_facturas, text="Promedio por Factura: €0.00", 
@@ -4974,7 +5124,7 @@ También puedes configurar tu IDE para usar el Python del venv:
         self.facturas_vencidas_tree.pack(fill='both', expand=True)
         
         self.monto_total_vencido_label = ttk.Label(vencidas_frame, text="Monto Total Vencido: €0.00", 
-                                                   font=('Segoe UI', 10, 'bold'), foreground='#e74c3c')
+                                                   font=('Segoe UI', 10, 'bold'), foreground='#ef4444')
         self.monto_total_vencido_label.pack(pady=5)
         
         # Facturas próximas a vencer
@@ -4994,7 +5144,7 @@ También puedes configurar tu IDE para usar el Python del venv:
         self.facturas_proximas_tree.pack(fill='both', expand=True)
         
         self.monto_total_proximas_label = ttk.Label(proximas_frame, text="Monto Total Próximo: €0.00", 
-                                                    font=('Segoe UI', 10, 'bold'), foreground='#f39c12')
+                                                    font=('Segoe UI', 10, 'bold'), foreground='#fbbf24')
         self.monto_total_proximas_label.pack(pady=5)
         
         # ============================================
@@ -5095,7 +5245,7 @@ También puedes configurar tu IDE para usar el Python del venv:
         descuentos_content.pack(fill='x')
         
         self.total_descuentos_label = ttk.Label(descuentos_content, text="Total Descuentos Aplicados: €0.00", 
-                                                font=('Segoe UI', 12, 'bold'), foreground='#e67e22')
+                                                font=('Segoe UI', 12, 'bold'), foreground='#fb923c')
         self.total_descuentos_label.pack(side='left', padx=10)
         
         self.promedio_descuento_label = ttk.Label(descuentos_content, text="Promedio por Factura/Presupuesto: €0.00", 
@@ -5419,9 +5569,9 @@ También puedes configurar tu IDE para usar el Python del venv:
             cambio_porcentaje = ((facturacion_actual - facturacion_anterior) / facturacion_anterior) * 100
             signo = "+" if cambio_porcentaje >= 0 else ""
             self.kpi_comparacion_label.config(text=f"{signo}{cambio_porcentaje:.1f}%", 
-                                             foreground='#27ae60' if cambio_porcentaje >= 0 else '#e74c3c')
+                                             foreground='#22c55e' if cambio_porcentaje >= 0 else '#e74c3c')
         else:
-            self.kpi_comparacion_label.config(text="N/A", foreground='#95a5a6')
+            self.kpi_comparacion_label.config(text="N/A", foreground='#6c6f80')
         
         # Actualizar KPIs
         self.kpi_facturacion_total_label.config(text=f"€{facturacion_actual:.2f}")
