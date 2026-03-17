@@ -110,6 +110,7 @@ import { environment } from '../environments/environment';
     .saas-layout {
       height: 100vh;
       background: var(--app-bg-page, #f8fafc);
+      overflow-x: hidden;
     }
 
     .saas-sidebar {
@@ -117,6 +118,7 @@ import { environment } from '../environments/environment';
       background: var(--app-bg-card) !important;
       border-right: 1px solid var(--app-border, rgba(0,0,0,0.06));
       box-shadow: var(--app-shadow-md, 0 4px 12px rgba(0,0,0,0.06));
+      overflow-x: hidden;
     }
 
     .saas-sidebar .sidebar-header {

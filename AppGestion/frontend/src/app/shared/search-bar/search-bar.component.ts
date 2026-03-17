@@ -84,7 +84,8 @@ export interface SearchResult {
     .search-box {
       display: flex;
       align-items: center;
-      width: 360px;
+      width: 420px;
+      min-width: 280px;
       max-width: 100%;
       background: rgba(255, 255, 255, 0.15);
       border-radius: var(--app-radius-md, 12px);

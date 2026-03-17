@@ -8,8 +8,10 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { PresupuestoService } from '../../core/services/presupuesto.service';
 import { FacturaService } from '../../core/services/factura.service';
+import { MaterialService } from '../../core/services/material.service';
 import { Presupuesto } from '../../core/models/presupuesto.model';
 import { Factura } from '../../core/models/factura.model';
+import { Material } from '../../core/models/material.model';
 import { EstadoBadgeComponent } from '../../shared/estado-badge/estado-badge.component';
 
 interface PresupuestoStats {
@@ -40,6 +42,13 @@ interface SaludCobros {
 export interface IngresoPorMes {
   name: string;
   value: number;
+}
+
+/** Cliente ranqueado por número de operaciones (presupuestos + facturas). */
+export interface TopCliente {
+  clienteId: number;
+  clienteNombre: string;
+  count: number;
 }
 
 @Component({
@@ -282,6 +291,55 @@ export interface IngresoPorMes {
                   <span class="chart-legend-total">{{ chartTotal | number:'1.2-2' }} €</span>
                 </div>
               </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      </section>
+
+      <section class="recent-section top-lists-section">
+        <mat-card class="recent-card">
+          <mat-card-header>
+            <mat-card-title>Top clientes</mat-card-title>
+            <a mat-button routerLink="/clientes">Ver todos</a>
+          </mat-card-header>
+          <mat-card-content>
+            @if (topClientes.length === 0) {
+              <p class="empty">No hay datos de clientes en presupuestos ni facturas</p>
+            } @else {
+              <ul class="recent-list top-list">
+                @for (c of topClientes; track c.clienteId; let i = $index) {
+                  <li>
+                    <a [routerLink]="['/clientes']">
+                      <span class="top-rank">#{{ i + 1 }}</span>
+                      <span class="recent-name">{{ c.clienteNombre }}</span>
+                      <span class="recent-meta">{{ c.count }} operaciones</span>
+                    </a>
+                  </li>
+                }
+              </ul>
+            }
+          </mat-card-content>
+        </mat-card>
+        <mat-card class="recent-card">
+          <mat-card-header>
+            <mat-card-title>Top materiales utilizados</mat-card-title>
+            <a mat-button routerLink="/materiales">Ver todos</a>
+          </mat-card-header>
+          <mat-card-content>
+            @if (topMateriales.length === 0) {
+              <p class="empty">No hay materiales utilizados</p>
+            } @else {
+              <ul class="recent-list top-list">
+                @for (m of topMateriales; track m.id; let i = $index) {
+                  <li>
+                    <a [routerLink]="['/materiales']">
+                      <span class="top-rank">#{{ i + 1 }}</span>
+                      <span class="recent-name">{{ m.nombre }}</span>
+                      <span class="recent-meta">{{ m.precioUnitario | number:'1.2-2' }} € / {{ m.unidadMedida }}</span>
+                    </a>
+                  </li>
+                }
+              </ul>
             }
           </mat-card-content>
         </mat-card>
@@ -641,6 +699,10 @@ export interface IngresoPorMes {
       gap: var(--app-space-lg, 24px);
     }
 
+    .top-lists-section {
+      margin-bottom: var(--app-space-xl, 32px);
+    }
+
     .recent-card {
       border: 1px solid var(--app-border);
     }
@@ -691,6 +753,13 @@ export interface IngresoPorMes {
       gap: 12px;
       font-size: 0.875rem;
       color: rgba(0, 0, 0, 0.6);
+    }
+
+    .top-list .top-rank {
+      font-weight: 600;
+      color: var(--app-text-secondary, #64748b);
+      min-width: 28px;
+      font-size: 0.8125rem;
     }
 
     .estado-badge, .pago-badge {
@@ -815,6 +884,12 @@ export class DashboardComponent implements OnInit {
   recentFacturas: Factura[] = [];
   /** Últimos 12 meses: ingresos (total facturado) por mes para el gráfico. */
   ingresosPorMes: IngresoPorMes[] = [];
+  /** Top clientes por frecuencia (presupuestos + facturas). */
+  topClientes: TopCliente[] = [];
+  /** Top materiales más utilizados (desde API). */
+  topMateriales: Material[] = [];
+  private allPresupuestos: Presupuesto[] = [];
+  private allFacturas: Factura[] = [];
 
   /** Origen X del gráfico (espacio para eje Y y etiquetas). */
   private readonly chartPadLeft = 70;
@@ -883,25 +958,51 @@ export class DashboardComponent implements OnInit {
 
   constructor(
     private presupuestoService: PresupuestoService,
-    private facturaService: FacturaService
+    private facturaService: FacturaService,
+    private materialService: MaterialService
   ) {}
 
   ngOnInit(): void {
     this.presupuestoService.getAll().subscribe((data) => {
+      this.allPresupuestos = data;
       this.presupuestosCount = data.length;
       this.recentPresupuestos = [...data]
         .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
         .slice(0, 5);
       this.computePresupuestoStats(data);
+      this.computeTopClientes();
     });
     this.facturaService.getAll().subscribe((data) => {
+      this.allFacturas = data;
       this.facturasCount = data.length;
       this.recentFacturas = [...data]
         .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
         .slice(0, 5);
       this.computeFacturaStats(data);
       this.ingresosPorMes = this.computeIngresosPorMes(data);
+      this.computeTopClientes();
     });
+    this.materialService.getTopUsados().subscribe((data) => {
+      this.topMateriales = data;
+    });
+  }
+
+  private computeTopClientes(): void {
+    const byCliente = new Map<number, { nombre: string; count: number }>();
+    for (const p of this.allPresupuestos) {
+      const prev = byCliente.get(p.clienteId);
+      const nombre = p.clienteNombre ?? 'Sin nombre';
+      if (prev) prev.count++; else byCliente.set(p.clienteId, { nombre, count: 1 });
+    }
+    for (const f of this.allFacturas) {
+      const prev = byCliente.get(f.clienteId);
+      const nombre = f.clienteNombre ?? 'Sin nombre';
+      if (prev) prev.count++; else byCliente.set(f.clienteId, { nombre, count: 1 });
+    }
+    this.topClientes = Array.from(byCliente.entries())
+      .map(([clienteId, { nombre, count }]) => ({ clienteId, clienteNombre: nombre, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
   }
 
   private computePresupuestoStats(presupuestos: Presupuesto[]): void {

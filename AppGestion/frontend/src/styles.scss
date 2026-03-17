@@ -65,6 +65,11 @@ $appgestion-theme: mat.define-light-theme((
   --app-transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Oculta la barra de scroll horizontal del menú lateral (mat-sidenav) */
+.saas-sidebar .mat-drawer-inner-container {
+  overflow-x: hidden !important;
+}
+
 html, body {
   height: 100%;
 }
