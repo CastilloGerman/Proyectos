@@ -13,6 +13,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../../core/auth/auth.service';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
 import { ClienteService } from '../../../core/services/cliente.service';
 import { MaterialService } from '../../../core/services/material.service';
@@ -65,6 +66,7 @@ const IVA_RATE = 0.21;
                 <mat-select formControlName="estado">
                   <mat-option value="Pendiente">Pendiente</mat-option>
                   <mat-option value="Aceptado">Aceptado</mat-option>
+                  <mat-option value="En ejecución">En ejecución</mat-option>
                   <mat-option value="Rechazado">Rechazado</mat-option>
                 </mat-select>
               </mat-form-field>
@@ -161,6 +163,29 @@ const IVA_RATE = 0.21;
               </mat-checkbox>
             </div>
 
+            <!-- Texto inteligente para el PDF -->
+            <div class="section clausulas-section">
+              <h3>Texto adicional en el PDF (plantilla)</h3>
+              <p class="hint-clausulas">{{ plantillaVarsHint }}</p>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Cláusulas o condiciones (aparecen tras los totales)</mat-label>
+                <textarea matInput formControlName="textoClausulas" rows="5" [placeholder]="plantillaPlaceholder"></textarea>
+              </mat-form-field>
+            </div>
+
+            <!-- Señal / anticipo -->
+            <div class="section senal-section">
+              <h3>Señal / anticipo</h3>
+              <p class="hint-senal">Importe acordado como señal y si ya se cobró (referencia interna).</p>
+              <div class="discount-fields">
+                <mat-form-field appearance="outline">
+                  <mat-label>Importe señal (€)</mat-label>
+                  <input matInput type="number" formControlName="senalImporte" min="0" step="0.01" placeholder="0">
+                </mat-form-field>
+                <mat-checkbox formControlName="senalPagada">Señal cobrada</mat-checkbox>
+              </div>
+            </div>
+
             <!-- 4. Descuentos -->
             <div class="section discount-section">
               <h3>Descuentos globales</h3>
@@ -210,7 +235,7 @@ const IVA_RATE = 0.21;
 
             <div class="actions">
               <button mat-button type="button" routerLink="/presupuestos">Cancelar</button>
-              <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || form.pending">
+              <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || form.pending || !auth.canMutate()">
                 {{ isEdit ? 'Guardar' : 'Crear' }}
               </button>
             </div>
@@ -237,6 +262,10 @@ const IVA_RATE = 0.21;
     .tareas-section { background: #fff8f0; border-color: #f0d9c5; }
     .discount-section { background: #f5f5f5; border-color: #e0e0e0; }
     .cost-summary { background: #e8f5e9; border: 1px solid #c8e6c9; }
+    .clausulas-section { background: #f3f0ff; border-color: #d4c4f0; }
+    .senal-section { background: #fff8e6; border-color: #ffe0a3; }
+    .hint-senal { font-size: 12px; color: #6d4c00; margin: 0 0 12px 0; }
+    .hint-clausulas { font-size: 12px; color: #5c4d7a; margin: 0 0 12px 0; line-height: 1.5; }
 
     .top-materiales { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
     .top-label { font-size: 12px; color: #666; }
@@ -267,6 +296,10 @@ const IVA_RATE = 0.21;
   `],
 })
 export class PresupuestoFormComponent implements OnInit {
+  readonly plantillaVarsHint =
+    'Variables: {{cliente.nombre}}, {{cliente.email}}, {{cliente.telefono}}, {{cliente.direccion}}, {{fecha}}, {{fecha_hora}}, {{subtotal}}, {{iva}}, {{total}}, {{estado}}, {{presupuesto.id}}';
+  readonly plantillaPlaceholder = 'Ej.: Presupuesto válido según condiciones acordadas con {{cliente.nombre}}.';
+
   form: FormGroup;
   clientes: Cliente[] = [];
   materiales: Material[] = [];
@@ -291,6 +324,7 @@ export class PresupuestoFormComponent implements OnInit {
     private fb: FormBuilder,
     private route: ActivatedRoute,
     private router: Router,
+    public auth: AuthService,
     private presupuestoService: PresupuestoService,
     private clienteService: ClienteService,
     private materialService: MaterialService,
@@ -303,6 +337,9 @@ export class PresupuestoFormComponent implements OnInit {
       descuentoGlobalPorcentaje: [0],
       descuentoGlobalFijo: [0],
       descuentoAntesIva: [true],
+      textoClausulas: [''],
+      senalImporte: [null as number | null],
+      senalPagada: [false],
       materialItems: this.fb.array([]),
       manualItems: this.fb.array([]),
     });
@@ -335,6 +372,9 @@ export class PresupuestoFormComponent implements OnInit {
             descuentoGlobalPorcentaje: p.descuentoGlobalPorcentaje ?? 0,
             descuentoGlobalFijo: p.descuentoGlobalFijo ?? 0,
             descuentoAntesIva: p.descuentoAntesIva ?? true,
+            textoClausulas: p.textoClausulas ?? '',
+            senalImporte: p.senalImporte ?? null,
+            senalPagada: p.senalPagada ?? false,
           });
           this.materialItems.clear();
           this.manualItems.clear();
@@ -550,6 +590,9 @@ export class PresupuestoFormComponent implements OnInit {
       descuentoGlobalPorcentaje: +(value.descuentoGlobalPorcentaje ?? 0),
       descuentoGlobalFijo: +(value.descuentoGlobalFijo ?? 0),
       descuentoAntesIva: value.descuentoAntesIva !== false,
+      textoClausulas: (value.textoClausulas as string)?.trim() || undefined,
+      senalImporte: value.senalImporte != null && value.senalImporte !== '' ? +value.senalImporte : undefined,
+      senalPagada: !!value.senalPagada,
     };
     const req = this.isEdit && this.id
       ? this.presupuestoService.update(this.id, payload)

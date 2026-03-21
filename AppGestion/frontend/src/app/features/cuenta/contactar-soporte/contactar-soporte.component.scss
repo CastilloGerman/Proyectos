@@ -1,0 +1,102 @@
+.wrap {
+  max-width: 640px;
+  margin: 0 auto;
+  padding-bottom: 48px;
+}
+
+.back {
+  margin-bottom: 16px;
+}
+
+.card {
+  padding: 28px 24px 24px;
+  border-radius: var(--app-radius-md, 12px);
+}
+
+.head {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.head__icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  color: var(--mat-sys-primary, #1e40af);
+  opacity: 0.9;
+}
+
+.title {
+  margin: 12px 0 8px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--app-text-primary, #0f172a);
+}
+
+.lead {
+  margin: 0;
+  color: var(--app-text-secondary, #64748b);
+  line-height: 1.55;
+  font-size: 15px;
+  text-align: left;
+}
+
+.full {
+  width: 100%;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.files-block {
+  margin: 16px 0 24px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.files-label {
+  display: block;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 6px;
+  color: var(--app-text-primary, #334155);
+}
+
+.files-hint {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--app-text-secondary, #64748b);
+  line-height: 1.45;
+}
+
+.file-input {
+  display: block;
+  width: 100%;
+  font-size: 14px;
+}
+
+.file-list {
+  margin: 10px 0 0;
+  padding-left: 1.2rem;
+  font-size: 13px;
+  color: var(--app-text-secondary, #475569);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.btn-spinner {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+button mat-icon {
+  margin-right: 6px;
+  vertical-align: middle;
+}

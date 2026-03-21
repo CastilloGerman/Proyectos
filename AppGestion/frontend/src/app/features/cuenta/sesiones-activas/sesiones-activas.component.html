@@ -1,0 +1,33 @@
+<div class="sa-page">
+  <a mat-button routerLink="/dashboard" class="sa-back">
+    <mat-icon>arrow_back</mat-icon>
+    Volver
+  </a>
+
+  <mat-card class="sa-card">
+    <div class="sa-card__icon" aria-hidden="true">
+      <mat-icon>devices</mat-icon>
+    </div>
+    <h1 class="sa-title">Sesiones activas</h1>
+    <p class="sa-lead">
+      Estamos preparando esta sección. Pronto podrás configurarla desde aquí sin salir de la app.
+    </p>
+    @if (sessionExpiresAt(); as exp) {
+      <p class="sa-hint">
+        <mat-icon class="sa-hint__icon">schedule</mat-icon>
+        Tu sesión en este dispositivo caduca aproximadamente el
+        <strong>{{ exp | date: 'short' }}</strong>.
+      </p>
+    } @else {
+      <p class="sa-hint sa-hint--muted">
+        Mientras tanto, puedes <strong>cerrar sesión</strong> desde el menú de usuario si usas un equipo compartido.
+      </p>
+    }
+    <div class="sa-actions">
+      <button mat-stroked-button type="button" routerLink="/dashboard">Ir al panel</button>
+      <button mat-button type="button" color="primary" routerLink="/cuenta/cambiar-contrasena">
+        Cambiar contraseña
+      </button>
+    </div>
+  </mat-card>
+</div>

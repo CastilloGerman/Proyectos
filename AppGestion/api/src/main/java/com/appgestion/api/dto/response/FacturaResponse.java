@@ -25,5 +25,7 @@ public record FacturaResponse(
         String estadoPago,
         Double montoCobrado,
         String notas,
-        List<FacturaItemResponse> items
+        List<FacturaItemResponse> items,
+        String paymentLinkUrl,
+        List<FacturaCobroResponse> cobros
 ) {}

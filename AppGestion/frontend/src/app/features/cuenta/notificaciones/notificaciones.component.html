@@ -1,0 +1,103 @@
+<div class="notif-page">
+  <div class="notif-page__head">
+    <a mat-button routerLink="/dashboard" class="notif-back">
+      <mat-icon>arrow_back</mat-icon>
+      Volver
+    </a>
+    <h1 class="notif-page__title">Notificaciones</h1>
+    <p class="notif-page__subtitle">
+      Avisos sobre tu cuenta, suscripción y facturación. Las que no hayas leído también se muestran en la
+      <strong>campana</strong> del menú superior.
+    </p>
+
+    <div class="notif-toolbar">
+      <mat-button-toggle-group [formControl]="filtro" class="notif-filtro" aria-label="Filtrar por estado">
+        <mat-button-toggle value="todas">Todas</mat-button-toggle>
+        <mat-button-toggle value="no_leidas">No leídas</mat-button-toggle>
+        <mat-button-toggle value="leidas">Leídas</mat-button-toggle>
+      </mat-button-toggle-group>
+
+      <button
+        mat-stroked-button
+        type="button"
+        color="primary"
+        (click)="marcarTodasLeidas()"
+        [disabled]="saving() || notifSvc.unreadCount() === 0"
+      >
+        @if (saving()) {
+          <mat-progress-spinner diameter="18" mode="indeterminate" />
+        } @else {
+          <mat-icon>done_all</mat-icon>
+        }
+        Marcar todas como leídas
+      </button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="notif-state notif-state--center">
+      <mat-progress-spinner diameter="40" mode="indeterminate" />
+      <span>Cargando avisos…</span>
+    </div>
+  } @else if (items().length === 0) {
+    <mat-card class="notif-empty">
+      <mat-card-content>
+        <div class="notif-empty__icon" aria-hidden="true">
+          <mat-icon>notifications_none</mat-icon>
+        </div>
+        <h2 class="notif-empty__title">No hay notificaciones</h2>
+        <p class="notif-empty__text">
+          @if (filtro.value === 'no_leidas') {
+            No tienes avisos pendientes de leer. ¡Todo al día!
+          } @else if (filtro.value === 'leidas') {
+            Aún no hay notificaciones marcadas como leídas con este filtro.
+          } @else {
+            Cuando haya novedades (suscripción, facturas de clientes, avisos del sistema) aparecerán aquí y en la campana.
+          }
+        </p>
+        <a mat-stroked-button routerLink="/cuenta/suscripcion">Ver mi suscripción</a>
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    <mat-card class="notif-list-card">
+      <mat-card-content class="notif-list">
+        @for (n of items(); track n.id) {
+          <button type="button" class="notif-row" [class.notif-row--unread]="!n.leida" (click)="abrir(n)">
+            <mat-icon class="notif-row__icon" [color]="colorIcono(n)">{{ icono(n) }}</mat-icon>
+            <div class="notif-row__body">
+              <div class="notif-row__meta">
+                <span class="notif-chip">{{ etiquetaTipo(n.tipo) }}</span>
+                <span class="notif-row__date">{{ n.createdAt | date: 'short' }}</span>
+              </div>
+              <div class="notif-row__title">{{ n.titulo }}</div>
+              @if (n.resumen) {
+                <p class="notif-row__summary">{{ n.resumen }}</p>
+              }
+              @if (n.actionPath) {
+                <span class="notif-row__cta">
+                  Abrir
+                  <mat-icon class="notif-row__cta-icon">chevron_right</mat-icon>
+                </span>
+              }
+            </div>
+          </button>
+          @if (!$last) {
+            <mat-divider />
+          }
+        }
+      </mat-card-content>
+    </mat-card>
+
+    @if (totalPages() > 1) {
+      <div class="notif-pager">
+        <button mat-button type="button" (click)="prevPage()" [disabled]="pageIndex() <= 0">Anterior</button>
+        <span class="notif-pager__info"
+          >Página {{ pageIndex() + 1 }} de {{ totalPages() }} ({{ totalElements() }} en total)</span
+        >
+        <button mat-button type="button" (click)="nextPage()" [disabled]="pageIndex() >= totalPages() - 1">
+          Siguiente
+        </button>
+      </div>
+    }
+  }
+</div>

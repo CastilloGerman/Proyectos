@@ -2,21 +2,32 @@ package com.appgestion.api.service;
 
 import com.appgestion.api.domain.enums.SubscriptionStatus;
 import com.appgestion.api.domain.entity.Usuario;
+import com.appgestion.api.dto.request.ChangePasswordRequest;
 import com.appgestion.api.dto.request.ForgotPasswordRequest;
 import com.appgestion.api.dto.request.GoogleLoginRequest;
 import com.appgestion.api.dto.request.LoginRequest;
 import com.appgestion.api.dto.request.RegisterRequest;
 import com.appgestion.api.dto.request.ResetPasswordRequest;
+import com.appgestion.api.dto.request.UpdateAccountSettingsRequest;
+import com.appgestion.api.dto.request.UpdatePerfilRequest;
+import com.appgestion.api.dto.request.TotpDisableRequest;
+import com.appgestion.api.dto.request.TotpSetupConfirmRequest;
+import com.appgestion.api.dto.request.UpdatePreferenciasRequest;
 import com.appgestion.api.dto.response.AuthResponse;
+import com.appgestion.api.dto.response.TotpSetupStartResponse;
 import com.appgestion.api.dto.response.UsuarioResponse;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.appgestion.api.security.JwtService;
 import com.appgestion.api.security.SecurityUtils;
+import com.appgestion.api.security.TotpService;
+import com.appgestion.api.validation.UserPreferencesValidator;
 import jakarta.mail.MessagingException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -33,6 +44,7 @@ public class AuthService {
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final int TRIAL_DAYS = 14;
     private static final int PASSWORD_RESET_EXPIRY_HOURS = 1;
+    private static final int TOTP_PENDING_MINUTES = 10;
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
@@ -40,6 +52,9 @@ public class AuthService {
     private final SubscriptionService subscriptionService;
     private final EmailService emailService;
     private final GoogleTokenVerifier googleTokenVerifier;
+    private final OrganizationService organizationService;
+    private final TotpService totpService;
+    private final NotificacionService notificacionService;
 
     @Value("${app.frontend-url:http://localhost:4200}")
     private String frontendUrl;
@@ -49,13 +64,19 @@ public class AuthService {
                        JwtService jwtService,
                        SubscriptionService subscriptionService,
                        EmailService emailService,
-                       GoogleTokenVerifier googleTokenVerifier) {
+                       GoogleTokenVerifier googleTokenVerifier,
+                       OrganizationService organizationService,
+                       TotpService totpService,
+                       NotificacionService notificacionService) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.subscriptionService = subscriptionService;
         this.emailService = emailService;
         this.googleTokenVerifier = googleTokenVerifier;
+        this.organizationService = organizationService;
+        this.totpService = totpService;
+        this.notificacionService = notificacionService;
     }
 
     @Transactional
@@ -76,7 +97,9 @@ public class AuthService {
         usuario.setTrialEndDate(trialStart.plusDays(TRIAL_DAYS));
         usuario.setSubscriptionStatus(SubscriptionStatus.TRIAL_ACTIVE);
 
-        usuario = usuarioRepository.save(usuario);
+        usuario = organizationService.attachNewPersonalOrganization(usuario);
+
+        notificacionService.ensureWelcomeIfEmpty(usuario.getId());
 
         String token = jwtService.generateToken(usuario.getEmail(), usuario.getRol());
         Instant expiresAt = Instant.now().plusMillis(86400000); // 24 horas
@@ -98,6 +121,10 @@ public class AuthService {
         }
 
         subscriptionService.checkAndUpdateTrialStatus(usuario);
+
+        requireTotpIfEnabled(usuario, request.totpCode());
+
+        notificacionService.ensureWelcomeIfEmpty(usuario.getId());
 
         String token = jwtService.generateToken(usuario.getEmail(), usuario.getRol());
         Instant expiresAt = Instant.now().plusMillis(86400000); // 24 horas
@@ -130,7 +157,7 @@ public class AuthService {
             nuevo.setTrialStartDate(trialStart);
             nuevo.setTrialEndDate(trialStart.plusDays(TRIAL_DAYS));
             nuevo.setSubscriptionStatus(SubscriptionStatus.TRIAL_ACTIVE);
-            return usuarioRepository.save(nuevo);
+            return organizationService.attachNewPersonalOrganization(nuevo);
         });
 
         if (!Boolean.TRUE.equals(usuario.getActivo())) {
@@ -138,6 +165,11 @@ public class AuthService {
         }
 
         subscriptionService.checkAndUpdateTrialStatus(usuario);
+
+        requireTotpIfEnabled(usuario, request.totpCode());
+
+        notificacionService.ensureWelcomeIfEmpty(usuario.getId());
+
         String token = jwtService.generateToken(usuario.getEmail(), usuario.getRol());
         Instant expiresAt = Instant.now().plusMillis(86400000);
 
@@ -147,17 +179,162 @@ public class AuthService {
 
     public UsuarioResponse getMeResponse() {
         Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
+        return usuarioToResponse(usuario);
+    }
+
+    private UsuarioResponse usuarioToResponse(Usuario usuario) {
+        String stripeCustomerId = usuario.getStripeCustomerId();
+        boolean billingPortal = stripeCustomerId != null && !stripeCustomerId.isBlank();
+        boolean totpEnrollmentPending = usuario.getTotpPendingSecret() != null
+                && usuario.getTotpPendingExpiresAt() != null
+                && !usuario.getTotpPendingExpiresAt().isBefore(LocalDateTime.now());
         return new UsuarioResponse(
                 usuario.getId(),
                 usuario.getNombre(),
                 usuario.getEmail(),
+                usuario.getTelefono(),
                 usuario.getRol(),
                 usuario.getActivo(),
                 usuario.getFechaCreacion(),
                 usuario.getSubscriptionStatus() != null ? usuario.getSubscriptionStatus().name() : null,
                 usuario.getTrialEndDate(),
-                subscriptionService.canWrite(usuario)
+                usuario.getSubscriptionCurrentPeriodEnd(),
+                billingPortal,
+                usuario.getUiLocale(),
+                usuario.getTimeZone(),
+                usuario.getCurrencyCode(),
+                usuario.isEmailNotifyBilling(),
+                usuario.isEmailNotifyDocuments(),
+                usuario.isEmailNotifyMarketing(),
+                subscriptionService.canWrite(usuario),
+                Boolean.TRUE.equals(usuario.getTotpEnabled()),
+                totpEnrollmentPending
         );
+    }
+
+    /**
+     * Si el usuario tiene 2FA activo, exige código TOTP válido. Sin código → 400 con mensaje TOTP_REQUERIDO (login / Google).
+     */
+    private void requireTotpIfEnabled(Usuario usuario, String totpCode) {
+        if (!Boolean.TRUE.equals(usuario.getTotpEnabled())) {
+            return;
+        }
+        if (totpCode == null || totpCode.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "TOTP_REQUERIDO");
+        }
+        if (!totpService.verify(usuario.getTotpSecret(), totpCode)) {
+            throw new IllegalArgumentException("Código de verificación incorrecto");
+        }
+    }
+
+    @Transactional
+    public TotpSetupStartResponse iniciarTotpSetup() {
+        Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
+        if (Boolean.TRUE.equals(usuario.getTotpEnabled())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El 2FA ya está activado");
+        }
+        var key = totpService.generateKey();
+        usuario.setTotpPendingSecret(key.getKey());
+        usuario.setTotpPendingExpiresAt(LocalDateTime.now().plusMinutes(TOTP_PENDING_MINUTES));
+        usuarioRepository.save(usuario);
+        String otpAuthUrl = totpService.buildOtpAuthUrl(usuario.getEmail(), key);
+        return new TotpSetupStartResponse(otpAuthUrl, key.getKey(), TOTP_PENDING_MINUTES);
+    }
+
+    @Transactional
+    public UsuarioResponse confirmarTotpSetup(TotpSetupConfirmRequest request) {
+        Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
+        if (Boolean.TRUE.equals(usuario.getTotpEnabled())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El 2FA ya está activado");
+        }
+        String pending = usuario.getTotpPendingSecret();
+        if (pending == null || usuario.getTotpPendingExpiresAt() == null) {
+            throw new IllegalArgumentException("No hay un enrolamiento pendiente. Inicia de nuevo.");
+        }
+        if (usuario.getTotpPendingExpiresAt().isBefore(LocalDateTime.now())) {
+            usuario.setTotpPendingSecret(null);
+            usuario.setTotpPendingExpiresAt(null);
+            usuarioRepository.save(usuario);
+            throw new IllegalArgumentException("El enrolamiento ha caducado. Vuelve a generar el código QR.");
+        }
+        if (!totpService.verify(pending, request.code())) {
+            throw new IllegalArgumentException("Código incorrecto");
+        }
+        usuario.setTotpSecret(pending);
+        usuario.setTotpEnabled(true);
+        usuario.setTotpPendingSecret(null);
+        usuario.setTotpPendingExpiresAt(null);
+        usuarioRepository.save(usuario);
+        return usuarioToResponse(usuario);
+    }
+
+    @Transactional
+    public void cancelarTotpSetup() {
+        Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
+        usuario.setTotpPendingSecret(null);
+        usuario.setTotpPendingExpiresAt(null);
+        usuarioRepository.save(usuario);
+    }
+
+    @Transactional
+    public void desactivarTotp(TotpDisableRequest request) {
+        Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
+        if (!Boolean.TRUE.equals(usuario.getTotpEnabled())) {
+            throw new IllegalArgumentException("El 2FA no está activado");
+        }
+        if (!passwordEncoder.matches(request.currentPassword(), usuario.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La contraseña no es correcta");
+        }
+        if (!totpService.verify(usuario.getTotpSecret(), request.totpCode())) {
+            throw new IllegalArgumentException("Código de verificación incorrecto");
+        }
+        usuario.setTotpSecret(null);
+        usuario.setTotpEnabled(false);
+        usuario.setTotpPendingSecret(null);
+        usuario.setTotpPendingExpiresAt(null);
+        usuarioRepository.save(usuario);
+    }
+
+    @Transactional
+    public UsuarioResponse actualizarConfiguracionCuenta(UpdateAccountSettingsRequest request) {
+        Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
+        usuario.setEmailNotifyBilling(Boolean.TRUE.equals(request.emailNotifyBilling()));
+        usuario.setEmailNotifyDocuments(Boolean.TRUE.equals(request.emailNotifyDocuments()));
+        usuario.setEmailNotifyMarketing(Boolean.TRUE.equals(request.emailNotifyMarketing()));
+        usuarioRepository.save(usuario);
+        return usuarioToResponse(usuario);
+    }
+
+    @Transactional
+    public UsuarioResponse actualizarPreferencias(UpdatePreferenciasRequest request) {
+        Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
+        usuario.setUiLocale(UserPreferencesValidator.normalizeAndValidateLocale(request.locale()));
+        usuario.setTimeZone(UserPreferencesValidator.normalizeAndValidateTimeZone(request.timeZone()));
+        usuario.setCurrencyCode(UserPreferencesValidator.normalizeAndValidateCurrency(request.currencyCode()));
+        usuarioRepository.save(usuario);
+        return usuarioToResponse(usuario);
+    }
+
+    @Transactional
+    public UsuarioResponse actualizarMiPerfil(UpdatePerfilRequest request) {
+        Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
+        String nombre = request.nombre().trim().replaceAll("\\s+", " ");
+        if (nombre.isEmpty()) {
+            throw new IllegalArgumentException("El nombre no puede estar vacío");
+        }
+        if (nombre.length() > 100) {
+            throw new IllegalArgumentException("El nombre no puede superar 100 caracteres");
+        }
+        usuario.setNombre(nombre);
+
+        String telRaw = request.telefono() != null ? request.telefono().trim() : "";
+        if (telRaw.length() > 30) {
+            throw new IllegalArgumentException("El teléfono no puede superar 30 caracteres");
+        }
+        usuario.setTelefono(telRaw.isEmpty() ? null : telRaw);
+
+        usuarioRepository.save(usuario);
+        return usuarioToResponse(usuario);
     }
 
     /**
@@ -213,5 +390,24 @@ public class AuthService {
         usuario.setPasswordResetExpiresAt(null);
         usuarioRepository.save(usuario);
         log.info("Contraseña restablecida para {}", usuario.getEmail());
+    }
+
+    /**
+     * Cambio de contraseña con la sesión actual (JWT). No cierra otras sesiones: el token sigue válido hasta su expiración.
+     */
+    @Transactional
+    public void cambiarContrasena(ChangePasswordRequest request) {
+        Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
+        if (!passwordEncoder.matches(request.currentPassword(), usuario.getPasswordHash())) {
+            // 400 (no 401): evitar que clientes interpreten "sesión inválida" y cierren la sesión del usuario.
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La contraseña actual no es correcta");
+        }
+        String nueva = request.newPassword();
+        if (passwordEncoder.matches(nueva, usuario.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La nueva contraseña debe ser distinta de la actual");
+        }
+        usuario.setPasswordHash(passwordEncoder.encode(nueva));
+        usuarioRepository.save(usuario);
+        log.info("Contraseña actualizada (usuario autenticado) para {}", usuario.getEmail());
     }
 }

@@ -9,5 +9,8 @@ public record LoginRequest(
         String email,
 
         @NotBlank(message = "La contraseña es obligatoria")
-        String password
+        String password,
+
+        /** Opcional: código TOTP de 6 dígitos si el usuario tiene 2FA activo. */
+        String totpCode
 ) {}

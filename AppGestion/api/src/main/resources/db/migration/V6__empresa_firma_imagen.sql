@@ -1,0 +1,1 @@
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS firma_imagen BYTEA;

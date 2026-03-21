@@ -26,7 +26,7 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
     <div class="cliente-list">
       <div class="header">
         <h1>Clientes</h1>
-        @if (auth.canWrite()) {
+        @if (auth.canMutate()) {
         <a mat-raised-button color="primary" routerLink="/clientes/nuevo">
           <mat-icon>add</mat-icon>
           Nuevo cliente
@@ -50,7 +50,7 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let row">
-              @if (auth.canWrite()) {
+              @if (auth.canMutate()) {
               <button mat-icon-button [routerLink]="['/clientes', row.id]" matTooltip="Editar">
                 <mat-icon>edit</mat-icon>
               </button>
@@ -62,8 +62,17 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-          <tr class="mat-row" *matNoDataRow>
-            <td class="mat-cell" colspan="4">No hay clientes. Crea uno para empezar.</td>
+          <tr class="mat-row empty-row" *matNoDataRow>
+            <td class="mat-cell" colspan="4">
+              <div class="empty-state">
+                <mat-icon class="empty-illus" aria-hidden="true">groups</mat-icon>
+                <p class="empty-title">Aún no tienes clientes</p>
+                <p class="empty-text">Crea el primero para vincular presupuestos y facturas.</p>
+                @if (auth.canMutate()) {
+                <a mat-stroked-button color="primary" routerLink="/clientes/nuevo">Nuevo cliente</a>
+                }
+              </div>
+            </td>
           </tr>
         </table>
       </div>
@@ -83,6 +92,40 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
 
     .full-width {
       width: 100%;
+    }
+
+    .empty-row .mat-mdc-cell {
+      border-bottom: none;
+      padding: 48px 24px;
+    }
+
+    .empty-state {
+      text-align: center;
+      max-width: 360px;
+      margin: 0 auto;
+      color: var(--app-text-secondary, #64748b);
+    }
+
+    .empty-illus {
+      font-size: 64px;
+      width: 64px;
+      height: 64px;
+      color: var(--app-accent-copper, #b87333);
+      opacity: 0.85;
+    }
+
+    .empty-title {
+      margin: 16px 0 8px;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--app-text-primary, #0f172a);
+      font-family: 'Sora', 'IBM Plex Sans', sans-serif;
+    }
+
+    .empty-text {
+      margin: 0 0 20px;
+      font-size: 0.9375rem;
+      line-height: 1.5;
     }
   `],
 })

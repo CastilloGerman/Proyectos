@@ -1,0 +1,117 @@
+<div class="df-page">
+  <div class="df-page__head">
+    <a mat-button routerLink="/dashboard" class="df-back">
+      <mat-icon>arrow_back</mat-icon>
+      Volver
+    </a>
+    <div>
+      <h1 class="df-page__title">Datos fiscales</h1>
+      <p class="df-page__subtitle">
+        Información que usará la aplicación como <strong>referencia en facturación</strong> (régimen, actividad, datos intracomunitarios). Debe ser coherente con tu situación real; ante duda, consulta a tu gestoría.
+      </p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="df-state">
+      <mat-progress-spinner diameter="40" mode="indeterminate" />
+      <span>Cargando…</span>
+    </div>
+  } @else if (loadError()) {
+    <mat-card class="df-card">
+      <mat-card-content>
+        <p>No pudimos cargar los datos.</p>
+        <button mat-stroked-button type="button" color="primary" (click)="cargar()">Reintentar</button>
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    @if (empresaResumen(); as emp) {
+      <mat-card class="df-card df-card--mirror">
+        <mat-card-header>
+          <mat-card-title>Identidad en facturas</mat-card-title>
+          <mat-card-subtitle
+            >Razón social, NIF y domicilio fiscal (los que salen como emisor en PDF). Se editan en “Datos de empresa”.</mat-card-subtitle
+          >
+        </mat-card-header>
+        <mat-card-content>
+          <dl class="df-dl">
+            <div class="df-dl__row">
+              <dt>Razón social / nombre</dt>
+              <dd>{{ emp.nombre || '—' }}</dd>
+            </div>
+            <div class="df-dl__row">
+              <dt>NIF / CIF</dt>
+              <dd>{{ emp.nif || '—' }}</dd>
+            </div>
+            <div class="df-dl__row">
+              <dt>Domicilio fiscal</dt>
+              <dd>{{ domicilioUnaLinea(emp) }}</dd>
+            </div>
+          </dl>
+          <button mat-stroked-button type="button" color="primary" routerLink="/cuenta/datos-empresa">
+            <mat-icon>business</mat-icon>
+            Editar datos de empresa
+          </button>
+        </mat-card-content>
+      </mat-card>
+    }
+
+    <mat-card class="df-card">
+      <mat-card-header>
+        <mat-card-title>Régimen y actividad</mat-card-title>
+        <mat-card-subtitle>Se aplican como valores por defecto al crear una factura nueva (campo “Régimen fiscal”).</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <form [formGroup]="form" (ngSubmit)="guardar()" class="df-form">
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Régimen de IVA / impuesto principal</mat-label>
+            <mat-select formControlName="regimenIvaPrincipal">
+              @for (opt of regimenChoices(); track opt) {
+                <mat-option [value]="opt">{{ opt }}</mat-option>
+              }
+            </mat-select>
+            @if (form.controls.regimenIvaPrincipal.hasError('required') && form.controls.regimenIvaPrincipal.touched) {
+              <mat-error>Selecciona una opción</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Descripción de la actividad (opcional)</mat-label>
+            <textarea matInput formControlName="descripcionActividad" rows="3" maxlength="500" placeholder="Ej. Instalación y mantenimiento de climatización"></textarea>
+            <mat-hint align="end">{{ form.controls.descripcionActividad.value.length }}/500</mat-hint>
+            <mat-hint>Útil para cláusulas o notas en documentos; no sustituye al detalle de cada factura.</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>NIF-IVA intracomunitario (opcional)</mat-label>
+            <input matInput formControlName="nifIntracomunitario" placeholder="ESB12345678" autocomplete="off" maxlength="20" />
+            @if (form.controls.nifIntracomunitario.hasError('nifIvaIntraInvalido') && form.controls.nifIntracomunitario.touched) {
+              <mat-error>Formato tipo ESB12345678 (país + alfanumérico)</mat-error>
+            }
+            <mat-hint>Solo si operas con clientes/proveedores UE con inversión del sujeto pasivo u operaciones intracomunitarias.</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Epígrafe IAE (opcional)</mat-label>
+            <input matInput formControlName="epigrafeIae" maxlength="30" placeholder="Ej. 453.1" />
+          </mat-form-field>
+
+          <mat-divider class="df-divider" />
+
+          <div class="df-actions">
+            <button mat-raised-button color="primary" type="submit" [disabled]="saving() || form.invalid || form.pristine">
+              @if (saving()) {
+                <mat-progress-spinner diameter="20" mode="indeterminate" />
+              }
+              Guardar datos fiscales
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+
+    <p class="df-footnote">
+      Esta aplicación no sustituye asesoramiento fiscal. Los cambios en normativa (VeriFactu, factura electrónica, etc.) pueden requerir campos adicionales en el futuro.
+    </p>
+  }
+</div>

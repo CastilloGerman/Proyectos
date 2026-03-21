@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Factura, FacturaRequest } from '../models/factura.model';
+import { Factura, FacturaRequest, FacturaCobroRequest } from '../models/factura.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -37,5 +37,13 @@ export class FacturaService {
 
   enviarPorEmail(id: number, email?: string): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/${id}/enviar-email`, email ? { email } : {});
+  }
+
+  registrarCobro(id: number, body: FacturaCobroRequest): Observable<Factura> {
+    return this.http.post<Factura>(`${this.apiUrl}/${id}/cobros`, body);
+  }
+
+  generarEnlacePago(id: number): Observable<Factura> {
+    return this.http.post<Factura>(`${this.apiUrl}/${id}/payment-link`, {});
   }
 }

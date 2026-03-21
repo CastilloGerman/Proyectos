@@ -17,6 +17,7 @@ import { EstadoBadgeComponent } from '../../shared/estado-badge/estado-badge.com
 interface PresupuestoStats {
   pendientes: number;
   aceptados: number;
+  enEjecucion: number;
   rechazados: number;
   totalValor: number;
 }
@@ -131,6 +132,11 @@ export interface TopCliente {
                 [matTooltip]="presupuestoStats.aceptados + ' aceptados'"
               ></div>
               <div
+                class="bar-segment ejecucion"
+                [style.flex]="presupuestoStats.enEjecucion || 0.01"
+                [matTooltip]="presupuestoStats.enEjecucion + ' en ejecución'"
+              ></div>
+              <div
                 class="bar-segment rechazado"
                 [style.flex]="presupuestoStats.rechazados || 0.01"
                 [matTooltip]="presupuestoStats.rechazados + ' rechazados'"
@@ -144,6 +150,10 @@ export interface TopCliente {
               <div class="legend-item">
                 <span class="dot aceptado"></span>
                 <span>Aceptados: {{ presupuestoStats.aceptados }}</span>
+              </div>
+              <div class="legend-item">
+                <span class="dot ejecucion"></span>
+                <span>En ejecución: {{ presupuestoStats.enEjecucion }}</span>
               </div>
               <div class="legend-item">
                 <span class="dot rechazado"></span>
@@ -416,6 +426,7 @@ export interface TopCliente {
       font-weight: 600;
       color: var(--app-text-primary, #0f172a);
       letter-spacing: -0.02em;
+      font-family: 'Sora', 'Space Grotesk', 'IBM Plex Sans', sans-serif;
     }
 
     .subtitle {
@@ -441,11 +452,28 @@ export interface TopCliente {
       box-shadow: var(--app-shadow-md);
       border: 1px solid var(--app-border);
       transition: transform var(--app-transition), box-shadow var(--app-transition);
+      animation: kpi-in 0.45s ease-out both;
     }
 
     .kpi-card:hover {
-      transform: translateY(-2px);
+      transform: translateY(-3px);
       box-shadow: var(--app-shadow-lg);
+    }
+
+    .kpi-card:nth-child(1) { animation-delay: 0.05s; }
+    .kpi-card:nth-child(2) { animation-delay: 0.1s; }
+    .kpi-card:nth-child(3) { animation-delay: 0.15s; }
+    .kpi-card:nth-child(4) { animation-delay: 0.2s; }
+
+    @keyframes kpi-in {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .kpi-presupuestos { border-top: 3px solid #6366f1; }
@@ -551,6 +579,7 @@ export interface TopCliente {
 
     .bar-segment.pendiente { background: #ffc107; }
     .bar-segment.aceptado { background: #4caf50; }
+    .bar-segment.ejecucion { background: #ff9800; }
     .bar-segment.rechazado { background: #f44336; }
     .bar-segment.no-pagada { background: #f44336; }
     .bar-segment.parcial { background: #ff9800; }
@@ -579,6 +608,7 @@ export interface TopCliente {
 
     .dot.pendiente { background: #ffc107; }
     .dot.aceptado { background: #4caf50; }
+    .dot.ejecucion { background: #ff9800; }
     .dot.rechazado { background: #f44336; }
     .dot.no-pagada { background: #f44336; }
     .dot.parcial { background: #ff9800; }
@@ -862,6 +892,7 @@ export class DashboardComponent implements OnInit {
   presupuestoStats: PresupuestoStats = {
     pendientes: 0,
     aceptados: 0,
+    enEjecucion: 0,
     rechazados: 0,
     totalValor: 0,
   };
@@ -1008,17 +1039,20 @@ export class DashboardComponent implements OnInit {
   private computePresupuestoStats(presupuestos: Presupuesto[]): void {
     let pendientes = 0;
     let aceptados = 0;
+    let enEjecucion = 0;
     let rechazados = 0;
     let totalValor = 0;
     for (const p of presupuestos) {
       totalValor += p.total ?? 0;
-      const e = (p.estado ?? '').toLowerCase();
+      const raw = (p.estado ?? '').toLowerCase();
+      const e = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       if (e === 'pendiente') pendientes++;
       else if (e === 'aceptado') aceptados++;
       else if (e === 'rechazado') rechazados++;
+      else if (e.includes('ejecucion')) enEjecucion++;
       else pendientes++;
     }
-    this.presupuestoStats = { pendientes, aceptados, rechazados, totalValor };
+    this.presupuestoStats = { pendientes, aceptados, enEjecucion, rechazados, totalValor };
   }
 
   private computeFacturaStats(facturas: Factura[]): void {

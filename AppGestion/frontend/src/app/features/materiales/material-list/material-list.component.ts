@@ -28,7 +28,7 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
     <div class="material-list">
       <div class="header">
         <h1>Materiales</h1>
-        @if (auth.canWrite()) {
+        @if (auth.canMutate()) {
         <a mat-raised-button color="primary" routerLink="/materiales/nuevo">
           <mat-icon>add</mat-icon>
           Nuevo material
@@ -52,7 +52,7 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let row">
-              @if (auth.canWrite()) {
+              @if (auth.canMutate()) {
               <button mat-icon-button [routerLink]="['/materiales', row.id]" matTooltip="Editar">
                 <mat-icon>edit</mat-icon>
               </button>

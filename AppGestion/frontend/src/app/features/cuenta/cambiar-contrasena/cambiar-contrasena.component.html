@@ -1,0 +1,117 @@
+<div class="cp-page">
+  <div class="cp-page__head">
+    <a mat-button routerLink="/dashboard" class="cp-back">
+      <mat-icon>arrow_back</mat-icon>
+      Volver
+    </a>
+    <div>
+      <h1 class="cp-page__title">Cambiar contraseña</h1>
+      <p class="cp-page__subtitle">
+        Usa una contraseña larga y única para esta cuenta. Si inicias sesión con Google y no recuerdas contraseña, puedes
+        <a routerLink="/forgot-password" class="cp-inline-link">solicitar un enlace de recuperación</a>
+        con tu email para definir una.
+      </p>
+    </div>
+  </div>
+
+  <mat-card class="cp-card">
+    <mat-card-header>
+      <mat-card-title>Nueva contraseña</mat-card-title>
+      <mat-card-subtitle>Mínimo 8 caracteres. No reutilices la contraseña actual.</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="form" (ngSubmit)="guardar()" class="cp-form" autocomplete="off">
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Contraseña actual</mat-label>
+          <input
+            matInput
+            [type]="hideCurrent ? 'password' : 'text'"
+            formControlName="currentPassword"
+            autocomplete="current-password"
+            maxlength="128"
+          />
+          <button
+            mat-icon-button
+            matSuffix
+            type="button"
+            (click)="hideCurrent = !hideCurrent"
+            [attr.aria-label]="hideCurrent ? 'Mostrar contraseña' : 'Ocultar contraseña'"
+          >
+            <mat-icon>{{ hideCurrent ? 'visibility' : 'visibility_off' }}</mat-icon>
+          </button>
+          @if (form.controls.currentPassword.hasError('required') && form.controls.currentPassword.touched) {
+            <mat-error>Campo obligatorio</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Nueva contraseña</mat-label>
+          <input
+            matInput
+            [type]="hideNew ? 'password' : 'text'"
+            formControlName="newPassword"
+            autocomplete="new-password"
+            maxlength="128"
+          />
+          <button
+            mat-icon-button
+            matSuffix
+            type="button"
+            (click)="hideNew = !hideNew"
+            [attr.aria-label]="hideNew ? 'Mostrar contraseña' : 'Ocultar contraseña'"
+          >
+            <mat-icon>{{ hideNew ? 'visibility' : 'visibility_off' }}</mat-icon>
+          </button>
+          @if (form.controls.newPassword.hasError('required') && form.controls.newPassword.touched) {
+            <mat-error>Campo obligatorio</mat-error>
+          }
+          @if (form.controls.newPassword.hasError('minlength') && form.controls.newPassword.touched) {
+            <mat-error>Al menos 8 caracteres</mat-error>
+          }
+          <mat-hint align="end">{{ form.controls.newPassword.value.length }}/128</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Repetir nueva contraseña</mat-label>
+          <input
+            matInput
+            [type]="hideConfirm ? 'password' : 'text'"
+            formControlName="confirmPassword"
+            autocomplete="new-password"
+            maxlength="128"
+          />
+          <button
+            mat-icon-button
+            matSuffix
+            type="button"
+            (click)="hideConfirm = !hideConfirm"
+            [attr.aria-label]="hideConfirm ? 'Mostrar contraseña' : 'Ocultar contraseña'"
+          >
+            <mat-icon>{{ hideConfirm ? 'visibility' : 'visibility_off' }}</mat-icon>
+          </button>
+          @if (form.controls.confirmPassword.hasError('required') && form.controls.confirmPassword.touched) {
+            <mat-error>Confirma la nueva contraseña</mat-error>
+          }
+          @if (form.controls.confirmPassword.hasError('mismatch') && form.controls.confirmPassword.touched) {
+            <mat-error>No coincide con la nueva contraseña</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-divider class="cp-divider" />
+
+        <div class="cp-actions">
+          <button mat-raised-button color="primary" type="submit" [disabled]="saving() || form.invalid">
+            @if (saving()) {
+              <mat-progress-spinner diameter="20" mode="indeterminate" />
+            }
+            Guardar contraseña
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <p class="cp-footnote">
+    Tras cambiar la contraseña, tu sesión actual sigue activa. Si usabas la cuenta en otro dispositivo, cierra sesión allí o cambia de nuevo si sospechas acceso no autorizado.
+  </p>
+</div>

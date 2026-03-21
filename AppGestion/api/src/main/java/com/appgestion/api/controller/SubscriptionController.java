@@ -1,12 +1,15 @@
 package com.appgestion.api.controller;
 
 import com.appgestion.api.domain.entity.Usuario;
+import com.appgestion.api.dto.response.SubscriptionInvoiceDto;
 import com.appgestion.api.service.CurrentUserService;
 import com.appgestion.api.service.StripeService;
 import com.stripe.exception.StripeException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -29,6 +32,25 @@ public class SubscriptionController {
             return ResponseEntity.ok(Map.of("checkoutUrl", checkoutUrl));
         } catch (StripeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Historial de facturas de la suscripción (Stripe) del usuario autenticado.
+     */
+    @GetMapping("/invoices")
+    public ResponseEntity<?> listSubscriptionInvoices(@RequestParam(name = "limit", defaultValue = "24") int limit) {
+        Usuario usuario = currentUserService.getCurrentUsuario();
+        String customerId = usuario.getStripeCustomerId();
+        if (customerId == null || customerId.isBlank()) {
+            return ResponseEntity.ok(List.<SubscriptionInvoiceDto>of());
+        }
+        try {
+            List<SubscriptionInvoiceDto> list = stripeService.listCustomerInvoices(customerId, limit);
+            return ResponseEntity.ok(list);
+        } catch (StripeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                    .body(Map.of("error", "No se pudo obtener el historial de facturas. Inténtalo más tarde."));
         }
     }
 

@@ -6,6 +6,9 @@ import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 import org.springframework.stereotype.Service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -19,6 +22,8 @@ import java.util.Optional;
  */
 @Service
 public class FacturaPdfService {
+
+    private static final Logger log = LoggerFactory.getLogger(FacturaPdfService.class);
 
     private static final Color HEADER_BG = new Color(45, 55, 72);
     private static final Color ROW_ALT = new Color(248, 250, 252);
@@ -46,7 +51,7 @@ public class FacturaPdfService {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    private void agregarContenido(Document document, Factura factura, Long usuarioId) throws DocumentException {
+    private void agregarContenido(Document document, Factura factura, Long usuarioId) throws DocumentException, IOException {
         Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 22, Color.DARK_GRAY);
         Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.WHITE);
         Font cellFont = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.DARK_GRAY);
@@ -56,10 +61,12 @@ public class FacturaPdfService {
         Empresa empresa = empresaService.getEmpresaOrNull(usuarioId);
         Cliente cliente = factura.getCliente();
 
-        // Cabecera: FACTURA + número (RD 1619/2012 - número y serie)
-        Paragraph title = new Paragraph("FACTURA " + (factura.getNumeroFactura() != null ? factura.getNumeroFactura() : ""), titleFont);
-        title.setSpacingAfter(20);
-        document.add(title);
+        byte[] logo = empresa != null ? empresa.getLogoImagen() : null;
+        String tituloFactura = "FACTURA " + (factura.getNumeroFactura() != null ? factura.getNumeroFactura() : "");
+        PdfLogoHelper.agregarTituloConLogoOpcional(document, logo, tituloFactura, titleFont);
+        Paragraph spacer = new Paragraph(" ");
+        spacer.setSpacingAfter(8);
+        document.add(spacer);
 
         // Tabla de dos columnas: Emisor (izq) y Cliente/Destinatario (der) - RD 1619/2012
         PdfPTable headerTable = new PdfPTable(2);
@@ -163,6 +170,20 @@ public class FacturaPdfService {
             Paragraph notasFactura = new Paragraph("Notas: " + factura.getNotas(), smallFont);
             notasFactura.setSpacingBefore(8);
             document.add(notasFactura);
+        }
+        String qrPayload = factura.getPaymentLinkUrl();
+        if (qrPayload == null || qrPayload.isBlank()) {
+            qrPayload = "Factura "
+                    + Optional.ofNullable(factura.getNumeroFactura()).orElse("")
+                    + " | id:" + factura.getId();
+        }
+        try {
+            PdfQrHelper.agregarQr(document, qrPayload, smallFont);
+        } catch (IOException e) {
+            log.warn("No se pudo añadir QR al PDF de factura: {}", e.getMessage());
+        }
+        if (empresa != null && empresa.getFirmaImagen() != null && empresa.getFirmaImagen().length > 0) {
+            PdfFirmaHelper.agregarFirmaSiExiste(document, empresa.getFirmaImagen(), smallFont);
         }
     }
 

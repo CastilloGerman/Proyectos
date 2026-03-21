@@ -1,0 +1,90 @@
+<div class="user-dropdown" #root>
+  <button
+    type="button"
+    class="user-dropdown__trigger"
+    [class.user-dropdown__trigger--open]="open()"
+    [attr.aria-expanded]="open()"
+    aria-haspopup="true"
+    aria-controls="user-menu-panel"
+    id="user-menu-button"
+    (click)="toggle($event)"
+    (keydown.escape)="close()"
+  >
+    <span class="user-dropdown__avatar" aria-hidden="true">{{ displayInitials() }}</span>
+    <span class="user-dropdown__meta">
+      <span class="user-dropdown__name">{{ displayName() }}</span>
+      <span class="user-dropdown__email">{{ auth.user()?.email }}</span>
+    </span>
+    <mat-icon class="user-dropdown__chevron" aria-hidden="true">{{ open() ? 'expand_less' : 'expand_more' }}</mat-icon>
+  </button>
+
+  @if (open()) {
+    <div
+      #panel
+      id="user-menu-panel"
+      class="user-dropdown__panel"
+      role="menu"
+      aria-labelledby="user-menu-button"
+      (keydown.escape)="close(); $event.stopPropagation()"
+    >
+      <div class="user-dropdown__panel-scroll">
+        @for (section of sections; track section.id) {
+          <div class="user-dropdown__section" role="presentation">
+            <div class="user-dropdown__section-label" role="presentation">{{ section.label }}</div>
+            @for (item of section.items; track item.id) {
+              @if (item.kind === 'route' && item.route) {
+                <a
+                  class="user-dropdown__item"
+                  role="menuitem"
+                  [routerLink]="item.route"
+                  (click)="close()"
+                  [class.is-disabled]="item.disabled"
+                  [attr.tabindex]="item.disabled ? -1 : 0"
+                >
+                  <mat-icon class="user-dropdown__item-icon">{{ item.icon }}</mat-icon>
+                  <span class="user-dropdown__item-label">{{ item.label }}</span>
+                </a>
+              } @else if (item.kind === 'external' && item.href) {
+                <a
+                  class="user-dropdown__item"
+                  role="menuitem"
+                  [href]="item.href"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  (click)="close()"
+                >
+                  <mat-icon class="user-dropdown__item-icon">{{ item.icon }}</mat-icon>
+                  <span class="user-dropdown__item-label">{{ item.label }}</span>
+                  <mat-icon class="user-dropdown__item-suffix" aria-hidden="true">open_in_new</mat-icon>
+                </a>
+              } @else if (item.kind === 'action') {
+                <button
+                  type="button"
+                  class="user-dropdown__item user-dropdown__item--btn"
+                  role="menuitem"
+                  [disabled]="item.disabled"
+                  (click)="onAction(item, $event)"
+                >
+                  <mat-icon class="user-dropdown__item-icon">{{ item.icon }}</mat-icon>
+                  <span class="user-dropdown__item-label">{{ item.label }}</span>
+                </button>
+              }
+            }
+          </div>
+        }
+      </div>
+
+      <div class="user-dropdown__footer" role="presentation">
+        <button
+          type="button"
+          class="user-dropdown__logout"
+          role="menuitem"
+          (click)="confirmLogout($event)"
+        >
+          <mat-icon>logout</mat-icon>
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+  }
+</div>

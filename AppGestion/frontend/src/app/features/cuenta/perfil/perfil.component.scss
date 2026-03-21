@@ -1,0 +1,131 @@
+.perfil-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding-bottom: 32px;
+}
+
+.perfil-page__head {
+  margin-bottom: 24px;
+}
+
+.perfil-back {
+  margin-bottom: 12px;
+}
+
+.perfil-page__title {
+  margin: 0 0 8px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--app-text-primary, #0f172a);
+}
+
+.perfil-page__subtitle {
+  margin: 0;
+  max-width: 42rem;
+  color: var(--app-text-secondary, #64748b);
+  line-height: 1.5;
+  font-size: 15px;
+}
+
+.perfil-grid {
+  display: grid;
+  gap: 20px;
+  align-items: start;
+  grid-template-columns: 1fr;
+
+  @media (min-width: 900px) {
+    grid-template-columns: 1fr minmax(260px, 320px);
+  }
+}
+
+.perfil-card {
+  border-radius: var(--app-radius-md, 12px);
+}
+
+.perfil-card--form mat-card-header {
+  padding-bottom: 0;
+}
+
+.perfil-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.perfil-form .full {
+  width: 100%;
+  display: block;
+}
+
+.perfil-form__actions {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.perfil-form__actions button[type='submit'] {
+  min-width: 160px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.perfil-meta {
+  padding-top: 8px !important;
+}
+
+.perfil-dl {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.perfil-dl dt {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-text-secondary, #64748b);
+}
+
+.perfil-dl dd {
+  margin: 0 0 4px;
+  font-size: 15px;
+  color: var(--app-text-primary, #0f172a);
+}
+
+.perfil-divider {
+  margin: 20px 0 !important;
+}
+
+.perfil-hint {
+  font-size: 13px;
+  color: var(--app-text-secondary, #64748b);
+  line-height: 1.45;
+  margin: 0 0 12px;
+}
+
+.perfil-link-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.perfil-link-btn mat-icon {
+  margin-right: 8px;
+}
+
+.perfil-state {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--app-text-secondary, #64748b);
+}
+
+.perfil-state--center {
+  justify-content: center;
+  padding: 48px 16px;
+}

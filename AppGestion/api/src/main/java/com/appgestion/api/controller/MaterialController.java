@@ -6,6 +6,7 @@ import com.appgestion.api.service.CurrentUserService;
 import com.appgestion.api.service.MaterialService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -48,12 +49,14 @@ public class MaterialController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public MaterialResponse actualizar(@PathVariable Long id, @Valid @RequestBody MaterialRequest request) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
         return materialService.actualizar(id, request, usuarioId);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void eliminar(@PathVariable Long id) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();

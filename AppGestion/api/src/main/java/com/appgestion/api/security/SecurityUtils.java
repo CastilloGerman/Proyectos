@@ -10,7 +10,7 @@ public final class SecurityUtils {
 
     public static Usuario getCurrentUsuario(UsuarioRepository usuarioRepository) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return usuarioRepository.findByEmail(email)
+        return usuarioRepository.findByEmailIgnoreCase(email != null ? email.trim() : "")
                 .orElseThrow(() -> new IllegalStateException("Usuario no autenticado"));
     }
 }

@@ -3,13 +3,30 @@ package com.appgestion.api.service;
 import com.appgestion.api.domain.entity.Empresa;
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.request.EmpresaRequest;
+import com.appgestion.api.dto.request.DatosFiscalesPatchRequest;
+import com.appgestion.api.dto.request.MetodosCobroPatchRequest;
+import com.appgestion.api.dto.request.PlantillasPdfPatchRequest;
 import com.appgestion.api.dto.response.EmpresaResponse;
 import com.appgestion.api.repository.EmpresaRepository;
+import com.appgestion.api.util.BizumTelefonoValidator;
+import com.appgestion.api.util.IbanValidator;
+import com.appgestion.api.util.NifIvaIntraValidator;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Base64;
+import java.util.Objects;
+import java.util.Set;
 
 @Service
 public class EmpresaService {
+
+    private static final int MAX_FIRMA_BYTES = 400_000;
+    private static final int MAX_LOGO_BYTES = 400_000;
+
+    private static final Set<String> METODOS_PAGO_PERMITIDOS = Set.of("Transferencia", "Efectivo", "Tarjeta", "Bizum");
 
     private final EmpresaRepository empresaRepository;
 
@@ -44,6 +61,160 @@ public class EmpresaService {
         if (request.mailPort() != null) emp.setMailPort(request.mailPort());
         if (request.mailUsername() != null) emp.setMailUsername(request.mailUsername());
         if (request.mailPassword() != null && !request.mailPassword().isBlank()) emp.setMailPassword(request.mailPassword());
+        if (request.firmaImagenBase64() != null) {
+            if (request.firmaImagenBase64().isBlank()) {
+                emp.setFirmaImagen(null);
+            } else {
+                String raw = request.firmaImagenBase64().trim();
+                int comma = raw.indexOf(',');
+                if (raw.startsWith("data:") && comma > 0) {
+                    raw = raw.substring(comma + 1);
+                }
+                try {
+                    byte[] decoded = Base64.getDecoder().decode(raw);
+                    if (decoded.length > MAX_FIRMA_BYTES) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                "La imagen de firma no puede superar " + (MAX_FIRMA_BYTES / 1024) + " KB");
+                    }
+                    emp.setFirmaImagen(decoded);
+                } catch (IllegalArgumentException e) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Imagen de firma en Base64 no válida");
+                }
+            }
+        }
+        if (request.logoImagenBase64() != null) {
+            if (request.logoImagenBase64().isBlank()) {
+                emp.setLogoImagen(null);
+            } else {
+                String raw = request.logoImagenBase64().trim();
+                int comma = raw.indexOf(',');
+                if (raw.startsWith("data:") && comma > 0) {
+                    raw = raw.substring(comma + 1);
+                }
+                try {
+                    byte[] decoded = Base64.getDecoder().decode(raw);
+                    if (decoded.length > MAX_LOGO_BYTES) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                "El logo no puede superar " + (MAX_LOGO_BYTES / 1024) + " KB");
+                    }
+                    emp.setLogoImagen(decoded);
+                } catch (IllegalArgumentException e) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Logo en Base64 no válido");
+                }
+            }
+        }
+        emp = empresaRepository.save(emp);
+        return toResponse(emp);
+    }
+
+    @Transactional
+    public EmpresaResponse actualizarMetodosCobro(MetodosCobroPatchRequest request, Usuario usuario) {
+        String metodo = request.defaultMetodoPago() != null ? request.defaultMetodoPago().trim() : "";
+        if (!metodo.isEmpty() && !METODOS_PAGO_PERMITIDOS.contains(metodo)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Método de pago no reconocido");
+        }
+        String ibanRaw = request.ibanCuenta() != null ? request.ibanCuenta().trim().replaceAll("\\s+", "") : "";
+        if (!ibanRaw.isEmpty() && !IbanValidator.isValid(ibanRaw)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "IBAN no válido");
+        }
+        String bizumRaw = request.bizumTelefono() != null ? request.bizumTelefono().trim() : "";
+        if (!bizumRaw.isEmpty() && !BizumTelefonoValidator.isValid(bizumRaw)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Teléfono Bizum no válido (móvil español, 9 dígitos)");
+        }
+        String cond = request.defaultCondicionesPago() != null ? request.defaultCondicionesPago().trim() : "";
+        if (cond.length() > 200) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Condiciones de pago demasiado largas");
+        }
+
+        Empresa emp = empresaRepository.findByUsuarioId(usuario.getId()).orElseGet(() -> {
+            Empresa e = new Empresa();
+            e.setUsuario(usuario);
+            String n = usuario.getNombre();
+            e.setNombre(n != null && !n.isBlank() ? n : "");
+            return e;
+        });
+        emp.setDefaultMetodoPago(metodo.isEmpty() ? null : metodo);
+        emp.setDefaultCondicionesPago(cond.isEmpty() ? null : cond);
+        emp.setIbanCuenta(ibanRaw.isEmpty() ? null : ibanRaw.toUpperCase());
+        emp.setBizumTelefono(bizumRaw.isEmpty() ? null : normalizeBizumDigits(bizumRaw));
+        emp = empresaRepository.save(emp);
+        return toResponse(emp);
+    }
+
+    private static String normalizeBizumDigits(String raw) {
+        String digits = raw.replaceAll("[^0-9+]", "");
+        if (digits.startsWith("+34")) {
+            digits = digits.substring(3);
+        } else if (digits.startsWith("0034")) {
+            digits = digits.substring(4);
+        }
+        digits = digits.replace("+", "");
+        return digits;
+    }
+
+    @Transactional
+    public EmpresaResponse actualizarPlantillasPdf(PlantillasPdfPatchRequest request, Usuario usuario) {
+        Empresa emp = empresaRepository.findByUsuarioId(usuario.getId()).orElseGet(() -> {
+            Empresa e = new Empresa();
+            e.setUsuario(usuario);
+            String n = usuario.getNombre();
+            e.setNombre(n != null && !n.isBlank() ? n : "");
+            return e;
+        });
+        if (request.notasPiePresupuesto() != null) {
+            emp.setNotasPiePresupuesto(blankToNull(request.notasPiePresupuesto()));
+        }
+        if (request.notasPieFactura() != null) {
+            emp.setNotasPieFactura(blankToNull(request.notasPieFactura()));
+        }
+        Empresa guardada = Objects.requireNonNull(empresaRepository.save(Objects.requireNonNull(emp)));
+        return toResponse(guardada);
+    }
+
+    private static String blankToNull(String s) {
+        if (s == null) {
+            return null;
+        }
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
+    }
+
+    @Transactional
+    public EmpresaResponse actualizarDatosFiscales(DatosFiscalesPatchRequest request, Usuario usuario) {
+        String regimen = request.regimenIvaPrincipal() != null ? request.regimenIvaPrincipal().trim() : "";
+        if (regimen.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indica el régimen de IVA o impuesto aplicable");
+        }
+        if (regimen.length() > 120) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Régimen fiscal demasiado largo");
+        }
+        String nifIva = request.nifIntracomunitario() != null
+                ? request.nifIntracomunitario().trim().replaceAll("\\s+", "").toUpperCase() : "";
+        if (!nifIva.isEmpty() && !NifIvaIntraValidator.isValid(nifIva)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "NIF-IVA intracomunitario no válido (formato tipo ESB12345678)");
+        }
+        String desc = request.descripcionActividad() != null ? request.descripcionActividad().trim() : "";
+        if (desc.length() > 500) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Descripción de actividad demasiado larga");
+        }
+        String ep = request.epigrafeIae() != null ? request.epigrafeIae().trim() : "";
+        if (ep.length() > 30) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Epígrafe IAE demasiado largo");
+        }
+
+        Empresa emp = empresaRepository.findByUsuarioId(usuario.getId()).orElseGet(() -> {
+            Empresa e = new Empresa();
+            e.setUsuario(usuario);
+            String n = usuario.getNombre();
+            e.setNombre(n != null && !n.isBlank() ? n : "");
+            return e;
+        });
+        emp.setRegimenIvaPrincipal(regimen);
+        emp.setDescripcionActividadFiscal(desc.isEmpty() ? null : desc);
+        emp.setNifIntracomunitario(nifIva.isEmpty() ? null : nifIva);
+        emp.setEpigrafeIae(ep.isEmpty() ? null : ep);
         emp = empresaRepository.save(emp);
         return toResponse(emp);
     }
@@ -54,10 +225,17 @@ public class EmpresaService {
 
     private EmpresaResponse toResponse(Empresa emp) {
         if (emp == null) {
-            return new EmpresaResponse(null, "", null, null, null, null, null, null, null, null, null, null, null, null, false);
+            return new EmpresaResponse(null, "", null, null, null, null, null, null, null, null, null, null, null, null,
+                    false, false, null, false, null, null, null, null, null, null, null, null, null);
         }
         boolean mailConfigurado = emp.getMailUsername() != null && !emp.getMailUsername().isBlank()
                 && emp.getMailPassword() != null && !emp.getMailPassword().isBlank();
+        byte[] firma = emp.getFirmaImagen();
+        boolean tieneFirma = firma != null && firma.length > 0;
+        String firmaB64 = tieneFirma ? Base64.getEncoder().encodeToString(firma) : null;
+        byte[] logo = emp.getLogoImagen();
+        boolean tieneLogo = logo != null && logo.length > 0;
+        String logoB64 = tieneLogo ? Base64.getEncoder().encodeToString(logo) : null;
         return new EmpresaResponse(
                 emp.getId(),
                 emp.getNombre(),
@@ -73,7 +251,19 @@ public class EmpresaService {
                 emp.getMailHost(),
                 emp.getMailPort(),
                 emp.getMailUsername(),
-                mailConfigurado
+                mailConfigurado,
+                tieneFirma,
+                firmaB64,
+                tieneLogo,
+                logoB64,
+                emp.getDefaultMetodoPago(),
+                emp.getDefaultCondicionesPago(),
+                emp.getIbanCuenta(),
+                emp.getBizumTelefono(),
+                emp.getRegimenIvaPrincipal(),
+                emp.getDescripcionActividadFiscal(),
+                emp.getNifIntracomunitario(),
+                emp.getEpigrafeIae()
         );
     }
 }

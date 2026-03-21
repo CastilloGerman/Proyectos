@@ -17,6 +17,22 @@ export interface FacturaItemRequest {
   aplicaIva?: boolean;
 }
 
+export interface FacturaCobro {
+  id: number;
+  importe: number;
+  fecha: string;
+  metodo?: string;
+  notas?: string;
+  createdAt: string;
+}
+
+export interface FacturaCobroRequest {
+  importe: number;
+  fecha?: string;
+  metodo?: string;
+  notas?: string;
+}
+
 export interface Factura {
   id: number;
   numeroFactura: string;
@@ -39,6 +55,9 @@ export interface Factura {
   montoCobrado?: number;
   notas?: string;
   items: FacturaItem[];
+  /** URL de pago (Stripe Checkout) si se generó. */
+  paymentLinkUrl?: string | null;
+  cobros?: FacturaCobro[];
 }
 
 export interface FacturaRequest {

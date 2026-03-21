@@ -13,6 +13,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +63,7 @@ public class PresupuestoController {
     }
 
     @PostMapping("/{id}/enviar-email")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void enviarPorEmail(@PathVariable Long id, @RequestBody(required = false) EnviarEmailRequest request) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
@@ -80,6 +82,7 @@ public class PresupuestoController {
     }
 
     @PostMapping("/{id}/factura")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @ResponseStatus(HttpStatus.CREATED)
     public FacturaResponse crearFacturaDesdePresupuesto(@PathVariable Long id) {
         Usuario usuario = currentUserService.getCurrentUsuario();
@@ -94,12 +97,14 @@ public class PresupuestoController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public PresupuestoResponse actualizar(@PathVariable Long id, @Valid @RequestBody PresupuestoRequest request) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
         return presupuestoService.actualizar(id, request, usuarioId);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void eliminar(@PathVariable Long id) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();

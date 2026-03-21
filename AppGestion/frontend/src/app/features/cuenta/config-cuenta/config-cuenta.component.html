@@ -1,0 +1,98 @@
+<div class="cfg-page">
+  <div class="cfg-page__head">
+    <a mat-button routerLink="/dashboard" class="cfg-back">
+      <mat-icon>arrow_back</mat-icon>
+      Volver
+    </a>
+    <h1 class="cfg-page__title">Configuración de cuenta</h1>
+    <p class="cfg-page__subtitle">
+      Gestiona cómo usamos tu correo para avisos importantes. Para idioma, moneda y zona horaria ve a
+      <a routerLink="/cuenta/preferencias">Preferencias</a>.
+    </p>
+  </div>
+
+  @if (loading()) {
+    <div class="cfg-state cfg-state--center">
+      <mat-progress-spinner diameter="40" mode="indeterminate" />
+      <span>Cargando…</span>
+    </div>
+  } @else if (loadError()) {
+    <mat-card class="cfg-card">
+      <mat-card-content>
+        <p>No pudimos cargar la configuración.</p>
+        <button mat-stroked-button type="button" color="primary" (click)="reintentar()">Reintentar</button>
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    <div class="cfg-grid">
+      <mat-card class="cfg-card">
+        <mat-card-header>
+          <mat-card-title>Correo de acceso</mat-card-title>
+          <mat-card-subtitle>Solo lectura</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <p class="cfg-email">{{ me()?.email }}</p>
+          <p class="cfg-muted">
+            Es el usuario con el que inicias sesión. Para cambiarlo hace falta un proceso de verificación; por ahora contacta
+            con soporte si lo necesitas.
+          </p>
+          <a mat-stroked-button routerLink="/cuenta/cambiar-contrasena" class="cfg-inline-link">
+            <mat-icon>lock_reset</mat-icon>
+            Cambiar contraseña
+          </a>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="cfg-card cfg-card--wide">
+        <mat-card-header>
+          <mat-card-title>Correos que recibes</mat-card-title>
+          <mat-card-subtitle>Activa o desactiva cada tipo de mensaje</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <form [formGroup]="form" (ngSubmit)="guardar()" class="cfg-form">
+            <div class="cfg-toggle-row">
+              <mat-slide-toggle formControlName="emailNotifyBilling" color="primary">
+                <span class="cfg-toggle-label">Facturación y suscripción</span>
+              </mat-slide-toggle>
+              <p class="cfg-toggle-hint">
+                Recibos, fallos de pago, fin de periodo de prueba y avisos relacionados con tu plan.
+              </p>
+            </div>
+
+            <mat-divider />
+
+            <div class="cfg-toggle-row">
+              <mat-slide-toggle formControlName="emailNotifyDocuments" color="primary">
+                <span class="cfg-toggle-label">Presupuestos y facturas</span>
+              </mat-slide-toggle>
+              <p class="cfg-toggle-hint">
+                Recordatorios o avisos cuando envíes documentos a clientes (cuando activemos el envío automático).
+              </p>
+            </div>
+
+            <mat-divider />
+
+            <div class="cfg-toggle-row">
+              <mat-slide-toggle formControlName="emailNotifyMarketing" color="primary">
+                <span class="cfg-toggle-label">Novedades y consejos</span>
+              </mat-slide-toggle>
+              <p class="cfg-toggle-hint">
+                Ideas para sacar más partido a la app. Sin spam: como mucho un envío ocasional.
+              </p>
+            </div>
+
+            <div class="cfg-actions">
+              <button mat-flat-button color="primary" type="submit" [disabled]="form.pristine || saving()">
+                @if (saving()) {
+                  <mat-progress-spinner diameter="20" mode="indeterminate" />
+                } @else {
+                  Guardar preferencias
+                }
+              </button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  }
+</div>

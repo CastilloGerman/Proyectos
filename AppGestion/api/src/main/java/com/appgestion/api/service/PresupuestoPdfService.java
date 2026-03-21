@@ -42,7 +42,7 @@ public class PresupuestoPdfService {
         }
     }
 
-    private void agregarContenido(Document document, Presupuesto presupuesto, Long usuarioId) throws DocumentException {
+    private void agregarContenido(Document document, Presupuesto presupuesto, Long usuarioId) throws DocumentException, IOException {
         Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 22, Color.DARK_GRAY);
         Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.WHITE);
         Font cellFont = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.DARK_GRAY);
@@ -50,9 +50,8 @@ public class PresupuestoPdfService {
 
         Empresa empresa = usuarioId != null ? empresaService.getEmpresaOrNull(usuarioId) : null;
 
-        Paragraph title = new Paragraph("PRESUPUESTO", titleFont);
-        title.setSpacingAfter(4);
-        document.add(title);
+        byte[] logo = empresa != null ? empresa.getLogoImagen() : null;
+        PdfLogoHelper.agregarTituloConLogoOpcional(document, logo, "PRESUPUESTO", titleFont);
 
         if (empresa != null && (empresa.getNombre() != null && !empresa.getNombre().isBlank()
                 || empresa.getDireccion() != null || empresa.getNif() != null)) {
@@ -99,10 +98,32 @@ public class PresupuestoPdfService {
         PdfPTable totalesTable = crearTablaTotales(presupuesto, cellFont);
         document.add(totalesTable);
 
+        String clausulasExpandidas = DocumentTemplateService.expandirPresupuesto(
+                presupuesto.getTextoClausulas(), presupuesto);
+        if (clausulasExpandidas != null && !clausulasExpandidas.isBlank()) {
+            for (String linea : clausulasExpandidas.split("\\r?\\n")) {
+                if (!linea.isBlank()) {
+                    Paragraph cl = new Paragraph(linea.trim(), smallFont);
+                    cl.setSpacingBefore(4);
+                    document.add(cl);
+                }
+            }
+        }
+
         if (empresa != null && empresa.getNotasPiePresupuesto() != null && !empresa.getNotasPiePresupuesto().isBlank()) {
             Paragraph notas = new Paragraph(empresa.getNotasPiePresupuesto(), smallFont);
             notas.setSpacingBefore(20);
             document.add(notas);
+        }
+        String qrRef = "Presupuesto #" + presupuesto.getId()
+                + " | Total " + String.format("%.2f €", presupuesto.getTotal() != null ? presupuesto.getTotal() : 0.0);
+        try {
+            PdfQrHelper.agregarQr(document, qrRef, smallFont);
+        } catch (Exception ignored) {
+            // sin QR si falla la generación
+        }
+        if (empresa != null && empresa.getFirmaImagen() != null && empresa.getFirmaImagen().length > 0) {
+            PdfFirmaHelper.agregarFirmaSiExiste(document, empresa.getFirmaImagen(), smallFont);
         }
     }
 

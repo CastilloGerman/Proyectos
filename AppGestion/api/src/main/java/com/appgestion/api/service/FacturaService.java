@@ -2,23 +2,23 @@ package com.appgestion.api.service;
 
 import com.appgestion.api.constant.TaxConstants;
 import com.appgestion.api.domain.entity.*;
+import com.appgestion.api.dto.request.FacturaCobroRequest;
 import com.appgestion.api.dto.request.FacturaItemRequest;
 import com.appgestion.api.dto.request.FacturaRequest;
 import com.appgestion.api.dto.request.EnviarEmailRequest;
-import com.appgestion.api.dto.response.FacturaItemResponse;
 import com.appgestion.api.dto.response.FacturaResponse;
 import com.appgestion.api.repository.ClienteRepository;
 import com.appgestion.api.repository.EmpresaRepository;
+import com.appgestion.api.repository.FacturaCobroRepository;
 import com.appgestion.api.repository.FacturaRepository;
 import com.appgestion.api.repository.MaterialRepository;
 import com.appgestion.api.repository.PresupuestoRepository;
 import com.appgestion.api.util.NifValidator;
+import jakarta.mail.MessagingException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-
-import jakarta.mail.MessagingException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -40,7 +40,11 @@ public class FacturaService {
     private final MaterialRepository materialRepository;
     private final FacturaPdfService facturaPdfService;
     private final FacturaNumeroService facturaNumeroService;
-    private final EmailService emailService;
+    private final FacturaCobroRepository facturaCobroRepository;
+    private final FacturaResponseMapper facturaResponseMapper;
+    private final FacturaEmailService facturaEmailService;
+    private final FacturaCobroService facturaCobroService;
+    private final FacturaPaymentLinkService facturaPaymentLinkService;
 
     public FacturaService(FacturaRepository facturaRepository,
                           ClienteRepository clienteRepository,
@@ -49,7 +53,11 @@ public class FacturaService {
                           MaterialRepository materialRepository,
                           FacturaPdfService facturaPdfService,
                           FacturaNumeroService facturaNumeroService,
-                          EmailService emailService) {
+                          FacturaCobroRepository facturaCobroRepository,
+                          FacturaResponseMapper facturaResponseMapper,
+                          FacturaEmailService facturaEmailService,
+                          FacturaCobroService facturaCobroService,
+                          FacturaPaymentLinkService facturaPaymentLinkService) {
         this.facturaRepository = facturaRepository;
         this.clienteRepository = clienteRepository;
         this.empresaRepository = empresaRepository;
@@ -57,13 +65,17 @@ public class FacturaService {
         this.materialRepository = materialRepository;
         this.facturaPdfService = facturaPdfService;
         this.facturaNumeroService = facturaNumeroService;
-        this.emailService = emailService;
+        this.facturaCobroRepository = facturaCobroRepository;
+        this.facturaResponseMapper = facturaResponseMapper;
+        this.facturaEmailService = facturaEmailService;
+        this.facturaCobroService = facturaCobroService;
+        this.facturaPaymentLinkService = facturaPaymentLinkService;
     }
 
     @Transactional(readOnly = true)
     public List<FacturaResponse> listar(Long usuarioId, String q) {
         var stream = facturaRepository.findByUsuarioIdOrderByFechaCreacionDesc(usuarioId).stream()
-                .map(this::toResponse);
+                .map(f -> facturaResponseMapper.toResponse(f, List.of()));
         if (q != null && !q.isBlank()) {
             String lower = q.strip().toLowerCase();
             stream = stream.filter(f ->
@@ -79,7 +91,7 @@ public class FacturaService {
     public FacturaResponse obtenerPorId(Long id, Long usuarioId) {
         Factura factura = facturaRepository.findByIdAndUsuarioId(id, usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
-        return toResponse(factura);
+        return facturaResponseMapper.toResponse(factura, facturaCobroRepository.findByFacturaIdOrderByFechaDescCreatedAtDesc(factura.getId()));
     }
 
     @Transactional
@@ -120,7 +132,7 @@ public class FacturaService {
         mapItems(request.items(), factura);
         calcularTotales(factura);
         factura = facturaRepository.save(factura);
-        return toResponse(factura);
+        return facturaResponseMapper.toResponse(factura, facturaCobroRepository.findByFacturaIdOrderByFechaDescCreatedAtDesc(factura.getId()));
     }
 
     @Transactional
@@ -164,13 +176,27 @@ public class FacturaService {
         mapItems(request.items(), factura);
         calcularTotales(factura);
         factura = facturaRepository.save(factura);
-        return toResponse(factura);
+        return facturaResponseMapper.toResponse(factura, facturaCobroRepository.findByFacturaIdOrderByFechaDescCreatedAtDesc(factura.getId()));
     }
 
     @Transactional
     public FacturaResponse crearDesdePresupuesto(Long presupuestoId, Usuario usuario) {
         Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(presupuestoId, usuario.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
+
+        if (facturaRepository.findFirstByPresupuesto_IdAndUsuario_Id(presupuestoId, usuario.getId()).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Este presupuesto ya tiene una factura asociada");
+        }
+
+        String estado = presupuesto.getEstado() != null ? presupuesto.getEstado().trim() : "";
+        if ("Rechazado".equalsIgnoreCase(estado)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede facturar un presupuesto rechazado");
+        }
+        if (!"Pendiente".equalsIgnoreCase(estado) && !"Aceptado".equalsIgnoreCase(estado)
+                && !"En ejecución".equalsIgnoreCase(estado) && !"En ejecucion".equalsIgnoreCase(estado)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Solo se puede facturar un presupuesto pendiente, aceptado o en ejecución");
+        }
 
         validarDatosFactura(usuario.getId(), presupuesto.getCliente());
 
@@ -208,7 +234,7 @@ public class FacturaService {
         presupuesto.setEstado("Aceptado");
         calcularTotales(factura);
         factura = facturaRepository.save(factura);
-        return toResponse(factura);
+        return facturaResponseMapper.toResponse(factura, facturaCobroRepository.findByFacturaIdOrderByFechaDescCreatedAtDesc(factura.getId()));
     }
 
     @Transactional(readOnly = true)
@@ -220,19 +246,7 @@ public class FacturaService {
 
     @Transactional(readOnly = true)
     public void enviarPorEmail(Long id, Long usuarioId, EnviarEmailRequest request) throws MessagingException {
-        Factura factura = facturaRepository.findByIdAndUsuarioId(id, usuarioId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
-        String email = request != null && request.email() != null && !request.email().isBlank()
-                ? request.email().trim()
-                : (factura.getCliente() != null ? factura.getCliente().getEmail() : null);
-        if (email == null || email.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El cliente no tiene email registrado. Indique un email en el request.");
-        }
-        byte[] pdf = facturaPdfService.generarPdf(factura, usuarioId);
-        String nombreArchivo = "factura-" + (factura.getNumeroFactura() != null ? factura.getNumeroFactura() : id) + ".pdf";
-        String asunto = "Factura " + factura.getNumeroFactura() + " - " + (factura.getCliente() != null ? factura.getCliente().getNombre() : "");
-        String cuerpo = "<p>Adjunto encontrará la factura correspondiente.</p><p>Saludos cordiales.</p>";
-        emailService.enviarPdf(usuarioId, email, asunto, cuerpo, pdf, nombreArchivo);
+        facturaEmailService.enviarPorEmail(id, usuarioId, request);
     }
 
     @Transactional
@@ -241,6 +255,16 @@ public class FacturaService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada");
         }
         facturaRepository.deleteById(Objects.requireNonNull(id));
+    }
+
+    @Transactional
+    public FacturaResponse registrarCobro(Long facturaId, Long usuarioId, FacturaCobroRequest request) {
+        return facturaCobroService.registrarCobro(facturaId, usuarioId, request);
+    }
+
+    @Transactional
+    public FacturaResponse generarPaymentLink(Long facturaId, Long usuarioId) {
+        return facturaPaymentLinkService.generarPaymentLink(facturaId, usuarioId);
     }
 
     private void validarDatosFactura(Long usuarioId, Cliente cliente) {
@@ -287,8 +311,8 @@ public class FacturaService {
             item.setAplicaIva(Optional.ofNullable(req.aplicaIva()).orElse(true));
 
             if (req.materialId() != null) {
-                Long usuarioId = Objects.requireNonNull(factura.getUsuario()).getId();
-                materialRepository.findByIdAndUsuarioId(Objects.requireNonNull(req.materialId()), usuarioId).ifPresent(item::setMaterial);
+                Long uid = Objects.requireNonNull(factura.getUsuario()).getId();
+                materialRepository.findByIdAndUsuarioId(Objects.requireNonNull(req.materialId()), uid).ifPresent(item::setMaterial);
                 item.setEsTareaManual(false);
                 item.setTareaManual(null);
             } else {
@@ -333,44 +357,5 @@ public class FacturaService {
                 }
             }
         }
-    }
-
-    private FacturaResponse toResponse(Factura factura) {
-        List<FacturaItemResponse> items = factura.getItems().stream()
-                .map(item -> new FacturaItemResponse(
-                        item.getId(),
-                        item.getMaterial() != null ? item.getMaterial().getId() : null,
-                        item.getEsTareaManual() != null && item.getEsTareaManual() ? item.getTareaManual() : (item.getMaterial() != null ? item.getMaterial().getNombre() : ""),
-                        item.getEsTareaManual() != null && item.getEsTareaManual(),
-                        item.getCantidad(),
-                        item.getPrecioUnitario(),
-                        item.getSubtotal(),
-                        Boolean.TRUE.equals(item.getAplicaIva()) || item.getAplicaIva() == null
-                ))
-                .toList();
-
-        return new FacturaResponse(
-                factura.getId(),
-                factura.getNumeroFactura(),
-                factura.getCliente().getId(),
-                factura.getCliente().getNombre(),
-                factura.getCliente().getEmail(),
-                factura.getPresupuesto() != null ? factura.getPresupuesto().getId() : null,
-                factura.getFechaCreacion(),
-                factura.getFechaExpedicion(),
-                factura.getFechaOperacion(),
-                factura.getFechaVencimiento(),
-                factura.getSubtotal(),
-                factura.getIva(),
-                factura.getTotal(),
-                factura.getIvaHabilitado(),
-                factura.getRegimenFiscal(),
-                factura.getCondicionesPago(),
-                factura.getMetodoPago(),
-                factura.getEstadoPago(),
-                factura.getMontoCobrado(),
-                factura.getNotas(),
-                items
-        );
     }
 }

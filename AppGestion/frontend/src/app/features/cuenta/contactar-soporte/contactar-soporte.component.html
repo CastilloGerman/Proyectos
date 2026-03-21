@@ -1,0 +1,80 @@
+<div class="wrap">
+  <a mat-button routerLink="/dashboard" class="back">
+    <mat-icon>arrow_back</mat-icon>
+    Volver
+  </a>
+
+  <mat-card class="card">
+    <div class="head">
+      <mat-icon class="head__icon" aria-hidden="true">support_agent</mat-icon>
+      <h1 class="title">Contactar soporte</h1>
+      <p class="lead">
+        Describe tu incidencia y, si quieres, adjunta capturas o un vídeo corto. El mensaje se envía al equipo de
+        soporte desde tu cuenta.
+      </p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="enviar(fileInput)">
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Asunto</mat-label>
+        <input matInput formControlName="asunto" autocomplete="off" maxlength="200" />
+        @if (form.controls.asunto.hasError('required') && form.controls.asunto.touched) {
+          <mat-error>Indica un asunto</mat-error>
+        }
+        @if (form.controls.asunto.hasError('minlength') && form.controls.asunto.touched) {
+          <mat-error>Mínimo 3 caracteres</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Describe la incidencia</mat-label>
+        <textarea
+          matInput
+          formControlName="mensaje"
+          rows="8"
+          placeholder="Qué ocurría, pasos para reproducirlo, mensaje de error, etc."
+        ></textarea>
+        @if (form.controls.mensaje.hasError('required') && form.controls.mensaje.touched) {
+          <mat-error>Escribe los detalles</mat-error>
+        }
+        @if (form.controls.mensaje.hasError('minlength') && form.controls.mensaje.touched) {
+          <mat-error>Mínimo 10 caracteres</mat-error>
+        }
+        <mat-hint align="end">{{ form.controls.mensaje.value.length }} / 8000</mat-hint>
+      </mat-form-field>
+
+      <div class="files-block">
+        <label class="files-label">Adjuntos (opcional)</label>
+        <p class="files-hint">Imágenes, vídeos (p. ej. MP4) o PDF. Hasta 5 archivos; 25 MB por archivo como máximo.</p>
+        <input
+          #fileInput
+          type="file"
+          multiple
+          accept="image/*,video/*,.pdf"
+          class="file-input"
+          (change)="onFilesSelected($event)"
+        />
+        @if (selectedFiles().length > 0) {
+          <ul class="file-list">
+            @for (f of selectedFiles(); track f.name + f.size) {
+              <li>{{ f.name }} ({{ f.size | number }} bytes)</li>
+            }
+          </ul>
+          <button mat-button type="button" (click)="clearFiles(fileInput)">Quitar archivos</button>
+        }
+      </div>
+
+      <div class="actions">
+        <button mat-stroked-button type="button" routerLink="/cuenta/centro-ayuda">Centro de ayuda</button>
+        <button mat-raised-button color="primary" type="submit" [disabled]="sending()">
+          @if (sending()) {
+            <span class="btn-spinner"><mat-spinner diameter="20" /></span>
+            Enviando…
+          } @else {
+            Enviar al soporte
+          }
+        </button>
+      </div>
+    </form>
+  </mat-card>
+</div>

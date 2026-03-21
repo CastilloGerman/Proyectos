@@ -48,6 +48,16 @@ public class Presupuesto {
     @Column(name = "descuento_antes_iva")
     private Boolean descuentoAntesIva = true;
 
+    /** Texto extra en PDF; admite variables {{cliente.nombre}}, {{total}}, etc. */
+    @Column(name = "texto_clausulas", columnDefinition = "TEXT")
+    private String textoClausulas;
+
+    @Column(name = "senal_importe")
+    private Double senalImporte;
+
+    @Column(name = "senal_pagada")
+    private Boolean senalPagada = false;
+
     @OneToMany(mappedBy = "presupuesto", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PresupuestoItem> items = new ArrayList<>();
 
@@ -91,6 +101,15 @@ public class Presupuesto {
 
     public Boolean getDescuentoAntesIva() { return descuentoAntesIva; }
     public void setDescuentoAntesIva(Boolean descuentoAntesIva) { this.descuentoAntesIva = descuentoAntesIva; }
+
+    public String getTextoClausulas() { return textoClausulas; }
+    public void setTextoClausulas(String textoClausulas) { this.textoClausulas = textoClausulas; }
+
+    public Double getSenalImporte() { return senalImporte; }
+    public void setSenalImporte(Double senalImporte) { this.senalImporte = senalImporte; }
+
+    public Boolean getSenalPagada() { return senalPagada; }
+    public void setSenalPagada(Boolean senalPagada) { this.senalPagada = senalPagada; }
 
     public List<PresupuestoItem> getItems() { return items; }
     public void setItems(List<PresupuestoItem> items) { this.items = items; }

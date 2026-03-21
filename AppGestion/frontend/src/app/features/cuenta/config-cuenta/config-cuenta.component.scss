@@ -1,0 +1,112 @@
+.cfg-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding-bottom: 32px;
+}
+
+.cfg-page__title {
+  margin: 12px 0 8px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--app-text-primary, #0f172a);
+}
+
+.cfg-page__subtitle {
+  margin: 0;
+  color: var(--app-text-secondary, #64748b);
+  line-height: 1.5;
+  font-size: 15px;
+  max-width: 40rem;
+}
+
+.cfg-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cfg-card {
+  border-radius: var(--app-radius-md, 12px);
+}
+
+.cfg-card mat-card-header {
+  padding-bottom: 0;
+}
+
+.cfg-email {
+  font-size: 1.05rem;
+  font-weight: 500;
+  margin: 8px 0 12px;
+  word-break: break-all;
+}
+
+.cfg-muted {
+  font-size: 14px;
+  color: var(--app-text-secondary, #64748b);
+  line-height: 1.45;
+  margin: 0 0 16px;
+}
+
+.cfg-inline-link {
+  display: inline-flex;
+  align-items: center;
+}
+
+.cfg-inline-link mat-icon {
+  margin-right: 6px;
+}
+
+.cfg-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-top: 8px;
+}
+
+.cfg-toggle-row {
+  padding: 16px 0;
+}
+
+.cfg-toggle-label {
+  font-weight: 500;
+  color: var(--app-text-primary, #0f172a);
+}
+
+.cfg-toggle-hint {
+  margin: 8px 0 0 48px;
+  font-size: 13px;
+  color: var(--app-text-secondary, #64748b);
+  line-height: 1.45;
+}
+
+@media (max-width: 600px) {
+  .cfg-toggle-hint {
+    margin-left: 0;
+  }
+}
+
+.cfg-actions {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.cfg-actions button {
+  min-width: 200px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.cfg-state {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--app-text-secondary, #64748b);
+}
+
+.cfg-state--center {
+  justify-content: center;
+  padding: 48px 16px;
+}

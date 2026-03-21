@@ -1,0 +1,120 @@
+<div class="plant-page">
+  <a mat-button routerLink="/dashboard" class="plant-back">
+    <mat-icon>arrow_back</mat-icon>
+    Volver
+  </a>
+
+  <header class="plant-head">
+    <h1 class="plant-title">Plantillas de presupuestos y facturas</h1>
+    <p class="plant-lead">
+      Aquí defines los <strong>textos al pie</strong> que se imprimen en los PDF. El logo, la firma y los datos de
+      cabecera se configuran en <strong>Datos de la empresa</strong>. En cada presupuesto puedes añadir
+      <strong>cláusulas propias</strong> del documento (variables como cliente, total, etc.).
+    </p>
+    <div class="plant-head__links">
+      <a mat-stroked-button color="primary" routerLink="/cuenta/datos-empresa">
+        <mat-icon>business</mat-icon>
+        Datos de la empresa (logo y firma)
+      </a>
+      <a mat-button routerLink="/cuenta/datos-fiscales">
+        <mat-icon>gavel</mat-icon>
+        Datos fiscales
+      </a>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <div class="plant-state">
+      <mat-progress-spinner diameter="40" mode="indeterminate" />
+      <span>Cargando…</span>
+    </div>
+  } @else if (loadError()) {
+    <mat-card class="plant-card">
+      <mat-card-content>
+        <p>No pudimos cargar la configuración.</p>
+        <button mat-stroked-button color="primary" type="button" (click)="cargar()">Reintentar</button>
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    @if (!puedeEditar) {
+      <div class="plant-readonly-banner" role="status">
+        <mat-icon>lock</mat-icon>
+        <span>Modo solo lectura: puedes revisar los textos; para guardar cambios necesitas suscripción activa.</span>
+      </div>
+    }
+
+    <mat-card class="plant-card">
+      <mat-card-content>
+        <mat-tab-group mat-stretch-tabs="false" animationDuration="200ms">
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="plant-tab-icon">description</mat-icon>
+              Presupuesto
+            </ng-template>
+            <div class="plant-tab-body">
+              <p class="plant-hint-block">
+                Este texto aparece al final del PDF del presupuesto, debajo del detalle e importes. Las condiciones
+                largas o legales también puedes escribirlas en el campo <strong>Cláusulas</strong> de cada presupuesto.
+              </p>
+              <mat-form-field appearance="outline" class="plant-field-full">
+                <mat-label>Notas al pie del presupuesto (PDF)</mat-label>
+                <textarea
+                  matInput
+                  formControlName="notasPiePresupuesto"
+                  rows="8"
+                  [maxlength]="maxPie"
+                  placeholder="Ej.: Válido 30 días. IVA no incluido salvo indicación contraria."
+                ></textarea>
+                <mat-hint align="end">{{ form.controls.notasPiePresupuesto.value.length }} / {{ maxPie }}</mat-hint>
+              </mat-form-field>
+            </div>
+          </mat-tab>
+
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="plant-tab-icon">receipt_long</mat-icon>
+              Factura
+            </ng-template>
+            <div class="plant-tab-body">
+              <p class="plant-hint-block">
+                Texto al pie del PDF de factura. El régimen fiscal y datos legales principales van en
+                <strong>Datos fiscales</strong>; aquí suele ir una nota corta o referencia a condiciones de pago.
+              </p>
+              <mat-form-field appearance="outline" class="plant-field-full">
+                <mat-label>Notas al pie de la factura (PDF)</mat-label>
+                <textarea
+                  matInput
+                  formControlName="notasPieFactura"
+                  rows="8"
+                  [maxlength]="maxPie"
+                  placeholder="Ej.: Gracias por su confianza. Transferencia según datos indicados en el documento."
+                ></textarea>
+                <mat-hint align="end">{{ form.controls.notasPieFactura.value.length }} / {{ maxPie }}</mat-hint>
+              </mat-form-field>
+            </div>
+          </mat-tab>
+        </mat-tab-group>
+
+        <mat-divider class="plant-divider" />
+
+        <div class="plant-actions">
+          <button mat-stroked-button type="button" routerLink="/presupuestos">Ir a presupuestos</button>
+          <button mat-stroked-button type="button" routerLink="/facturas">Ir a facturas</button>
+          <span class="plant-actions__spacer"></span>
+          <button
+            mat-flat-button
+            color="primary"
+            type="button"
+            (click)="guardar()"
+            [disabled]="!puedeEditar || saving() || form.pristine || form.invalid"
+          >
+            @if (saving()) {
+              <mat-progress-spinner diameter="20" mode="indeterminate" />
+            }
+            Guardar plantillas
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

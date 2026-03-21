@@ -15,4 +15,18 @@ export interface Empresa {
   mailUsername?: string;
   mailPassword?: string;
   mailConfigurado?: boolean;
+  tieneFirma?: boolean;
+  firmaImagenBase64?: string | null;
+  tieneLogo?: boolean;
+  logoImagenBase64?: string | null;
+  /** Valores por defecto en nuevas facturas (cobro a clientes). */
+  defaultMetodoPago?: string | null;
+  defaultCondicionesPago?: string | null;
+  ibanCuenta?: string | null;
+  bizumTelefono?: string | null;
+  /** Facturación / régimen (también usado como defecto en nuevas facturas). */
+  regimenIvaPrincipal?: string | null;
+  descripcionActividadFiscal?: string | null;
+  nifIntracomunitario?: string | null;
+  epigrafeIae?: string | null;
 }

@@ -74,6 +74,12 @@ public class Factura {
     @Column(name = "recordatorio_enviado")
     private Boolean recordatorioEnviado = false;
 
+    @Column(name = "payment_link_url", columnDefinition = "TEXT")
+    private String paymentLinkUrl;
+
+    @Column(name = "payment_link_id", length = 120)
+    private String paymentLinkId;
+
     @Column(length = 1000)
     private String notas;
 
@@ -150,4 +156,10 @@ public class Factura {
 
     public List<FacturaItem> getItems() { return items; }
     public void setItems(List<FacturaItem> items) { this.items = items; }
+
+    public String getPaymentLinkUrl() { return paymentLinkUrl; }
+    public void setPaymentLinkUrl(String paymentLinkUrl) { this.paymentLinkUrl = paymentLinkUrl; }
+
+    public String getPaymentLinkId() { return paymentLinkId; }
+    public void setPaymentLinkId(String paymentLinkId) { this.paymentLinkId = paymentLinkId; }
 }

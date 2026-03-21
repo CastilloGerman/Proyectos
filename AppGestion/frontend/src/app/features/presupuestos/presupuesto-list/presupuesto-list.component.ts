@@ -49,7 +49,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
           <button mat-icon-button (click)="openConfig()" matTooltip="Configuración plantillas">
             <mat-icon>settings</mat-icon>
           </button>
-          @if (auth.canWrite()) {
+          @if (auth.canMutate()) {
           <a mat-raised-button color="primary" routerLink="/presupuestos/nuevo">
             <mat-icon>add</mat-icon>
             Nuevo presupuesto
@@ -70,6 +70,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
             <mat-option value="Pendiente">Pendiente</mat-option>
             <mat-option value="Aceptado">Aceptado</mat-option>
             <mat-option value="Rechazado">Rechazado</mat-option>
+            <mat-option value="En ejecución">En ejecución</mat-option>
           </mat-select>
         </mat-form-field>
       </div>
@@ -91,6 +92,21 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
               <app-estado-badge [estado]="row.estado"></app-estado-badge>
             </td>
           </ng-container>
+          <ng-container matColumnDef="senal">
+            <th mat-header-cell *matHeaderCellDef>Señal</th>
+            <td mat-cell *matCellDef="let row" class="senal-cell">
+              @if (row.senalImporte != null && row.senalImporte > 0) {
+                <span [matTooltip]="row.senalPagada ? 'Señal cobrada' : 'Señal pendiente'">
+                  {{ row.senalImporte | number:'1.2-2' }} €
+                  @if (row.senalPagada) {
+                    <mat-icon class="senal-ok">check_circle</mat-icon>
+                  }
+                </span>
+              } @else {
+                <span class="text-muted">—</span>
+              }
+            </td>
+          </ng-container>
           <ng-container matColumnDef="total">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Total</th>
             <td mat-cell *matCellDef="let row" class="text-right">{{ row.total | number:'1.2-2' }} €</td>
@@ -98,15 +114,16 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef>Acciones</th>
             <td mat-cell *matCellDef="let row" class="actions-cell">
-              @if (auth.canWrite()) {
+              @if (auth.canMutate()) {
               <a mat-stroked-button [routerLink]="['/presupuestos', row.id]" matTooltip="Editar presupuesto y estado (pendiente, aceptado, rechazado)" class="action-edit">
                 <mat-icon>edit</mat-icon>
                 Editar
               </a>
               }
-              @if (auth.canWrite() && row.estado === 'Pendiente') {
-                <button mat-icon-button (click)="crearFactura(row)" matTooltip="Crear factura">
-                  <mat-icon>receipt</mat-icon>
+              @if (auth.canMutate() && puedeFacturar(row)) {
+                <button mat-stroked-button color="accent" (click)="crearFactura(row)" matTooltip="Generar factura en un clic desde este presupuesto" class="action-facturar">
+                  <mat-icon>receipt_long</mat-icon>
+                  Facturar
                 </button>
               }
               <button mat-icon-button (click)="enviarEmail(row)" matTooltip="Enviar por email">
@@ -115,7 +132,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
               <button mat-icon-button (click)="downloadPdf(row)" matTooltip="Descargar PDF">
                 <mat-icon>picture_as_pdf</mat-icon>
               </button>
-              @if (auth.canWrite()) {
+              @if (auth.canMutate()) {
               <button mat-icon-button color="warn" (click)="delete(row)" matTooltip="Eliminar">
                 <mat-icon>delete</mat-icon>
               </button>
@@ -222,10 +239,14 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
     .estado-pendiente { background: #fff3e0; color: #e65100; }
     .estado-aceptado { background: #e8f5e9; color: #2e7d32; }
     .estado-rechazado { background: #ffebee; color: #c62828; }
+
+    .senal-cell { font-size: 0.875rem; }
+    .senal-ok { font-size: 16px; width: 16px; height: 16px; vertical-align: middle; color: #2e7d32; }
+    .text-muted { color: rgba(0,0,0,0.38); }
   `],
 })
 export class PresupuestoListComponent implements OnInit, AfterViewInit {
-  displayedColumns = ['clienteNombre', 'fechaCreacion', 'estado', 'total', 'actions'];
+  displayedColumns = ['clienteNombre', 'fechaCreacion', 'estado', 'senal', 'total', 'actions'];
   dataSource = new MatTableDataSource<Presupuesto>([]);
 
   @ViewChild(MatSort) sort!: MatSort;
@@ -312,6 +333,13 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
       width: '500px',
       data: { context: 'presupuesto' },
     });
+  }
+
+  /** Muestra Facturar si el presupuesto admite conversión y aún no tiene factura. */
+  puedeFacturar(p: Presupuesto): boolean {
+    if (p.facturaId != null && p.facturaId !== undefined) return false;
+    const e = (p.estado || '').trim().toLowerCase();
+    return e === 'pendiente' || e === 'aceptado' || e === 'en ejecución' || e === 'en ejecucion';
   }
 
   crearFactura(presupuesto: Presupuesto): void {

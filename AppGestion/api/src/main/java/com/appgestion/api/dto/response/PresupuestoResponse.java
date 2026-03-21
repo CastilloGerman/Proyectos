@@ -17,5 +17,10 @@ public record PresupuestoResponse(
         Double descuentoGlobalPorcentaje,
         Double descuentoGlobalFijo,
         Boolean descuentoAntesIva,
-        List<PresupuestoItemResponse> items
+        List<PresupuestoItemResponse> items,
+        String textoClausulas,
+        Double senalImporte,
+        Boolean senalPagada,
+        /** Id de factura generada desde este presupuesto, si existe. */
+        Long facturaId
 ) {}

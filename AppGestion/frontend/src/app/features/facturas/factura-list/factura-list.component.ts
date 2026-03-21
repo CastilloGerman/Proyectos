@@ -66,7 +66,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
           <button mat-icon-button (click)="openConfig()" matTooltip="Configuración plantillas">
             <mat-icon>settings</mat-icon>
           </button>
-          @if (auth.canWrite()) {
+          @if (auth.canMutate()) {
           <button mat-stroked-button (click)="openImportarPresupuesto()">
             <mat-icon>file_download</mat-icon>
             Importar presupuesto
@@ -136,7 +136,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef>Acciones</th>
             <td mat-cell *matCellDef="let row" class="actions-cell">
-              @if (auth.canWrite()) {
+              @if (auth.canMutate()) {
               <a mat-stroked-button [routerLink]="['/facturas', row.id]" matTooltip="Editar factura y estado de pago (pendiente, parcial, pagada)" class="action-edit">
                 <mat-icon>edit</mat-icon>
                 Editar
@@ -148,7 +148,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
               <button mat-icon-button (click)="downloadPdf(row)" matTooltip="Descargar PDF">
                 <mat-icon>picture_as_pdf</mat-icon>
               </button>
-              @if (auth.canWrite()) {
+              @if (auth.canMutate()) {
               <button mat-icon-button color="warn" (click)="delete(row)" matTooltip="Eliminar">
                 <mat-icon>delete</mat-icon>
               </button>

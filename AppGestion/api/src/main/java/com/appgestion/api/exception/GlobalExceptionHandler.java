@@ -38,6 +38,15 @@ public class GlobalExceptionHandler {
                 .body(Map.of("message", msg, "detail", msg));
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalStateException(IllegalStateException ex) {
+        String msg = ex.getMessage() != null ? ex.getMessage() : "Operación no disponible";
+        log.debug("IllegalStateException: {}", msg);
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", msg, "detail", msg));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationException(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors().stream()

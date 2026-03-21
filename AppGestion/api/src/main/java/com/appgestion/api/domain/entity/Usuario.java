@@ -19,6 +19,10 @@ public class Usuario {
     @Column(nullable = false, unique = true, length = 150)
     private String email;
 
+    /** Teléfono de contacto (perfil); opcional. */
+    @Column(length = 30)
+    private String telefono;
+
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
@@ -56,6 +60,52 @@ public class Usuario {
     @Column(name = "password_reset_expires_at")
     private LocalDateTime passwordResetExpiresAt;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "organization_id", nullable = false)
+    private Organization organization;
+
+    /** Usuario que envió el enlace de referido (si el alta fue por invitación). */
+    @Column(name = "referred_by_usuario_id")
+    private Long referredByUsuarioId;
+
+    /** Avisos de facturación, suscripción y pagos por email. */
+    @Column(name = "email_notify_billing", nullable = false)
+    private boolean emailNotifyBilling = true;
+
+    /** Recordatorios y avisos sobre presupuestos/facturas por email. */
+    @Column(name = "email_notify_documents", nullable = false)
+    private boolean emailNotifyDocuments = true;
+
+    /** Novedades y consejos (comunicación comercial ligera). */
+    @Column(name = "email_notify_marketing", nullable = false)
+    private boolean emailNotifyMarketing = false;
+
+    /** Código de idioma de interfaz (ej. es, en). */
+    @Column(name = "ui_locale", nullable = false, length = 10)
+    private String uiLocale = "es";
+
+    /** Zona horaria IANA (ej. Europe/Madrid). */
+    @Column(name = "time_zone", nullable = false, length = 64)
+    private String timeZone = "Europe/Madrid";
+
+    /** Código ISO 4217 de moneda preferida para importes en UI. */
+    @Column(name = "currency_code", nullable = false, length = 3)
+    private String currencyCode = "EUR";
+
+    /** Secreto TOTP activo (Base32). Cifrado en reposo sería mejora futura. */
+    @Column(name = "totp_secret", length = 64)
+    private String totpSecret;
+
+    @Column(name = "totp_enabled", nullable = false)
+    private Boolean totpEnabled = false;
+
+    /** Secreto temporal mientras el usuario confirma el enrolamiento. */
+    @Column(name = "totp_pending_secret", length = 64)
+    private String totpPendingSecret;
+
+    @Column(name = "totp_pending_expires_at")
+    private LocalDateTime totpPendingExpiresAt;
+
     @PrePersist
     protected void onCreate() {
         fechaCreacion = LocalDateTime.now();
@@ -70,6 +120,9 @@ public class Usuario {
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+
+    public String getTelefono() { return telefono; }
+    public void setTelefono(String telefono) { this.telefono = telefono; }
 
     public String getPasswordHash() { return passwordHash; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
@@ -106,4 +159,40 @@ public class Usuario {
 
     public LocalDateTime getPasswordResetExpiresAt() { return passwordResetExpiresAt; }
     public void setPasswordResetExpiresAt(LocalDateTime passwordResetExpiresAt) { this.passwordResetExpiresAt = passwordResetExpiresAt; }
+
+    public Organization getOrganization() { return organization; }
+    public void setOrganization(Organization organization) { this.organization = organization; }
+
+    public Long getReferredByUsuarioId() { return referredByUsuarioId; }
+    public void setReferredByUsuarioId(Long referredByUsuarioId) { this.referredByUsuarioId = referredByUsuarioId; }
+
+    public boolean isEmailNotifyBilling() { return emailNotifyBilling; }
+    public void setEmailNotifyBilling(boolean emailNotifyBilling) { this.emailNotifyBilling = emailNotifyBilling; }
+
+    public boolean isEmailNotifyDocuments() { return emailNotifyDocuments; }
+    public void setEmailNotifyDocuments(boolean emailNotifyDocuments) { this.emailNotifyDocuments = emailNotifyDocuments; }
+
+    public boolean isEmailNotifyMarketing() { return emailNotifyMarketing; }
+    public void setEmailNotifyMarketing(boolean emailNotifyMarketing) { this.emailNotifyMarketing = emailNotifyMarketing; }
+
+    public String getUiLocale() { return uiLocale; }
+    public void setUiLocale(String uiLocale) { this.uiLocale = uiLocale; }
+
+    public String getTimeZone() { return timeZone; }
+    public void setTimeZone(String timeZone) { this.timeZone = timeZone; }
+
+    public String getCurrencyCode() { return currencyCode; }
+    public void setCurrencyCode(String currencyCode) { this.currencyCode = currencyCode; }
+
+    public String getTotpSecret() { return totpSecret; }
+    public void setTotpSecret(String totpSecret) { this.totpSecret = totpSecret; }
+
+    public Boolean getTotpEnabled() { return totpEnabled; }
+    public void setTotpEnabled(Boolean totpEnabled) { this.totpEnabled = totpEnabled; }
+
+    public String getTotpPendingSecret() { return totpPendingSecret; }
+    public void setTotpPendingSecret(String totpPendingSecret) { this.totpPendingSecret = totpPendingSecret; }
+
+    public LocalDateTime getTotpPendingExpiresAt() { return totpPendingExpiresAt; }
+    public void setTotpPendingExpiresAt(LocalDateTime totpPendingExpiresAt) { this.totpPendingExpiresAt = totpPendingExpiresAt; }
 }

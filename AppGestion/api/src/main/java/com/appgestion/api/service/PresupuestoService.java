@@ -8,6 +8,7 @@ import com.appgestion.api.dto.request.EnviarEmailRequest;
 import com.appgestion.api.dto.response.PresupuestoItemResponse;
 import com.appgestion.api.dto.response.PresupuestoResponse;
 import com.appgestion.api.repository.ClienteRepository;
+import com.appgestion.api.repository.FacturaRepository;
 import com.appgestion.api.repository.MaterialRepository;
 import com.appgestion.api.repository.PresupuestoRepository;
 import org.springframework.http.HttpStatus;
@@ -26,17 +27,20 @@ public class PresupuestoService {
     private final PresupuestoRepository presupuestoRepository;
     private final ClienteRepository clienteRepository;
     private final MaterialRepository materialRepository;
+    private final FacturaRepository facturaRepository;
     private final PresupuestoPdfService presupuestoPdfService;
     private final EmailService emailService;
 
     public PresupuestoService(PresupuestoRepository presupuestoRepository,
                               ClienteRepository clienteRepository,
                               MaterialRepository materialRepository,
+                              FacturaRepository facturaRepository,
                               PresupuestoPdfService presupuestoPdfService,
                               EmailService emailService) {
         this.presupuestoRepository = presupuestoRepository;
         this.clienteRepository = clienteRepository;
         this.materialRepository = materialRepository;
+        this.facturaRepository = facturaRepository;
         this.presupuestoPdfService = presupuestoPdfService;
         this.emailService = emailService;
     }
@@ -75,6 +79,9 @@ public class PresupuestoService {
         presupuesto.setDescuentoGlobalPorcentaje(request.descuentoGlobalPorcentaje());
         presupuesto.setDescuentoGlobalFijo(request.descuentoGlobalFijo());
         presupuesto.setDescuentoAntesIva(request.descuentoAntesIva());
+        presupuesto.setTextoClausulas(request.textoClausulas());
+        presupuesto.setSenalImporte(request.senalImporte());
+        presupuesto.setSenalPagada(request.senalPagada());
 
         mapItems(request.items(), presupuesto);
         calcularTotales(presupuesto);
@@ -96,6 +103,9 @@ public class PresupuestoService {
         presupuesto.setDescuentoGlobalPorcentaje(request.descuentoGlobalPorcentaje());
         presupuesto.setDescuentoGlobalFijo(request.descuentoGlobalFijo());
         presupuesto.setDescuentoAntesIva(request.descuentoAntesIva());
+        presupuesto.setTextoClausulas(request.textoClausulas());
+        presupuesto.setSenalImporte(request.senalImporte());
+        presupuesto.setSenalPagada(request.senalPagada());
 
         presupuesto.getItems().clear();
         mapItems(request.items(), presupuesto);
@@ -213,6 +223,12 @@ public class PresupuestoService {
                 ))
                 .toList();
 
+        Long usuarioId = Objects.requireNonNull(presupuesto.getUsuario()).getId();
+        Long facturaId = facturaRepository
+                .findFirstByPresupuesto_IdAndUsuario_Id(presupuesto.getId(), usuarioId)
+                .map(f -> f.getId())
+                .orElse(null);
+
         return new PresupuestoResponse(
                 presupuesto.getId(),
                 Objects.requireNonNull(Objects.requireNonNull(presupuesto.getCliente()).getId()),
@@ -227,7 +243,11 @@ public class PresupuestoService {
                 Optional.ofNullable(presupuesto.getDescuentoGlobalPorcentaje()).orElse(0.0),
                 Optional.ofNullable(presupuesto.getDescuentoGlobalFijo()).orElse(0.0),
                 Optional.ofNullable(presupuesto.getDescuentoAntesIva()).orElse(true),
-                items
+                items,
+                presupuesto.getTextoClausulas(),
+                presupuesto.getSenalImporte(),
+                Optional.ofNullable(presupuesto.getSenalPagada()).orElse(false),
+                facturaId
         );
     }
 }

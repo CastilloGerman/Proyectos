@@ -1,0 +1,159 @@
+<div class="tf-page">
+  <div class="tf-page__head">
+    <a mat-button routerLink="/dashboard" class="tf-back">
+      <mat-icon>arrow_back</mat-icon>
+      Volver
+    </a>
+    <div>
+      <h1 class="tf-page__title">Autenticación en dos factores (2FA)</h1>
+      <p class="tf-page__subtitle">
+        Añade una capa extra de seguridad: además de tu contraseña (o Google), necesitarás un código de 6 dígitos de una app como
+        Google Authenticator, Microsoft Authenticator o Authy.
+      </p>
+    </div>
+  </div>
+
+  @if (loadingMe()) {
+    <div class="tf-loading">
+      <mat-spinner diameter="40"></mat-spinner>
+    </div>
+  } @else if (me()?.totpEnabled) {
+    <mat-card class="tf-card">
+      <mat-card-header>
+        <mat-card-title>2FA activo</mat-card-title>
+        <mat-card-subtitle>Tu cuenta está protegida con un código de verificación.</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <p class="tf-hint">
+          Para iniciar sesión deberás introducir el código de tu app. Si desactivas el 2FA, vuelve a ser obligatorio solo email y
+          contraseña (o Google).
+        </p>
+        <mat-divider class="tf-divider"></mat-divider>
+        <h3 class="tf-section-title">Desactivar 2FA</h3>
+        <p class="tf-hint">Por seguridad, confirma tu contraseña y un código válido de la app.</p>
+        <form [formGroup]="disableForm" (ngSubmit)="disableTotp()" class="tf-form" autocomplete="off">
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Contraseña actual</mat-label>
+            <input
+              matInput
+              [type]="hideDisablePassword ? 'password' : 'text'"
+              formControlName="currentPassword"
+              autocomplete="current-password"
+              maxlength="128"
+            />
+            <button
+              mat-icon-button
+              matSuffix
+              type="button"
+              (click)="hideDisablePassword = !hideDisablePassword"
+              [attr.aria-label]="hideDisablePassword ? 'Mostrar contraseña' : 'Ocultar contraseña'"
+            >
+              <mat-icon>{{ hideDisablePassword ? 'visibility' : 'visibility_off' }}</mat-icon>
+            </button>
+            @if (disableForm.get('currentPassword')?.hasError('required') && disableForm.get('currentPassword')?.touched) {
+              <mat-error>Obligatorio</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Código de 6 dígitos</mat-label>
+            <input matInput formControlName="totpCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+            @if (disableForm.get('totpCode')?.hasError('required') && disableForm.get('totpCode')?.touched) {
+              <mat-error>Obligatorio</mat-error>
+            }
+            @if (disableForm.get('totpCode')?.hasError('pattern') && disableForm.get('totpCode')?.touched) {
+              <mat-error>Debe tener 6 dígitos</mat-error>
+            }
+          </mat-form-field>
+          <div class="tf-actions">
+            <button mat-raised-button color="warn" type="submit" [disabled]="disabling()">
+              @if (disabling()) {
+                <mat-spinner diameter="22"></mat-spinner>
+              } @else {
+                Desactivar 2FA
+              }
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    <mat-card class="tf-card">
+      <mat-card-header>
+        <mat-card-title>Activar 2FA</mat-card-title>
+        <mat-card-subtitle>Escanea el QR o introduce la clave manualmente en tu app de autenticación.</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        @if (me()?.totpEnrollmentPending && !setupOtpUrl()) {
+          <p class="tf-banner">
+            Tienes una configuración pendiente en el servidor. Puedes generar un código QR nuevo (el anterior dejará de valer) o
+            cancelar.
+          </p>
+        }
+
+        @if (!setupOtpUrl()) {
+          <div class="tf-actions tf-actions--start">
+            <button mat-raised-button color="primary" type="button" (click)="startSetup()" [disabled]="startingSetup()">
+              @if (startingSetup()) {
+                <mat-spinner diameter="22"></mat-spinner>
+              } @else {
+                {{ me()?.totpEnrollmentPending ? 'Generar código QR' : 'Empezar configuración' }}
+              }
+            </button>
+            @if (me()?.totpEnrollmentPending) {
+              <button mat-stroked-button type="button" (click)="cancelSetup()" [disabled]="cancelling()">
+                @if (cancelling()) {
+                  <mat-spinner diameter="22"></mat-spinner>
+                } @else {
+                  Cancelar configuración
+                }
+              </button>
+            }
+          </div>
+        } @else {
+          <p class="tf-expiry">Este paso caduca en unos {{ setupExpiresMin() }} minutos. Si se agota, genera un QR nuevo.</p>
+          <div class="tf-qr-wrap">
+            @if (qrDataUrl(); as src) {
+              <img [src]="src" alt="Código QR para configurar 2FA" class="tf-qr" />
+            } @else {
+              <p class="tf-hint">No se pudo generar la imagen del QR. Usa la clave manual o copia el enlace en una app compatible.</p>
+            }
+          </div>
+          <div class="tf-secret-row">
+            <code class="tf-secret">{{ setupSecret() }}</code>
+            <button mat-stroked-button type="button" (click)="copySecret()">
+              <mat-icon>content_copy</mat-icon>
+              Copiar clave
+            </button>
+          </div>
+          <mat-divider class="tf-divider"></mat-divider>
+          <h3 class="tf-section-title">Confirmar activación</h3>
+          <p class="tf-hint">Introduce el código de 6 dígitos que muestra la app para terminar.</p>
+          <form [formGroup]="confirmForm" (ngSubmit)="confirmSetup()" class="tf-form">
+            <mat-form-field appearance="outline" class="full">
+              <mat-label>Código de verificación</mat-label>
+              <input matInput formControlName="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+              @if (confirmForm.get('code')?.hasError('required') && confirmForm.get('code')?.touched) {
+                <mat-error>Obligatorio</mat-error>
+              }
+              @if (confirmForm.get('code')?.hasError('pattern') && confirmForm.get('code')?.touched) {
+                <mat-error>6 dígitos</mat-error>
+              }
+            </mat-form-field>
+            <div class="tf-actions">
+              <button mat-raised-button color="primary" type="submit" [disabled]="confirming()">
+                @if (confirming()) {
+                  <mat-spinner diameter="22"></mat-spinner>
+                } @else {
+                  Activar 2FA
+                }
+              </button>
+              <button mat-stroked-button type="button" (click)="cancelSetup()" [disabled]="cancelling()">
+                Cancelar
+              </button>
+            </div>
+          </form>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

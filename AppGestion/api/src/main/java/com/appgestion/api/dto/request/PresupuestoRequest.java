@@ -18,7 +18,11 @@ public record PresupuestoRequest(
         String estado,
         Double descuentoGlobalPorcentaje,
         Double descuentoGlobalFijo,
-        Boolean descuentoAntesIva
+        Boolean descuentoAntesIva,
+        /** Texto con variables inteligentes para el PDF (opcional). */
+        String textoClausulas,
+        Double senalImporte,
+        Boolean senalPagada
 ) {
     public PresupuestoRequest {
         if (ivaHabilitado == null) ivaHabilitado = true;
@@ -26,5 +30,6 @@ public record PresupuestoRequest(
         if (descuentoGlobalPorcentaje == null) descuentoGlobalPorcentaje = 0.0;
         if (descuentoGlobalFijo == null) descuentoGlobalFijo = 0.0;
         if (descuentoAntesIva == null) descuentoAntesIva = true;
+        if (senalPagada == null) senalPagada = false;
     }
 }

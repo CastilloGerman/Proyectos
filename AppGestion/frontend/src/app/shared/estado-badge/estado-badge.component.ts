@@ -18,6 +18,8 @@ const BADGE_CONFIG: Record<string, BadgeConfig> = {
   'pendiente':  { cssClass: 'badge-pendiente',   icon: 'hourglass_empty', tooltip: 'Pendiente de respuesta' },
   'aceptado':   { cssClass: 'badge-aceptado',    icon: 'thumb_up',        tooltip: 'Presupuesto aceptado' },
   'rechazado':  { cssClass: 'badge-rechazado',   icon: 'thumb_down',      tooltip: 'Presupuesto rechazado' },
+  'en ejecución': { cssClass: 'badge-ejecucion', icon: 'construction',  tooltip: 'Obra en curso' },
+  'en ejecucion': { cssClass: 'badge-ejecucion', icon: 'construction',  tooltip: 'Obra en curso' },
 };
 
 @Component({
@@ -59,6 +61,7 @@ const BADGE_CONFIG: Record<string, BadgeConfig> = {
     .badge-pendiente { background: #e0e7ff; color: #3730a3; }
     .badge-aceptado  { background: #dcfce7; color: #166534; }
     .badge-rechazado { background: #fee2e2; color: #b91c1c; }
+    .badge-ejecucion { background: #ffedd5; color: #c2410c; }
   `],
 })
 export class EstadoBadgeComponent {

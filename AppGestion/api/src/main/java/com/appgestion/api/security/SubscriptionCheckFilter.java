@@ -88,11 +88,21 @@ public class SubscriptionCheckFilter extends OncePerRequestFilter {
     }
 
     private boolean isExcludedPath(String path) {
-        return path.contains("/auth/")
-                || path.contains("/webhook/")
+        // No excluir /auth/ completo: POST autenticados (p. ej. invitaciones) deben respetar canWrite.
+        return path.contains("/webhook/")
                 || path.contains("/subscription/checkout")
                 || path.contains("/subscription/portal")
                 || path.contains("/enviar-email")
-                || path.contains("/dev/");
+                || path.contains("/dev/")
+                // El perfil (nombre/teléfono) debe poder actualizarse aunque la suscripción esté en solo lectura.
+                || path.contains("/auth/profile")
+                || path.contains("/auth/account-settings")
+                || path.contains("/auth/preferences")
+                || path.contains("/auth/change-password")
+                || path.contains("/auth/totp")
+                || path.contains("/auth/support")
+                || path.contains("/auth/notifications")
+                // Datos de empresa en PDFs: permitir guardar aunque la suscripción esté en solo lectura.
+                || path.contains("/config/empresa");
     }
 }

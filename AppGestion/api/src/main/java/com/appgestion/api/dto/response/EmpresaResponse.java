@@ -15,5 +15,19 @@ public record EmpresaResponse(
         String mailHost,
         Integer mailPort,
         String mailUsername,
-        Boolean mailConfigurado
+        Boolean mailConfigurado,
+        Boolean tieneFirma,
+        /** Base64 para previsualizar en configuración (solo si hay firma). */
+        String firmaImagenBase64,
+        Boolean tieneLogo,
+        /** Base64 para previsualizar logo en configuración. */
+        String logoImagenBase64,
+        String defaultMetodoPago,
+        String defaultCondicionesPago,
+        String ibanCuenta,
+        String bizumTelefono,
+        String regimenIvaPrincipal,
+        String descripcionActividadFiscal,
+        String nifIntracomunitario,
+        String epigrafeIae
 ) {}

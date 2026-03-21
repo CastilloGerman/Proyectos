@@ -1,6 +1,6 @@
-import { AfterViewInit, Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { AfterViewInit, Component, OnInit, ViewChild, ElementRef, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,6 +16,7 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
   standalone: true,
   imports: [
     ReactiveFormsModule,
+    FormsModule,
     RouterLink,
     MatFormFieldModule,
     MatInputModule,
@@ -51,6 +52,26 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
                 <mat-error>La contraseña es obligatoria</mat-error>
               }
             </mat-form-field>
+            @if (totpStep()) {
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Código de verificación (2FA)</mat-label>
+                <input
+                  matInput
+                  formControlName="totpCode"
+                  inputmode="numeric"
+                  maxlength="6"
+                  autocomplete="one-time-code"
+                  placeholder="000000"
+                />
+                @if (form.get('totpCode')?.hasError('required') && form.get('totpCode')?.touched) {
+                  <mat-error>Introduce el código de 6 dígitos de tu app</mat-error>
+                }
+                @if (form.get('totpCode')?.hasError('pattern') && form.get('totpCode')?.touched) {
+                  <mat-error>Debe tener 6 dígitos</mat-error>
+                }
+              </mat-form-field>
+              <p class="login-totp-hint">Abre tu app de autenticación y copia el código actual.</p>
+            }
             <button mat-raised-button color="primary" type="submit" [disabled]="loading" class="submit-btn">
               @if (loading) {
                 <mat-spinner diameter="24"></mat-spinner>
@@ -71,6 +92,31 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
               </button>
             }
           </div>
+          @if (googleTotpStep()) {
+            <div class="google-totp-box">
+              <p class="login-totp-hint">Tu cuenta tiene 2FA activo. Introduce el código de tu app.</p>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Código 2FA</mat-label>
+                <input
+                  matInput
+                  [(ngModel)]="googleTotpCode"
+                  [ngModelOptions]="{ standalone: true }"
+                  inputmode="numeric"
+                  maxlength="6"
+                  autocomplete="one-time-code"
+                />
+              </mat-form-field>
+              <button
+                mat-stroked-button
+                type="button"
+                class="google-totp-submit"
+                [disabled]="loading || !isSixDigits(googleTotpCode)"
+                (click)="submitGoogleTotp()"
+              >
+                Confirmar e iniciar sesión
+              </button>
+            </div>
+          }
           <a routerLink="/forgot-password" class="forgot-link">¿Olvidaste tu contraseña?</a>
           <a routerLink="/register" class="register-link">¿No tienes cuenta? Regístrate</a>
         </div>
@@ -302,12 +348,36 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
       vertical-align: middle;
       margin-right: 8px;
     }
+
+    .login-totp-hint {
+      margin: -4px 0 12px;
+      font-size: 0.85rem;
+      color: #64748b;
+      line-height: 1.4;
+    }
+
+    .google-totp-box {
+      margin-top: 16px;
+      padding: 16px;
+      border-radius: 12px;
+      background: rgba(30, 64, 175, 0.06);
+      border: 1px solid rgba(30, 64, 175, 0.12);
+    }
+
+    .google-totp-submit {
+      width: 100%;
+      margin-top: 8px;
+    }
   `],
 })
 export class LoginComponent implements OnInit, AfterViewInit {
   @ViewChild('googleButtonRef') googleButtonRef!: ElementRef<HTMLDivElement>;
   form: FormGroup;
   loading = false;
+  readonly totpStep = signal(false);
+  readonly googleTotpStep = signal(false);
+  googleTotpCode = '';
+  private pendingGoogleToken: string | null = null;
   /** Valor fijo para evitar que el chunk lazy reciba un environment sin googleClientId; el botón real siempre se muestra. */
   readonly googleClientId = DEFAULT_GOOGLE_CLIENT_ID;
 
@@ -320,7 +390,18 @@ export class LoginComponent implements OnInit, AfterViewInit {
     this.form = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', Validators.required],
+      totpCode: [''],
     });
+  }
+
+  isSixDigits(v: string): boolean {
+    return /^\d{6}$/.test((v || '').trim());
+  }
+
+  private isTotpRequiredError(err: unknown): boolean {
+    const e = err as { error?: { message?: string; detail?: string } };
+    const msg = e?.error?.message ?? e?.error?.detail;
+    return msg === 'TOTP_REQUERIDO';
   }
 
   ngOnInit(): void {
@@ -381,39 +462,86 @@ export class LoginComponent implements OnInit, AfterViewInit {
 
   onGoogleCredential(idToken: string): void {
     console.log('[Login] Credencial de Google recibida, llamando a la API...');
+    this.pendingGoogleToken = idToken;
+    this.googleTotpStep.set(false);
+    this.googleTotpCode = '';
+    this.callGoogleLogin(idToken);
+  }
+
+  private callGoogleLogin(idToken: string, totpCode?: string): void {
     this.loading = true;
-    this.auth.loginWithGoogle(idToken).subscribe({
+    this.auth.loginWithGoogle(idToken, totpCode).subscribe({
       next: () => {
         console.log('[Login] Inicio con Google correcto.');
+        this.loading = false;
+        this.googleTotpStep.set(false);
+        this.pendingGoogleToken = null;
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {
         this.loading = false;
         console.error('[Login] Error al iniciar con Google:', err?.status, err?.error ?? err?.message, err);
+        if (this.isTotpRequiredError(err)) {
+          this.googleTotpStep.set(true);
+          return;
+        }
         const msg = err?.error?.message ?? err?.error?.detail ?? err?.message ?? 'Error al iniciar sesión con Google';
         this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
       },
     });
   }
 
+  submitGoogleTotp(): void {
+    const token = this.pendingGoogleToken;
+    if (!token || !this.isSixDigits(this.googleTotpCode)) return;
+    this.callGoogleLogin(token, this.googleTotpCode.trim());
+  }
+
   onSubmit(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
+    const step = this.totpStep();
+    if (!step) {
+      const emailCtrl = this.form.get('email');
+      const passCtrl = this.form.get('password');
+      if (emailCtrl?.invalid || passCtrl?.invalid) {
+        this.form.markAllAsTouched();
+        return;
+      }
+    } else {
+      this.form.get('totpCode')?.setValidators([Validators.required, Validators.pattern(/^\d{6}$/)]);
+      this.form.get('totpCode')?.updateValueAndValidity({ emitEvent: false });
+      if (this.form.get('totpCode')?.invalid) {
+        this.form.get('totpCode')?.markAsTouched();
+        return;
+      }
     }
+
     this.loading = true;
-    this.auth.login(this.form.value).subscribe({
-      next: () => {
-        this.router.navigate(['/dashboard']);
-      },
-      error: (err) => {
-        this.loading = false;
-        this.snackBar.open(
-          err.error?.message || 'Credenciales inválidas',
-          'Cerrar',
-          { duration: 4000 }
-        );
-      },
-    });
+    const raw = this.form.getRawValue();
+    this.auth
+      .login({
+        email: raw.email,
+        password: raw.password,
+        totpCode: step ? raw.totpCode.trim() : undefined,
+      })
+      .subscribe({
+        next: () => {
+          this.loading = false;
+          this.totpStep.set(false);
+          this.router.navigate(['/dashboard']);
+        },
+        error: (err) => {
+          this.loading = false;
+          if (!step && this.isTotpRequiredError(err)) {
+            this.totpStep.set(true);
+            this.form.get('totpCode')?.setValidators([Validators.required, Validators.pattern(/^\d{6}$/)]);
+            this.form.get('totpCode')?.updateValueAndValidity({ emitEvent: false });
+            this.snackBar.open('Introduce el código de tu app de autenticación', 'Cerrar', { duration: 4500 });
+            return;
+          }
+          this.snackBar.open(err.error?.message || err.error?.detail || 'Credenciales inválidas', 'Cerrar', {
+            duration: 4000,
+          });
+        },
+      });
   }
 }

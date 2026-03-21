@@ -74,8 +74,17 @@ public class FacturaRecordatorioService {
                 "<tr><td style='padding:6px 16px 6px 0;color:#666'>Importe</td><td><strong>" + importe + "</strong></td></tr>" +
                 "<tr><td style='padding:6px 16px 6px 0;color:#666'>Vencimiento</td><td>" + estado + "</td></tr>" +
                 "</table>" +
-                "<p>Accede a AppGestion para actualizar el estado de cobro.</p>" +
-                "<p style='color:#999;font-size:12px'>Este mensaje ha sido generado automáticamente.</p>";
+                "<p>Accede a Noemí para actualizar el estado de cobro.</p>";
+
+        String wa = WhatsAppLinkService.enlaceRecordatorioFactura(factura);
+        if (wa != null) {
+            cuerpo += "<p><strong>WhatsApp al cliente:</strong> " +
+                    "<a href=\"" + wa + "\">Abrir chat con mensaje sugerido</a></p>" +
+                    "<p style='color:#666;font-size:12px'>El enlace abre WhatsApp Web o la app con un texto editable. " +
+                    "No se envía ningún mensaje automático al cliente.</p>";
+        }
+
+        cuerpo += "<p style='color:#999;font-size:12px'>Este mensaje ha sido generado automáticamente.</p>";
 
         emailService.enviarPdf(factura.getUsuario().getId(), emailUsuario, asunto, cuerpo, null, null);
     }

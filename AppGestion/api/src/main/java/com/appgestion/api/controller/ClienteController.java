@@ -6,6 +6,7 @@ import com.appgestion.api.service.ClienteService;
 import com.appgestion.api.service.CurrentUserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -35,6 +36,7 @@ public class ClienteController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @ResponseStatus(HttpStatus.CREATED)
     public ClienteResponse crear(@Valid @RequestBody ClienteRequest request) {
         var usuario = currentUserService.getCurrentUsuario();
@@ -48,6 +50,7 @@ public class ClienteController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void eliminar(@PathVariable Long id) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();

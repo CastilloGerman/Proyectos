@@ -56,6 +56,42 @@ public class Empresa {
     @Column(name = "mail_password", length = 255)
     private String mailPassword;
 
+    /** Imagen de firma para PDFs (PNG/JPEG). */
+    @Lob
+    @Column(name = "firma_imagen", columnDefinition = "BYTEA")
+    private byte[] firmaImagen;
+
+    /** Logo para cabecera de presupuestos y facturas (PNG/JPEG). */
+    @Lob
+    @Column(name = "logo_imagen", columnDefinition = "BYTEA")
+    private byte[] logoImagen;
+
+    /** Valor por defecto del campo "Método de pago" en nuevas facturas. */
+    @Column(name = "default_metodo_pago", length = 50)
+    private String defaultMetodoPago;
+
+    @Column(name = "default_condiciones_pago", length = 200)
+    private String defaultCondicionesPago;
+
+    @Column(name = "iban_cuenta", length = 34)
+    private String ibanCuenta;
+
+    @Column(name = "bizum_telefono", length = 20)
+    private String bizumTelefono;
+
+    /** Régimen de IVA/IGIC principal (texto mostrado en factura). */
+    @Column(name = "regimen_iva_principal", length = 120)
+    private String regimenIvaPrincipal;
+
+    @Column(name = "descripcion_actividad_fiscal", length = 500)
+    private String descripcionActividadFiscal;
+
+    @Column(name = "nif_intracomunitario", length = 20)
+    private String nifIntracomunitario;
+
+    @Column(name = "epigrafe_iae", length = 30)
+    private String epigrafeIae;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -103,4 +139,34 @@ public class Empresa {
 
     public String getMailPassword() { return mailPassword; }
     public void setMailPassword(String mailPassword) { this.mailPassword = mailPassword; }
+
+    public byte[] getFirmaImagen() { return firmaImagen; }
+    public void setFirmaImagen(byte[] firmaImagen) { this.firmaImagen = firmaImagen; }
+
+    public byte[] getLogoImagen() { return logoImagen; }
+    public void setLogoImagen(byte[] logoImagen) { this.logoImagen = logoImagen; }
+
+    public String getDefaultMetodoPago() { return defaultMetodoPago; }
+    public void setDefaultMetodoPago(String defaultMetodoPago) { this.defaultMetodoPago = defaultMetodoPago; }
+
+    public String getDefaultCondicionesPago() { return defaultCondicionesPago; }
+    public void setDefaultCondicionesPago(String defaultCondicionesPago) { this.defaultCondicionesPago = defaultCondicionesPago; }
+
+    public String getIbanCuenta() { return ibanCuenta; }
+    public void setIbanCuenta(String ibanCuenta) { this.ibanCuenta = ibanCuenta; }
+
+    public String getBizumTelefono() { return bizumTelefono; }
+    public void setBizumTelefono(String bizumTelefono) { this.bizumTelefono = bizumTelefono; }
+
+    public String getRegimenIvaPrincipal() { return regimenIvaPrincipal; }
+    public void setRegimenIvaPrincipal(String regimenIvaPrincipal) { this.regimenIvaPrincipal = regimenIvaPrincipal; }
+
+    public String getDescripcionActividadFiscal() { return descripcionActividadFiscal; }
+    public void setDescripcionActividadFiscal(String descripcionActividadFiscal) { this.descripcionActividadFiscal = descripcionActividadFiscal; }
+
+    public String getNifIntracomunitario() { return nifIntracomunitario; }
+    public void setNifIntracomunitario(String nifIntracomunitario) { this.nifIntracomunitario = nifIntracomunitario; }
+
+    public String getEpigrafeIae() { return epigrafeIae; }
+    public void setEpigrafeIae(String epigrafeIae) { this.epigrafeIae = epigrafeIae; }
 }

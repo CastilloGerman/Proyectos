@@ -1,11 +1,14 @@
 spring:
-  # No definir profile activo por defecto → producción segura
-  # Para desarrollo: --spring.profiles.active=local (ver launch.json o iniciar-api.ps1)
+  # Para desarrollo local: --spring.profiles.active=local (ver spring-boot-maven-plugin en pom.xml)
+  # Producción: SPRING_PROFILES_ACTIVE=prod y variables JWT_SECRET, CORS, Stripe, etc.
   application:
     name: appgestion-api
 
-  # Mail (SMTP) - configurar MAIL_USERNAME y MAIL_PASSWORD para envío de PDFs
-  # Gmail: usar contraseña de aplicación si tienes 2FA
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 55MB
+
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
@@ -29,13 +32,13 @@ spring:
       connection-timeout: 30000
 
   flyway:
-    baseline-on-migrate: true   # permite ejecutar en BD ya existente sin borrar datos
+    baseline-on-migrate: true
     baseline-version: 1
     locations: classpath:db/migration
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
@@ -47,31 +50,68 @@ spring:
 server:
   port: 8081
   error:
-    include-message: always
-  # Sin context-path: la API sirve en raíz (/presupuestos, /auth, etc.)
-  # El proxy de Angular reescribe /api/xyz -> /xyz al reenviar
+    # En prod se sobrescribe: menos filtrado de detalles al cliente
+    include-message: on_param
 
-# Stripe
+# Stripe: en prod deben venir de variables de entorno (validado en StripeConfig)
 stripe:
-  secret-key: ${STRIPE_SECRET_KEY:sk_test_xxx}
-  webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_xxx}
-  price-id-monthly: ${STRIPE_PRICE_MONTHLY:price_xxx}
+  secret-key: ${STRIPE_SECRET_KEY:}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  price-id-monthly: ${STRIPE_PRICE_MONTHLY:}
   success-url: ${STRIPE_SUCCESS_URL:http://localhost:4200/subscription/success}
   cancel-url: ${STRIPE_CANCEL_URL:http://localhost:4200/subscription/cancel}
   portal-return-url: ${STRIPE_PORTAL_RETURN_URL:http://localhost:4200/dashboard}
 
-# App config: skip-check true por defecto para desarrollo (sin Stripe)
-# PRODUCCIÓN: definir SPRING_PROFILES_ACTIVE=prod para exigir suscripción
+app:
+  support:
+    # Buzón de soporte (solo servidor). Los usuarios envían vía POST; no exponer este valor en el front.
+    inbox-email: ${SUPPORT_INBOX_EMAIL:castillogerman98@hotmail.com}
+  subscription:
+    # Por defecto exige suscripción para escritura (seguro). Perfil local la desactiva.
+    skip-check: false
+  # Nombre que verá el usuario en la app de autenticación (QR TOTP).
+  totp:
+    issuer: ${TOTP_ISSUER:AppGestion}
+  frontend-url: ${FRONTEND_URL:http://localhost:4200}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://127.0.0.1:4200}
+  jwt:
+    # Obligatorio si no usas perfil local (ver bloque --- local abajo)
+    secret: ${JWT_SECRET}
+    expiration-ms: 86400000
+    issuer: appgestion-api
+  security:
+    auth-rate-limit:
+      enabled: true
+      capacity: 30
+      refill-minutes: 15
+
+logging:
+  level:
+    '[com.appgestion]': INFO
+    '[org.springframework.web]': INFO
+    '[org.hibernate.SQL]': WARN
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  jpa:
+    hibernate:
+      ddl-auto: update
 app:
   subscription:
     skip-check: true
-  frontend-url: ${FRONTEND_URL:http://localhost:4200}
   jwt:
-    secret: ${JWT_SECRET:tu-clave-secreta-muy-larga-minimo-256-bits-para-HS256}
-    expiration-ms: 86400000   # 24 horas
-    issuer: appgestion-api
-
-# Logging
+    secret: ${JWT_SECRET:local-dev-only-minimum-thirty-two-characters-long-for-hs256}
+  security:
+    auth-rate-limit:
+      enabled: true
+stripe:
+  secret-key: ${STRIPE_SECRET_KEY:sk_test_local_placeholder_replace_with_real_key}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_local_placeholder_replace_with_real_secret}
+  price-id-monthly: ${STRIPE_PRICE_MONTHLY:price_xxx}
 logging:
   level:
     '[com.appgestion]': DEBUG
@@ -79,17 +119,6 @@ logging:
     '[org.hibernate.SQL]': DEBUG
 
 ---
-# Perfil local: desarrollo sin Stripe (omitir comprobación de suscripción)
-spring:
-  config:
-    activate:
-      on-profile: local
-app:
-  subscription:
-    skip-check: true
-
----
-# Perfil prod: exigir suscripción activa (para despliegue)
 spring:
   config:
     activate:
@@ -97,6 +126,9 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+server:
+  error:
+    include-message: never
 app:
   subscription:
     skip-check: false

@@ -2,6 +2,7 @@ package com.appgestion.api.controller;
 
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.request.EnviarEmailRequest;
+import com.appgestion.api.dto.request.FacturaCobroRequest;
 import com.appgestion.api.dto.request.FacturaRequest;
 import com.appgestion.api.dto.response.FacturaResponse;
 import com.appgestion.api.service.FacturaService;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -52,6 +54,7 @@ public class FacturaController {
     }
 
     @PostMapping("/{id}/enviar-email")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void enviarPorEmail(@PathVariable Long id, @RequestBody(required = false) EnviarEmailRequest request) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
@@ -77,12 +80,27 @@ public class FacturaController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public FacturaResponse actualizar(@PathVariable Long id, @Valid @RequestBody FacturaRequest request) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
         return facturaService.actualizar(id, request, usuarioId);
     }
 
+    @PostMapping("/{id}/cobros")
+    public FacturaResponse registrarCobro(@PathVariable Long id, @Valid @RequestBody FacturaCobroRequest request) {
+        Long usuarioId = currentUserService.getCurrentUsuario().getId();
+        return facturaService.registrarCobro(id, usuarioId, request);
+    }
+
+    @PostMapping("/{id}/payment-link")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public FacturaResponse generarPaymentLink(@PathVariable Long id) {
+        Long usuarioId = currentUserService.getCurrentUsuario().getId();
+        return facturaService.generarPaymentLink(id, usuarioId);
+    }
+
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void eliminar(@PathVariable Long id) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();

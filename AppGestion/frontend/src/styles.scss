@@ -51,9 +51,13 @@ $appgestion-theme: mat.define-light-theme((
   --app-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
   --app-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
   --app-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
-  --app-bg-page: #f8fafc;
+  --app-bg-page: #f6f4f1;
   --app-bg-card: #ffffff;
-  --app-border: rgba(0, 0, 0, 0.06);
+  --app-bg-warm: #6b3a2a;
+  --app-bg-deep: #0f172a;
+  --app-accent-copper: #b87333;
+  --app-accent-rust: #8b4513;
+  --app-border: rgba(15, 23, 42, 0.08);
   --app-text-primary: #0f172a;
   --app-text-secondary: #64748b;
   --app-text-muted: #94a3b8;
@@ -76,7 +80,7 @@ html, body {
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'IBM Plex Sans', 'Inter', system-ui, -apple-system, sans-serif;
   background: var(--app-bg-page);
   color: var(--app-text-primary);
 }

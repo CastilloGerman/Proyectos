@@ -1,0 +1,118 @@
+<div class="perfil-page">
+  <div class="perfil-page__head">
+    <a mat-button routerLink="/dashboard" class="perfil-back">
+      <mat-icon>arrow_back</mat-icon>
+      Volver
+    </a>
+    <div class="perfil-page__titles">
+      <h1 class="perfil-page__title">Tu perfil</h1>
+      <p class="perfil-page__subtitle">
+        Así te mostrarán en la aplicación y en los correos que envíe el sistema. El correo de acceso no se cambia desde aquí.
+      </p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="perfil-state perfil-state--center">
+      <mat-progress-spinner diameter="40" mode="indeterminate" />
+      <span>Cargando tu perfil…</span>
+    </div>
+  } @else if (loadError()) {
+    <mat-card class="perfil-card">
+      <mat-card-content>
+        <p>No pudimos cargar los datos. Comprueba tu conexión e inténtalo de nuevo.</p>
+        <button mat-stroked-button type="button" color="primary" (click)="reintentar()">Reintentar</button>
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    <div class="perfil-grid">
+      <mat-card class="perfil-card perfil-card--form">
+        <mat-card-header>
+          <mat-card-title>Datos personales</mat-card-title>
+          <mat-card-subtitle>Información que puedes actualizar cuando quieras</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <form [formGroup]="form" (ngSubmit)="guardar()" class="perfil-form">
+            <mat-form-field appearance="outline" class="full">
+              <mat-label>Nombre y apellidos</mat-label>
+              <input matInput formControlName="nombre" autocomplete="name" maxlength="100" />
+              <mat-hint align="end">{{ form.controls.nombre.value.length }}/100</mat-hint>
+              @if (form.controls.nombre.hasError('required') && form.controls.nombre.touched) {
+                <mat-error>Indica cómo quieres que te llamemos</mat-error>
+              }
+              @if (form.controls.nombre.hasError('maxlength')) {
+                <mat-error>Máximo 100 caracteres</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full">
+              <mat-label>Correo electrónico</mat-label>
+              <input matInput [value]="emailDisplay()" readonly tabindex="-1" />
+              <mat-hint>Para cambiar el correo de acceso, contacta con soporte (próximamente verificación por email).</mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full">
+              <mat-label>Teléfono de contacto</mat-label>
+              <input
+                matInput
+                formControlName="telefono"
+                type="tel"
+                autocomplete="tel"
+                maxlength="30"
+                placeholder="Ej. 600 000 000 o +34 600 000 000"
+              />
+              <mat-hint>Opcional. Solo números, espacios y símbolos + ( ) . -</mat-hint>
+              @if (form.controls.telefono.hasError('maxlength')) {
+                <mat-error>Máximo 30 caracteres</mat-error>
+              }
+              @if (form.controls.telefono.hasError('pattern') && form.controls.telefono.touched) {
+                <mat-error>Revisa el formato del teléfono</mat-error>
+              }
+            </mat-form-field>
+
+            <div class="perfil-form__actions">
+              <button
+                mat-flat-button
+                color="primary"
+                type="submit"
+                [disabled]="form.invalid || form.pristine || saving()"
+              >
+                @if (saving()) {
+                  <mat-progress-spinner diameter="20" mode="indeterminate" />
+                } @else {
+                  Guardar cambios
+                }
+              </button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="perfil-card perfil-card--meta">
+        <mat-card-header>
+          <mat-card-title>Tu cuenta</mat-card-title>
+          <mat-card-subtitle>Resumen (solo lectura)</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content class="perfil-meta">
+          <dl class="perfil-dl">
+            <dt>Alta en la plataforma</dt>
+            <dd>{{ fechaAltaFmt() }}</dd>
+            <dt>Rol</dt>
+            <dd>{{ rolEtiqueta() }}</dd>
+            <dt>Estado de suscripción</dt>
+            <dd>{{ estadoSuscripcion() }}</dd>
+          </dl>
+          <mat-divider class="perfil-divider" />
+          <p class="perfil-hint">
+            La contraseña y la seguridad avanzada (2FA, sesiones) las gestionas en las secciones correspondientes del menú de
+            usuario.
+          </p>
+          <a mat-stroked-button routerLink="/cuenta/cambiar-contrasena" class="perfil-link-btn">
+            <mat-icon>lock_reset</mat-icon>
+            Ir a cambiar contraseña
+          </a>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  }
+</div>

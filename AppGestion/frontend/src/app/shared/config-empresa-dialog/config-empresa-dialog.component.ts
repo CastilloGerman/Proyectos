@@ -10,6 +10,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ConfigService } from '../../core/services/config.service';
 import { Empresa } from '../../core/models/empresa.model';
+import { dataUrlFromStoredBase64 } from '../../core/utils/image-data-url';
 
 export type ConfigContext = 'presupuesto' | 'factura' | 'mail';
 
@@ -69,6 +70,32 @@ export type ConfigContext = 'presupuesto' | 'factura' | 'mail';
                 <mat-label>Email</mat-label>
                 <input matInput formControlName="email">
               </mat-form-field>
+              <p class="hint">Logo en cabecera de PDF (PNG/JPEG/WebP, máx. ~380 KB).</p>
+              @if (logoPreviewSrc) {
+                <div class="firma-preview-wrap">
+                  <img [src]="logoPreviewSrc" alt="Vista previa logo" class="logo-preview" />
+                </div>
+              }
+              <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" #logoInput (change)="onLogoFile($event)" hidden />
+              <button mat-stroked-button type="button" (click)="logoInput.click()">Subir logo</button>
+              @if (logoPreviewSrc || tieneLogoGuardada) {
+                <button mat-button type="button" color="warn" (click)="quitarLogo()">Quitar logo</button>
+              }
+            </div>
+          </mat-tab>
+          <mat-tab label="Firma en PDF">
+            <div class="tab-content">
+              <p class="hint">Imagen que aparecerá al final de presupuestos y facturas en PDF (PNG o JPEG, máx. ~400 KB).</p>
+              @if (firmaPreviewSrc) {
+                <div class="firma-preview-wrap">
+                  <img [src]="firmaPreviewSrc" alt="Vista previa firma" class="firma-preview" />
+                </div>
+              }
+              <input type="file" accept="image/png,image/jpeg,image/webp" #firmaInput (change)="onFirmaFile($event)" hidden />
+              <button mat-stroked-button type="button" (click)="firmaInput.click()">Elegir imagen</button>
+              @if (firmaPreviewSrc || tieneFirmaGuardada) {
+                <button mat-button type="button" color="warn" (click)="quitarFirma()">Quitar firma</button>
+              }
             </div>
           </mat-tab>
           <mat-tab label="Notas pie presupuesto">
@@ -136,6 +163,9 @@ export type ConfigContext = 'presupuesto' | 'factura' | 'mail';
       font-size: 14px;
       margin-bottom: 16px;
     }
+    .firma-preview-wrap { margin: 12px 0; }
+    .firma-preview { max-height: 100px; max-width: 200px; object-fit: contain; border: 1px solid #e0e0e0; border-radius: 4px; }
+    .logo-preview { max-height: 72px; max-width: 200px; object-fit: contain; border: 1px solid #e0e0e0; border-radius: 4px; }
   `],
 })
 export class ConfigEmpresaDialogComponent implements OnInit {
@@ -143,6 +173,15 @@ export class ConfigEmpresaDialogComponent implements OnInit {
   saving = false;
   initialTab = 0;
   mailConfigurado = false;
+  firmaPreviewSrc: string | null = null;
+  nuevaFirmaBase64: string | null = null;
+  /** none | set | clear — control de envío de firma al guardar */
+  firmaCambiada: 'none' | 'set' | 'clear' = 'none';
+  tieneFirmaGuardada = false;
+  logoPreviewSrc: string | null = null;
+  logoCambiada: 'none' | 'set' | 'clear' = 'none';
+  nuevaLogoBase64: string | null = null;
+  tieneLogoGuardada = false;
 
   constructor(
     private fb: FormBuilder,
@@ -168,14 +207,20 @@ export class ConfigEmpresaDialogComponent implements OnInit {
       mailPassword: [''],
     });
     if (data?.context === 'factura') this.initialTab = 0;
-    else if (data?.context === 'presupuesto') this.initialTab = 1;
-    else if (data?.context === 'mail') this.initialTab = 3;
+    else if (data?.context === 'presupuesto') this.initialTab = 2;
+    else if (data?.context === 'mail') this.initialTab = 4;
   }
 
   ngOnInit(): void {
     this.configService.getEmpresa().subscribe({
       next: (e: Empresa) => {
         this.mailConfigurado = e.mailConfigurado ?? false;
+        this.tieneLogoGuardada = !!(e.tieneLogo && e.logoImagenBase64);
+        this.logoPreviewSrc = dataUrlFromStoredBase64(e.logoImagenBase64 ?? null);
+        this.logoCambiada = 'none';
+        this.nuevaLogoBase64 = null;
+        this.tieneFirmaGuardada = !!(e.tieneFirma && e.firmaImagenBase64);
+        this.firmaPreviewSrc = dataUrlFromStoredBase64(e.firmaImagenBase64 ?? null);
         this.form.patchValue({
           nombre: e.nombre ?? '',
           direccion: e.direccion ?? '',
@@ -197,11 +242,82 @@ export class ConfigEmpresaDialogComponent implements OnInit {
     });
   }
 
+  onLogoFile(ev: Event): void {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || !/^image\/(png|jpeg|jpg|webp)$/i.test(file.type)) {
+      this.snackBar.open('Formato no admitido (PNG, JPEG o WebP)', 'Cerrar', { duration: 4000 });
+      input.value = '';
+      return;
+    }
+    if (file.size > 380000) {
+      this.snackBar.open('El logo no puede superar ~380 KB', 'Cerrar', { duration: 4000 });
+      input.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const r = reader.result as string;
+      this.logoPreviewSrc = r;
+      const comma = r.indexOf(',');
+      this.nuevaLogoBase64 = comma >= 0 ? r.slice(comma + 1) : r;
+      this.logoCambiada = 'set';
+      this.tieneLogoGuardada = true;
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+
+  quitarLogo(): void {
+    this.logoPreviewSrc = null;
+    this.nuevaLogoBase64 = null;
+    this.logoCambiada = 'clear';
+    this.tieneLogoGuardada = false;
+  }
+
+  onFirmaFile(ev: Event): void {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || file.size > 380000) {
+      this.snackBar.open('Elige una imagen más pequeña (máx. ~380 KB)', 'Cerrar', { duration: 4000 });
+      input.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const r = reader.result as string;
+      this.firmaPreviewSrc = r;
+      const comma = r.indexOf(',');
+      this.nuevaFirmaBase64 = comma >= 0 ? r.slice(comma + 1) : r;
+      this.firmaCambiada = 'set';
+      this.tieneFirmaGuardada = true;
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+
+  quitarFirma(): void {
+    this.firmaPreviewSrc = null;
+    this.nuevaFirmaBase64 = null;
+    this.firmaCambiada = 'clear';
+    this.tieneFirmaGuardada = false;
+  }
+
   save(): void {
     this.saving = true;
     const val = this.form.value;
-    const payload = { ...val };
-    if (!val.mailPassword?.trim()) delete payload.mailPassword;
+    const payload: Record<string, unknown> = { ...val };
+    if (!val.mailPassword?.trim()) delete payload['mailPassword'];
+    if (this.firmaCambiada === 'clear') {
+      payload['firmaImagenBase64'] = '';
+    } else if (this.firmaCambiada === 'set' && this.nuevaFirmaBase64) {
+      payload['firmaImagenBase64'] = this.nuevaFirmaBase64;
+    }
+    if (this.logoCambiada === 'clear') {
+      payload['logoImagenBase64'] = '';
+    } else if (this.logoCambiada === 'set' && this.nuevaLogoBase64) {
+      payload['logoImagenBase64'] = this.nuevaLogoBase64;
+    }
     this.configService.saveEmpresa(payload).subscribe({
       next: () => {
         this.snackBar.open('Configuración guardada', 'Cerrar', { duration: 3000 });

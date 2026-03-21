@@ -1,5 +1,6 @@
 package com.appgestion.api.config;
 
+import com.appgestion.api.security.AuthRateLimitFilter;
 import com.appgestion.api.security.JwtAuthenticationFilter;
 import com.appgestion.api.security.SubscriptionCheckFilter;
 import org.springframework.context.annotation.Bean;
@@ -10,6 +11,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -31,13 +33,22 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final SubscriptionCheckFilter subscriptionCheckFilter;
     private final CorsConfigurationSource corsConfigurationSource;
+    private final boolean authRateLimitEnabled;
+    private final int authRateLimitCapacity;
+    private final int authRateLimitRefillMinutes;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
                           SubscriptionCheckFilter subscriptionCheckFilter,
-                          CorsConfigurationSource corsConfigurationSource) {
+                          CorsConfigurationSource corsConfigurationSource,
+                          @Value("${app.security.auth-rate-limit.enabled:true}") boolean authRateLimitEnabled,
+                          @Value("${app.security.auth-rate-limit.capacity:30}") int authRateLimitCapacity,
+                          @Value("${app.security.auth-rate-limit.refill-minutes:15}") int authRateLimitRefillMinutes) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.subscriptionCheckFilter = subscriptionCheckFilter;
         this.corsConfigurationSource = corsConfigurationSource;
+        this.authRateLimitEnabled = authRateLimitEnabled;
+        this.authRateLimitCapacity = authRateLimitCapacity;
+        this.authRateLimitRefillMinutes = authRateLimitRefillMinutes;
     }
 
     @Bean
@@ -53,17 +64,23 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
-                    auth.requestMatchers("/auth/register", "/auth/login", "/auth/google", "/auth/forgot-password", "/auth/reset-password").permitAll()
+                    auth.requestMatchers("/auth/register", "/auth/login", "/auth/google", "/auth/forgot-password", "/auth/reset-password",
+                                "/auth/invite/**").permitAll()
                         .requestMatchers("/webhook/**").permitAll()
                         .requestMatchers("/error").permitAll()
-                        .requestMatchers("/auth/me").authenticated()
+                        .requestMatchers("/auth/me", "/auth/profile", "/auth/account-settings", "/auth/preferences", "/auth/change-password", "/auth/totp/**", "/auth/support/**", "/auth/notifications/**").authenticated()
                         .requestMatchers("/usuarios/**").hasRole("ADMIN");
                     // Siempre exigir autenticación para app endpoints.
                     // skipSubscriptionCheck solo afecta al SubscriptionCheckFilter (omitir Stripe), no a Spring Security.
                     auth.requestMatchers(appEndpoints).authenticated();
                     auth.anyRequest().authenticated();
                 })
+                // JWT debe registrarse antes que AuthRateLimitFilter use JwtAuthenticationFilter.class como ancla
+                // (Spring Security 6.5+: el filtro de referencia ha de tener orden en cadena).
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(
+                        new AuthRateLimitFilter(authRateLimitEnabled, authRateLimitCapacity, authRateLimitRefillMinutes),
+                        JwtAuthenticationFilter.class)
                 .addFilterAfter(subscriptionCheckFilter, JwtAuthenticationFilter.class);
 
         return http.build();
@@ -81,7 +98,9 @@ public class SecurityConfig {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");
-            response.getWriter().write("{\"error\":\"Token inválido o expirado. Inicia sesión de nuevo.\"}");
+            response.getWriter().write(
+                    "{\"error\":\"Token inválido o expirado. Inicia sesión de nuevo.\","
+                            + "\"message\":\"Token inválido o expirado. Inicia sesión de nuevo.\"}");
         };
     }
 
@@ -94,7 +113,9 @@ public class SecurityConfig {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");
-            response.getWriter().write("{\"error\":\"Acceso denegado. No tienes permisos para este recurso.\"}");
+            response.getWriter().write(
+                    "{\"error\":\"Acceso denegado. No tienes permisos para este recurso.\","
+                            + "\"message\":\"Acceso denegado. No tienes permisos para este recurso.\"}");
         };
     }
 }

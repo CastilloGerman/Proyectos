@@ -1,0 +1,129 @@
+<div class="sub-page">
+  <div class="sub-page__head">
+    <a mat-button routerLink="/dashboard" class="sub-back">
+      <mat-icon>arrow_back</mat-icon>
+      Volver
+    </a>
+    <div>
+      <h1 class="sub-page__title">Suscripción y plan actual</h1>
+      <p class="sub-page__subtitle">
+        Consulta el estado de tu cuenta, fechas importantes y enlaces seguros para pagar o gestionar la facturación (Stripe).
+      </p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="sub-state">
+      <mat-progress-spinner diameter="40" mode="indeterminate" />
+      <span>Cargando información del plan…</span>
+    </div>
+  } @else if (loadError()) {
+    <mat-card class="sub-card">
+      <mat-card-content>
+        <p>No pudimos cargar los datos. Comprueba la conexión.</p>
+        <button mat-stroked-button type="button" color="primary" (click)="refrescar()">Reintentar</button>
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    @if (!puedeEscribir()) {
+      <div class="sub-banner sub-banner--readonly" role="status">
+        <mat-icon>lock</mat-icon>
+        <div>
+          <strong>Modo solo lectura</strong>
+          <p class="sub-banner__text">No puedes crear ni editar documentos hasta activar un plan o resolver el pago.</p>
+        </div>
+      </div>
+    }
+
+    <mat-card class="sub-card">
+      <mat-card-header>
+        <mat-card-title>Resumen</mat-card-title>
+        <mat-card-subtitle>Datos según nuestro sistema (se actualizan al iniciar sesión y tras pagar)</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <dl class="sub-dl">
+          <div class="sub-dl__row">
+            <dt>Plan</dt>
+            <dd>{{ planLabel }}</dd>
+          </div>
+          <div class="sub-dl__row">
+            <dt>Estado</dt>
+            <dd>
+              <span [class]="estadoChipClass()">{{ estadoEtiqueta() }}</span>
+            </dd>
+          </div>
+          <div class="sub-dl__row">
+            <dt>Acceso a la aplicación</dt>
+            <dd>{{ puedeEscribir() ? 'Edición y creación de datos' : 'Solo lectura' }}</dd>
+          </div>
+          <div class="sub-dl__row">
+            <dt>Fin de la prueba gratuita</dt>
+            <dd>{{ fechaFinPruebaFmt() }}</dd>
+          </div>
+          <div class="sub-dl__row">
+            <dt>Fin del periodo de facturación actual</dt>
+            <dd>
+              {{ finPeriodoFmt() }}
+              @if (estadoSuscripcion() !== 'ACTIVE' && estadoSuscripcion() !== 'PAST_DUE') {
+                <span class="sub-dl__hint"> (aplica cuando hay suscripción de pago activa)</span>
+              }
+            </dd>
+          </div>
+        </dl>
+
+        @if (textoAyudaEstado()) {
+          <p class="sub-lead">{{ textoAyudaEstado() }}</p>
+        }
+
+        <mat-divider class="sub-divider" />
+
+        <div class="sub-actions">
+          @if (mostrarCheckout()) {
+            <button
+              mat-raised-button
+              color="primary"
+              type="button"
+              (click)="abrirCheckout()"
+              [disabled]="openingCheckout()"
+            >
+              @if (openingCheckout()) {
+                <mat-progress-spinner diameter="20" mode="indeterminate" />
+              } @else {
+                <mat-icon>workspace_premium</mat-icon>
+              }
+              Contratar plan
+            </button>
+          }
+          @if (portalDisponible()) {
+            <button
+              mat-stroked-button
+              type="button"
+              color="primary"
+              (click)="abrirPortal()"
+              [disabled]="openingPortal()"
+            >
+              @if (openingPortal()) {
+                <mat-progress-spinner diameter="20" mode="indeterminate" />
+              } @else {
+                <mat-icon>open_in_new</mat-icon>
+              }
+              Facturación y método de pago
+            </button>
+          }
+        </div>
+        <p class="sub-footnote">
+          Los pagos y datos bancarios se gestionan en Stripe; no almacenamos tu tarjeta en nuestros servidores.
+        </p>
+      </mat-card-content>
+    </mat-card>
+
+    @if (!environment.production) {
+      <mat-card class="sub-card sub-card--dev">
+        <mat-card-content>
+          <p class="sub-dev-label">Solo desarrollo</p>
+          <button mat-stroked-button type="button" (click)="grantPremiumDev()">Marcar suscripción activa (sin Stripe)</button>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+</div>

@@ -10,14 +10,18 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDividerModule } from '@angular/material/divider';
 import { FacturaService } from '../../../core/services/factura.service';
+import { ConfigService } from '../../../core/services/config.service';
+import { formatIbanDisplay } from '../../../shared/validators/iban.validator';
+import { AuthService } from '../../../core/auth/auth.service';
 import { ClienteService } from '../../../core/services/cliente.service';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
 import { MaterialService } from '../../../core/services/material.service';
 import { Cliente } from '../../../core/models/cliente.model';
 import { Presupuesto } from '../../../core/models/presupuesto.model';
 import { Material } from '../../../core/models/material.model';
-import { FacturaItemRequest } from '../../../core/models/factura.model';
+import { Factura, FacturaCobro, FacturaItemRequest } from '../../../core/models/factura.model';
 
 @Component({
   selector: 'app-factura-form',
@@ -34,6 +38,7 @@ import { FacturaItemRequest } from '../../../core/models/factura.model';
     MatIconModule,
     MatCheckboxModule,
     MatSnackBarModule,
+    MatDividerModule,
   ],
   template: `
     <div class="factura-form">
@@ -96,6 +101,7 @@ import { FacturaItemRequest } from '../../../core/models/factura.model';
               <mat-label>Método de pago</mat-label>
               <mat-select formControlName="metodoPago">
                 <mat-option value="Transferencia">Transferencia</mat-option>
+                <mat-option value="Bizum">Bizum</mat-option>
                 <mat-option value="Efectivo">Efectivo</mat-option>
                 <mat-option value="Tarjeta">Tarjeta</mat-option>
               </mat-select>
@@ -158,9 +164,85 @@ import { FacturaItemRequest } from '../../../core/models/factura.model';
                 </div>
               }
             </div>
+            @if (isEdit && id && auth.canMutate()) {
+              <mat-divider class="section-divider"></mat-divider>
+              <div class="cobros-section">
+                <h3>Cobros parciales</h3>
+                <p class="hint-cobros">
+                  Registra cada abono; el estado de pago y el importe cobrado se actualizan en el servidor.
+                  Total factura: <strong>{{ facturaTotal | number:'1.2-2' }} €</strong> · Cobrado:
+                  <strong>{{ montoCobradoServidor | number:'1.2-2' }} €</strong>
+                </p>
+                @if (cobros.length > 0) {
+                  <table class="cobros-table">
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Importe</th>
+                        <th>Método</th>
+                        <th>Notas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (c of cobros; track c.id) {
+                        <tr>
+                          <td>{{ c.fecha | date:'dd/MM/yyyy' }}</td>
+                          <td>{{ c.importe | number:'1.2-2' }} €</td>
+                          <td>{{ c.metodo || '—' }}</td>
+                          <td>{{ c.notas || '—' }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+                <div class="nuevo-cobro-row" [formGroup]="cobroForm">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Importe (€)</mat-label>
+                    <input matInput type="number" formControlName="importe" min="0.01" step="0.01">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Fecha</mat-label>
+                    <input matInput type="date" formControlName="fecha">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Método</mat-label>
+                    <mat-select formControlName="metodo">
+                      <mat-option value="Transferencia">Transferencia</mat-option>
+                      <mat-option value="Efectivo">Efectivo</mat-option>
+                      <mat-option value="Tarjeta">Tarjeta</mat-option>
+                      <mat-option value="Bizum">Bizum</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="cobro-notas">
+                    <mat-label>Notas</mat-label>
+                    <input matInput formControlName="notas">
+                  </mat-form-field>
+                  <button type="button" mat-stroked-button color="primary" (click)="addCobro()" [disabled]="cobroForm.invalid || cobroSaving">
+                    {{ cobroSaving ? 'Registrando…' : 'Registrar cobro' }}
+                  </button>
+                </div>
+              </div>
+              <div class="payment-link-section">
+                <h3>Enlace de pago (Stripe)</h3>
+                <p class="hint-cobros">Genera una URL para que el cliente pague el importe pendiente con tarjeta.</p>
+                @if (paymentLinkUrl) {
+                  <div class="link-row">
+                    <code class="payment-url">{{ paymentLinkUrl }}</code>
+                    <button type="button" mat-stroked-button (click)="copyPaymentLink()">
+                      <mat-icon>content_copy</mat-icon>
+                      Copiar
+                    </button>
+                  </div>
+                }
+                <button type="button" mat-raised-button color="accent" (click)="createPaymentLink()" [disabled]="paymentLinkLoading">
+                  {{ paymentLinkLoading ? 'Generando…' : (paymentLinkUrl ? 'Renovar enlace de pago' : 'Generar enlace de pago') }}
+                </button>
+              </div>
+            }
+
             <div class="actions">
               <button mat-button type="button" routerLink="/facturas">Cancelar</button>
-              <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || form.pending">
+              <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || form.pending || !auth.canMutate()">
                 {{ isEdit ? 'Guardar' : 'Crear' }}
               </button>
             </div>
@@ -227,15 +309,96 @@ import { FacturaItemRequest } from '../../../core/models/factura.model';
     .vencimiento-buttons button {
       font-size: 12px;
     }
+
+    .section-divider {
+      margin: 28px 0 20px;
+    }
+
+    .cobros-section, .payment-link-section {
+      margin-bottom: 24px;
+    }
+
+    .hint-cobros {
+      font-size: 13px;
+      color: rgba(0,0,0,0.6);
+      margin: 0 0 12px;
+    }
+
+    .cobros-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+
+    .cobros-table th, .cobros-table td {
+      border-bottom: 1px solid #e0e0e0;
+      padding: 8px 10px;
+      text-align: left;
+    }
+
+    .cobros-table th {
+      font-weight: 600;
+      color: #555;
+    }
+
+    .nuevo-cobro-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .nuevo-cobro-row mat-form-field {
+      min-width: 120px;
+    }
+
+    .cobro-notas {
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .link-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .payment-url {
+      flex: 1;
+      min-width: 200px;
+      font-size: 11px;
+      word-break: break-all;
+      background: #f5f5f5;
+      padding: 8px 10px;
+      border-radius: 4px;
+    }
   `],
 })
 export class FacturaFormComponent implements OnInit {
   form: FormGroup;
+  cobroForm: FormGroup;
   clientes: Cliente[] = [];
   presupuestos: Presupuesto[] = [];
   materiales: Material[] = [];
   isEdit = false;
   id?: number;
+  cobros: FacturaCobro[] = [];
+  paymentLinkUrl: string | null = null;
+  private facturaTotalSnapshot = 0;
+  private montoCobradoSnapshot = 0;
+  cobroSaving = false;
+  paymentLinkLoading = false;
+
+  get facturaTotal(): number {
+    return this.facturaTotalSnapshot;
+  }
+
+  get montoCobradoServidor(): number {
+    return this.montoCobradoSnapshot;
+  }
 
   get items(): FormArray {
     return this.form.get('items') as FormArray;
@@ -245,7 +408,9 @@ export class FacturaFormComponent implements OnInit {
     private fb: FormBuilder,
     private route: ActivatedRoute,
     private router: Router,
+    public auth: AuthService,
     private facturaService: FacturaService,
+    private configService: ConfigService,
     private clienteService: ClienteService,
     private presupuestoService: PresupuestoService,
     private materialService: MaterialService,
@@ -267,6 +432,13 @@ export class FacturaFormComponent implements OnInit {
       ivaHabilitado: [true],
       items: this.fb.array([], Validators.required),
     });
+    const hoy = new Date().toISOString().split('T')[0];
+    this.cobroForm = this.fb.group({
+      importe: [null, [Validators.required, Validators.min(0.01)]],
+      fecha: [hoy, Validators.required],
+      metodo: ['Transferencia'],
+      notas: [''],
+    });
   }
 
   ngOnInit(): void {
@@ -287,7 +459,31 @@ export class FacturaFormComponent implements OnInit {
         this.id = undefined;
         this.items.clear();
         this.addItem();
+        this.applyPaymentDefaultsFromEmpresa();
       }
+    });
+  }
+
+  /** Rellena método, condiciones y notas sugeridas desde /config/empresa (pantalla Métodos de pago). */
+  private applyPaymentDefaultsFromEmpresa(): void {
+    this.configService.getEmpresa().subscribe({
+      next: (e) => {
+        const patch: Record<string, string> = {};
+        if (e.defaultMetodoPago) patch['metodoPago'] = e.defaultMetodoPago;
+        if (e.defaultCondicionesPago) patch['condicionesPago'] = e.defaultCondicionesPago;
+        if (e.regimenIvaPrincipal?.trim()) patch['regimenFiscal'] = e.regimenIvaPrincipal.trim();
+        const notasBits: string[] = [];
+        const metodo = e.defaultMetodoPago || '';
+        if (e.ibanCuenta?.trim() && (metodo === 'Transferencia' || !metodo)) {
+          notasBits.push(`Cobro por transferencia. IBAN: ${formatIbanDisplay(e.ibanCuenta)}`);
+        }
+        if (e.bizumTelefono?.trim() && metodo === 'Bizum') {
+          notasBits.push(`Pago con Bizum al ${e.bizumTelefono}`);
+        }
+        if (notasBits.length) patch['notas'] = notasBits.join('\n');
+        if (Object.keys(patch).length) this.form.patchValue(patch);
+      },
+      error: () => {},
     });
   }
 
@@ -327,6 +523,7 @@ export class FacturaFormComponent implements OnInit {
         if (itemList.length === 0) {
           this.addItem();
         }
+        this.applyFacturaCobrosSnapshot(f);
       },
       error: (err) => {
         const msg = err.error?.detail ?? err.error?.message ?? 'No se pudo cargar la factura';
@@ -350,6 +547,70 @@ export class FacturaFormComponent implements OnInit {
 
   removeItem(index: number): void {
     this.items.removeAt(index);
+  }
+
+  private applyFacturaCobrosSnapshot(f: Factura): void {
+    this.cobros = f.cobros ?? [];
+    this.paymentLinkUrl = f.paymentLinkUrl ?? null;
+    this.facturaTotalSnapshot = f.total ?? 0;
+    this.montoCobradoSnapshot = f.montoCobrado ?? 0;
+  }
+
+  addCobro(): void {
+    if (!this.id || this.cobroForm.invalid) {
+      this.cobroForm.markAllAsTouched();
+      return;
+    }
+    const v = this.cobroForm.value;
+    this.cobroSaving = true;
+    this.facturaService
+      .registrarCobro(this.id, {
+        importe: +v.importe,
+        fecha: v.fecha || undefined,
+        metodo: v.metodo || undefined,
+        notas: v.notas?.trim() || undefined,
+      })
+      .subscribe({
+        next: (f) => {
+          this.applyFacturaCobrosSnapshot(f);
+          this.form.patchValue({
+            estadoPago: f.estadoPago,
+            montoCobrado: f.montoCobrado ?? null,
+          });
+          const hoy = new Date().toISOString().split('T')[0];
+          this.cobroForm.reset({ importe: null, fecha: hoy, metodo: 'Transferencia', notas: '' });
+          this.snackBar.open('Cobro registrado', 'Cerrar', { duration: 3000 });
+          this.cobroSaving = false;
+        },
+        error: (err) => {
+          this.snackBar.open(err.error?.message || 'Error al registrar cobro', 'Cerrar', { duration: 4000 });
+          this.cobroSaving = false;
+        },
+      });
+  }
+
+  createPaymentLink(): void {
+    if (!this.id) return;
+    this.paymentLinkLoading = true;
+    this.facturaService.generarEnlacePago(this.id).subscribe({
+      next: (f) => {
+        this.applyFacturaCobrosSnapshot(f);
+        this.snackBar.open('Enlace generado. Compártelo con el cliente.', 'Cerrar', { duration: 4000 });
+        this.paymentLinkLoading = false;
+      },
+      error: (err) => {
+        this.snackBar.open(err.error?.message || 'No se pudo generar el enlace', 'Cerrar', { duration: 5000 });
+        this.paymentLinkLoading = false;
+      },
+    });
+  }
+
+  copyPaymentLink(): void {
+    if (!this.paymentLinkUrl) return;
+    navigator.clipboard.writeText(this.paymentLinkUrl).then(
+      () => this.snackBar.open('Enlace copiado', 'Cerrar', { duration: 2000 }),
+      () => this.snackBar.open('No se pudo copiar', 'Cerrar', { duration: 2000 })
+    );
   }
 
   setVencimiento(dias: number): void {

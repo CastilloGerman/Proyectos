@@ -2,6 +2,8 @@
 
 SaaS multiusuario para gestión de presupuestos y facturas. Aplicación web con Angular, API REST en Spring Boot y base de datos PostgreSQL.
 
+**Documentación:** [Despliegue en producción](docs/DEPLOY.md) · [Modelo organización / tenant](docs/TENANT-MODEL.md)
+
 ## Arquitectura
 
 ```
@@ -69,12 +71,16 @@ $env:SPRING_DATASOURCE_URL = "jdbc:postgresql://localhost:5432/appgestion"
 
 ### 2. API (Spring Boot)
 
+El `pom.xml` del módulo `api` activa el perfil **`local`** en `spring-boot:run` (JWT por defecto solo desarrollo, `skip-check` de suscripción, `ddl-auto: update`).
+
 ```powershell
 cd api
 mvn clean compile spring-boot:run
 ```
 
 O con el script: `.\api\iniciar-api.ps1`
+
+Si arrancas la API **sin** perfil `local` (p. ej. desde el IDE), define al menos `JWT_SECRET` (≥32 caracteres) o activa `--spring.profiles.active=local`.
 
 **Variables opcionales** (PowerShell):
 ```powershell
@@ -84,7 +90,11 @@ $env:JWT_SECRET = "tu-clave-secreta-minimo-32-caracteres"
 # Para suscripciones Stripe:
 $env:STRIPE_SECRET_KEY = "sk_test_..."
 $env:STRIPE_PRICE_MONTHLY = "price_..."
+# Orígenes CORS (producción): lista separada por comas
+$env:CORS_ALLOWED_ORIGINS = "https://tu-dominio.com"
 ```
+
+**Producción:** `SPRING_PROFILES_ACTIVE=prod`, `JWT_SECRET` fuerte, `CORS_ALLOWED_ORIGINS`, claves Stripe reales (el arranque en `prod` falla si detecta placeholders). Ver también `docs/TENANT-MODEL.md`.
 
 La API estará en `http://localhost:8081`. Espera a ver "Started AppGestionApiApplication" antes de continuar.
 
@@ -143,15 +153,15 @@ AppGestion/
 
 ### API (application.yml)
 
-| Variable | Descripción | Default |
-|----------|-------------|---------|
-| Variable | Descripción | Default |
-|----------|-------------|---------|
-| `SPRING_DATASOURCE_URL` | JDBC URL PostgreSQL | `jdbc:postgresql://localhost:5432/appgestion` |
-| `JWT_SECRET` | Clave para firmar tokens | (requerido en producción) |
-| `STRIPE_SECRET_KEY` | Clave API Stripe | `sk_test_xxx` (placeholder, **debe configurarse**) |
-| `STRIPE_WEBHOOK_SECRET` | Secreto webhook Stripe | `whsec_xxx` |
-| `STRIPE_PRICE_MONTHLY` | ID del precio mensual | `price_xxx` |
+| Variable | Descripción | Default / notas |
+|----------|-------------|------------------|
+| `SPRING_PROFILES_ACTIVE` | `local` (dev) / `prod` (despliegue) | Sin `local`, exige `JWT_SECRET` y perfil seguro |
+| `SPRING_DATASOURCE_URL` | JDBC URL PostgreSQL | Ver `application.yml` |
+| `JWT_SECRET` | Clave HS256 (≥32 caracteres fuera de `local`) | Obligatorio si no usas perfil `local` |
+| `CORS_ALLOWED_ORIGINS` | Orígenes permitidos (coma) | En `prod` acotar explícitamente |
+| `STRIPE_SECRET_KEY` | Clave API Stripe | Vacío por defecto; `local` trae placeholder de desarrollo |
+| `STRIPE_WEBHOOK_SECRET` | Secreto webhook Stripe | Validado en `prod` |
+| `STRIPE_PRICE_MONTHLY` | ID del precio mensual | Configurar para checkout |
 
 ### Stripe (suscripciones)
 

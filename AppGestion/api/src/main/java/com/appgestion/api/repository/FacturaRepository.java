@@ -22,6 +22,8 @@ public interface FacturaRepository extends JpaRepository<Factura, Long> {
 
     Optional<Factura> findByNumeroFacturaAndUsuarioId(String numeroFactura, Long usuarioId);
 
+    Optional<Factura> findFirstByPresupuesto_IdAndUsuario_Id(Long presupuestoId, Long usuarioId);
+
     long countByUsuarioId(Long usuarioId);
 
     @Query("SELECT f FROM Factura f JOIN FETCH f.usuario JOIN FETCH f.cliente " +

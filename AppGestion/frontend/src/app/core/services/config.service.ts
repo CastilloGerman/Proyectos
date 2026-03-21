@@ -17,4 +17,37 @@ export class ConfigService {
   saveEmpresa(data: Partial<Empresa>): Observable<Empresa> {
     return this.http.put<Empresa>(`${this.apiUrl}/empresa`, data);
   }
+
+  /** IBAN, Bizum y valores por defecto de factura (PATCH). */
+  patchMetodosCobro(body: MetodosCobroPayload): Observable<Empresa> {
+    return this.http.patch<Empresa>(`${this.apiUrl}/empresa/metodos-cobro`, body);
+  }
+
+  patchDatosFiscales(body: DatosFiscalesPayload): Observable<Empresa> {
+    return this.http.patch<Empresa>(`${this.apiUrl}/empresa/datos-fiscales`, body);
+  }
+
+  /** Notas al pie de PDFs (presupuesto / factura). */
+  patchPlantillasPdf(body: PlantillasPdfPayload): Observable<Empresa> {
+    return this.http.patch<Empresa>(`${this.apiUrl}/empresa/plantillas-pdf`, body);
+  }
+}
+
+export interface MetodosCobroPayload {
+  defaultMetodoPago: string;
+  defaultCondicionesPago: string;
+  ibanCuenta: string;
+  bizumTelefono: string;
+}
+
+export interface DatosFiscalesPayload {
+  regimenIvaPrincipal: string;
+  descripcionActividad: string;
+  nifIntracomunitario: string;
+  epigrafeIae: string;
+}
+
+export interface PlantillasPdfPayload {
+  notasPiePresupuesto: string | null;
+  notasPieFactura: string | null;
 }

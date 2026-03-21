@@ -31,9 +31,17 @@ export interface Presupuesto {
   total: number;
   ivaHabilitado: boolean;
   estado: string;
+  /** Si ya existe factura generada desde este presupuesto. */
+  facturaId?: number | null;
   descuentoGlobalPorcentaje?: number;
   descuentoGlobalFijo?: number;
   descuentoAntesIva?: boolean;
+  /** Texto extra en PDF con variables {{cliente.nombre}}, {{total}}, etc. */
+  textoClausulas?: string | null;
+  /** Importe de señal / anticipo acordado. */
+  senalImporte?: number | null;
+  /** Si la señal ya fue cobrada. */
+  senalPagada?: boolean;
   items: PresupuestoItem[];
 }
 
@@ -45,4 +53,7 @@ export interface PresupuestoRequest {
   descuentoGlobalPorcentaje?: number;
   descuentoGlobalFijo?: number;
   descuentoAntesIva?: boolean;
+  textoClausulas?: string;
+  senalImporte?: number;
+  senalPagada?: boolean;
 }
