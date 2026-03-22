@@ -17,7 +17,9 @@ public record RegisterRequest(
         @Size(min = 6, message = "La contraseña debe tener al menos 6 caracteres")
         String password,
 
-        String rol
+        String rol,
+
+        DeviceClientInfoRequest clientInfo
 ) {
     public String getRol() {
         return rol != null && !rol.isBlank() ? rol : "USER";

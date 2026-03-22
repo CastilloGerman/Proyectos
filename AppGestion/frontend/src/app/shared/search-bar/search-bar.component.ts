@@ -84,13 +84,14 @@ export interface SearchResult {
     .search-box {
       display: flex;
       align-items: center;
-      width: 420px;
-      min-width: 280px;
-      max-width: 100%;
+      width: 100%;
+      max-width: 420px;
+      min-width: 0;
       background: rgba(255, 255, 255, 0.15);
       border-radius: var(--app-radius-md, 12px);
       border: 1px solid rgba(255, 255, 255, 0.5);
       overflow: hidden;
+      box-sizing: border-box;
     }
 
     .search-icon {

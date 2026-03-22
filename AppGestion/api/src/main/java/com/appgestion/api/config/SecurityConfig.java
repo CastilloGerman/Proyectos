@@ -68,7 +68,7 @@ public class SecurityConfig {
                                 "/auth/invite/**").permitAll()
                         .requestMatchers("/webhook/**").permitAll()
                         .requestMatchers("/error").permitAll()
-                        .requestMatchers("/auth/me", "/auth/profile", "/auth/account-settings", "/auth/preferences", "/auth/change-password", "/auth/totp/**", "/auth/support/**", "/auth/notifications/**").authenticated()
+                        .requestMatchers("/auth/me", "/auth/profile", "/auth/account-settings", "/auth/preferences", "/auth/change-password", "/auth/totp/**", "/auth/support/**", "/auth/notifications/**", "/auth/sessions", "/auth/sessions/**", "/auth/logout").authenticated()
                         .requestMatchers("/usuarios/**").hasRole("ADMIN");
                     // Siempre exigir autenticación para app endpoints.
                     // skipSubscriptionCheck solo afecta al SubscriptionCheckFilter (omitir Stripe), no a Spring Security.

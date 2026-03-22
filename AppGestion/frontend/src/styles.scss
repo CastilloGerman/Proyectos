@@ -74,8 +74,15 @@ $appgestion-theme: mat.define-light-theme((
   overflow-x: hidden !important;
 }
 
+/* Contenido principal: evita desbordamiento horizontal (móvil + tablas anchas) */
+.mat-drawer-container.saas-layout .mat-drawer-content {
+  overflow-x: hidden !important;
+  min-width: 0;
+}
+
 html, body {
   height: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -83,6 +90,12 @@ body {
   font-family: 'IBM Plex Sans', 'Inter', system-ui, -apple-system, sans-serif;
   background: var(--app-bg-page);
   color: var(--app-text-primary);
+}
+
+app-root {
+  display: block;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .container {

@@ -11,6 +11,7 @@ import com.appgestion.api.repository.InvitacionRepository;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.appgestion.api.security.JwtService;
 import jakarta.mail.MessagingException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -43,6 +44,7 @@ public class InvitacionService {
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final OrganizationService organizationService;
+    private final SessionService sessionService;
 
     @Value("${app.frontend-url:http://localhost:4200}")
     private String frontendUrl;
@@ -53,7 +55,8 @@ public class InvitacionService {
                              SubscriptionService subscriptionService,
                              EmailService emailService,
                              PasswordEncoder passwordEncoder,
-                             OrganizationService organizationService) {
+                             OrganizationService organizationService,
+                             SessionService sessionService) {
         this.invitacionRepository = invitacionRepository;
         this.usuarioRepository = usuarioRepository;
         this.jwtService = jwtService;
@@ -61,6 +64,7 @@ public class InvitacionService {
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
         this.organizationService = organizationService;
+        this.sessionService = sessionService;
     }
 
     @Transactional
@@ -108,7 +112,7 @@ public class InvitacionService {
     }
 
     @Transactional
-    public AuthResponse aceptar(AcceptInvitacionRequest request) {
+    public AuthResponse aceptar(AcceptInvitacionRequest request, HttpServletRequest httpRequest) {
         String hash = sha256Hex(request.token().trim());
         Invitacion inv = invitacionRepository.findByTokenHash(hash)
                 .orElseThrow(() -> new IllegalArgumentException("Invitación inválida o expirada"));
@@ -141,10 +145,12 @@ public class InvitacionService {
         inv.setUsedAt(LocalDateTime.now());
         invitacionRepository.save(inv);
 
-        String token = jwtService.generateToken(usuario.getEmail(), usuario.getRol());
-        Instant expiresAt = Instant.now().plusMillis(86400000);
+        var sesion = sessionService.createSession(usuario, httpRequest, request.clientInfo());
+        String token = jwtService.generateToken(usuario.getEmail(), usuario.getRol(), sesion.getId());
+        Instant expiresAt = Instant.now().plusMillis(jwtService.getExpirationMs());
         return AuthResponse.of(token, usuario.getEmail(), usuario.getRol(), expiresAt,
-                usuario.getSubscriptionStatus(), usuario.getTrialEndDate(), subscriptionService.canWrite(usuario));
+                usuario.getSubscriptionStatus(), usuario.getTrialEndDate(), subscriptionService.canWrite(usuario),
+                sesion.getId());
     }
 
     private static String sha256Hex(String input) {

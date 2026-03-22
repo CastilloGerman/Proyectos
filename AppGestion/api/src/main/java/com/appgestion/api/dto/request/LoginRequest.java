@@ -12,5 +12,7 @@ public record LoginRequest(
         String password,
 
         /** Opcional: código TOTP de 6 dígitos si el usuario tiene 2FA activo. */
-        String totpCode
+        String totpCode,
+
+        DeviceClientInfoRequest clientInfo
 ) {}

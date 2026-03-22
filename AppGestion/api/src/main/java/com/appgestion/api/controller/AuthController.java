@@ -15,16 +15,22 @@ import com.appgestion.api.dto.request.UpdatePerfilRequest;
 import com.appgestion.api.dto.request.UpdatePreferenciasRequest;
 import com.appgestion.api.dto.response.AuthResponse;
 import com.appgestion.api.dto.response.InviteVerifyResponse;
+import com.appgestion.api.dto.response.SesionDispositivoResponse;
 import com.appgestion.api.dto.response.TotpSetupStartResponse;
 import com.appgestion.api.dto.response.UsuarioResponse;
 import com.appgestion.api.service.AuthService;
 import com.appgestion.api.service.CurrentUserService;
 import com.appgestion.api.service.InvitacionService;
+import com.appgestion.api.service.SessionService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
@@ -33,30 +39,36 @@ public class AuthController {
     private final AuthService authService;
     private final InvitacionService invitacionService;
     private final CurrentUserService currentUserService;
+    private final SessionService sessionService;
 
     public AuthController(AuthService authService,
                           InvitacionService invitacionService,
-                          CurrentUserService currentUserService) {
+                          CurrentUserService currentUserService,
+                          SessionService sessionService) {
         this.authService = authService;
         this.invitacionService = invitacionService;
         this.currentUserService = currentUserService;
+        this.sessionService = sessionService;
     }
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        AuthResponse response = authService.registrar(request);
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request,
+                                                 HttpServletRequest httpRequest) {
+        AuthResponse response = authService.registrar(request, httpRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        AuthResponse response = authService.login(request);
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request,
+                                              HttpServletRequest httpRequest) {
+        AuthResponse response = authService.login(request, httpRequest);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/google")
-    public ResponseEntity<AuthResponse> loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request) {
-        AuthResponse response = authService.loginWithGoogle(request);
+    public ResponseEntity<AuthResponse> loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request,
+                                                        HttpServletRequest httpRequest) {
+        AuthResponse response = authService.loginWithGoogle(request, httpRequest);
         return ResponseEntity.ok(response);
     }
 
@@ -133,7 +145,31 @@ public class AuthController {
     }
 
     @PostMapping("/invite/accept")
-    public ResponseEntity<AuthResponse> aceptarInvitacion(@Valid @RequestBody AcceptInvitacionRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(invitacionService.aceptar(request));
+    public ResponseEntity<AuthResponse> aceptarInvitacion(@Valid @RequestBody AcceptInvitacionRequest request,
+                                                          HttpServletRequest httpRequest) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(invitacionService.aceptar(request, httpRequest));
+    }
+
+    @GetMapping("/sessions")
+    public ResponseEntity<List<SesionDispositivoResponse>> listSessions(HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(sessionService.listForCurrentUser(httpRequest));
+    }
+
+    @DeleteMapping("/sessions/{sessionId}")
+    public ResponseEntity<Void> revokeSession(@PathVariable String sessionId, HttpServletRequest httpRequest) {
+        sessionService.revokeSession(sessionId, httpRequest);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/sessions/others")
+    public ResponseEntity<Map<String, Integer>> revokeOtherSessions(HttpServletRequest httpRequest) {
+        int revoked = sessionService.revokeOtherSessions(httpRequest);
+        return ResponseEntity.ok(Map.of("revokedCount", revoked));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest httpRequest) {
+        sessionService.revokeCurrentSession(httpRequest);
+        return ResponseEntity.noContent().build();
     }
 }

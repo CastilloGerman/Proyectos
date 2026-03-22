@@ -10,24 +10,126 @@
     </div>
     <h1 class="sa-title">Sesiones activas</h1>
     <p class="sa-lead">
-      Estamos preparando esta sección. Pronto podrás configurarla desde aquí sin salir de la app.
+      Cada inicio de sesión queda registrado con el navegador, sistema y dirección IP visibles para el servidor (útil para
+      reconocer si es tu equipo o no). Puedes cerrar sesiones en otros dispositivos sin tocar la de este navegador.
     </p>
+
     @if (sessionExpiresAt(); as exp) {
       <p class="sa-hint">
         <mat-icon class="sa-hint__icon">schedule</mat-icon>
-        Tu sesión en este dispositivo caduca aproximadamente el
+        El token de este navegador caduca aproximadamente el
         <strong>{{ exp | date: 'short' }}</strong>.
       </p>
-    } @else {
-      <p class="sa-hint sa-hint--muted">
-        Mientras tanto, puedes <strong>cerrar sesión</strong> desde el menú de usuario si usas un equipo compartido.
+    }
+
+    @if (hasLegacySession()) {
+      <p class="sa-hint sa-hint--warn">
+        <mat-icon class="sa-hint__icon">info</mat-icon>
+        Esta cuenta usa un acceso anterior sin identificador de sesión.
+        <strong>Cierra sesión e inicia de nuevo</strong> para que este dispositivo aparezca en la lista con todos los datos.
       </p>
     }
+
+    @if (loading()) {
+      <div class="sa-center">
+        <mat-progress-spinner diameter="40" mode="indeterminate" />
+      </div>
+    } @else if (loadError()) {
+      <p class="sa-error">{{ loadError() }}</p>
+      <button mat-stroked-button type="button" (click)="reload()">Reintentar</button>
+    } @else {
+      <div class="sa-toolbar">
+        <button
+          mat-stroked-button
+          type="button"
+          color="warn"
+          (click)="cerrarResto()"
+          [disabled]="revokingOthers() || sessions().length <= 1"
+        >
+          @if (revokingOthers()) {
+            <mat-progress-spinner class="sa-btn-spinner" diameter="18" mode="indeterminate" />
+          } @else {
+            <mat-icon>logout</mat-icon>
+          }
+          Cerrar las demás sesiones
+        </button>
+      </div>
+
+      @if (sessions().length === 0) {
+        <p class="sa-empty">No hay sesiones activas registradas. Vuelve a iniciar sesión para crear una en este dispositivo.</p>
+      } @else {
+        <ul class="sa-list">
+          @for (s of sessions(); track s.id) {
+            <li class="sa-item">
+              <div class="sa-item__head">
+                <mat-icon class="sa-item__icon" aria-hidden="true">
+                  {{ s.deviceType === 'MOBILE' || s.deviceType === 'TABLET' ? 'smartphone' : 'computer' }}
+                </mat-icon>
+                <div class="sa-item__titles">
+                  <span class="sa-item__label">{{ s.clientLabel || 'Dispositivo' }}</span>
+                  @if (s.currentSession) {
+                    <mat-chip-set class="sa-chips">
+                      <mat-chip highlighted>Esta sesión</mat-chip>
+                    </mat-chip-set>
+                  }
+                </div>
+              </div>
+              <dl class="sa-meta">
+                <div>
+                  <dt>Navegador</dt>
+                  <dd>{{ s.browser || '—' }}</dd>
+                </div>
+                <div>
+                  <dt>Sistema</dt>
+                  <dd>{{ s.osName || '—' }}</dd>
+                </div>
+                <div>
+                  <dt>Tipo</dt>
+                  <dd>{{ tipoDispositivoLabel(s.deviceType) }}</dd>
+                </div>
+                <div>
+                  <dt>IP (vista por el servidor)</dt>
+                  <dd>{{ s.ipAddress || '—' }}</dd>
+                </div>
+                <div class="sa-meta__full">
+                  <dt>Última actividad</dt>
+                  <dd>{{ s.lastActivityAt | date: 'medium' }}</dd>
+                </div>
+                @if (s.userAgentPreview) {
+                  <div class="sa-meta__full">
+                    <dt>User-Agent (extracto)</dt>
+                    <dd class="sa-ua">{{ s.userAgentPreview }}</dd>
+                  </div>
+                }
+              </dl>
+              @if (!s.currentSession) {
+                <div class="sa-item__actions">
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    color="warn"
+                    (click)="cerrarOtraSesion(s)"
+                    [disabled]="revokingId() === s.id"
+                  >
+                    @if (revokingId() === s.id) {
+                      <mat-progress-spinner class="sa-btn-spinner" diameter="18" mode="indeterminate" />
+                    } @else {
+                      <mat-icon>link_off</mat-icon>
+                    }
+                    Cerrar sesión
+                  </button>
+                </div>
+              }
+              <mat-divider class="sa-divider" />
+            </li>
+          }
+        </ul>
+      }
+    }
+
     <div class="sa-actions">
       <button mat-stroked-button type="button" routerLink="/dashboard">Ir al panel</button>
-      <button mat-button type="button" color="primary" routerLink="/cuenta/cambiar-contrasena">
-        Cambiar contraseña
-      </button>
+      <button mat-button type="button" color="primary" routerLink="/cuenta/cambiar-contrasena">Cambiar contraseña</button>
     </div>
   </mat-card>
 </div>

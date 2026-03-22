@@ -22,6 +22,7 @@ import com.appgestion.api.security.SecurityUtils;
 import com.appgestion.api.security.TotpService;
 import com.appgestion.api.validation.UserPreferencesValidator;
 import jakarta.mail.MessagingException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,6 +34,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -42,6 +44,11 @@ import org.slf4j.LoggerFactory;
 public class AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+
+    private static final LocalDate FECHA_NACIMIENTO_MIN = LocalDate.of(1900, 1, 1);
+
+    private static final Set<String> GENEROS_PERMITIDOS = Set.of(
+            "MALE", "FEMALE", "NON_BINARY", "OTHER", "UNSPECIFIED");
     private static final int TRIAL_DAYS = 14;
     private static final int PASSWORD_RESET_EXPIRY_HOURS = 1;
     private static final int TOTP_PENDING_MINUTES = 10;
@@ -55,6 +62,7 @@ public class AuthService {
     private final OrganizationService organizationService;
     private final TotpService totpService;
     private final NotificacionService notificacionService;
+    private final SessionService sessionService;
 
     @Value("${app.frontend-url:http://localhost:4200}")
     private String frontendUrl;
@@ -67,7 +75,8 @@ public class AuthService {
                        GoogleTokenVerifier googleTokenVerifier,
                        OrganizationService organizationService,
                        TotpService totpService,
-                       NotificacionService notificacionService) {
+                       NotificacionService notificacionService,
+                       SessionService sessionService) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -77,10 +86,11 @@ public class AuthService {
         this.organizationService = organizationService;
         this.totpService = totpService;
         this.notificacionService = notificacionService;
+        this.sessionService = sessionService;
     }
 
     @Transactional
-    public AuthResponse registrar(RegisterRequest request) {
+    public AuthResponse registrar(RegisterRequest request, HttpServletRequest httpRequest) {
         if (usuarioRepository.existsByEmail(request.email())) {
             throw new IllegalArgumentException("Ya existe un usuario con ese email");
         }
@@ -101,14 +111,17 @@ public class AuthService {
 
         notificacionService.ensureWelcomeIfEmpty(usuario.getId());
 
-        String token = jwtService.generateToken(usuario.getEmail(), usuario.getRol());
-        Instant expiresAt = Instant.now().plusMillis(86400000); // 24 horas
+        var sesion = sessionService.createSession(usuario, httpRequest, request.clientInfo());
+        String token = jwtService.generateToken(usuario.getEmail(), usuario.getRol(), sesion.getId());
+        Instant expiresAt = Instant.now().plusMillis(jwtService.getExpirationMs());
 
         return AuthResponse.of(token, usuario.getEmail(), usuario.getRol(), expiresAt,
-                usuario.getSubscriptionStatus(), usuario.getTrialEndDate(), subscriptionService.canWrite(usuario));
+                usuario.getSubscriptionStatus(), usuario.getTrialEndDate(), subscriptionService.canWrite(usuario),
+                sesion.getId());
     }
 
-    public AuthResponse login(LoginRequest request) {
+    @Transactional
+    public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
         Usuario usuario = usuarioRepository.findByEmail(request.email())
                 .orElseThrow(() -> new IllegalArgumentException("Credenciales inválidas"));
 
@@ -126,18 +139,20 @@ public class AuthService {
 
         notificacionService.ensureWelcomeIfEmpty(usuario.getId());
 
-        String token = jwtService.generateToken(usuario.getEmail(), usuario.getRol());
-        Instant expiresAt = Instant.now().plusMillis(86400000); // 24 horas
+        var sesion = sessionService.createSession(usuario, httpRequest, request.clientInfo());
+        String token = jwtService.generateToken(usuario.getEmail(), usuario.getRol(), sesion.getId());
+        Instant expiresAt = Instant.now().plusMillis(jwtService.getExpirationMs());
 
         return AuthResponse.of(token, usuario.getEmail(), usuario.getRol(), expiresAt,
-                usuario.getSubscriptionStatus(), usuario.getTrialEndDate(), subscriptionService.canWrite(usuario));
+                usuario.getSubscriptionStatus(), usuario.getTrialEndDate(), subscriptionService.canWrite(usuario),
+                sesion.getId());
     }
 
     /**
      * Inicio de sesión con Google: verifica el ID token, busca o crea usuario por email y devuelve JWT.
      */
     @Transactional
-    public AuthResponse loginWithGoogle(GoogleLoginRequest request) {
+    public AuthResponse loginWithGoogle(GoogleLoginRequest request, HttpServletRequest httpRequest) {
         var tokenInfo = googleTokenVerifier.verify(request.idToken())
                 .orElseThrow(() -> new IllegalArgumentException("Token de Google inválido o expirado"));
 
@@ -170,11 +185,13 @@ public class AuthService {
 
         notificacionService.ensureWelcomeIfEmpty(usuario.getId());
 
-        String token = jwtService.generateToken(usuario.getEmail(), usuario.getRol());
-        Instant expiresAt = Instant.now().plusMillis(86400000);
+        var sesion = sessionService.createSession(usuario, httpRequest, request.clientInfo());
+        String token = jwtService.generateToken(usuario.getEmail(), usuario.getRol(), sesion.getId());
+        Instant expiresAt = Instant.now().plusMillis(jwtService.getExpirationMs());
 
         return AuthResponse.of(token, usuario.getEmail(), usuario.getRol(), expiresAt,
-                usuario.getSubscriptionStatus(), usuario.getTrialEndDate(), subscriptionService.canWrite(usuario));
+                usuario.getSubscriptionStatus(), usuario.getTrialEndDate(), subscriptionService.canWrite(usuario),
+                sesion.getId());
     }
 
     public UsuarioResponse getMeResponse() {
@@ -208,7 +225,11 @@ public class AuthService {
                 usuario.isEmailNotifyMarketing(),
                 subscriptionService.canWrite(usuario),
                 Boolean.TRUE.equals(usuario.getTotpEnabled()),
-                totpEnrollmentPending
+                totpEnrollmentPending,
+                usuario.getFechaNacimiento(),
+                usuario.getGenero(),
+                usuario.getNacionalidadIso(),
+                usuario.getPaisResidenciaIso()
         );
     }
 
@@ -333,8 +354,42 @@ public class AuthService {
         }
         usuario.setTelefono(telRaw.isEmpty() ? null : telRaw);
 
+        LocalDate fn = request.fechaNacimiento();
+        if (fn != null) {
+            if (fn.isAfter(LocalDate.now())) {
+                throw new IllegalArgumentException("La fecha de nacimiento no puede ser futura");
+            }
+            if (fn.isBefore(FECHA_NACIMIENTO_MIN)) {
+                throw new IllegalArgumentException("La fecha de nacimiento no es válida");
+            }
+        }
+        usuario.setFechaNacimiento(fn);
+
+        String genRaw = request.genero() != null ? request.genero().trim().toUpperCase() : "";
+        if (!genRaw.isEmpty() && !GENEROS_PERMITIDOS.contains(genRaw)) {
+            throw new IllegalArgumentException("Valor de género no válido");
+        }
+        usuario.setGenero(genRaw.isEmpty() ? null : genRaw);
+
+        usuario.setNacionalidadIso(normalizarCodigoPaisIso(request.nacionalidadIso()));
+        usuario.setPaisResidenciaIso(normalizarCodigoPaisIso(request.paisResidenciaIso()));
+
         usuarioRepository.save(usuario);
         return usuarioToResponse(usuario);
+    }
+
+    private static String normalizarCodigoPaisIso(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String s = raw.trim().toUpperCase();
+        if (s.isEmpty()) {
+            return null;
+        }
+        if (s.length() != 2 || !s.chars().allMatch(Character::isLetter)) {
+            throw new IllegalArgumentException("El código de país debe ser ISO 3166-1 alpha-2");
+        }
+        return s;
     }
 
     /**

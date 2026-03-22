@@ -13,15 +13,19 @@ public record AuthResponse(
         Instant expiresAt,
         String subscriptionStatus,
         LocalDate trialEndDate,
-        boolean canWrite
+        boolean canWrite,
+        /** Identificador de sesión ({@code usuario_sesion}); null en respuestas antiguas. */
+        String sessionId
 ) {
     public static AuthResponse of(String token, String email, String rol, Instant expiresAt,
-                                  SubscriptionStatus subscriptionStatus, LocalDate trialEndDate, boolean canWrite) {
+                                  SubscriptionStatus subscriptionStatus, LocalDate trialEndDate, boolean canWrite,
+                                  String sessionId) {
         return new AuthResponse(
                 token, "Bearer", email, rol, expiresAt,
                 subscriptionStatus != null ? subscriptionStatus.name() : null,
                 trialEndDate,
-                canWrite
+                canWrite,
+                sessionId
         );
     }
 }

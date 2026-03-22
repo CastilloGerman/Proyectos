@@ -1,4 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { map } from 'rxjs/operators';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
@@ -47,7 +50,14 @@ import { environment } from '../environments/environment';
   template: `
     @if (auth.isAuthenticated()) {
       <mat-sidenav-container class="saas-layout">
-        <mat-sidenav #drawer mode="side" [opened]="!sidebarCollapsed" class="saas-sidebar">
+        <mat-sidenav
+          #drawer
+          class="saas-sidebar"
+          [mode]="isMobileLayout() ? 'over' : 'side'"
+          [opened]="isMobileLayout() ? isSidebarOpen : !sidebarCollapsed"
+          [fixedInViewport]="isMobileLayout()"
+          (openedChange)="onSidenavOpenedChange($event)"
+        >
           <div class="sidebar-header">
             <span class="brand-logo">
               <img src="assets/noemi-logo.png" alt="Noemí" class="brand-logo-img" />
@@ -84,7 +94,13 @@ import { environment } from '../environments/environment';
         </mat-sidenav>
         <mat-sidenav-content class="saas-main">
           <header class="saas-topbar">
-            <button mat-icon-button (click)="sidebarCollapsed = !sidebarCollapsed" matTooltip="{{ sidebarCollapsed ? 'Abrir menú' : 'Cerrar menú' }}">
+            <button
+              mat-icon-button
+              type="button"
+              (click)="toggleSidenavMenu()"
+              [matTooltip]="sidenavMenuTooltip()"
+              aria-label="Abrir o cerrar menú lateral"
+            >
               <mat-icon>menu</mat-icon>
             </button>
             <app-search-bar></app-search-bar>
@@ -189,12 +205,15 @@ import { environment } from '../environments/environment';
   styles: [`
     .saas-layout {
       height: 100vh;
+      height: 100dvh;
+      max-width: 100%;
       background: var(--app-bg-page, #f8fafc);
       overflow-x: hidden;
     }
 
     .saas-sidebar {
-      width: 260px;
+      width: min(260px, 85vw);
+      max-width: 100%;
       background: var(--app-bg-card) !important;
       border-right: 1px solid var(--app-border, rgba(0,0,0,0.06));
       box-shadow: var(--app-shadow-md, 0 4px 12px rgba(0,0,0,0.06));
@@ -252,6 +271,10 @@ import { environment } from '../environments/environment';
     .saas-main {
       display: flex;
       flex-direction: column;
+      min-width: 0;
+      max-width: 100%;
+      overflow-x: hidden;
+      box-sizing: border-box;
       background: var(--app-bg-page, #f8fafc);
     }
 
@@ -264,19 +287,58 @@ import { environment } from '../environments/environment';
       gap: var(--app-space-sm, 8px);
       padding: 0 var(--app-space-md, 16px);
       min-height: 56px;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
       background: var(--app-bg-card);
       border-bottom: 1px solid var(--app-border, rgba(0,0,0,0.06));
       box-shadow: var(--app-shadow-sm, 0 1px 2px rgba(0,0,0,0.04));
     }
 
+    .saas-topbar app-search-bar {
+      flex: 1 1 auto;
+      min-width: 0;
+      display: block;
+    }
+
     .saas-topbar .spacer {
       flex: 1 1 auto;
+      min-width: 0;
     }
 
     .saas-content {
       flex: 1;
+      min-width: 0;
+      max-width: 100%;
       padding: var(--app-space-lg, 24px);
-      overflow: auto;
+      overflow-x: hidden;
+      overflow-y: auto;
+      box-sizing: border-box;
+    }
+
+    @media (max-width: 768px) {
+      .saas-topbar {
+        padding: 0 var(--app-space-sm, 8px);
+        gap: 4px;
+      }
+
+      .saas-content {
+        padding: var(--app-space-md, 16px) var(--app-space-sm, 8px);
+      }
+
+      .banner-readonly,
+      .banner-trial {
+        margin-left: var(--app-space-sm, 8px);
+        margin-right: var(--app-space-sm, 8px);
+        max-width: calc(100% - 16px);
+        box-sizing: border-box;
+        flex-wrap: wrap;
+      }
+
+      .saas-topbar .mat-mdc-outlined-button {
+        padding: 0 8px;
+        font-size: 12px;
+      }
     }
 
     .banner-readonly {
@@ -433,7 +495,16 @@ import { environment } from '../environments/environment';
   `],
 })
 export class AppComponent implements OnInit {
+  /** Escritorio: false = barra visible (comportamiento actual). */
   sidebarCollapsed = false;
+  /** Móvil (overlay): true = drawer abierto. */
+  isSidebarOpen = false;
+
+  private readonly breakpointObserver = inject(BreakpointObserver);
+  readonly isMobileLayout = toSignal(
+    this.breakpointObserver.observe('(max-width: 768px)').pipe(map((r) => r.matches)),
+    { initialValue: false },
+  );
 
   readonly notificaciones = inject(NotificacionesService);
   private readonly router = inject(Router);
@@ -509,7 +580,33 @@ export class AppComponent implements OnInit {
       if (this.auth.isAuthenticated()) {
         this.notificaciones.refreshUnreadCount();
       }
+      if (this.isMobileLayout()) {
+        this.isSidebarOpen = false;
+      }
     });
+  }
+
+  toggleSidenavMenu(): void {
+    if (this.isMobileLayout()) {
+      this.isSidebarOpen = !this.isSidebarOpen;
+    } else {
+      this.sidebarCollapsed = !this.sidebarCollapsed;
+    }
+  }
+
+  onSidenavOpenedChange(opened: boolean): void {
+    if (this.isMobileLayout()) {
+      this.isSidebarOpen = opened;
+    } else {
+      this.sidebarCollapsed = !opened;
+    }
+  }
+
+  sidenavMenuTooltip(): string {
+    if (this.isMobileLayout()) {
+      return this.isSidebarOpen ? 'Cerrar menú' : 'Abrir menú';
+    }
+    return this.sidebarCollapsed ? 'Abrir menú' : 'Cerrar menú';
   }
 
   daysLeftInTrial(): number {

@@ -85,6 +85,12 @@ app:
       enabled: true
       capacity: 30
       refill-minutes: 15
+  # Sesiones JWT persistidas (dispositivos): purga automática de filas muy antiguas.
+  sessions:
+    cleanup:
+      enabled: ${SESSIONS_CLEANUP_ENABLED:true}
+      # Borra registros cuyo expiresAt es anterior a (ahora - N días). Mínimo efectivo: 1.
+      retention-days: ${SESSIONS_CLEANUP_RETENTION_DAYS:30}
 
 logging:
   level:
@@ -103,6 +109,9 @@ spring:
 app:
   subscription:
     skip-check: true
+  # Pruebas desde el móvil vía http://<IP-LAN>:4200 (Angular ya escucha en 0.0.0.0)
+  cors:
+    allowed-origin-patterns: "http://*:4200,http://127.0.0.1:4200"
   jwt:
     secret: ${JWT_SECRET:local-dev-only-minimum-thirty-two-characters-long-for-hs256}
   security:

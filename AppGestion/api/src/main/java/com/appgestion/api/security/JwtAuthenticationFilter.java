@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.appgestion.api.service.SessionService;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.SignatureException;
@@ -30,10 +31,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsServiceImpl userDetailsService;
+    private final SessionService sessionService;
 
-    public JwtAuthenticationFilter(JwtService jwtService, UserDetailsServiceImpl userDetailsService) {
+    public JwtAuthenticationFilter(JwtService jwtService,
+                                   UserDetailsServiceImpl userDetailsService,
+                                   SessionService sessionService) {
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
+        this.sessionService = sessionService;
     }
 
     @Override
@@ -53,16 +58,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (StringUtils.hasText(token) && jwtService.validateToken(token)) {
                 String email = jwtService.extractEmail(token);
-                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                boolean sessionOk = jwtService.extractSessionId(token)
+                        .map(sid -> sessionService.validateAndTouchSession(sid, email).isPresent())
+                        .orElse(true);
+                if (sessionOk) {
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                } else {
+                    log.warn("JWT: sesión revocada o inválida (sid) en {} {}", request.getMethod(), request.getRequestURI());
+                }
             }
         } catch (ExpiredJwtException e) {
             log.warn("JWT: token EXPIRADO en {} {} - exp: {}", request.getMethod(), request.getRequestURI(), e.getClaims().getExpiration());

@@ -26,5 +26,9 @@ public record UsuarioResponse(
         boolean canWrite,
         boolean totpEnabled,
         /** True si hay un enrolamiento TOTP pendiente (código de confirmación no enviado aún). */
-        boolean totpEnrollmentPending
+        boolean totpEnrollmentPending,
+        LocalDate fechaNacimiento,
+        String genero,
+        String nacionalidadIso,
+        String paisResidenciaIso
 ) {}

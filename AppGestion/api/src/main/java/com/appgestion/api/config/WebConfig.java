@@ -22,18 +22,33 @@ public class WebConfig {
     @Value("${app.cors.allowed-origins:http://localhost:4200,http://127.0.0.1:4200}")
     private String allowedOriginsRaw;
 
+    /**
+     * Patrones CORS (p. ej. {@code http://*:4200} en perfil local) para probar desde la LAN sin listar cada IP.
+     * Si está definido y no vacío, sustituye a {@code allowed-origins} (no deben usarse ambos a la vez).
+     */
+    @Value("${app.cors.allowed-origin-patterns:}")
+    private String allowedOriginPatternsRaw;
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        List<String> origins = Arrays.stream(allowedOriginsRaw.split(","))
+        List<String> patterns = Arrays.stream(allowedOriginPatternsRaw.split(","))
                 .map(String::trim)
                 .filter(StringUtils::hasText)
                 .collect(Collectors.toList());
-        if (origins.isEmpty()) {
-            origins = List.of("http://localhost:4200");
-        }
 
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(origins);
+        if (!patterns.isEmpty()) {
+            config.setAllowedOriginPatterns(patterns);
+        } else {
+            List<String> origins = Arrays.stream(allowedOriginsRaw.split(","))
+                    .map(String::trim)
+                    .filter(StringUtils::hasText)
+                    .collect(Collectors.toList());
+            if (origins.isEmpty()) {
+                origins = List.of("http://localhost:4200");
+            }
+            config.setAllowedOrigins(origins);
+        }
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

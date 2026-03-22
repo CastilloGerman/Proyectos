@@ -92,6 +92,22 @@ public class Usuario {
     @Column(name = "currency_code", nullable = false, length = 3)
     private String currencyCode = "EUR";
 
+    /** Fecha de nacimiento (perfil); opcional. */
+    @Column(name = "fecha_nacimiento")
+    private LocalDate fechaNacimiento;
+
+    /** Género autodeclarado: MALE, FEMALE, NON_BINARY, OTHER, UNSPECIFIED; opcional. */
+    @Column(length = 32)
+    private String genero;
+
+    /** Nacionalidad ISO 3166-1 alpha-2; opcional. */
+    @Column(name = "nacionalidad_iso", length = 2)
+    private String nacionalidadIso;
+
+    /** País de residencia ISO 3166-1 alpha-2; opcional. */
+    @Column(name = "pais_residencia_iso", length = 2)
+    private String paisResidenciaIso;
+
     /** Secreto TOTP activo (Base32). Cifrado en reposo sería mejora futura. */
     @Column(name = "totp_secret", length = 64)
     private String totpSecret;
@@ -183,6 +199,18 @@ public class Usuario {
 
     public String getCurrencyCode() { return currencyCode; }
     public void setCurrencyCode(String currencyCode) { this.currencyCode = currencyCode; }
+
+    public LocalDate getFechaNacimiento() { return fechaNacimiento; }
+    public void setFechaNacimiento(LocalDate fechaNacimiento) { this.fechaNacimiento = fechaNacimiento; }
+
+    public String getGenero() { return genero; }
+    public void setGenero(String genero) { this.genero = genero; }
+
+    public String getNacionalidadIso() { return nacionalidadIso; }
+    public void setNacionalidadIso(String nacionalidadIso) { this.nacionalidadIso = nacionalidadIso; }
+
+    public String getPaisResidenciaIso() { return paisResidenciaIso; }
+    public void setPaisResidenciaIso(String paisResidenciaIso) { this.paisResidenciaIso = paisResidenciaIso; }
 
     public String getTotpSecret() { return totpSecret; }
     public void setTotpSecret(String totpSecret) { this.totpSecret = totpSecret; }

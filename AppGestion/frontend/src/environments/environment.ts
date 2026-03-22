@@ -1,8 +1,21 @@
+function devAppPublicUrl(): string {
+  if (typeof window === 'undefined' || !window.location?.origin) {
+    return 'http://localhost:4200';
+  }
+  return window.location.origin;
+}
+
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:8081',
-  /** URL pública del front (home/login). Si vacío, el diálogo de referido usa `window.location.origin`. */
-  appPublicUrl: 'http://localhost:4200',
+  /**
+   * Base de la API (sin barra final). Con `ng serve` y `proxy.conf.js`, `/api` se reenvía al backend
+   * aunque entres desde el móvil por la IP de la LAN (mismo origen que :4200).
+   */
+  apiUrl: '/api',
+  /** URL pública del front (home/login). En dev se adapta al origen real (p. ej. IP de la LAN en el móvil). */
+  get appPublicUrl(): string {
+    return devAppPublicUrl();
+  },
   /** Google OAuth 2.0 Client ID (tipo "Aplicación web") para "Iniciar con Google". Opcional. */
   googleClientId: '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.apps.googleusercontent.com' as string,
   /** Centro de ayuda (docs/FAQ). Si está vacío, el menú de usuario abre la vista interna de ayuda. */

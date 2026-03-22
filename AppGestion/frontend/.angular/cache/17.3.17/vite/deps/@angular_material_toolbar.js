@@ -1,7 +1,9 @@
 import {
-  MatCommonModule,
+  MatCommonModule
+} from "./chunk-2NKMDX3O.js";
+import {
   Platform
-} from "./chunk-LXWT5KRU.js";
+} from "./chunk-YWTA7WNB.js";
 import {
   DOCUMENT
 } from "./chunk-4G4CT5YG.js";

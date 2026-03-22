@@ -7,5 +7,7 @@ public record GoogleLoginRequest(
         String idToken,
 
         /** Opcional: TOTP si la cuenta tiene 2FA activo. */
-        String totpCode
+        String totpCode,
+
+        DeviceClientInfoRequest clientInfo
 ) {}

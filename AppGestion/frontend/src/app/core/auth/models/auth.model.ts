@@ -1,8 +1,16 @@
+/** Opcional: se envía en login/registro/Google/invitación para la tabla de sesiones. */
+export interface DeviceClientInfo {
+  deviceLabel: string;
+  platform?: string;
+  vendor?: string;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;
   /** Código TOTP de 6 dígitos cuando el backend responde TOTP_REQUERIDO. */
   totpCode?: string;
+  clientInfo?: DeviceClientInfo;
 }
 
 export interface RegisterRequest {
@@ -10,6 +18,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   rol?: string;
+  clientInfo?: DeviceClientInfo;
 }
 
 export interface InviteVerifyResponse {
@@ -42,6 +51,22 @@ export interface AuthResponse {
   canWrite?: boolean;
   /** Rellenado desde GET /auth/me. */
   totpEnabled?: boolean;
+  /** Id de fila `usuario_sesion` (JWT claim sid). */
+  sessionId?: string;
+}
+
+export interface SesionDispositivoDto {
+  id: string;
+  createdAt: string;
+  lastActivityAt: string;
+  expiresAt: string;
+  ipAddress?: string | null;
+  browser?: string | null;
+  osName?: string | null;
+  deviceType?: string | null;
+  clientLabel?: string | null;
+  userAgentPreview?: string | null;
+  currentSession: boolean;
 }
 
 export interface TotpSetupStartResponse {

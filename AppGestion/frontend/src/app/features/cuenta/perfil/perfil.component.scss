@@ -58,6 +58,24 @@
   display: block;
 }
 
+.perfil-field--date {
+  max-width: 320px;
+}
+
+:host ::ng-deep .perfil-datepicker-panel {
+  .mat-datepicker-content {
+    font-size: 13px;
+  }
+
+  .mat-calendar {
+    width: 252px;
+  }
+
+  .mat-calendar-body-cell-content {
+    font-size: 13px;
+  }
+}
+
 .perfil-form__actions {
   margin-top: 16px;
   display: flex;

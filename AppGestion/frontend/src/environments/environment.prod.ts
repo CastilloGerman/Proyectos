@@ -1,5 +1,9 @@
 export const environment = {
   production: true,
+  /**
+   * - `/api` si nginx (u otro proxy) reenvía `/api/*` al backend (recomendado).
+   * - `''` (vacío) si el front y la API comparten origen y las rutas son `/auth`, `/facturas`, etc.
+   */
   apiUrl: '/api',
   /** Ej.: 'https://tu-dominio.com'. Vacío = se usa el origen actual (recomendado si sirves el SPA en ese dominio). */
   appPublicUrl: '' as string,

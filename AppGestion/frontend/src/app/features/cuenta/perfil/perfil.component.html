@@ -70,6 +70,61 @@
               }
             </mat-form-field>
 
+            <mat-form-field appearance="outline" class="full perfil-field--date" subscriptSizing="dynamic">
+              <mat-label>Fecha de nacimiento</mat-label>
+              <input
+                matInput
+                formControlName="fechaNacimiento"
+                [matDatepicker]="pickerFn"
+                [max]="hoy"
+                autocomplete="bday"
+                placeholder="Elige fecha"
+              />
+              <mat-datepicker-toggle matIconSuffix [for]="pickerFn" />
+              <mat-datepicker #pickerFn panelClass="perfil-datepicker-panel" />
+              <mat-hint>Opcional. Calendario compacto al pulsar el icono</mat-hint>
+              @if (form.controls.fechaNacimiento.hasError('futureDate')) {
+                <mat-error>La fecha no puede ser futura</mat-error>
+              }
+              @if (form.controls.fechaNacimiento.hasError('tooOld')) {
+                <mat-error>Fecha no válida</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
+              <mat-label>Género</mat-label>
+              <mat-select formControlName="genero">
+                <mat-option value="">Prefiero no indicar</mat-option>
+                <mat-option value="MALE">Hombre</mat-option>
+                <mat-option value="FEMALE">Mujer</mat-option>
+                <mat-option value="NON_BINARY">No binario</mat-option>
+                <mat-option value="OTHER">Otro</mat-option>
+              </mat-select>
+              <mat-hint>Opcional</mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
+              <mat-label>Nacionalidad</mat-label>
+              <mat-select formControlName="nacionalidadIso">
+                <mat-option value="">—</mat-option>
+                @for (p of paisOptions; track p.code) {
+                  <mat-option [value]="p.code">{{ p.name }}</mat-option>
+                }
+              </mat-select>
+              <mat-hint>Opcional. Lista en español (código ISO)</mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
+              <mat-label>País de residencia</mat-label>
+              <mat-select formControlName="paisResidenciaIso">
+                <mat-option value="">—</mat-option>
+                @for (p of paisOptions; track p.code) {
+                  <mat-option [value]="p.code">{{ p.name }}</mat-option>
+                }
+              </mat-select>
+              <mat-hint>Opcional</mat-hint>
+            </mat-form-field>
+
             <div class="perfil-form__actions">
               <button
                 mat-flat-button

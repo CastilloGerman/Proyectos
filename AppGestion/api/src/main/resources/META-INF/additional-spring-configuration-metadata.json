@@ -57,6 +57,11 @@
       "description": "Orígenes CORS separados por coma (variable de entorno CORS_ALLOWED_ORIGINS)."
     },
     {
+      "name": "app.cors.allowed-origin-patterns",
+      "type": "java.lang.String",
+      "description": "Patrones CORS (coma). Si no vacío, reemplaza allowed-origins. Ej. perfil local: http://*:4200 para LAN."
+    },
+    {
       "name": "app.security.auth-rate-limit.enabled",
       "type": "java.lang.Boolean",
       "description": "Activa límite de peticiones por IP en rutas POST /auth/* sensibles.",
@@ -89,6 +94,18 @@
       "name": "app.totp.issuer",
       "type": "java.lang.String",
       "description": "Nombre del emisor en apps TOTP (QR 2FA)."
+    },
+    {
+      "name": "app.sessions.cleanup.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Si true, ejecuta job diario que borra filas de usuario_sesion expiradas hace más de retention-days.",
+      "defaultValue": true
+    },
+    {
+      "name": "app.sessions.cleanup.retention-days",
+      "type": "java.lang.Integer",
+      "description": "Días tras la expiración del token antes de borrar la fila (variable SESSIONS_CLEANUP_RETENTION_DAYS).",
+      "defaultValue": 30
     }
   ]
 }

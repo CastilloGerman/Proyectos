@@ -8,7 +8,7 @@ import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
@@ -16,9 +16,10 @@ import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Optional;
 
 @Service
-public class JwtService {
+public class JwtService implements InitializingBean {
 
     private static final Logger log = LoggerFactory.getLogger(JwtService.class);
 
@@ -43,8 +44,8 @@ public class JwtService {
         this.environment = environment;
     }
 
-    @PostConstruct
-    void validateSecret() {
+    @Override
+    public void afterPropertiesSet() {
         boolean devProfile = environment.matchesProfiles("local", "test");
         if (secret == null || secret.isBlank()) {
             if (devProfile) {
@@ -72,18 +73,24 @@ public class JwtService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateToken(String email, String rol) {
+    public long getExpirationMs() {
+        return expirationMs;
+    }
+
+    public String generateToken(String email, String rol, String sessionId) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expirationMs);
 
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(email)
                 .claim("rol", rol != null ? rol : "USER")
                 .issuer(issuer)
                 .issuedAt(now)
-                .expiration(expiry)
-                .signWith(getSigningKey())
-                .compact();
+                .expiration(expiry);
+        if (sessionId != null && !sessionId.isBlank()) {
+            builder.claim("sid", sessionId);
+        }
+        return builder.signWith(getSigningKey()).compact();
     }
 
     public String extractEmail(String token) {
@@ -92,6 +99,19 @@ public class JwtService {
 
     public String extractRol(String token) {
         return getClaims(token).get("rol", String.class);
+    }
+
+    /** Identificador de sesión persistida ({@code usuario_sesion.id}); vacío en tokens antiguos. */
+    public Optional<String> extractSessionId(String token) {
+        try {
+            String sid = getClaims(token).get("sid", String.class);
+            if (sid == null || sid.isBlank()) {
+                return Optional.empty();
+            }
+            return Optional.of(sid.trim());
+        } catch (ExpiredJwtException | MalformedJwtException | SignatureException | IllegalArgumentException e) {
+            return Optional.empty();
+        }
     }
 
     public boolean validateToken(String token) {
