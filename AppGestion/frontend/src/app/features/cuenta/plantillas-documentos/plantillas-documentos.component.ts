@@ -1,21 +1,41 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { debounceTime, firstValueFrom, startWith } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatTabsModule } from '@angular/material/tabs';
-import { MatDividerModule } from '@angular/material/divider';
+import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { ConfigService } from '../../../core/services/config.service';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ConfigService, PlantillasPdfPreviewPayload } from '../../../core/services/config.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { Empresa } from '../../../core/models/empresa.model';
+import {
+  PLACEHOLDER_CATALOG,
+  PREVIEW_MOCK_BY_SCENARIO,
+  PREVIEW_SCENARIO_LABELS,
+  SAMPLE_LONG_FOOTER_TEXT,
+  DocumentPreviewMock,
+  PlaceholderDef,
+  PlantillaPdfPreviewEscenario,
+} from './document-template.models';
 
 const MAX_PIE = 1000;
+
+const PH_PRESU =
+  'Ejemplo: Presupuesto válido 30 días. El IVA se detalla en el cuerpo del documento.';
+const PH_FACT =
+  'Ejemplo: Gracias por su confianza. Para cualquier consulta puede llamarnos o escribirnos.';
 
 @Component({
   selector: 'app-plantillas-documentos',
@@ -26,39 +46,191 @@ const MAX_PIE = 1000;
     RouterLink,
     MatCardModule,
     MatButtonModule,
+    MatButtonToggleModule,
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
-    MatTabsModule,
-    MatDividerModule,
+    MatSelectModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
+    MatTooltipModule,
   ],
   templateUrl: './plantillas-documentos.component.html',
   styleUrl: './plantillas-documentos.component.scss',
 })
-export class PlantillasDocumentosComponent implements OnInit {
+export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
+  readonly placeholderPresupuesto = PH_PRESU;
+  readonly placeholderFactura = PH_FACT;
+
+  readonly escenarioOptions: { value: PlantillaPdfPreviewEscenario; label: string }[] = (
+    Object.keys(PREVIEW_SCENARIO_LABELS) as PlantillaPdfPreviewEscenario[]
+  ).map((value) => ({ value, label: PREVIEW_SCENARIO_LABELS[value] }));
+
   private readonly fb = inject(FormBuilder);
   private readonly config = inject(ConfigService);
   private readonly auth = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly sanitizer = inject(DomSanitizer);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly loadError = signal(false);
   readonly maxPie = MAX_PIE;
 
+  /** 0 = presupuesto, 1 = factura */
+  readonly previewTabIndex = signal(0);
+
+  /** Vista rápida (HTML) vs PDF generado por la aplicación. */
+  readonly previewMode = signal<'html' | 'pdf'>('html');
+
+  /** Perfil de líneas de ejemplo (HTML + mismo PDF al pedir vista exacta). */
+  readonly dataProfile = signal<PlantillaPdfPreviewEscenario>('DEFAULT');
+
+  readonly activeMock = computed(() => PREVIEW_MOCK_BY_SCENARIO[this.dataProfile()]);
+
+  readonly pdfPreviewLoading = signal(false);
+  readonly pdfPreviewError = signal<string | null>(null);
+
+  pdfSafeUrl: SafeResourceUrl | null = null;
+  private pdfObjectUrl: string | null = null;
+  private pdfRequestSeq = 0;
+
   readonly form = this.fb.nonNullable.group({
     notasPiePresupuesto: ['', [Validators.maxLength(MAX_PIE)]],
     notasPieFactura: ['', [Validators.maxLength(MAX_PIE)]],
   });
 
+  private readonly formValue = toSignal(this.form.valueChanges.pipe(startWith(this.form.getRawValue())), {
+    initialValue: { notasPiePresupuesto: '', notasPieFactura: '' },
+  });
+
+  readonly placeholders = PLACEHOLDER_CATALOG;
+
+  readonly textoPieVistaPrevia = computed(() => {
+    const idx = this.previewTabIndex();
+    const v = this.formValue();
+    const mock = this.activeMock();
+    const raw = idx === 0 ? v.notasPiePresupuesto : v.notasPieFactura;
+    return this.sustituirPlaceholders(raw ?? '', idx === 0 ? 'PRESUPUESTO' : 'FACTURA', mock);
+  });
+
   ngOnInit(): void {
+    this.form.valueChanges
+      .pipe(debounceTime(320), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (!this.loading() && this.previewMode() === 'pdf') {
+          void this.refreshPdfPreview();
+        }
+      });
     this.cargar();
+  }
+
+  ngOnDestroy(): void {
+    this.revokePdfUrl();
   }
 
   get puedeEditar(): boolean {
     return this.auth.canMutate();
+  }
+
+  setPreviewMode(mode: 'html' | 'pdf'): void {
+    this.previewMode.set(mode);
+    if (mode === 'html') {
+      this.revokePdfUrl();
+      this.pdfPreviewError.set(null);
+      this.pdfPreviewLoading.set(false);
+    } else {
+      void this.refreshPdfPreview();
+    }
+  }
+
+  onPreviewModeToggle(value: string | null | undefined): void {
+    if (value === 'html' || value === 'pdf') {
+      this.setPreviewMode(value);
+    }
+  }
+
+  retryPdfPreview(): void {
+    void this.refreshPdfPreview();
+  }
+
+  /** Valor del grupo de botones «Presupuesto / Factura» (Material suele usar string). */
+  previewDocToggleValue(): string {
+    return String(this.previewTabIndex());
+  }
+
+  onPickPreviewDocument(value: string | null | undefined): void {
+    const n = value === '1' ? 1 : 0;
+    this.previewTabIndex.set(n);
+    const id = n === 0 ? 'plant-texto-presupuesto' : 'plant-texto-factura';
+    queueMicrotask(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+    if (this.previewMode() === 'pdf') {
+      void this.refreshPdfPreview();
+    }
+  }
+
+  onEditBlockFocus(which: 0 | 1): void {
+    this.previewTabIndex.set(which);
+    if (this.previewMode() === 'pdf') {
+      void this.refreshPdfPreview();
+    }
+  }
+
+  onEscenarioChange(value: PlantillaPdfPreviewEscenario): void {
+    this.dataProfile.set(value);
+    if (this.previewMode() === 'pdf') {
+      void this.refreshPdfPreview();
+    }
+  }
+
+  tooltipPlaceholder(p: PlaceholderDef): string {
+    return `Código al pegar: ${p.token} · Ejemplo: ${p.ejemplo}`;
+  }
+
+  copyPlaceholder(p: PlaceholderDef): void {
+    void navigator.clipboard.writeText(p.token).then(
+      () => {
+        this.snackBar.open(`Copiado «${p.token}». Pégalo en el cuadro de arriba (Ctrl+V).`, 'Cerrar', {
+          duration: 4000,
+        });
+      },
+      () => {
+        this.snackBar.open('No se pudo copiar automáticamente. Escríbelo a mano si hace falta.', 'Cerrar', {
+          duration: 3500,
+        });
+      },
+    );
+  }
+
+  pegarPieLargoEjemplo(): void {
+    const key = this.previewTabIndex() === 0 ? 'notasPiePresupuesto' : 'notasPieFactura';
+    this.form.patchValue({ [key]: SAMPLE_LONG_FOOTER_TEXT });
+    this.form.markAsDirty();
+  }
+
+  fmtEuro(value: number): string {
+    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(value);
+  }
+
+  private sustituirPlaceholders(raw: string, tipo: 'PRESUPUESTO' | 'FACTURA', mock: DocumentPreviewMock): string {
+    const docNum = tipo === 'PRESUPUESTO' ? 'PRES-2025-0099' : mock.numeroDocumento;
+    const fecha = new Date(mock.fechaEmision + 'T12:00:00').toLocaleDateString('es-ES');
+    const mapa: Record<string, string> = {
+      '{{client_name}}': mock.clienteNombre,
+      '{{client_tax_id}}': mock.clienteNif,
+      '{{client_address}}': mock.clienteDireccion,
+      '{{doc_number}}': docNum,
+      '{{doc_date}}': fecha,
+      '{{subtotal}}': this.fmtEuro(mock.subtotal),
+      '{{tax_total}}': this.fmtEuro(mock.iva),
+      '{{total}}': this.fmtEuro(mock.total),
+    };
+    let out = raw ?? '';
+    for (const [k, v] of Object.entries(mapa)) {
+      out = out.split(k).join(v);
+    }
+    return out;
   }
 
   cargar(): void {
@@ -72,11 +244,14 @@ export class PlantillasDocumentosComponent implements OnInit {
         });
         this.form.markAsPristine();
         this.loading.set(false);
+        if (this.previewMode() === 'pdf') {
+          void this.refreshPdfPreview();
+        }
       },
       error: () => {
         this.loadError.set(true);
         this.loading.set(false);
-        this.snackBar.open('No se pudieron cargar las plantillas', 'Cerrar', { duration: 4000 });
+        this.snackBar.open('No se pudieron cargar los textos.', 'Cerrar', { duration: 4000 });
       },
     });
   }
@@ -96,10 +271,13 @@ export class PlantillasDocumentosComponent implements OnInit {
       .subscribe({
         next: () => {
           this.form.markAsPristine();
-          this.snackBar.open('Plantillas guardadas. Los nuevos PDF usarán estos textos.', 'Cerrar', {
+          this.snackBar.open('Guardado. Los próximos PDF usarán estos textos.', 'Cerrar', {
             duration: 4500,
           });
           this.saving.set(false);
+          if (this.previewMode() === 'pdf') {
+            void this.refreshPdfPreview();
+          }
         },
         error: (err) => {
           this.saving.set(false);
@@ -108,5 +286,63 @@ export class PlantillasDocumentosComponent implements OnInit {
           this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
         },
       });
+  }
+
+  private revokePdfUrl(): void {
+    if (this.pdfObjectUrl) {
+      URL.revokeObjectURL(this.pdfObjectUrl);
+      this.pdfObjectUrl = null;
+    }
+    this.pdfSafeUrl = null;
+  }
+
+  private async refreshPdfPreview(): Promise<void> {
+    if (this.previewMode() !== 'pdf' || this.loading()) {
+      return;
+    }
+    const seq = ++this.pdfRequestSeq;
+    this.pdfPreviewLoading.set(true);
+    this.pdfPreviewError.set(null);
+    const v = this.form.getRawValue();
+    const idx = this.previewTabIndex();
+    const body: PlantillasPdfPreviewPayload = {
+      tipo: idx === 0 ? 'PRESUPUESTO' : 'FACTURA',
+      notasPie: idx === 0 ? v.notasPiePresupuesto : v.notasPieFactura,
+      escenario: this.dataProfile(),
+    };
+    try {
+      const buffer = await firstValueFrom(this.config.postPlantillasPdfPreview(body));
+      if (seq !== this.pdfRequestSeq) {
+        return;
+      }
+      this.revokePdfUrl();
+      const blob = new Blob([buffer], { type: 'application/pdf' });
+      this.pdfObjectUrl = URL.createObjectURL(blob);
+      this.pdfSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.pdfObjectUrl);
+    } catch (e) {
+      if (seq !== this.pdfRequestSeq) {
+        return;
+      }
+      this.revokePdfUrl();
+      let msg = 'No se pudo mostrar el PDF de ejemplo.';
+      if (e instanceof HttpErrorResponse && e.error instanceof ArrayBuffer) {
+        try {
+          const t = new TextDecoder().decode(e.error);
+          const j = JSON.parse(t) as { message?: string; error?: string };
+          if (typeof j.message === 'string') {
+            msg = j.message;
+          } else if (typeof j.error === 'string') {
+            msg = j.error;
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+      this.pdfPreviewError.set(msg);
+    } finally {
+      if (seq === this.pdfRequestSeq) {
+        this.pdfPreviewLoading.set(false);
+      }
+    }
   }
 }

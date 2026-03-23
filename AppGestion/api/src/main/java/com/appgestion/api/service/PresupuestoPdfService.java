@@ -30,11 +30,20 @@ public class PresupuestoPdfService {
     private static final float[] TABLE_WIDTHS = {3f, 1.5f, 1.5f, 1.5f};
 
     public byte[] generarPdf(Presupuesto presupuesto, Long usuarioId) {
+        return generarPdfInterno(presupuesto, usuarioId, null);
+    }
+
+    /** Vista previa del editor: {@code notasPieOverride} no nulo sustituye las notas al pie de empresa. */
+    public byte[] generarVistaPrevia(Presupuesto presupuesto, Long usuarioId, String notasPieOverride) {
+        return generarPdfInterno(presupuesto, usuarioId, notasPieOverride);
+    }
+
+    private byte[] generarPdfInterno(Presupuesto presupuesto, Long usuarioId, String notasPiePresupuestoOverride) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              Document document = new Document(PageSize.A4, 40, 40, 50, 50)) {
             PdfWriter.getInstance(document, baos);
             document.open();
-            agregarContenido(document, presupuesto, usuarioId);
+            agregarContenido(document, presupuesto, usuarioId, notasPiePresupuestoOverride);
             document.close();
             return baos.toByteArray();
         } catch (DocumentException | IOException e) {
@@ -42,7 +51,8 @@ public class PresupuestoPdfService {
         }
     }
 
-    private void agregarContenido(Document document, Presupuesto presupuesto, Long usuarioId) throws DocumentException, IOException {
+    private void agregarContenido(Document document, Presupuesto presupuesto, Long usuarioId, String notasPiePresupuestoOverride)
+            throws DocumentException, IOException {
         Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 22, Color.DARK_GRAY);
         Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.WHITE);
         Font cellFont = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.DARK_GRAY);
@@ -110,16 +120,25 @@ public class PresupuestoPdfService {
             }
         }
 
-        if (empresa != null && empresa.getNotasPiePresupuesto() != null && !empresa.getNotasPiePresupuesto().isBlank()) {
-            Paragraph notas = new Paragraph(empresa.getNotasPiePresupuesto(), smallFont);
+        String piePresu;
+        if (notasPiePresupuestoOverride != null) {
+            piePresu = notasPiePresupuestoOverride.isBlank() ? null : notasPiePresupuestoOverride;
+        } else if (empresa != null && empresa.getNotasPiePresupuesto() != null && !empresa.getNotasPiePresupuesto().isBlank()) {
+            piePresu = empresa.getNotasPiePresupuesto();
+        } else {
+            piePresu = null;
+        }
+        if (piePresu != null) {
+            Paragraph notas = new Paragraph(piePresu, smallFont);
             notas.setSpacingBefore(20);
             document.add(notas);
         }
+        double total = Optional.ofNullable(presupuesto.getTotal()).orElse(0.0);
         String qrRef = "Presupuesto #" + presupuesto.getId()
-                + " | Total " + String.format("%.2f €", presupuesto.getTotal() != null ? presupuesto.getTotal() : 0.0);
+                + " | Total " + String.format("%.2f €", total);
         try {
             PdfQrHelper.agregarQr(document, qrRef, smallFont);
-        } catch (Exception ignored) {
+        } catch (DocumentException | IOException ignored) {
             // sin QR si falla la generación
         }
         if (empresa != null && empresa.getFirmaImagen() != null && empresa.getFirmaImagen().length > 0) {

@@ -91,6 +91,13 @@ app:
       enabled: ${SESSIONS_CLEANUP_ENABLED:true}
       # Borra registros cuyo expiresAt es anterior a (ahora - N días). Mínimo efectivo: 1.
       retention-days: ${SESSIONS_CLEANUP_RETENTION_DAYS:30}
+  audit:
+    access:
+      # Último octeto IPv4 a 0 (o equivalente IPv6); recomendado en UE.
+      anonymize-ip: ${AUDIT_ANONYMIZE_IP:true}
+      retention-days: ${AUDIT_ACCESS_RETENTION_DAYS:365}
+      cleanup:
+        enabled: ${AUDIT_ACCESS_CLEANUP_ENABLED:true}
 
 logging:
   level:

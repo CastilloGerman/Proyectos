@@ -18,10 +18,22 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(cloned).pipe(
     catchError((err: HttpErrorResponse) => {
       if (err.status === 401) {
-        const msg = err.error?.error || 'Tu sesión ha expirado. Inicia sesión de nuevo.';
-        snackBar.open(msg, 'Cerrar', { duration: 4000 });
-        auth.logout();
-        router.navigate(['/login']);
+        const url = req.url;
+        const publicAuth =
+          url.includes('/auth/login') ||
+          url.includes('/auth/register') ||
+          url.includes('/auth/google') ||
+          url.includes('/auth/forgot-password') ||
+          url.includes('/auth/reset-password');
+        const isLogoutRequest = url.includes('/auth/logout');
+        const skipGlobalSessionHandler =
+          publicAuth || isLogoutRequest || auth.isLogoutInProgress();
+        if (!skipGlobalSessionHandler) {
+          const msg = err.error?.error || 'Tu sesión ha expirado. Inicia sesión de nuevo.';
+          snackBar.open(msg, 'Cerrar', { duration: 4000 });
+          auth.clearSessionLocal();
+          router.navigate(['/login']);
+        }
       }
       return throwError(() => err);
     })

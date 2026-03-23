@@ -46,7 +46,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
       <div class="header">
         <h1>Presupuestos</h1>
         <div class="header-actions">
-          <button mat-icon-button (click)="openConfig()" matTooltip="Configuración plantillas">
+          <button mat-icon-button (click)="openConfig()" matTooltip="Textos al final del PDF">
             <mat-icon>settings</mat-icon>
           </button>
           @if (auth.canMutate()) {

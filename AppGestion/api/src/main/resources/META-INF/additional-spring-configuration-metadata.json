@@ -106,6 +106,24 @@
       "type": "java.lang.Integer",
       "description": "Días tras la expiración del token antes de borrar la fila (variable SESSIONS_CLEANUP_RETENTION_DAYS).",
       "defaultValue": 30
+    },
+    {
+      "name": "app.audit.access.anonymize-ip",
+      "type": "java.lang.Boolean",
+      "description": "Anonimizar IP en registros de auditoría (último octeto IPv4 / prefijo IPv6).",
+      "defaultValue": true
+    },
+    {
+      "name": "app.audit.access.retention-days",
+      "type": "java.lang.Integer",
+      "description": "Retención de filas en audit_access_event (variable AUDIT_ACCESS_RETENTION_DAYS).",
+      "defaultValue": 365
+    },
+    {
+      "name": "app.audit.access.cleanup.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Job diario que purga eventos de auditoría más antiguos que retention-days.",
+      "defaultValue": true
     }
   ]
 }

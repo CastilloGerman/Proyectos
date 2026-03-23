@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Empresa } from '../models/empresa.model';
 import { environment } from '../../../environments/environment';
@@ -31,6 +31,21 @@ export class ConfigService {
   patchPlantillasPdf(body: PlantillasPdfPayload): Observable<Empresa> {
     return this.http.patch<Empresa>(`${this.apiUrl}/empresa/plantillas-pdf`, body);
   }
+
+  /**
+   * PDF de vista previa (OpenPDF, misma pipeline que producción).
+   * notasPie null = usar textos guardados en servidor.
+   */
+  postPlantillasPdfPreview(body: PlantillasPdfPreviewPayload): Observable<ArrayBuffer> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      Accept: 'application/pdf',
+    });
+    return this.http.post(`${this.apiUrl}/empresa/plantillas-pdf/preview`, body, {
+      headers,
+      responseType: 'arraybuffer',
+    });
+  }
 }
 
 export interface MetodosCobroPayload {
@@ -50,4 +65,15 @@ export interface DatosFiscalesPayload {
 export interface PlantillasPdfPayload {
   notasPiePresupuesto: string | null;
   notasPieFactura: string | null;
+}
+
+export type PlantillasPdfPreviewTipo = 'PRESUPUESTO' | 'FACTURA';
+
+export type PlantillasPdfPreviewEscenario = 'DEFAULT' | 'MIXED_IVA' | 'LONG_LINES' | 'LONG_FOOTER';
+
+export interface PlantillasPdfPreviewPayload {
+  tipo: PlantillasPdfPreviewTipo;
+  /** null = usar notas guardadas en empresa */
+  notasPie: string | null;
+  escenario: PlantillasPdfPreviewEscenario;
 }

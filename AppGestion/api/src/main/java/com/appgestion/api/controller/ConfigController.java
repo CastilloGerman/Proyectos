@@ -5,12 +5,19 @@ import com.appgestion.api.dto.request.EmpresaRequest;
 import com.appgestion.api.dto.request.DatosFiscalesPatchRequest;
 import com.appgestion.api.dto.request.MetodosCobroPatchRequest;
 import com.appgestion.api.dto.request.PlantillasPdfPatchRequest;
+import com.appgestion.api.dto.request.PlantillasPdfPreviewRequest;
 import com.appgestion.api.dto.response.EmpresaResponse;
 import com.appgestion.api.service.CurrentUserService;
 import com.appgestion.api.service.EmpresaService;
+import com.appgestion.api.service.PlantillasPdfPreviewService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/config")
@@ -18,10 +25,15 @@ public class ConfigController {
 
     private final EmpresaService empresaService;
     private final CurrentUserService currentUserService;
+    private final PlantillasPdfPreviewService plantillasPdfPreviewService;
 
-    public ConfigController(EmpresaService empresaService, CurrentUserService currentUserService) {
+    public ConfigController(
+            EmpresaService empresaService,
+            CurrentUserService currentUserService,
+            PlantillasPdfPreviewService plantillasPdfPreviewService) {
         this.empresaService = empresaService;
         this.currentUserService = currentUserService;
+        this.plantillasPdfPreviewService = plantillasPdfPreviewService;
     }
 
     @GetMapping("/empresa")
@@ -58,5 +70,23 @@ public class ConfigController {
     public EmpresaResponse actualizarPlantillasPdf(@Valid @RequestBody PlantillasPdfPatchRequest request) {
         Usuario usuario = currentUserService.getCurrentUsuario();
         return empresaService.actualizarPlantillasPdf(request, usuario);
+    }
+
+    /**
+     * PDF de muestra generado con OpenPDF (misma lógica que facturas/presupuestos reales).
+     * {@code notasPie} null = usar textos guardados en empresa.
+     */
+    /**
+     * Sin {@code consumes} estricto: evita 404 por negociación de Content-Type (p. ej. charset) en algunos clientes.
+     */
+    @PostMapping(value = "/empresa/plantillas-pdf/preview", produces = MediaType.APPLICATION_PDF_VALUE)
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public ResponseEntity<byte[]> plantillasPdfPreview(@Valid @RequestBody PlantillasPdfPreviewRequest request) {
+        Usuario usuario = currentUserService.getCurrentUsuario();
+        byte[] pdf = plantillasPdfPreviewService.generar(usuario.getId(), request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"vista-previa-plantilla.pdf\"")
+                .contentType(Objects.requireNonNull(MediaType.APPLICATION_PDF))
+                .body(pdf);
     }
 }

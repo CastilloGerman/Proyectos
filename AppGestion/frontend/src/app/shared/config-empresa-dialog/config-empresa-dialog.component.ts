@@ -28,7 +28,7 @@ export type ConfigContext = 'presupuesto' | 'factura' | 'mail';
     MatSnackBarModule,
   ],
   template: `
-    <h2 mat-dialog-title>Configuración de plantillas</h2>
+    <h2 mat-dialog-title>Textos en los PDF</h2>
     <mat-dialog-content>
       <form [formGroup]="form">
         <mat-tab-group [selectedIndex]="initialTab">

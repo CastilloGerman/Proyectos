@@ -142,7 +142,7 @@ export const USER_MENU_SECTIONS: UserMenuSection[] = [
     items: [
       {
         id: 'plantillas',
-        label: 'Plantillas de presupuestos/facturas',
+        label: 'Textos al final del PDF',
         icon: 'description',
         kind: 'route',
         route: '/cuenta/plantillas',

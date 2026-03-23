@@ -1,5 +1,6 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.domain.enums.AuditAccessEventType;
 import com.appgestion.api.domain.enums.SubscriptionStatus;
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.request.ChangePasswordRequest;
@@ -33,6 +34,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -63,6 +65,7 @@ public class AuthService {
     private final TotpService totpService;
     private final NotificacionService notificacionService;
     private final SessionService sessionService;
+    private final AuditAccessService auditAccessService;
 
     @Value("${app.frontend-url:http://localhost:4200}")
     private String frontendUrl;
@@ -76,7 +79,8 @@ public class AuthService {
                        OrganizationService organizationService,
                        TotpService totpService,
                        NotificacionService notificacionService,
-                       SessionService sessionService) {
+                       SessionService sessionService,
+                       AuditAccessService auditAccessService) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -87,6 +91,7 @@ public class AuthService {
         this.totpService = totpService;
         this.notificacionService = notificacionService;
         this.sessionService = sessionService;
+        this.auditAccessService = auditAccessService;
     }
 
     @Transactional
@@ -115,6 +120,9 @@ public class AuthService {
         String token = jwtService.generateToken(usuario.getEmail(), usuario.getRol(), sesion.getId());
         Instant expiresAt = Instant.now().plusMillis(jwtService.getExpirationMs());
 
+        auditAccessService.recordForUsuario(usuario, AuditAccessEventType.REGISTER_SUCCESS, true, null, false,
+                httpRequest, sesion.getId(), "/auth/register", Map.of("channel", "PASSWORD"));
+
         return AuthResponse.of(token, usuario.getEmail(), usuario.getRol(), expiresAt,
                 usuario.getSubscriptionStatus(), usuario.getTrialEndDate(), subscriptionService.canWrite(usuario),
                 sesion.getId());
@@ -122,26 +130,36 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
-        Usuario usuario = usuarioRepository.findByEmail(request.email())
-                .orElseThrow(() -> new IllegalArgumentException("Credenciales inválidas"));
+        Optional<Usuario> opt = usuarioRepository.findByEmail(request.email());
+        if (opt.isEmpty()) {
+            throw new IllegalArgumentException("Credenciales inválidas");
+        }
+        Usuario usuario = opt.get();
 
         if (!passwordEncoder.matches(request.password(), usuario.getPasswordHash())) {
+            auditAccessService.recordForUsuario(usuario, AuditAccessEventType.LOGIN_FAILURE, false, "BAD_CREDENTIALS",
+                    false, httpRequest, null, "/auth/login", Map.of("channel", "PASSWORD"));
             throw new IllegalArgumentException("Credenciales inválidas");
         }
 
         if (!Boolean.TRUE.equals(usuario.getActivo())) {
+            auditAccessService.recordForUsuario(usuario, AuditAccessEventType.LOGIN_FAILURE, false, "ACCOUNT_INACTIVE",
+                    false, httpRequest, null, "/auth/login", Map.of("channel", "PASSWORD"));
             throw new IllegalArgumentException("Usuario desactivado");
         }
 
         subscriptionService.checkAndUpdateTrialStatus(usuario);
 
-        requireTotpIfEnabled(usuario, request.totpCode());
+        requireTotpIfEnabled(usuario, request.totpCode(), httpRequest, "PASSWORD");
 
         notificacionService.ensureWelcomeIfEmpty(usuario.getId());
 
         var sesion = sessionService.createSession(usuario, httpRequest, request.clientInfo());
         String token = jwtService.generateToken(usuario.getEmail(), usuario.getRol(), sesion.getId());
         Instant expiresAt = Instant.now().plusMillis(jwtService.getExpirationMs());
+
+        auditAccessService.recordForUsuario(usuario, AuditAccessEventType.LOGIN_SUCCESS, true, null, false, httpRequest,
+                sesion.getId(), "/auth/login", Map.of("channel", "PASSWORD"));
 
         return AuthResponse.of(token, usuario.getEmail(), usuario.getRol(), expiresAt,
                 usuario.getSubscriptionStatus(), usuario.getTrialEndDate(), subscriptionService.canWrite(usuario),
@@ -176,18 +194,23 @@ public class AuthService {
         });
 
         if (!Boolean.TRUE.equals(usuario.getActivo())) {
+            auditAccessService.recordForUsuario(usuario, AuditAccessEventType.LOGIN_FAILURE, false, "ACCOUNT_INACTIVE",
+                    false, httpRequest, null, "/auth/google", Map.of("channel", "GOOGLE"));
             throw new IllegalArgumentException("Usuario desactivado");
         }
 
         subscriptionService.checkAndUpdateTrialStatus(usuario);
 
-        requireTotpIfEnabled(usuario, request.totpCode());
+        requireTotpIfEnabled(usuario, request.totpCode(), httpRequest, "GOOGLE");
 
         notificacionService.ensureWelcomeIfEmpty(usuario.getId());
 
         var sesion = sessionService.createSession(usuario, httpRequest, request.clientInfo());
         String token = jwtService.generateToken(usuario.getEmail(), usuario.getRol(), sesion.getId());
         Instant expiresAt = Instant.now().plusMillis(jwtService.getExpirationMs());
+
+        auditAccessService.recordForUsuario(usuario, AuditAccessEventType.LOGIN_SUCCESS, true, null, false, httpRequest,
+                sesion.getId(), "/auth/google", Map.of("channel", "GOOGLE"));
 
         return AuthResponse.of(token, usuario.getEmail(), usuario.getRol(), expiresAt,
                 usuario.getSubscriptionStatus(), usuario.getTrialEndDate(), subscriptionService.canWrite(usuario),
@@ -236,14 +259,20 @@ public class AuthService {
     /**
      * Si el usuario tiene 2FA activo, exige código TOTP válido. Sin código → 400 con mensaje TOTP_REQUERIDO (login / Google).
      */
-    private void requireTotpIfEnabled(Usuario usuario, String totpCode) {
+    private void requireTotpIfEnabled(Usuario usuario, String totpCode, HttpServletRequest httpRequest,
+                                      String channel) {
         if (!Boolean.TRUE.equals(usuario.getTotpEnabled())) {
             return;
         }
+        String path = "GOOGLE".equals(channel) ? "/auth/google" : "/auth/login";
         if (totpCode == null || totpCode.isBlank()) {
+            auditAccessService.recordForUsuario(usuario, AuditAccessEventType.LOGIN_FAILURE, false, "TOTP_REQUERIDO",
+                    false, httpRequest, null, path, Map.of("channel", channel));
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "TOTP_REQUERIDO");
         }
         if (!totpService.verify(usuario.getTotpSecret(), totpCode)) {
+            auditAccessService.recordForUsuario(usuario, AuditAccessEventType.LOGIN_FAILURE, false, "TOTP_INVALIDO",
+                    false, httpRequest, null, path, Map.of("channel", channel));
             throw new IllegalArgumentException("Código de verificación incorrecto");
         }
     }
@@ -263,7 +292,7 @@ public class AuthService {
     }
 
     @Transactional
-    public UsuarioResponse confirmarTotpSetup(TotpSetupConfirmRequest request) {
+    public UsuarioResponse confirmarTotpSetup(TotpSetupConfirmRequest request, HttpServletRequest httpRequest) {
         Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
         if (Boolean.TRUE.equals(usuario.getTotpEnabled())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El 2FA ya está activado");
@@ -279,6 +308,8 @@ public class AuthService {
             throw new IllegalArgumentException("El enrolamiento ha caducado. Vuelve a generar el código QR.");
         }
         if (!totpService.verify(pending, request.code())) {
+            auditAccessService.recordForUsuario(usuario, AuditAccessEventType.LOGIN_FAILURE, false, "TOTP_SETUP_INVALID",
+                    true, httpRequest, null, "/auth/totp/setup/confirm", Map.of("context", "TOTP_SETUP"));
             throw new IllegalArgumentException("Código incorrecto");
         }
         usuario.setTotpSecret(pending);
@@ -286,27 +317,36 @@ public class AuthService {
         usuario.setTotpPendingSecret(null);
         usuario.setTotpPendingExpiresAt(null);
         usuarioRepository.save(usuario);
+        auditAccessService.recordForUsuario(usuario, AuditAccessEventType.TOTP_ENABLED, true, null, true, httpRequest,
+                null, "/auth/totp/setup/confirm", null);
         return usuarioToResponse(usuario);
     }
 
     @Transactional
-    public void cancelarTotpSetup() {
+    public void cancelarTotpSetup(HttpServletRequest httpRequest) {
         Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
         usuario.setTotpPendingSecret(null);
         usuario.setTotpPendingExpiresAt(null);
         usuarioRepository.save(usuario);
+        auditAccessService.recordForUsuario(usuario, AuditAccessEventType.TOTP_SETUP_CANCELLED, true, null, false,
+                httpRequest, null, "/auth/totp/setup/cancel", null);
     }
 
     @Transactional
-    public void desactivarTotp(TotpDisableRequest request) {
+    public void desactivarTotp(TotpDisableRequest request, HttpServletRequest httpRequest) {
         Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
         if (!Boolean.TRUE.equals(usuario.getTotpEnabled())) {
             throw new IllegalArgumentException("El 2FA no está activado");
         }
         if (!passwordEncoder.matches(request.currentPassword(), usuario.getPasswordHash())) {
+            auditAccessService.recordForUsuario(usuario, AuditAccessEventType.PASSWORD_CHANGE_FAILURE, false,
+                    "BAD_CURRENT_PASSWORD", true, httpRequest, null, "/auth/totp/disable",
+                    Map.of("context", "TOTP_DISABLE"));
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La contraseña no es correcta");
         }
         if (!totpService.verify(usuario.getTotpSecret(), request.totpCode())) {
+            auditAccessService.recordForUsuario(usuario, AuditAccessEventType.LOGIN_FAILURE, false, "TOTP_INVALIDO",
+                    true, httpRequest, null, "/auth/totp/disable", Map.of("context", "TOTP_DISABLE"));
             throw new IllegalArgumentException("Código de verificación incorrecto");
         }
         usuario.setTotpSecret(null);
@@ -314,6 +354,8 @@ public class AuthService {
         usuario.setTotpPendingSecret(null);
         usuario.setTotpPendingExpiresAt(null);
         usuarioRepository.save(usuario);
+        auditAccessService.recordForUsuario(usuario, AuditAccessEventType.TOTP_DISABLED, true, null, true, httpRequest,
+                null, "/auth/totp/disable", null);
     }
 
     @Transactional
@@ -397,7 +439,7 @@ public class AuthService {
      * Siempre responde éxito para no revelar si el email existe.
      */
     @Transactional
-    public void requestPasswordReset(ForgotPasswordRequest request) {
+    public void requestPasswordReset(ForgotPasswordRequest request, HttpServletRequest httpRequest) {
         Optional<Usuario> opt = usuarioRepository.findByEmail(request.email().trim());
         if (opt.isEmpty()) {
             return;
@@ -410,6 +452,8 @@ public class AuthService {
         usuario.setPasswordResetToken(token);
         usuario.setPasswordResetExpiresAt(LocalDateTime.now().plusHours(PASSWORD_RESET_EXPIRY_HOURS));
         usuarioRepository.save(usuario);
+        auditAccessService.recordForUsuario(usuario, AuditAccessEventType.PASSWORD_RESET_REQUESTED, true, null, true,
+                httpRequest, null, "/auth/forgot-password", null);
 
         String resetLink = frontendUrl + "/reset-password?token=" + token;
         String asunto = "Recuperación de contraseña - AppGestion";
@@ -429,7 +473,7 @@ public class AuthService {
      * Restablece la contraseña con el token recibido por email. Lanza si el token es inválido o ha expirado.
      */
     @Transactional
-    public void resetPassword(ResetPasswordRequest request) {
+    public void resetPassword(ResetPasswordRequest request, HttpServletRequest httpRequest) {
         Usuario usuario = usuarioRepository.findByPasswordResetToken(request.token())
                 .orElseThrow(() -> new IllegalArgumentException("Enlace inválido o expirado"));
 
@@ -444,6 +488,8 @@ public class AuthService {
         usuario.setPasswordResetToken(null);
         usuario.setPasswordResetExpiresAt(null);
         usuarioRepository.save(usuario);
+        auditAccessService.recordForUsuario(usuario, AuditAccessEventType.PASSWORD_RESET_COMPLETED, true, null, true,
+                httpRequest, null, "/auth/reset-password", null);
         log.info("Contraseña restablecida para {}", usuario.getEmail());
     }
 
@@ -451,9 +497,12 @@ public class AuthService {
      * Cambio de contraseña con la sesión actual (JWT). No cierra otras sesiones: el token sigue válido hasta su expiración.
      */
     @Transactional
-    public void cambiarContrasena(ChangePasswordRequest request) {
+    public void cambiarContrasena(ChangePasswordRequest request, HttpServletRequest httpRequest) {
         Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
+        String sid = sessionIdFromRequest(httpRequest);
         if (!passwordEncoder.matches(request.currentPassword(), usuario.getPasswordHash())) {
+            auditAccessService.recordForUsuario(usuario, AuditAccessEventType.PASSWORD_CHANGE_FAILURE, false,
+                    "BAD_CURRENT_PASSWORD", true, httpRequest, sid, "/auth/change-password", null);
             // 400 (no 401): evitar que clientes interpreten "sesión inválida" y cierren la sesión del usuario.
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La contraseña actual no es correcta");
         }
@@ -463,6 +512,19 @@ public class AuthService {
         }
         usuario.setPasswordHash(passwordEncoder.encode(nueva));
         usuarioRepository.save(usuario);
+        auditAccessService.recordForUsuario(usuario, AuditAccessEventType.PASSWORD_CHANGE_SUCCESS, true, null, true,
+                httpRequest, sid, "/auth/change-password", null);
         log.info("Contraseña actualizada (usuario autenticado) para {}", usuario.getEmail());
+    }
+
+    private String sessionIdFromRequest(HttpServletRequest httpRequest) {
+        if (httpRequest == null) {
+            return null;
+        }
+        String h = httpRequest.getHeader("Authorization");
+        if (h == null || !h.startsWith("Bearer ")) {
+            return null;
+        }
+        return jwtService.extractSessionId(h.substring(7).trim()).orElse(null);
     }
 }

@@ -22,7 +22,7 @@ export const CUENTA_SECCION_TITLES: Record<string, string> = {
   'sesiones-activas': 'Sesiones activas',
   'historial-accesos': 'Historial de accesos',
   'logo-empresa': 'Logo de la empresa',
-  plantillas: 'Plantillas',
+  plantillas: 'Textos al final del PDF',
   impuestos: 'Configuración de impuestos',
   'centro-ayuda': 'Centro de ayuda',
 };

@@ -4,24 +4,224 @@
     Volver
   </a>
 
-  <mat-card class="ha-card">
-    <div class="ha-card__icon" aria-hidden="true">
-      <mat-icon>history</mat-icon>
-    </div>
+  <div class="ha-head">
     <h1 class="ha-title">Historial de accesos</h1>
-    <p class="ha-lead">
-      Estamos preparando esta sección. Pronto podrás configurarla desde aquí sin salir de la app.
+    <p class="ha-sub">
+      Trazabilidad de inicios de sesión, cambios de seguridad y acciones sensibles.
+      {{ isAdmin() ? 'Como administrador ves eventos de toda la organización.' : 'Solo ves la actividad de tu usuario.' }}
+      Las marcas de tiempo se muestran en <strong>UTC</strong> para alinearlas con el servidor.
     </p>
-    <p class="ha-hint">
-      <mat-icon class="ha-hint__icon">info</mat-icon>
-      Aquí mostraremos un registro de tus inicios de sesión recientes para que puedas detectar actividad
-      inusual. Mientras tanto, protege tu cuenta con una contraseña segura y, si quieres, activa la verificación en
-      dos pasos.
-    </p>
-    <div class="ha-actions">
-      <button mat-stroked-button type="button" routerLink="/dashboard">Ir al panel</button>
-      <button mat-button type="button" color="primary" routerLink="/cuenta/2fa">Autenticación en dos factores</button>
-      <button mat-button type="button" routerLink="/cuenta/sesiones-activas">Sesiones activas</button>
-    </div>
+  </div>
+
+  @if (pageMeta(); as meta) {
+    @if (meta.failedCount24h >= 3) {
+      <mat-card class="ha-alert ha-alert--warn" appearance="outlined">
+        <mat-icon>warning_amber</mat-icon>
+        <div>
+          <strong>Posible actividad anómala</strong>
+          <p>
+            En las últimas 24&nbsp;h hay <strong>{{ meta.failedCount24h }}</strong> eventos fallidos en el ámbito visible
+            ({{ meta.sensitiveCount24h }} sensibles). Revisa los fallos de inicio de sesión y la columna de motivo.
+          </p>
+        </div>
+      </mat-card>
+    }
+  }
+
+  <mat-card class="ha-filters" appearance="outlined">
+    <mat-card-content>
+      <form [formGroup]="filters" class="ha-filter-grid" (ngSubmit)="aplicarFiltros()">
+        <mat-form-field appearance="outline" class="ha-fg">
+          <mat-label>Desde (fecha)</mat-label>
+          <input matInput type="date" formControlName="fromDate" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ha-fg">
+          <mat-label>Hasta (fecha)</mat-label>
+          <input matInput type="date" formControlName="toDate" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ha-fg ha-fg--grow">
+          <mat-label>Tipo de evento</mat-label>
+          <mat-select formControlName="eventType">
+            <mat-option value="">Todos</mat-option>
+            @for (e of eventTypes; track e.value) {
+              <mat-option [value]="e.value">{{ e.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ha-fg">
+          <mat-label>Estado</mat-label>
+          <mat-select formControlName="success">
+            <mat-option value="">Todos</mat-option>
+            <mat-option value="true">Éxito</mat-option>
+            <mat-option value="false">Fallo</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ha-fg">
+          <mat-label>IP (contiene)</mat-label>
+          <input matInput formControlName="ip" autocomplete="off" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ha-fg ha-fg--grow">
+          <mat-label>Búsqueda</mat-label>
+          <input matInput formControlName="q" placeholder="Correo, ruta, motivo…" autocomplete="off" />
+        </mat-form-field>
+        @if (isAdmin()) {
+          <mat-form-field appearance="outline" class="ha-fg">
+            <mat-label>ID usuario</mat-label>
+            <input matInput type="number" formControlName="usuarioId" min="1" />
+            <mat-hint>Opcional: filtrar por miembro</mat-hint>
+          </mat-form-field>
+        }
+        <div class="ha-filter-actions">
+          <button mat-flat-button color="primary" type="submit" [disabled]="loading()">Aplicar filtros</button>
+          <button mat-stroked-button type="button" (click)="limpiarFiltros()" [disabled]="loading()">Limpiar</button>
+          <button
+            mat-stroked-button
+            type="button"
+            (click)="exportar('csv')"
+            [disabled]="loading() || exporting()"
+          >
+            @if (exporting()) {
+              <mat-progress-spinner diameter="18" mode="indeterminate" />
+            } @else {
+              <mat-icon>download</mat-icon>
+            }
+            CSV
+          </button>
+          <button
+            mat-stroked-button
+            type="button"
+            (click)="exportar('json')"
+            [disabled]="loading() || exporting()"
+          >
+            JSON
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
   </mat-card>
+
+  @if (loading() && dataSource.data.length === 0) {
+    <div class="ha-state">
+      <mat-progress-spinner diameter="40" mode="indeterminate" />
+      <span>Cargando eventos…</span>
+    </div>
+  } @else if (loadError() && dataSource.data.length === 0) {
+    <mat-card appearance="outlined">
+      <mat-card-content>
+        <p>No se pudo cargar el historial.</p>
+        <button mat-stroked-button color="primary" type="button" (click)="cargar()">Reintentar</button>
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    <div class="ha-table-wrap mat-elevation-z1">
+      <table mat-table [dataSource]="dataSource" class="ha-table">
+        <ng-container matColumnDef="occurredAt">
+          <th mat-header-cell *matHeaderCellDef>Fecha (UTC)</th>
+          <td mat-cell *matCellDef="let row">
+            {{ row.occurredAt | date: 'dd/MM/yyyy HH:mm:ss' : 'UTC' : 'es' }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="userEmail">
+          <th mat-header-cell *matHeaderCellDef>Usuario</th>
+          <td mat-cell *matCellDef="let row">{{ row.userEmail ?? '—' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="eventType">
+          <th mat-header-cell *matHeaderCellDef>Evento</th>
+          <td mat-cell *matCellDef="let row">
+            <span [matTooltip]="row.eventType">{{ eventoEtiqueta(row.eventType) }}</span>
+            @if (row.sensitive) {
+              <mat-chip-set class="ha-chips">
+                <mat-chip color="warn">Sensible</mat-chip>
+              </mat-chip-set>
+            }
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="ip">
+          <th mat-header-cell *matHeaderCellDef>IP</th>
+          <td mat-cell *matCellDef="let row">{{ row.ipAddress ?? '—' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="success">
+          <th mat-header-cell *matHeaderCellDef>Estado</th>
+          <td mat-cell *matCellDef="let row">
+            @if (row.success) {
+              <span class="ha-ok">Éxito</span>
+            } @else {
+              <span class="ha-fail">Fallo</span>
+            }
+            @if (row.failureReason) {
+              <div class="ha-reason">{{ row.failureReason }}</div>
+            }
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="country">
+          <th mat-header-cell *matHeaderCellDef>Ubicación</th>
+          <td mat-cell *matCellDef="let row">
+            {{ row.countryCode ?? '—' }}
+            @if (!row.countryCode && row.userAgent) {
+              <mat-icon class="ha-hint-icon" [matTooltip]="row.userAgent" matTooltipShowDelay="200">info_outline</mat-icon>
+            }
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="expand">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let row">
+            <button
+              mat-icon-button
+              type="button"
+              [attr.aria-expanded]="expandedId() === row.id"
+              (click)="toggleExpand(row); $event.stopPropagation()"
+            >
+              <mat-icon>{{ expandedId() === row.id ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr
+          mat-row
+          *matRowDef="let row; columns: displayedColumns"
+          [class.ha-row--fail]="!row.success"
+          [class.ha-row--sensitive]="row.sensitive"
+        ></tr>
+      </table>
+      <mat-paginator
+        [length]="pageMeta()?.totalElements ?? 0"
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize()"
+        [pageSizeOptions]="[10, 20, 50]"
+        [showFirstLastButtons]="true"
+        (page)="onPage($event)"
+      />
+    </div>
+
+    @for (row of dataSource.data; track row.id) {
+      @if (expandedId() === row.id) {
+        <mat-card class="ha-detail" appearance="outlined">
+          <mat-card-content>
+            <h3 class="ha-detail__title">Detalle del evento #{{ row.id }}</h3>
+            <mat-divider />
+            <dl class="ha-dl">
+              <dt>User-Agent</dt>
+              <dd>{{ row.userAgent ?? '—' }}</dd>
+              <dt>Sesión</dt>
+              <dd>{{ row.sessionId ?? '—' }}</dd>
+              <dt>Recurso</dt>
+              <dd>{{ row.resourcePath ?? '—' }}</dd>
+              <dt>Trace / correlación</dt>
+              <dd>{{ row.traceId ?? '—' }}</dd>
+              <dt>Metadata (JSON)</dt>
+              <dd>
+                <pre class="ha-json">{{ metadataPretty(row.metadataJson) }}</pre>
+              </dd>
+            </dl>
+          </mat-card-content>
+        </mat-card>
+      }
+    }
+  }
+
+  <mat-divider class="ha-foot-divider" />
+  <p class="ha-footnote">
+    Los registros son solo inserción en base de datos; la retención máxima la configura el servidor. La IP puede
+    mostrarse anonimizada según política (último octeto en cero).
+  </p>
 </div>

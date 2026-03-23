@@ -2,6 +2,7 @@ package com.appgestion.api.service;
 
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.domain.entity.UsuarioSesion;
+import com.appgestion.api.domain.enums.AuditAccessEventType;
 import com.appgestion.api.dto.request.DeviceClientInfoRequest;
 import com.appgestion.api.dto.response.SesionDispositivoResponse;
 import com.appgestion.api.repository.UsuarioRepository;
@@ -21,6 +22,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,16 +35,19 @@ public class SessionService {
     private final UsuarioSesionRepository sesionRepository;
     private final UsuarioRepository usuarioRepository;
     private final JwtService jwtService;
+    private final AuditAccessService auditAccessService;
 
     @Value("${app.jwt.expiration-ms}")
     private long expirationMs;
 
     public SessionService(UsuarioSesionRepository sesionRepository,
                           UsuarioRepository usuarioRepository,
-                          JwtService jwtService) {
+                          JwtService jwtService,
+                          AuditAccessService auditAccessService) {
         this.sesionRepository = sesionRepository;
         this.usuarioRepository = usuarioRepository;
         this.jwtService = jwtService;
+        this.auditAccessService = auditAccessService;
     }
 
     @Transactional
@@ -152,6 +157,9 @@ public class SessionService {
         if (s.getRevokedAt() == null) {
             s.setRevokedAt(Instant.now());
             sesionRepository.save(s);
+            auditAccessService.recordForUsuario(u, AuditAccessEventType.SESSION_REVOKED_DEVICE, true, null, true,
+                    httpRequest, currentSid, "/auth/sessions/" + sessionId,
+                    Map.of("revokedSessionId", sessionId));
         }
     }
 
@@ -165,6 +173,9 @@ public class SessionService {
         if (token == null) {
             return;
         }
+        String sid = jwtService.extractSessionId(token).orElse(null);
+        auditAccessService.recordForUsuario(u, AuditAccessEventType.LOGOUT, true, null, false, httpRequest, sid,
+                "/auth/logout", null);
         jwtService.extractSessionId(token).flatMap(sesionRepository::findById).ifPresent(s -> {
             if (s.getUsuario().getId().equals(u.getId()) && s.getRevokedAt() == null) {
                 s.setRevokedAt(Instant.now());
@@ -182,7 +193,10 @@ public class SessionService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Tu sesión actual no incluye identificador; inicia sesión de nuevo.");
         }
-        return sesionRepository.revokeAllForUserExcept(u.getId(), currentSid, Instant.now());
+        int revoked = sesionRepository.revokeAllForUserExcept(u.getId(), currentSid, Instant.now());
+        auditAccessService.recordForUsuario(u, AuditAccessEventType.SESSION_REVOKED_OTHERS, true, null, true,
+                httpRequest, currentSid, "/auth/sessions/others", Map.of("revokedCount", revoked));
+        return revoked;
     }
 
     private static String extractBearer(HttpServletRequest request) {

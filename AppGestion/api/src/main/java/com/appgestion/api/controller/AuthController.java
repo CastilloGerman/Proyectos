@@ -93,8 +93,9 @@ public class AuthController {
     }
 
     @PostMapping("/change-password")
-    public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
-        authService.cambiarContrasena(request);
+    public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request,
+                                              HttpServletRequest httpRequest) {
+        authService.cambiarContrasena(request, httpRequest);
         return ResponseEntity.noContent().build();
     }
 
@@ -104,31 +105,35 @@ public class AuthController {
     }
 
     @PostMapping("/totp/setup/confirm")
-    public ResponseEntity<UsuarioResponse> totpSetupConfirm(@Valid @RequestBody TotpSetupConfirmRequest request) {
-        return ResponseEntity.ok(authService.confirmarTotpSetup(request));
+    public ResponseEntity<UsuarioResponse> totpSetupConfirm(@Valid @RequestBody TotpSetupConfirmRequest request,
+                                                            HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(authService.confirmarTotpSetup(request, httpRequest));
     }
 
     @PostMapping("/totp/setup/cancel")
-    public ResponseEntity<Void> totpSetupCancel() {
-        authService.cancelarTotpSetup();
+    public ResponseEntity<Void> totpSetupCancel(HttpServletRequest httpRequest) {
+        authService.cancelarTotpSetup(httpRequest);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/totp/disable")
-    public ResponseEntity<Void> totpDisable(@Valid @RequestBody TotpDisableRequest request) {
-        authService.desactivarTotp(request);
+    public ResponseEntity<Void> totpDisable(@Valid @RequestBody TotpDisableRequest request,
+                                           HttpServletRequest httpRequest) {
+        authService.desactivarTotp(request, httpRequest);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        authService.requestPasswordReset(request);
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request,
+                                               HttpServletRequest httpRequest) {
+        authService.requestPasswordReset(request, httpRequest);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        authService.resetPassword(request);
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request,
+                                              HttpServletRequest httpRequest) {
+        authService.resetPassword(request, httpRequest);
         return ResponseEntity.ok().build();
     }
 

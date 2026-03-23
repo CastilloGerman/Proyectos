@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, NgZone, OnInit, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { map } from 'rxjs/operators';
@@ -508,6 +508,7 @@ export class AppComponent implements OnInit {
 
   readonly notificaciones = inject(NotificacionesService);
   private readonly router = inject(Router);
+  private readonly ngZone = inject(NgZone);
 
   readonly notifBadge = computed(() => {
     const n = this.notificaciones.unreadCount();
@@ -579,6 +580,14 @@ export class AppComponent implements OnInit {
     this.router.events.pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd)).subscribe(() => {
       if (this.auth.isAuthenticated()) {
         this.notificaciones.refreshUnreadCount();
+        // Tras login o cambio de ruta el drawer aún puede estar midiendo; fuerza recálculo de MatProgressBar, flex, etc.
+        this.ngZone.runOutsideAngular(() => {
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() =>
+              this.ngZone.run(() => window.dispatchEvent(new Event('resize')))
+            )
+          );
+        });
       }
       if (this.isMobileLayout()) {
         this.isSidebarOpen = false;

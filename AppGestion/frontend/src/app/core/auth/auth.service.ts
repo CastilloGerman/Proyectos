@@ -56,6 +56,8 @@ export class AuthService {
 
   private tokenSignal = signal<string | null>(this.getStoredToken());
   private userSignal = signal<AuthResponse | null>(this.getStoredUser());
+  /** Evita bucles de 401 durante POST /auth/logout y peticiones paralelas al cerrar sesión. */
+  private logoutInProgress = false;
 
   token = this.tokenSignal.asReadonly();
   user = this.userSignal.asReadonly();
@@ -271,6 +273,7 @@ export class AuthService {
    * Revoca la sesión en servidor (si hay token) y limpia el almacenamiento local.
    */
   logout(): void {
+    this.logoutInProgress = true;
     this.http
       .post<void>(`${this.authRoot}/logout`, {})
       .pipe(
@@ -280,10 +283,23 @@ export class AuthService {
           localStorage.removeItem(USER_KEY);
           this.tokenSignal.set(null);
           this.userSignal.set(null);
+          this.logoutInProgress = false;
           this.router.navigate(['/login']);
         })
       )
       .subscribe();
+  }
+
+  /** Limpia sesión local sin llamar al API (p. ej. 401 en el interceptor). */
+  clearSessionLocal(): void {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    this.tokenSignal.set(null);
+    this.userSignal.set(null);
+  }
+
+  isLogoutInProgress(): boolean {
+    return this.logoutInProgress;
   }
 
   getToken(): string | null {

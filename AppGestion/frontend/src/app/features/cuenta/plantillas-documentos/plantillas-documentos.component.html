@@ -1,37 +1,26 @@
 <div class="plant-page">
   <a mat-button routerLink="/dashboard" class="plant-back">
     <mat-icon>arrow_back</mat-icon>
-    Volver
+    Volver al inicio
   </a>
 
   <header class="plant-head">
-    <h1 class="plant-title">Plantillas de presupuestos y facturas</h1>
+    <h1 class="plant-title">Textos al final de tus PDF</h1>
     <p class="plant-lead">
-      Aquí defines los <strong>textos al pie</strong> que se imprimen en los PDF. El logo, la firma y los datos de
-      cabecera se configuran en <strong>Datos de la empresa</strong>. En cada presupuesto puedes añadir
-      <strong>cláusulas propias</strong> del documento (variables como cliente, total, etc.).
+      Aquí escribes lo que quieres que aparezca <strong>al terminar</strong> el presupuesto o la factura que descargas o envías por correo (por ejemplo condiciones, plazos o un agradecimiento).
+      Arriba del todo del PDF siguen saliendo tu nombre, logo y datos: los cambias en otras pantallas (enlaces de abajo).
     </p>
-    <div class="plant-head__links">
-      <a mat-stroked-button color="primary" routerLink="/cuenta/datos-empresa">
-        <mat-icon>business</mat-icon>
-        Datos de la empresa (logo y firma)
-      </a>
-      <a mat-button routerLink="/cuenta/datos-fiscales">
-        <mat-icon>gavel</mat-icon>
-        Datos fiscales
-      </a>
-    </div>
   </header>
 
   @if (loading()) {
     <div class="plant-state">
       <mat-progress-spinner diameter="40" mode="indeterminate" />
-      <span>Cargando…</span>
+      <span>Un momento…</span>
     </div>
   } @else if (loadError()) {
     <mat-card class="plant-card">
       <mat-card-content>
-        <p>No pudimos cargar la configuración.</p>
+        <p>No hemos podido cargar la información. Revisa la conexión e inténtalo otra vez.</p>
         <button mat-stroked-button color="primary" type="button" (click)="cargar()">Reintentar</button>
       </mat-card-content>
     </mat-card>
@@ -39,63 +28,112 @@
     @if (!puedeEditar) {
       <div class="plant-readonly-banner" role="status">
         <mat-icon>lock</mat-icon>
-        <span>Modo solo lectura: puedes revisar los textos; para guardar cambios necesitas suscripción activa.</span>
+        <span>Puedes leer los textos. Para guardar cambios hace falta tener la suscripción activa.</span>
       </div>
     }
 
-    <mat-card class="plant-card">
-      <mat-card-content>
-        <mat-tab-group mat-stretch-tabs="false" animationDuration="200ms">
-          <mat-tab>
-            <ng-template mat-tab-label>
-              <mat-icon class="plant-tab-icon">description</mat-icon>
-              Presupuesto
-            </ng-template>
-            <div class="plant-tab-body">
-              <p class="plant-hint-block">
-                Este texto aparece al final del PDF del presupuesto, debajo del detalle e importes. Las condiciones
-                largas o legales también puedes escribirlas en el campo <strong>Cláusulas</strong> de cada presupuesto.
-              </p>
-              <mat-form-field appearance="outline" class="plant-field-full">
-                <mat-label>Notas al pie del presupuesto (PDF)</mat-label>
-                <textarea
-                  matInput
-                  formControlName="notasPiePresupuesto"
-                  rows="8"
-                  [maxlength]="maxPie"
-                  placeholder="Ej.: Válido 30 días. IVA no incluido salvo indicación contraria."
-                ></textarea>
-                <mat-hint align="end">{{ form.controls.notasPiePresupuesto.value.length }} / {{ maxPie }}</mat-hint>
-              </mat-form-field>
+    <form [formGroup]="form" (ngSubmit)="guardar()" class="plant-layout" novalidate>
+      <div class="plant-layout__main">
+        <mat-card class="plant-card plant-card--soft">
+          <mat-card-content class="plant-quick-links">
+            <p class="plant-quick-links__title">¿Dónde se cambia lo demás del documento?</p>
+            <div class="plant-quick-links__row">
+              <a mat-stroked-button color="primary" routerLink="/cuenta/datos-empresa">
+                <mat-icon>business</mat-icon>
+                Nombre, dirección y logo
+              </a>
+              <a mat-stroked-button routerLink="/cuenta/metodos-pago">
+                <mat-icon>account_balance</mat-icon>
+                Cuenta, IBAN y Bizum
+              </a>
+              <a mat-stroked-button routerLink="/cuenta/datos-fiscales">
+                <mat-icon>gavel</mat-icon>
+                Datos de Hacienda en facturas
+              </a>
             </div>
-          </mat-tab>
+          </mat-card-content>
+        </mat-card>
 
-          <mat-tab>
-            <ng-template mat-tab-label>
-              <mat-icon class="plant-tab-icon">receipt_long</mat-icon>
-              Factura
-            </ng-template>
-            <div class="plant-tab-body">
-              <p class="plant-hint-block">
-                Texto al pie del PDF de factura. El régimen fiscal y datos legales principales van en
-                <strong>Datos fiscales</strong>; aquí suele ir una nota corta o referencia a condiciones de pago.
-              </p>
-              <mat-form-field appearance="outline" class="plant-field-full">
-                <mat-label>Notas al pie de la factura (PDF)</mat-label>
-                <textarea
-                  matInput
-                  formControlName="notasPieFactura"
-                  rows="8"
-                  [maxlength]="maxPie"
-                  placeholder="Ej.: Gracias por su confianza. Transferencia según datos indicados en el documento."
-                ></textarea>
-                <mat-hint align="end">{{ form.controls.notasPieFactura.value.length }} / {{ maxPie }}</mat-hint>
-              </mat-form-field>
-            </div>
-          </mat-tab>
-        </mat-tab-group>
+        <mat-card
+          class="plant-card plant-editor-block"
+          id="plant-texto-presupuesto"
+          (focusin)="onEditBlockFocus(0)"
+        >
+          <mat-card-header>
+            <mat-card-title>Presupuesto</mat-card-title>
+            <mat-card-subtitle>
+              Texto que sale al final del PDF del presupuesto. Lo demás (trabajos, precios…) lo pones en cada presupuesto.
+            </mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-form-field appearance="outline" class="plant-field-full">
+              <mat-label>Tu texto al final del presupuesto</mat-label>
+              <textarea
+                matInput
+                formControlName="notasPiePresupuesto"
+                rows="7"
+                [maxlength]="maxPie"
+                [attr.placeholder]="placeholderPresupuesto"
+              ></textarea>
+              <mat-hint align="end">{{ form.controls.notasPiePresupuesto.value.length }} / {{ maxPie }}</mat-hint>
+            </mat-form-field>
+          </mat-card-content>
+        </mat-card>
 
-        <mat-divider class="plant-divider" />
+        <mat-card
+          class="plant-card plant-editor-block"
+          id="plant-texto-factura"
+          (focusin)="onEditBlockFocus(1)"
+        >
+          <mat-card-header>
+            <mat-card-title>Factura</mat-card-title>
+            <mat-card-subtitle>Texto que sale al final del PDF de la factura.</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-form-field appearance="outline" class="plant-field-full">
+              <mat-label>Tu texto al final de la factura</mat-label>
+              <textarea
+                matInput
+                formControlName="notasPieFactura"
+                rows="7"
+                [maxlength]="maxPie"
+                [attr.placeholder]="placeholderFactura"
+              ></textarea>
+              <mat-hint align="end">{{ form.controls.notasPieFactura.value.length }} / {{ maxPie }}</mat-hint>
+            </mat-form-field>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="plant-card">
+          <mat-card-header>
+            <mat-card-title>Palabras clave (opcional)</mat-card-title>
+            <mat-card-subtitle>
+              Cada botón muestra un <strong>nombre sencillo</strong>; al pulsarlo se copia el <strong>código</strong> que debes pegar
+              en el cuadro de arriba (clic derecho → Pegar, o Ctrl+V). Pasa el cursor por un botón para ver el código y un ejemplo.
+              En la <strong>vista rápida</strong> verás cómo quedaría con datos de ejemplo. En el PDF de la app, por ahora se imprimen
+              tal cual (no se sustituyen automáticamente).
+            </mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <!-- Botones nativos: mat-chip MDC a veces deja el texto ilegible (tema/encapsulación). -->
+            <ul class="plant-ph-list" aria-label="Insertar datos del documento (copiar código)">
+              @for (p of placeholders; track p.token) {
+                <li class="plant-ph-li">
+                  <button
+                    type="button"
+                    class="plant-ph-pill"
+                    [matTooltip]="tooltipPlaceholder(p)"
+                    matTooltipPosition="above"
+                    [attr.aria-label]="'Copiar código ' + p.token + ' para: ' + p.descripcion"
+                    (click)="copyPlaceholder(p); $event.stopPropagation()"
+                  >
+                    <span class="plant-ph-pill__label">{{ p.descripcion }}</span>
+                  </button>
+                </li>
+              }
+            </ul>
+          </mat-card-content>
+        </mat-card>
 
         <div class="plant-actions">
           <button mat-stroked-button type="button" routerLink="/presupuestos">Ir a presupuestos</button>
@@ -104,17 +142,145 @@
           <button
             mat-flat-button
             color="primary"
-            type="button"
-            (click)="guardar()"
+            type="submit"
             [disabled]="!puedeEditar || saving() || form.pristine || form.invalid"
           >
             @if (saving()) {
               <mat-progress-spinner diameter="20" mode="indeterminate" />
             }
-            Guardar plantillas
+            Guardar textos
           </button>
         </div>
-      </mat-card-content>
-    </mat-card>
+      </div>
+
+      <aside class="plant-layout__aside" aria-label="Cómo se verá tu documento">
+        <div class="plant-preview__sticky">
+          <div class="plant-preview__panel plant-preview__panel--controls">
+            <h2 class="plant-preview__heading">Cómo se ve</h2>
+            <p class="plant-preview__intro">Elige si quieres ver un presupuesto o una factura de ejemplo.</p>
+            <mat-button-toggle-group
+              class="plant-preview__doc-toggle"
+              [value]="previewDocToggleValue()"
+              (change)="onPickPreviewDocument($event.value)"
+              aria-label="Tipo de documento de ejemplo"
+            >
+              <mat-button-toggle value="0">Presupuesto</mat-button-toggle>
+              <mat-button-toggle value="1">Factura</mat-button-toggle>
+            </mat-button-toggle-group>
+
+            <p class="plant-preview__intro plant-preview__intro--tight">Tipo de vista:</p>
+            <mat-button-toggle-group
+              class="plant-preview__mode-toggle"
+              [value]="previewMode()"
+              (change)="onPreviewModeToggle($event.value)"
+              aria-label="Tipo de vista previa"
+            >
+              <mat-button-toggle value="html">Rápida</mat-button-toggle>
+              <mat-button-toggle value="pdf">PDF real</mat-button-toggle>
+            </mat-button-toggle-group>
+            <p class="plant-preview__mode-hint">
+              @if (previewMode() === 'html') {
+                Se actualiza al momento. Usa datos inventados para que veas el resultado.
+              } @else {
+                Es el mismo PDF que genera la aplicación al imprimir o descargar (tarda un poco).
+              }
+            </p>
+
+            <mat-form-field appearance="outline" class="plant-preview__select" subscriptSizing="dynamic">
+              <mat-label>Ejemplo de trabajo</mat-label>
+              <mat-select [value]="dataProfile()" (selectionChange)="onEscenarioChange($event.value)">
+                @for (opt of escenarioOptions; track opt.value) {
+                  <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <button mat-stroked-button type="button" class="plant-preview__sample-btn" (click)="pegarPieLargoEjemplo()">
+              Probar con un texto largo de ejemplo
+            </button>
+          </div>
+
+          @if (previewMode() === 'html') {
+            <div class="plant-preview__sheet">
+              <div class="plant-preview__sheet-inner">
+                <header class="plant-preview__doc-head">
+                  <div class="plant-preview__logo-ph">Logo</div>
+                  <div class="plant-preview__empresa-ph">
+                    <strong>Tu negocio</strong>
+                    <span>Tus datos (los pones en «Nombre, dirección y logo»)</span>
+                  </div>
+                </header>
+
+                <div class="plant-preview__doc-title">
+                  {{ previewTabIndex() === 0 ? 'PRESUPUESTO' : 'FACTURA' }}
+                  <span class="plant-preview__doc-num">{{
+                    previewTabIndex() === 0 ? 'PRES-2025-0099' : activeMock().numeroDocumento
+                  }}</span>
+                </div>
+
+                <p class="plant-preview__client">
+                  <strong>{{ activeMock().clienteNombre }}</strong><br />
+                  {{ activeMock().clienteNif }} · {{ activeMock().clienteDireccion }}
+                </p>
+
+                <div class="plant-preview__table-ph">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Concepto</th>
+                        <th>Cant.</th>
+                        @if (activeMock().mostrarIvaEnLineas) {
+                          <th>IVA</th>
+                        }
+                        <th>Importe</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (linea of activeMock().lineas; track $index) {
+                        <tr>
+                          <td>{{ linea.concepto }}</td>
+                          <td>{{ linea.cantidad }}</td>
+                          @if (activeMock().mostrarIvaEnLineas) {
+                            <td>{{ linea.ivaPct }}%</td>
+                          }
+                          <td>{{ fmtEuro(linea.importe) }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                  <div class="plant-preview__totals">
+                    <span>Subtotal {{ fmtEuro(activeMock().subtotal) }}</span>
+                    <span>IVA {{ fmtEuro(activeMock().iva) }}</span>
+                    <strong>Total {{ fmtEuro(activeMock().total) }}</strong>
+                  </div>
+                </div>
+
+                <footer class="plant-preview__foot">
+                  <div class="plant-preview__foot-label">Tu texto al final</div>
+                  <div class="plant-preview__foot-text">
+                    {{ textoPieVistaPrevia() || '— Aquí verás lo que escribas arriba —' }}
+                  </div>
+                </footer>
+              </div>
+            </div>
+          } @else {
+            <div class="plant-pdf-panel">
+              @if (pdfPreviewLoading()) {
+                <div class="plant-pdf-state">
+                  <mat-progress-spinner diameter="36" mode="indeterminate" />
+                  <span>Preparando el PDF…</span>
+                </div>
+              } @else if (pdfPreviewError()) {
+                <p class="plant-pdf-error" role="alert">{{ pdfPreviewError() }}</p>
+                <button mat-stroked-button color="primary" type="button" (click)="retryPdfPreview()">Probar otra vez</button>
+              } @else if (pdfSafeUrl) {
+                <iframe class="plant-pdf-frame" title="Vista del PDF de ejemplo" [src]="pdfSafeUrl"></iframe>
+              } @else {
+                <p class="plant-pdf-placeholder">Elige «PDF real» para generarlo.</p>
+              }
+            </div>
+          }
+        </div>
+      </aside>
+    </form>
   }
 </div>

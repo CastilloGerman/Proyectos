@@ -2,6 +2,7 @@ package com.appgestion.api.service;
 
 import com.appgestion.api.domain.entity.Invitacion;
 import com.appgestion.api.domain.entity.Usuario;
+import com.appgestion.api.domain.enums.AuditAccessEventType;
 import com.appgestion.api.domain.enums.SubscriptionStatus;
 import com.appgestion.api.dto.request.AcceptInvitacionRequest;
 import com.appgestion.api.dto.request.CreateInvitacionRequest;
@@ -24,6 +25,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -45,6 +47,7 @@ public class InvitacionService {
     private final PasswordEncoder passwordEncoder;
     private final OrganizationService organizationService;
     private final SessionService sessionService;
+    private final AuditAccessService auditAccessService;
 
     @Value("${app.frontend-url:http://localhost:4200}")
     private String frontendUrl;
@@ -56,7 +59,8 @@ public class InvitacionService {
                              EmailService emailService,
                              PasswordEncoder passwordEncoder,
                              OrganizationService organizationService,
-                             SessionService sessionService) {
+                             SessionService sessionService,
+                             AuditAccessService auditAccessService) {
         this.invitacionRepository = invitacionRepository;
         this.usuarioRepository = usuarioRepository;
         this.jwtService = jwtService;
@@ -65,6 +69,7 @@ public class InvitacionService {
         this.passwordEncoder = passwordEncoder;
         this.organizationService = organizationService;
         this.sessionService = sessionService;
+        this.auditAccessService = auditAccessService;
     }
 
     @Transactional
@@ -148,6 +153,9 @@ public class InvitacionService {
         var sesion = sessionService.createSession(usuario, httpRequest, request.clientInfo());
         String token = jwtService.generateToken(usuario.getEmail(), usuario.getRol(), sesion.getId());
         Instant expiresAt = Instant.now().plusMillis(jwtService.getExpirationMs());
+        auditAccessService.recordForUsuario(usuario, AuditAccessEventType.INVITE_ACCEPT_SUCCESS, true, null, false,
+                httpRequest, sesion.getId(), "/auth/invite/accept",
+                Map.of("channel", "INVITE", "inviterId", inviterId));
         return AuthResponse.of(token, usuario.getEmail(), usuario.getRol(), expiresAt,
                 usuario.getSubscriptionStatus(), usuario.getTrialEndDate(), subscriptionService.canWrite(usuario),
                 sesion.getId());

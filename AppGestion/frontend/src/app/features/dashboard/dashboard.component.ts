@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, NgZone, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -13,6 +13,7 @@ import { Presupuesto } from '../../core/models/presupuesto.model';
 import { Factura } from '../../core/models/factura.model';
 import { Material } from '../../core/models/material.model';
 import { EstadoBadgeComponent } from '../../shared/estado-badge/estado-badge.component';
+import { catchError, forkJoin, of } from 'rxjs';
 
 interface PresupuestoStats {
   pendientes: number;
@@ -453,6 +454,7 @@ export interface TopCliente {
       border: 1px solid var(--app-border);
       transition: transform var(--app-transition), box-shadow var(--app-transition);
       animation: kpi-in 0.45s ease-out both;
+      min-width: 0;
     }
 
     .kpi-card:hover {
@@ -500,6 +502,7 @@ export interface TopCliente {
       font-size: 28px;
       width: 28px;
       height: 28px;
+      overflow: visible;
     }
 
     .kpi-content {
@@ -534,6 +537,11 @@ export interface TopCliente {
 
     .stats-card {
       border: 1px solid var(--app-border);
+      min-width: 0;
+    }
+
+    .stats-card mat-card-content {
+      min-width: 0;
     }
 
     .stats-card mat-card-header {
@@ -551,6 +559,8 @@ export interface TopCliente {
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
+      overflow: visible;
     }
 
     .section-icon.presupuesto {
@@ -565,6 +575,7 @@ export interface TopCliente {
 
     .distribution-bar {
       display: flex;
+      width: 100%;
       height: 10px;
       border-radius: var(--app-radius-sm, 8px);
       overflow: hidden;
@@ -828,6 +839,7 @@ export interface TopCliente {
       border: 1px solid var(--app-border);
       border-left: 4px solid var(--app-border);
       transition: transform var(--app-transition), box-shadow var(--app-transition);
+      min-width: 0;
     }
 
     .salud-card:hover {
@@ -845,6 +857,7 @@ export interface TopCliente {
       font-size: 28px;
       width: 28px;
       height: 28px;
+      overflow: visible;
     }
 
     .salud-vencidas.salud-alert .salud-icon mat-icon { color: #ef4444; }
@@ -883,10 +896,11 @@ export interface TopCliente {
 
     .salud-bar-wrap {
       margin-top: 4px;
+      width: 100%;
     }
   `],
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, AfterViewInit {
   presupuestosCount = 0;
   facturasCount = 0;
   presupuestoStats: PresupuestoStats = {
@@ -990,31 +1004,61 @@ export class DashboardComponent implements OnInit {
   constructor(
     private presupuestoService: PresupuestoService,
     private facturaService: FacturaService,
-    private materialService: MaterialService
+    private materialService: MaterialService,
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
   ) {}
 
   ngOnInit(): void {
-    this.presupuestoService.getAll().subscribe((data) => {
-      this.allPresupuestos = data;
-      this.presupuestosCount = data.length;
-      this.recentPresupuestos = [...data]
-        .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
-        .slice(0, 5);
-      this.computePresupuestoStats(data);
-      this.computeTopClientes();
+    forkJoin({
+      presupuestos: this.presupuestoService.getAll().pipe(catchError(() => of<Presupuesto[]>([]))),
+      facturas: this.facturaService.getAll().pipe(catchError(() => of<Factura[]>([]))),
+      materiales: this.materialService.getTopUsados().pipe(catchError(() => of<Material[]>([]))),
+    }).subscribe({
+      next: ({ presupuestos, facturas, materiales }) => {
+        this.allPresupuestos = presupuestos;
+        this.presupuestosCount = presupuestos.length;
+        this.recentPresupuestos = [...presupuestos]
+          .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
+          .slice(0, 5);
+        this.computePresupuestoStats(presupuestos);
+
+        this.allFacturas = facturas;
+        this.facturasCount = facturas.length;
+        this.recentFacturas = [...facturas]
+          .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
+          .slice(0, 5);
+        this.computeFacturaStats(facturas);
+        this.ingresosPorMes = this.computeIngresosPorMes(facturas);
+
+        this.topMateriales = materiales;
+        this.computeTopClientes();
+        this.scheduleLayoutRefresh();
+      },
     });
-    this.facturaService.getAll().subscribe((data) => {
-      this.allFacturas = data;
-      this.facturasCount = data.length;
-      this.recentFacturas = [...data]
-        .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
-        .slice(0, 5);
-      this.computeFacturaStats(data);
-      this.ingresosPorMes = this.computeIngresosPorMes(data);
-      this.computeTopClientes();
-    });
-    this.materialService.getTopUsados().subscribe((data) => {
-      this.topMateriales = data;
+  }
+
+  ngAfterViewInit(): void {
+    this.scheduleLayoutRefresh();
+  }
+
+  /**
+   * Tras login el sidenav y las fuentes de iconos pueden no estar listas en el primer paint;
+   * MatProgressBar y barras flex a veces quedan con ancho 0 hasta un resize.
+   */
+  private scheduleLayoutRefresh(): void {
+    this.ngZone.runOutsideAngular(() => {
+      const bump = () =>
+        this.ngZone.run(() => {
+          window.dispatchEvent(new Event('resize'));
+          this.cdr.markForCheck();
+        });
+      const afterPaint = () => requestAnimationFrame(() => requestAnimationFrame(bump));
+      if (typeof document !== 'undefined' && document.fonts?.ready) {
+        void document.fonts.ready.then(afterPaint);
+      } else {
+        afterPaint();
+      }
     });
   }
 

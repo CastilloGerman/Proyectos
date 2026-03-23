@@ -37,11 +37,23 @@ public class FacturaPdfService {
     }
 
     public byte[] generarPdf(Factura factura, Long usuarioId) {
+        return generarPdfInterno(factura, usuarioId, null);
+    }
+
+    /**
+     * Vista previa desde el editor de plantillas: {@code notasPieOverride} no nulo sustituye las notas al pie
+     * guardadas en empresa (cadena vacía = sin pie en el PDF).
+     */
+    public byte[] generarVistaPrevia(Factura factura, Long usuarioId, String notasPieOverride) {
+        return generarPdfInterno(factura, usuarioId, notasPieOverride);
+    }
+
+    private byte[] generarPdfInterno(Factura factura, Long usuarioId, String notasPieFacturaOverride) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              Document document = new Document(PageSize.A4, 40, 40, 50, 50)) {
             PdfWriter.getInstance(document, baos);
             document.open();
-            agregarContenido(document, factura, usuarioId);
+            agregarContenido(document, factura, usuarioId, notasPieFacturaOverride);
             document.close();
             return baos.toByteArray();
         } catch (DocumentException | IOException e) {
@@ -51,7 +63,8 @@ public class FacturaPdfService {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    private void agregarContenido(Document document, Factura factura, Long usuarioId) throws DocumentException, IOException {
+    private void agregarContenido(Document document, Factura factura, Long usuarioId, String notasPieFacturaOverride)
+            throws DocumentException, IOException {
         Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 22, Color.DARK_GRAY);
         Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.WHITE);
         Font cellFont = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.DARK_GRAY);
@@ -160,9 +173,17 @@ public class FacturaPdfService {
         PdfPTable totalesTable = crearTablaTotales(factura, cellFont);
         document.add(totalesTable);
 
-        // Notas al pie (configurables)
-        if (empresa != null && empresa.getNotasPieFactura() != null && !empresa.getNotasPieFactura().isBlank()) {
-            Paragraph notas = new Paragraph(empresa.getNotasPieFactura(), smallFont);
+        // Notas al pie (configurables). null = usar las guardadas en empresa; no null = texto explícito (vista previa).
+        String pieFactura;
+        if (notasPieFacturaOverride != null) {
+            pieFactura = notasPieFacturaOverride.isBlank() ? null : notasPieFacturaOverride;
+        } else if (empresa != null && empresa.getNotasPieFactura() != null && !empresa.getNotasPieFactura().isBlank()) {
+            pieFactura = empresa.getNotasPieFactura();
+        } else {
+            pieFactura = null;
+        }
+        if (pieFactura != null) {
+            Paragraph notas = new Paragraph(pieFactura, smallFont);
             notas.setSpacingBefore(20);
             document.add(notas);
         }
