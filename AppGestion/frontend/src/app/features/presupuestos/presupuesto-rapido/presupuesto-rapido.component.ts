@@ -116,11 +116,20 @@ import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
           </form>
           @if (ultimoClienteWa) {
             <div class="wa-row">
-              <a mat-stroked-button color="accent" [href]="ultimoClienteWa" target="_blank" rel="noopener">
-                <mat-icon>chat</mat-icon>
-                WhatsApp al cliente
+              <a
+                class="wa-link"
+                [href]="ultimoClienteWa"
+                target="_blank"
+                rel="noopener"
+                aria-label="Abrir WhatsApp al cliente con un texto sugerido"
+              >
+                <img src="assets/whatsapp-logo.png" alt="" class="wa-logo" width="22" height="22" />
+                <span class="wa-link-text">WhatsApp al cliente</span>
               </a>
-              <span class="wa-hint">Abre la app con un texto sugerido (editable).</span>
+              <span class="wa-hint">
+                En muchos móviles el PDF se ofrece al compartir con WhatsApp; si no, abre el PDF en la otra pestaña y usa este
+                enlace (texto sugerido, sin adjunto automático).
+              </span>
             </div>
           }
         </mat-card-content>
@@ -156,6 +165,43 @@ import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
     .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; align-items: center; }
     .wa-row { margin-top: 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
     .wa-hint { font-size: 12px; color: #64748b; }
+    /* Enlace propio: evita color accent (rojo/naranja) y el flex en columna de mat-stroked-button. */
+    .wa-link {
+      display: inline-flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-radius: var(--app-radius-md, 12px);
+      border: 1px solid var(--app-border, rgba(15, 23, 42, 0.12));
+      background: var(--app-bg-card, #fff);
+      color: var(--app-text-primary, #0f172a);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.2;
+      transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      box-sizing: border-box;
+    }
+    .wa-link:hover {
+      background: var(--app-bg-page, #f8fafc);
+      border-color: rgba(15, 23, 42, 0.18);
+    }
+    .wa-link:focus-visible {
+      outline: 2px solid #1e3a8a;
+      outline-offset: 2px;
+    }
+    .wa-link-text {
+      color: inherit;
+      white-space: nowrap;
+    }
+    .wa-logo {
+      width: 22px;
+      height: 22px;
+      object-fit: contain;
+      flex-shrink: 0;
+      display: block;
+    }
     @media (max-width: 700px) {
       .line-row {
         grid-template-columns: 1fr 1fr;
@@ -284,14 +330,16 @@ export class PresupuestoRapidoComponent implements OnInit {
         this.ultimoClienteWa = this.buildWaLink(cli, pres.id);
         this.presupuestoService.downloadPdf(pres.id).subscribe({
           next: (blob) => {
-            const url = URL.createObjectURL(blob);
-            window.open(url, '_blank');
-            URL.revokeObjectURL(url);
+            void this.sharePdfOrOpenTab(blob, pres.id, cli).finally(() => {
+              this.loading = false;
+            });
           },
-          error: () => this.snackBar.open('Presupuesto creado; error al generar PDF', 'Cerrar', { duration: 4000 }),
+          error: () => {
+            this.loading = false;
+            this.snackBar.open('Presupuesto creado; error al generar PDF', 'Cerrar', { duration: 4000 });
+          },
         });
         this.snackBar.open('Presupuesto creado', 'Cerrar', { duration: 2500 });
-        this.loading = false;
       },
       error: (err) => {
         this.loading = false;
@@ -300,15 +348,66 @@ export class PresupuestoRapidoComponent implements OnInit {
     });
   }
 
+  /** Texto del mensaje (mismo que en wa.me). */
+  private waMessageText(cli: Cliente | undefined, presupuestoId: number): string {
+    return `Hola${cli?.nombre ? ' ' + cli.nombre : ''}, te envío el presupuesto #${presupuestoId}. ¿Te encaja?`;
+  }
+
+  private openPdfBlobInTab(blob: Blob): void {
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 120_000);
+  }
+
+  /**
+   * Intenta compartir PDF + texto (p. ej. WhatsApp con adjunto en móvil vía menú del sistema).
+   * Los enlaces wa.me no permiten archivos; esto es la opción estándar en navegadores.
+   */
+  private async sharePdfOrOpenTab(blob: Blob, presupuestoId: number, cli: Cliente | undefined): Promise<void> {
+    const text = this.waMessageText(cli, presupuestoId);
+    const file = new File([blob], `Presupuesto-${presupuestoId}.pdf`, { type: 'application/pdf' });
+
+    if (typeof navigator.share === 'function' && typeof navigator.canShare === 'function') {
+      const data: ShareData = { files: [file], text };
+      if (navigator.canShare(data)) {
+        try {
+          await navigator.share(data);
+          this.snackBar.open(
+            'Elige WhatsApp en el menú para enviar el PDF y el mensaje (el texto lo puedes editar en la app).',
+            'Cerrar',
+            { duration: 6000 },
+          );
+          return;
+        } catch (e: unknown) {
+          const name = e && typeof e === 'object' && 'name' in e ? (e as { name: string }).name : '';
+          if (name === 'AbortError') {
+            this.openPdfBlobInTab(blob);
+            return;
+          }
+          this.snackBar.open('No se pudo compartir. Se abre el PDF en una pestaña nueva.', 'Cerrar', {
+            duration: 4000,
+          });
+          this.openPdfBlobInTab(blob);
+          return;
+        }
+      }
+    }
+
+    this.openPdfBlobInTab(blob);
+    this.snackBar.open(
+      'Se abrió el PDF. En este equipo no se puede adjuntar solo con un clic: usa el botón de WhatsApp para el texto y adjunta el PDF desde la pestaña del documento.',
+      'Cerrar',
+      { duration: 7000 },
+    );
+  }
+
   private buildWaLink(cli: Cliente | undefined, presupuestoId: number): string | null {
     if (!cli?.telefono?.trim()) return null;
     let d = cli.telefono.replace(/\D/g, '');
     if (d.startsWith('00')) d = d.slice(2);
     if (d.length === 9) d = '34' + d;
     if (d.length < 10) return null;
-    const msg = encodeURIComponent(
-      `Hola${cli.nombre ? ' ' + cli.nombre : ''}, te envío el presupuesto #${presupuestoId}. ¿Te encaja?`
-    );
+    const msg = encodeURIComponent(this.waMessageText(cli, presupuestoId));
     return `https://wa.me/${d}?text=${msg}`;
   }
 }

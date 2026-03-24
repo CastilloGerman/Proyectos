@@ -74,7 +74,7 @@ import { environment } from '../../../environments/environment';
       </mat-form-field>
       <mat-menu #shareMenu="matMenu">
         <button mat-menu-item type="button" (click)="compartirWhatsApp()">
-          <mat-icon class="icon-wa">chat</mat-icon>
+          <img src="assets/whatsapp-logo.png" alt="" class="wa-menu-logo" width="22" height="22" />
           <span>WhatsApp</span>
         </button>
         <button mat-menu-item type="button" (click)="compartirNativo()" *ngIf="puedeCompartirNativo">
@@ -102,7 +102,14 @@ import { environment } from '../../../environments/environment';
       align-items: center;
       margin-right: -4px;
     }
-    .icon-wa { color: #25d366; }
+    .wa-menu-logo {
+      width: 22px;
+      height: 22px;
+      object-fit: contain;
+      flex-shrink: 0;
+      margin-right: 12px;
+      vertical-align: middle;
+    }
   `],
 })
 export class InvitarUsuarioDialogComponent {

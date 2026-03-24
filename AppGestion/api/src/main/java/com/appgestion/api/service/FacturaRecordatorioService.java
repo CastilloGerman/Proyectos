@@ -4,6 +4,7 @@ import com.appgestion.api.domain.entity.Factura;
 import com.appgestion.api.repository.FacturaRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,10 +21,17 @@ public class FacturaRecordatorioService {
 
     private final FacturaRepository facturaRepository;
     private final EmailService emailService;
+    /** Base URL del front (sin barra final); para icono WhatsApp en HTML del correo. */
+    private final String frontendBaseUrl;
 
-    public FacturaRecordatorioService(FacturaRepository facturaRepository, EmailService emailService) {
+    public FacturaRecordatorioService(
+            FacturaRepository facturaRepository,
+            EmailService emailService,
+            @Value("${app.frontend-url:http://localhost:4200}") String frontendUrl) {
         this.facturaRepository = facturaRepository;
         this.emailService = emailService;
+        String base = frontendUrl == null ? "" : frontendUrl.trim();
+        this.frontendBaseUrl = base.endsWith("/") ? base.substring(0, base.length() - 1) : base;
     }
 
     @Transactional
@@ -78,10 +86,22 @@ public class FacturaRecordatorioService {
 
         String wa = WhatsAppLinkService.enlaceRecordatorioFactura(factura);
         if (wa != null) {
-            cuerpo += "<p><strong>WhatsApp al cliente:</strong> " +
-                    "<a href=\"" + wa + "\">Abrir chat con mensaje sugerido</a></p>" +
-                    "<p style='color:#666;font-size:12px'>El enlace abre WhatsApp Web o la app con un texto editable. " +
-                    "No se envía ningún mensaje automático al cliente.</p>";
+            String logoSrc = frontendBaseUrl.isEmpty()
+                    ? ""
+                    : frontendBaseUrl + "/assets/whatsapp-logo.png";
+            String logoHtml = logoSrc.isEmpty()
+                    ? ""
+                    : "<img src=\""
+                            + logoSrc
+                            + "\" alt=\"WhatsApp\" width=\"22\" height=\"22\" "
+                            + "style=\"vertical-align:middle;margin-right:8px\"/>";
+            cuerpo += "<p style=\"line-height:1.6\">"
+                    + logoHtml
+                    + "<a href=\""
+                    + wa
+                    + "\">Abrir chat con mensaje sugerido</a> (cliente)</p>"
+                    + "<p style='color:#666;font-size:12px'>El enlace abre WhatsApp Web o la app con un texto editable. "
+                    + "No se envía ningún mensaje automático al cliente.</p>";
         }
 
         cuerpo += "<p style='color:#999;font-size:12px'>Este mensaje ha sido generado automáticamente.</p>";
