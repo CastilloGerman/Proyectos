@@ -109,7 +109,7 @@
             <mat-card-title>Palabras clave (opcional)</mat-card-title>
             <mat-card-subtitle>
               Cada botón muestra un <strong>nombre sencillo</strong>; al pulsarlo se copia el <strong>código</strong> que debes pegar
-              en el cuadro de arriba (clic derecho → Pegar, o Ctrl+V). Pasa el cursor por un botón para ver el código y un ejemplo.
+              en el cuadro de arriba (clic derecho → Pegar, o Ctrl+V). Pasa el cursor por un botón para ver un ejemplo de valor.
               En la <strong>vista rápida</strong> verás cómo quedaría con datos de ejemplo. En el PDF de la app, por ahora se imprimen
               tal cual (no se sustituyen automáticamente).
             </mat-card-subtitle>
@@ -124,7 +124,7 @@
                     class="plant-ph-pill"
                     [matTooltip]="tooltipPlaceholder(p)"
                     matTooltipPosition="above"
-                    [attr.aria-label]="'Copiar código ' + p.token + ' para: ' + p.descripcion"
+                    [attr.aria-label]="'Copiar al portapapeles para insertar: ' + p.descripcion"
                     (click)="copyPlaceholder(p); $event.stopPropagation()"
                   >
                     <span class="plant-ph-pill__label">{{ p.descripcion }}</span>
@@ -203,10 +203,16 @@
             <div class="plant-preview__sheet">
               <div class="plant-preview__sheet-inner">
                 <header class="plant-preview__doc-head">
-                  <div class="plant-preview__logo-ph">Logo</div>
+                  @if (logoPreviewSafeUrl()) {
+                    <div class="plant-preview__logo-wrap">
+                      <img [src]="logoPreviewSafeUrl()!" alt="" class="plant-preview__logo-img" />
+                    </div>
+                  } @else {
+                    <div class="plant-preview__logo-ph">Logo</div>
+                  }
                   <div class="plant-preview__empresa-ph">
-                    <strong>Tu negocio</strong>
-                    <span>Tus datos (los pones en «Nombre, dirección y logo»)</span>
+                    <strong>{{ empresaPreviewNombre() }}</strong>
+                    <span>{{ empresaPreviewSubline() }}</span>
                   </div>
                 </header>
 

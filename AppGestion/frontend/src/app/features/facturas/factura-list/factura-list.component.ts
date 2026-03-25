@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { trigger, transition, query, stagger, animate, style } from '@angular/animations';
 import { RouterLink } from '@angular/router';
@@ -270,13 +270,32 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
     .venc-overdue { color: #c62828; font-weight: 500; }
   `],
 })
-export class FacturaListComponent implements OnInit, AfterViewInit {
+export class FacturaListComponent implements OnInit {
   displayedColumns = ['numeroFactura', 'clienteNombre', 'fechaCreacion', 'fechaVencimiento', 'estadoPago', 'total', 'actions'];
   dataSource = new MatTableDataSource<Factura>([]);
   isLoading = false;
 
-  @ViewChild(MatSort) sort!: MatSort;
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  /**
+   * La tabla está en @if (!isLoading): en ngAfterViewInit aún no existe MatSort/MatPaginator.
+   * Setters enlazan el dataSource cuando el DOM ya tiene la tabla.
+   */
+  @ViewChild(MatSort)
+  set matSort(sort: MatSort | undefined) {
+    this._sort = sort;
+    if (sort) {
+      this.dataSource.sort = sort;
+    }
+  }
+  private _sort?: MatSort;
+
+  @ViewChild(MatPaginator)
+  set matPaginator(p: MatPaginator | undefined) {
+    this._paginator = p;
+    if (p) {
+      this.dataSource.paginator = p;
+    }
+  }
+  private _paginator?: MatPaginator;
 
   private textFilter = '';
   private estadoFilter = '';
@@ -298,15 +317,35 @@ export class FacturaListComponent implements OnInit, AfterViewInit {
       const estadoMatch = !estado || data.estadoPago === estado;
       return !!(textMatch && estadoMatch);
     };
+    this.dataSource.sortingDataAccessor = (row: Factura, column: string): string | number => {
+      switch (column) {
+        case 'fechaCreacion':
+          return row.fechaCreacion ? new Date(row.fechaCreacion).getTime() : 0;
+        case 'fechaVencimiento':
+          return row.fechaVencimiento ? new Date(row.fechaVencimiento).getTime() : Number.MAX_SAFE_INTEGER;
+        case 'total':
+          return row.total ?? 0;
+        case 'numeroFactura':
+        case 'clienteNombre':
+        case 'estadoPago':
+          return (row[column as keyof Factura] as string) ?? '';
+        default:
+          return '';
+      }
+    };
+  }
+
+  private connectSortPaginator(): void {
+    if (this._sort) {
+      this.dataSource.sort = this._sort;
+    }
+    if (this._paginator) {
+      this.dataSource.paginator = this._paginator;
+    }
   }
 
   ngOnInit(): void {
     this.load();
-  }
-
-  ngAfterViewInit(): void {
-    if (this.sort) this.dataSource.sort = this.sort;
-    if (this.paginator) this.dataSource.paginator = this.paginator;
   }
 
   load(): void {
@@ -315,10 +354,7 @@ export class FacturaListComponent implements OnInit, AfterViewInit {
       next: (data) => {
         this.dataSource.data = data;
         this.isLoading = false;
-        setTimeout(() => {
-          this.dataSource.paginator = this.paginator;
-          this.dataSource.sort = this.sort;
-        }, 0);
+        queueMicrotask(() => this.connectSortPaginator());
       },
       error: () => {
         this.isLoading = false;

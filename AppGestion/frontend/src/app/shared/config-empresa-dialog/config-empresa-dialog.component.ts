@@ -182,6 +182,9 @@ export class ConfigEmpresaDialogComponent implements OnInit {
   logoCambiada: 'none' | 'set' | 'clear' = 'none';
   nuevaLogoBase64: string | null = null;
   tieneLogoGuardada = false;
+  /** Conservar rubro al guardar desde el diálogo (no se edita aquí). */
+  private rubroAutonomoCodigoGuardado = '';
+  private empresaConfigCargada = false;
 
   constructor(
     private fb: FormBuilder,
@@ -221,6 +224,8 @@ export class ConfigEmpresaDialogComponent implements OnInit {
         this.nuevaLogoBase64 = null;
         this.tieneFirmaGuardada = !!(e.tieneFirma && e.firmaImagenBase64);
         this.firmaPreviewSrc = dataUrlFromStoredBase64(e.firmaImagenBase64 ?? null);
+        this.rubroAutonomoCodigoGuardado = e.rubroAutonomoCodigo ?? '';
+        this.empresaConfigCargada = true;
         this.form.patchValue({
           nombre: e.nombre ?? '',
           direccion: e.direccion ?? '',
@@ -315,8 +320,11 @@ export class ConfigEmpresaDialogComponent implements OnInit {
     }
     if (this.logoCambiada === 'clear') {
       payload['logoImagenBase64'] = '';
-    } else if (this.logoCambiada === 'set' && this.nuevaLogoBase64) {
+    } else     if (this.logoCambiada === 'set' && this.nuevaLogoBase64) {
       payload['logoImagenBase64'] = this.nuevaLogoBase64;
+    }
+    if (this.empresaConfigCargada) {
+      payload['rubroAutonomoCodigo'] = this.rubroAutonomoCodigoGuardado;
     }
     this.configService.saveEmpresa(payload).subscribe({
       next: () => {

@@ -29,4 +29,6 @@ export interface Empresa {
   descripcionActividadFiscal?: string | null;
   nifIntracomunitario?: string | null;
   epigrafeIae?: string | null;
+  /** Solo métricas internas; no se muestra en facturas/PDF. */
+  rubroAutonomoCodigo?: string | null;
 }

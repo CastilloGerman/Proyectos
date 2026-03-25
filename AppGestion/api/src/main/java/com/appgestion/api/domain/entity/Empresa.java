@@ -56,13 +56,14 @@ public class Empresa {
     @Column(name = "mail_password", length = 255)
     private String mailPassword;
 
-    /** Imagen de firma para PDFs (PNG/JPEG). */
-    @Lob
+    /**
+     * Imagen de firma para PDFs (PNG/JPEG).
+     * No usar {@code @Lob}: en PostgreSQL Hibernate lo mapea a {@code oid}, pero la columna es {@code BYTEA}.
+     */
     @Column(name = "firma_imagen", columnDefinition = "BYTEA")
     private byte[] firmaImagen;
 
     /** Logo para cabecera de presupuestos y facturas (PNG/JPEG). */
-    @Lob
     @Column(name = "logo_imagen", columnDefinition = "BYTEA")
     private byte[] logoImagen;
 
@@ -91,6 +92,10 @@ public class Empresa {
 
     @Column(name = "epigrafe_iae", length = 30)
     private String epigrafeIae;
+
+    /** Código de rubro/actividad (autónomo); solo métricas internas, no se imprime en PDF. */
+    @Column(name = "rubro_autonomo_codigo", length = 64)
+    private String rubroAutonomoCodigo;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -169,4 +174,7 @@ public class Empresa {
 
     public String getEpigrafeIae() { return epigrafeIae; }
     public void setEpigrafeIae(String epigrafeIae) { this.epigrafeIae = epigrafeIae; }
+
+    public String getRubroAutonomoCodigo() { return rubroAutonomoCodigo; }
+    public void setRubroAutonomoCodigo(String rubroAutonomoCodigo) { this.rubroAutonomoCodigo = rubroAutonomoCodigo; }
 }

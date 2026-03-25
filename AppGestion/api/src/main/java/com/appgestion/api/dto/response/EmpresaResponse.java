@@ -29,5 +29,7 @@ public record EmpresaResponse(
         String regimenIvaPrincipal,
         String descripcionActividadFiscal,
         String nifIntracomunitario,
-        String epigrafeIae
+        String epigrafeIae,
+        /** Solo métricas internas; no se usa en PDF. */
+        String rubroAutonomoCodigo
 ) {}

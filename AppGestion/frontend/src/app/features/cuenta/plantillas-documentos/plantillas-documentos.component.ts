@@ -15,7 +15,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { DomSanitizer, SafeResourceUrl, SafeUrl } from '@angular/platform-browser';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ConfigService, PlantillasPdfPreviewPayload } from '../../../core/services/config.service';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -107,6 +107,38 @@ export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
 
   readonly placeholders = PLACEHOLDER_CATALOG;
 
+  /** Empresa cargada (misma respuesta que GET /config/empresa) para cabecera de la vista rápida. */
+  readonly empresaPreview = signal<Empresa | null>(null);
+  /** Logo en data URL seguro para <img [src]>. */
+  readonly logoPreviewSafeUrl = signal<SafeUrl | null>(null);
+
+  readonly empresaPreviewNombre = computed(() => {
+    const n = this.empresaPreview()?.nombre?.trim();
+    return n || 'Tu negocio';
+  });
+
+  readonly empresaPreviewSubline = computed(() => {
+    const e = this.empresaPreview();
+    if (!e) {
+      return 'Tus datos (los pones en «Nombre, dirección y logo»)';
+    }
+    const parts: string[] = [];
+    if (e.direccion?.trim()) {
+      parts.push(e.direccion.trim());
+    }
+    const cpProv = [e.codigoPostal?.trim(), e.provincia?.trim()].filter(Boolean).join(' ');
+    if (cpProv) {
+      parts.push(cpProv);
+    }
+    if (e.pais?.trim() && e.pais.trim() !== 'España') {
+      parts.push(e.pais.trim());
+    }
+    if (e.nif?.trim()) {
+      parts.push(`NIF ${e.nif.trim()}`);
+    }
+    return parts.length > 0 ? parts.join(' · ') : 'Tus datos (los pones en «Nombre, dirección y logo»)';
+  });
+
   readonly textoPieVistaPrevia = computed(() => {
     const idx = this.previewTabIndex();
     const v = this.formValue();
@@ -185,13 +217,13 @@ export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
   }
 
   tooltipPlaceholder(p: PlaceholderDef): string {
-    return `Código al pegar: ${p.token} · Ejemplo: ${p.ejemplo}`;
+    return `Ejemplo en el documento: ${p.ejemplo}`;
   }
 
   copyPlaceholder(p: PlaceholderDef): void {
     void navigator.clipboard.writeText(p.token).then(
       () => {
-        this.snackBar.open(`Copiado «${p.token}». Pégalo en el cuadro de arriba (Ctrl+V).`, 'Cerrar', {
+        this.snackBar.open(`Copiado. Pégalo en el cuadro de arriba (Ctrl+V).`, 'Cerrar', {
           duration: 4000,
         });
       },
@@ -243,6 +275,7 @@ export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
           notasPieFactura: e.notasPieFactura ?? '',
         });
         this.form.markAsPristine();
+        this.applyEmpresaPreview(e);
         this.loading.set(false);
         if (this.previewMode() === 'pdf') {
           void this.refreshPdfPreview();
@@ -286,6 +319,16 @@ export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
           this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
         },
       });
+  }
+
+  private applyEmpresaPreview(e: Empresa): void {
+    this.empresaPreview.set(e);
+    const b64 = e.logoImagenBase64?.trim();
+    if (!b64) {
+      this.logoPreviewSafeUrl.set(null);
+      return;
+    }
+    this.logoPreviewSafeUrl.set(this.sanitizer.bypassSecurityTrustUrl(buildImageDataUrlFromBase64(b64)));
   }
 
   private revokePdfUrl(): void {
@@ -345,4 +388,46 @@ export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
       }
     }
   }
+}
+
+/**
+ * Construye una data URL con MIME acorde a la firma del binario (PNG/JPEG/GIF/WebP).
+ * El API solo envía el Base64 crudo.
+ */
+function buildImageDataUrlFromBase64(b64: string): string {
+  const clean = b64.replace(/\s/g, '');
+  try {
+    const headLen = Math.min(clean.length, 32);
+    const head = clean.substring(0, headLen);
+    const padded = head + '='.repeat((4 - (head.length % 4)) % 4);
+    const binaryString = atob(padded);
+    const n = Math.min(binaryString.length, 12);
+    const bytes = new Uint8Array(n);
+    for (let i = 0; i < n; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+      return `data:image/jpeg;base64,${clean}`;
+    }
+    if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+      return `data:image/png;base64,${clean}`;
+    }
+    if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) {
+      return `data:image/gif;base64,${clean}`;
+    }
+    if (
+      bytes[0] === 0x52 &&
+      bytes[1] === 0x49 &&
+      bytes[2] === 0x46 &&
+      bytes[8] === 0x57 &&
+      bytes[9] === 0x45 &&
+      bytes[10] === 0x42 &&
+      bytes[11] === 0x50
+    ) {
+      return `data:image/webp;base64,${clean}`;
+    }
+  } catch {
+    /* ignore */
+  }
+  return `data:image/png;base64,${clean}`;
 }

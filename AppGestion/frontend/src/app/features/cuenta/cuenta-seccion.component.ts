@@ -15,7 +15,7 @@ export const CUENTA_SECCION_TITLES: Record<string, string> = {
   'datos-empresa': 'Datos de la empresa',
   suscripcion: 'Suscripción y plan actual',
   'historial-suscripcion': 'Historial de facturas de la suscripción',
-  'metodos-pago': 'Métodos de pago',
+  'metodos-pago': 'Métodos de cobro',
   'datos-fiscales': 'Datos fiscales',
   'cambiar-contrasena': 'Cambiar contraseña',
   '2fa': 'Autenticación en dos factores',

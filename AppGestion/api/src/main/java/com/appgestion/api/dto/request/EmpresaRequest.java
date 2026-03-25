@@ -22,5 +22,9 @@ public record EmpresaRequest(
         /**
          * Base64 de logo cabecera (PNG/JPEG). null = no cambiar; cadena vacía = eliminar logo.
          */
-        String logoImagenBase64
+        String logoImagenBase64,
+        /**
+         * Código de rubro (métricas). null = no modificar el valor guardado; "" = borrar.
+         */
+        String rubroAutonomoCodigo
 ) {}

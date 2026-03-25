@@ -93,6 +93,20 @@
               }
             </mat-form-field>
           </div>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Rubro o actividad (opcional)</mat-label>
+            <mat-select formControlName="rubroAutonomoCodigo" panelClass="empresa-rubro-panel">
+              <mat-option value="">Sin indicar</mat-option>
+              @for (cat of rubroCategorias; track cat.id) {
+                <mat-optgroup [label]="cat.etiqueta">
+                  @for (op of cat.opciones; track op.codigo) {
+                    <mat-option [value]="op.codigo">{{ op.etiqueta }}</mat-option>
+                  }
+                </mat-optgroup>
+              }
+            </mat-select>
+            <mat-hint>Solo para estadísticas internas de la plataforma; no aparece en presupuestos ni facturas.</mat-hint>
+          </mat-form-field>
         </mat-card-content>
       </mat-card>
 

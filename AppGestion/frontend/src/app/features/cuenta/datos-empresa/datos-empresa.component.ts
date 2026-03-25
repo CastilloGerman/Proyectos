@@ -11,7 +11,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { MatSelectModule } from '@angular/material/select';
 import { nifValidator } from '../../../shared/validators/nif.validator';
+import { RUBRO_AUTONOMO_CATEGORIAS } from './rubro-autonomo.catalog';
 import { ConfigService } from '../../../core/services/config.service';
 import { Empresa } from '../../../core/models/empresa.model';
 import { dataUrlFromStoredBase64 } from '../../../core/utils/image-data-url';
@@ -35,6 +37,7 @@ const MAX_IMAGE_BYTES = 380_000;
     MatSnackBarModule,
     MatDividerModule,
     MatExpansionModule,
+    MatSelectModule,
   ],
   templateUrl: './datos-empresa.component.html',
   styleUrl: './datos-empresa.component.scss',
@@ -43,6 +46,8 @@ export class DatosEmpresaComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly config = inject(ConfigService);
   private readonly snackBar = inject(MatSnackBar);
+
+  readonly rubroCategorias = RUBRO_AUTONOMO_CATEGORIAS;
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -63,6 +68,7 @@ export class DatosEmpresaComponent implements OnInit {
     mailPort: [587 as number],
     mailUsername: ['', [Validators.maxLength(150)]],
     mailPassword: ['', [Validators.maxLength(255)]],
+    rubroAutonomoCodigo: [''],
   });
 
   mailConfigurado = false;
@@ -121,6 +127,7 @@ export class DatosEmpresaComponent implements OnInit {
       mailPort: e.mailPort ?? 587,
       mailUsername: e.mailUsername ?? '',
       mailPassword: '',
+      rubroAutonomoCodigo: e.rubroAutonomoCodigo ?? '',
     });
     this.form.markAsPristine();
     this.loading.set(false);
@@ -207,6 +214,7 @@ export class DatosEmpresaComponent implements OnInit {
       mailHost: v.mailHost.trim() || undefined,
       mailPort: v.mailPort,
       mailUsername: v.mailUsername.trim() || undefined,
+      rubroAutonomoCodigo: v.rubroAutonomoCodigo?.trim() ?? '',
     };
     if (!v.mailPassword?.trim()) {
       delete payload['mailPassword'];

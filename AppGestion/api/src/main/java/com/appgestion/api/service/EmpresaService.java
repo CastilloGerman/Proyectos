@@ -1,5 +1,6 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.catalog.RubroAutonomoCatalog;
 import com.appgestion.api.domain.entity.Empresa;
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.request.EmpresaRequest;
@@ -101,6 +102,16 @@ public class EmpresaService {
                 } catch (IllegalArgumentException e) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Logo en Base64 no válido");
                 }
+            }
+        }
+        if (request.rubroAutonomoCodigo() != null) {
+            String rubro = request.rubroAutonomoCodigo().trim();
+            if (rubro.isEmpty()) {
+                emp.setRubroAutonomoCodigo(null);
+            } else if (!RubroAutonomoCatalog.esCodigoValido(rubro)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rubro o actividad no reconocido");
+            } else {
+                emp.setRubroAutonomoCodigo(rubro);
             }
         }
         emp = empresaRepository.save(emp);
@@ -226,7 +237,7 @@ public class EmpresaService {
     private EmpresaResponse toResponse(Empresa emp) {
         if (emp == null) {
             return new EmpresaResponse(null, "", null, null, null, null, null, null, null, null, null, null, null, null,
-                    false, false, null, false, null, null, null, null, null, null, null, null, null);
+                    false, false, null, false, null, null, null, null, null, null, null, null, null, null);
         }
         boolean mailConfigurado = emp.getMailUsername() != null && !emp.getMailUsername().isBlank()
                 && emp.getMailPassword() != null && !emp.getMailPassword().isBlank();
@@ -263,7 +274,8 @@ public class EmpresaService {
                 emp.getRegimenIvaPrincipal(),
                 emp.getDescripcionActividadFiscal(),
                 emp.getNifIntracomunitario(),
-                emp.getEpigrafeIae()
+                emp.getEpigrafeIae(),
+                emp.getRubroAutonomoCodigo()
         );
     }
 }

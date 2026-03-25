@@ -464,7 +464,7 @@ export class FacturaFormComponent implements OnInit {
     });
   }
 
-  /** Rellena método, condiciones y notas sugeridas desde /config/empresa (pantalla Métodos de pago). */
+  /** Rellena método, condiciones y notas sugeridas desde /config/empresa (pantalla Métodos de cobro). */
   private applyPaymentDefaultsFromEmpresa(): void {
     this.configService.getEmpresa().subscribe({
       next: (e) => {
