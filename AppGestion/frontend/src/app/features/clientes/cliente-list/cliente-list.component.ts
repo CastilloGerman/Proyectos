@@ -39,6 +39,20 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
             <th mat-header-cell *matHeaderCellDef>Nombre</th>
             <td mat-cell *matCellDef="let row">{{ row.nombre }}</td>
           </ng-container>
+          <ng-container matColumnDef="estadoPanel">
+            <th mat-header-cell *matHeaderCellDef>Cobros y documentos</th>
+            <td mat-cell *matCellDef="let row">
+              <a
+                mat-stroked-button
+                color="primary"
+                [routerLink]="['/clientes', row.id, 'panel']"
+                class="btn-ver-estado"
+              >
+                <mat-icon>insights</mat-icon>
+                Ver estado
+              </a>
+            </td>
+          </ng-container>
           <ng-container matColumnDef="email">
             <th mat-header-cell *matHeaderCellDef>Email</th>
             <td mat-cell *matCellDef="let row">{{ row.email }}</td>
@@ -63,7 +77,7 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
           <tr class="mat-row empty-row" *matNoDataRow>
-            <td class="mat-cell" colspan="4">
+            <td class="mat-cell" colspan="5">
               <div class="empty-state">
                 <mat-icon class="empty-illus" aria-hidden="true">groups</mat-icon>
                 <p class="empty-title">Aún no tienes clientes</p>
@@ -92,6 +106,13 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
 
     .full-width {
       width: 100%;
+    }
+
+    .btn-ver-estado mat-icon {
+      margin-right: 4px;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
     }
 
     .empty-row .mat-mdc-cell {
@@ -130,7 +151,7 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
   `],
 })
 export class ClienteListComponent implements OnInit {
-  displayedColumns = ['nombre', 'email', 'telefono', 'actions'];
+  displayedColumns = ['nombre', 'estadoPanel', 'email', 'telefono', 'actions'];
   dataSource = new MatTableDataSource<Cliente>([]);
 
   constructor(

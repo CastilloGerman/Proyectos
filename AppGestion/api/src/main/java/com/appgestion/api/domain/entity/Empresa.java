@@ -97,6 +97,14 @@ public class Empresa {
     @Column(name = "rubro_autonomo_codigo", length = 64)
     private String rubroAutonomoCodigo;
 
+    /** Si true, se envían recordatorios de pago por email al cliente (facturas impagadas). */
+    @Column(name = "recordatorio_cliente_activo", nullable = false)
+    private Boolean recordatorioClienteActivo = false;
+
+    /** Días tras la fecha de vencimiento en los que enviar (ej. "7,15,30"). */
+    @Column(name = "recordatorio_cliente_dias", nullable = false, length = 32)
+    private String recordatorioClienteDias = "7,15,30";
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -177,4 +185,14 @@ public class Empresa {
 
     public String getRubroAutonomoCodigo() { return rubroAutonomoCodigo; }
     public void setRubroAutonomoCodigo(String rubroAutonomoCodigo) { this.rubroAutonomoCodigo = rubroAutonomoCodigo; }
+
+    public Boolean getRecordatorioClienteActivo() { return recordatorioClienteActivo; }
+    public void setRecordatorioClienteActivo(Boolean recordatorioClienteActivo) {
+        this.recordatorioClienteActivo = recordatorioClienteActivo != null ? recordatorioClienteActivo : false;
+    }
+
+    public String getRecordatorioClienteDias() { return recordatorioClienteDias; }
+    public void setRecordatorioClienteDias(String recordatorioClienteDias) {
+        this.recordatorioClienteDias = recordatorioClienteDias != null ? recordatorioClienteDias : "7,15,30";
+    }
 }

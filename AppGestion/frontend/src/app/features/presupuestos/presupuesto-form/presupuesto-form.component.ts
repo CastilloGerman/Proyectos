@@ -399,6 +399,15 @@ export class PresupuestoFormComponent implements OnInit {
         },
         error: () => this.router.navigate(['/presupuestos']),
       });
+    } else {
+      this.isEdit = false;
+      const preCliente = this.route.snapshot.queryParamMap.get('clienteId');
+      if (preCliente) {
+        const n = +preCliente;
+        if (!isNaN(n)) {
+          this.form.patchValue({ clienteId: n });
+        }
+      }
     }
     // No añadir fila vacía por defecto: el usuario añade desde "Más usados" o "Añadir material"
   }

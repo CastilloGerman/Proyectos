@@ -5,8 +5,10 @@ import com.appgestion.api.dto.request.EnviarEmailRequest;
 import com.appgestion.api.dto.request.FacturaCobroRequest;
 import com.appgestion.api.dto.request.FacturaRequest;
 import com.appgestion.api.dto.response.FacturaResponse;
+import com.appgestion.api.service.FacturaRecordatorioClienteService;
 import com.appgestion.api.service.FacturaService;
 import com.appgestion.api.service.CurrentUserService;
+import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -23,10 +25,15 @@ public class FacturaController {
 
     private final FacturaService facturaService;
     private final CurrentUserService currentUserService;
+    private final FacturaRecordatorioClienteService facturaRecordatorioClienteService;
 
-    public FacturaController(FacturaService facturaService, CurrentUserService currentUserService) {
+    public FacturaController(
+            FacturaService facturaService,
+            CurrentUserService currentUserService,
+            FacturaRecordatorioClienteService facturaRecordatorioClienteService) {
         this.facturaService = facturaService;
         this.currentUserService = currentUserService;
+        this.facturaRecordatorioClienteService = facturaRecordatorioClienteService;
     }
 
     @GetMapping
@@ -51,6 +58,36 @@ public class FacturaController {
                 .headers(headers)
                 .contentType(MediaType.parseMediaType("application/pdf"))
                 .body(pdf);
+    }
+
+    /**
+     * Recordatorio de cobro al cliente (mismo contenido base que el envío automático). No modifica marcas del job.
+     * Requiere vencimiento en ≤15 días o ya vencido, importe pendiente y email del cliente.
+     * Ruta en segmentos para evitar que Spring trate la petición como recurso estático.
+     */
+    @PostMapping("/{id}/recordatorio/cobro")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void enviarRecordatorioCliente(@PathVariable Long id) {
+        Long usuarioId = currentUserService.getCurrentUsuario().getId();
+        try {
+            facturaRecordatorioClienteService.enviarRecordatorioClienteManual(usuarioId, id);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    e.getMessage());
+        } catch (MessagingException e) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "No se pudo enviar el correo. Revisa el SMTP en datos de la empresa: "
+                            + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(FacturaController.class).warn(
+                    "Error recordatorio cliente factura {}: {}", id, e.getMessage(), e);
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error al enviar el recordatorio: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
+        }
     }
 
     @PostMapping("/{id}/enviar-email")

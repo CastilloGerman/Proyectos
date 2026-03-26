@@ -72,7 +72,13 @@ import { environment } from '../environments/environment';
               <mat-icon matListItemIcon>inventory_2</mat-icon>
               <span matListItemTitle>Materiales</span>
             </a>
-            <a mat-list-item routerLink="/clientes" routerLinkActive="active">
+            <a
+              mat-list-item
+              routerLink="/clientes"
+              routerLinkActive="active"
+              matTooltip="En la lista: Ver estado"
+              matTooltipPosition="right"
+            >
               <mat-icon matListItemIcon>people</mat-icon>
               <span matListItemTitle>Clientes</span>
             </a>

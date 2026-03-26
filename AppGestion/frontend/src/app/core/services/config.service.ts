@@ -23,6 +23,10 @@ export class ConfigService {
     return this.http.patch<Empresa>(`${this.apiUrl}/empresa/metodos-cobro`, body);
   }
 
+  patchRecordatoriosCobro(body: RecordatoriosCobroPayload): Observable<Empresa> {
+    return this.http.patch<Empresa>(`${this.apiUrl}/empresa/recordatorios-cobro`, body);
+  }
+
   patchDatosFiscales(body: DatosFiscalesPayload): Observable<Empresa> {
     return this.http.patch<Empresa>(`${this.apiUrl}/empresa/datos-fiscales`, body);
   }
@@ -53,6 +57,11 @@ export interface MetodosCobroPayload {
   defaultCondicionesPago: string;
   ibanCuenta: string;
   bizumTelefono: string;
+}
+
+export interface RecordatoriosCobroPayload {
+  recordatorioClienteActivo: boolean;
+  recordatorioClienteDias: number[];
 }
 
 export interface DatosFiscalesPayload {

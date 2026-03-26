@@ -31,4 +31,8 @@ export interface Empresa {
   epigrafeIae?: string | null;
   /** Solo métricas internas; no se muestra en facturas/PDF. */
   rubroAutonomoCodigo?: string | null;
+  /** Recordatorios por email al cliente (facturas impagadas). */
+  recordatorioClienteActivo?: boolean;
+  /** Días tras el vencimiento (solo 7, 15, 30). */
+  recordatorioClienteDias?: number[];
 }

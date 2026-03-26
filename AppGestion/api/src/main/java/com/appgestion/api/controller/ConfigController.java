@@ -5,6 +5,7 @@ import com.appgestion.api.dto.request.EmpresaRequest;
 import com.appgestion.api.dto.request.DatosFiscalesPatchRequest;
 import com.appgestion.api.dto.request.MetodosCobroPatchRequest;
 import com.appgestion.api.dto.request.PlantillasPdfPatchRequest;
+import com.appgestion.api.dto.request.RecordatorioCobroPatchRequest;
 import com.appgestion.api.dto.request.PlantillasPdfPreviewRequest;
 import com.appgestion.api.dto.response.EmpresaResponse;
 import com.appgestion.api.service.CurrentUserService;
@@ -55,6 +56,14 @@ public class ConfigController {
     public EmpresaResponse actualizarMetodosCobro(@Valid @RequestBody MetodosCobroPatchRequest request) {
         Usuario usuario = currentUserService.getCurrentUsuario();
         return empresaService.actualizarMetodosCobro(request, usuario);
+    }
+
+    /** Recordatorios automáticos por email al cliente (facturas impagadas; días tras vencimiento). */
+    @PatchMapping("/empresa/recordatorios-cobro")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public EmpresaResponse actualizarRecordatoriosCobro(@Valid @RequestBody RecordatorioCobroPatchRequest request) {
+        Usuario usuario = currentUserService.getCurrentUsuario();
+        return empresaService.actualizarRecordatoriosCobro(request, usuario);
     }
 
     @PatchMapping("/empresa/datos-fiscales")

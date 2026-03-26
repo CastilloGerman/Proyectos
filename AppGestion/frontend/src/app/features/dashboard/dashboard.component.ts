@@ -309,21 +309,34 @@ export interface TopCliente {
 
       <section class="recent-section top-lists-section">
         <mat-card class="recent-card">
-          <mat-card-header>
-            <mat-card-title>Top clientes</mat-card-title>
+          <mat-card-header class="top-clientes-card-header">
+            <div class="top-clientes-titles">
+              <mat-card-title>Top clientes</mat-card-title>
+              <mat-card-subtitle>
+                Pendiente de cobro, presupuestos e historial por cliente
+              </mat-card-subtitle>
+            </div>
             <a mat-button routerLink="/clientes">Ver todos</a>
           </mat-card-header>
           <mat-card-content>
             @if (topClientes.length === 0) {
               <p class="empty">No hay datos de clientes en presupuestos ni facturas</p>
             } @else {
-              <ul class="recent-list top-list">
+              <ul class="recent-list top-list top-clientes-list">
                 @for (c of topClientes; track c.clienteId; let i = $index) {
-                  <li>
-                    <a [routerLink]="['/clientes']">
+                  <li class="top-cliente-item">
+                    <a [routerLink]="['/clientes', c.clienteId, 'panel']" class="top-cliente-link">
                       <span class="top-rank">#{{ i + 1 }}</span>
                       <span class="recent-name">{{ c.clienteNombre }}</span>
                       <span class="recent-meta">{{ c.count }} operaciones</span>
+                    </a>
+                    <a
+                      mat-stroked-button
+                      color="primary"
+                      [routerLink]="['/clientes', c.clienteId, 'panel']"
+                      class="top-cliente-panel-btn"
+                    >
+                      Ver estado
                     </a>
                   </li>
                 }
@@ -754,6 +767,37 @@ export interface TopCliente {
       align-items: center;
     }
 
+    .top-clientes-card-header {
+      align-items: flex-start;
+    }
+
+    .top-clientes-titles {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .top-clientes-titles mat-card-subtitle {
+      margin-top: 4px;
+      line-height: 1.35;
+    }
+
+    .top-clientes-list .top-cliente-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 4px 0;
+    }
+
+    .top-cliente-link {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .top-cliente-panel-btn {
+      flex-shrink: 0;
+      font-size: 0.8125rem;
+    }
+
     .recent-list {
       list-style: none;
       padding: 0;
@@ -780,6 +824,10 @@ export interface TopCliente {
     }
 
     .recent-list a:hover {
+      background: var(--app-bg-page, #f8fafc);
+    }
+
+    .top-cliente-link:hover {
       background: var(--app-bg-page, #f8fafc);
     }
 

@@ -14,6 +14,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSortModule, MatSort } from '@angular/material/sort';
 import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { EstadoBadgeComponent } from '../../../shared/estado-badge/estado-badge.component';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -43,6 +44,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
     MatSelectModule,
     MatSortModule,
     MatPaginatorModule,
+    MatProgressSpinnerModule,
     EstadoBadgeComponent,
     SkeletonComponent,
   ],
@@ -141,6 +143,21 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
                 <mat-icon>edit</mat-icon>
                 Editar
               </a>
+              }
+              @if (auth.canMutate() && mostrarRecordatorioManual(row)) {
+                <button
+                  mat-icon-button
+                  color="primary"
+                  (click)="enviarRecordatorioCliente(row)"
+                  [disabled]="loadingRecordatorioId === row.id"
+                  matTooltip="Enviar recordatorio de cobro al cliente (email)"
+                >
+                  @if (loadingRecordatorioId === row.id) {
+                    <mat-progress-spinner diameter="22" mode="indeterminate" />
+                  } @else {
+                    <mat-icon>schedule_send</mat-icon>
+                  }
+                </button>
               }
               <button mat-icon-button (click)="enviarEmail(row)" matTooltip="Enviar por email">
                 <mat-icon>email</mat-icon>
@@ -274,6 +291,7 @@ export class FacturaListComponent implements OnInit {
   displayedColumns = ['numeroFactura', 'clienteNombre', 'fechaCreacion', 'fechaVencimiento', 'estadoPago', 'total', 'actions'];
   dataSource = new MatTableDataSource<Factura>([]);
   isLoading = false;
+  loadingRecordatorioId: number | null = null;
 
   /**
    * La tabla está en @if (!isLoading): en ngAfterViewInit aún no existe MatSort/MatPaginator.
@@ -387,6 +405,55 @@ export class FacturaListComponent implements OnInit {
     if (diff < 0) return 'venc-overdue';
     if (diff <= 7) return 'venc-warn';
     return 'venc-ok';
+  }
+
+  /** Vencimiento en ≤15 días (o ya vencida), con importe pendiente y email de cliente. */
+  mostrarRecordatorioManual(f: Factura): boolean {
+    if (f.estadoPago === 'Pagada') return false;
+    if (!f.fechaVencimiento) return false;
+    if (!this.tieneImportePendiente(f)) return false;
+    if (!f.clienteEmail?.trim()) return false;
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const venc = new Date(f.fechaVencimiento);
+    venc.setHours(0, 0, 0, 0);
+    const diasHastaVenc = Math.round((venc.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+    return diasHastaVenc <= 15;
+  }
+
+  private tieneImportePendiente(f: Factura): boolean {
+    if (f.estadoPago === 'Pagada') return false;
+    if (f.estadoPago === 'Parcial') {
+      const cobrado = f.montoCobrado ?? 0;
+      return f.total - cobrado > 0.009;
+    }
+    return true;
+  }
+
+  enviarRecordatorioCliente(factura: Factura): void {
+    if (this.loadingRecordatorioId === factura.id) return;
+    this.loadingRecordatorioId = factura.id;
+    this.facturaService.enviarRecordatorioCliente(factura.id).subscribe({
+      next: () => {
+        this.loadingRecordatorioId = null;
+        this.snackBar.open('Recordatorio enviado al cliente', 'Cerrar', { duration: 4000 });
+      },
+      error: (err) => {
+        this.loadingRecordatorioId = null;
+        const msg =
+          err.error?.message || err.error?.detail || err.error?.error || 'No se pudo enviar el recordatorio';
+        const needsConfig =
+          typeof msg === 'string' &&
+          (msg.includes('correo') || msg.includes('SMTP') || msg.includes('Configure') || msg.includes('configur'));
+        this.snackBar.open(typeof msg === 'string' ? msg : 'Error al enviar', needsConfig ? 'Configurar' : 'Cerrar', {
+          duration: needsConfig ? 8000 : 5000,
+        }).onAction().subscribe(() => {
+          if (needsConfig) {
+            this.dialog.open(ConfigEmpresaDialogComponent, { width: '500px', data: { context: 'mail' } });
+          }
+        });
+      },
+    });
   }
 
   delete(factura: Factura): void {

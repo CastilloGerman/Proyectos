@@ -7,6 +7,7 @@ import com.appgestion.api.dto.request.EmpresaRequest;
 import com.appgestion.api.dto.request.DatosFiscalesPatchRequest;
 import com.appgestion.api.dto.request.MetodosCobroPatchRequest;
 import com.appgestion.api.dto.request.PlantillasPdfPatchRequest;
+import com.appgestion.api.dto.request.RecordatorioCobroPatchRequest;
 import com.appgestion.api.dto.response.EmpresaResponse;
 import com.appgestion.api.repository.EmpresaRepository;
 import com.appgestion.api.util.BizumTelefonoValidator;
@@ -17,9 +18,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class EmpresaService {
@@ -28,6 +33,7 @@ public class EmpresaService {
     private static final int MAX_LOGO_BYTES = 400_000;
 
     private static final Set<String> METODOS_PAGO_PERMITIDOS = Set.of("Transferencia", "Efectivo", "Tarjeta", "Bizum");
+    private static final Set<Integer> DIAS_RECORDATORIO_CLIENTE_PERMITIDOS = Set.of(7, 15, 30);
 
     private final EmpresaRepository empresaRepository;
 
@@ -230,6 +236,34 @@ public class EmpresaService {
         return toResponse(emp);
     }
 
+    @Transactional
+    public EmpresaResponse actualizarRecordatoriosCobro(RecordatorioCobroPatchRequest request, Usuario usuario) {
+        List<Integer> diasFiltrados = request.recordatorioClienteDias().stream()
+                .filter(d -> d != null && DIAS_RECORDATORIO_CLIENTE_PERMITIDOS.contains(d))
+                .distinct()
+                .sorted(Comparator.naturalOrder())
+                .collect(Collectors.toList());
+        if (Boolean.TRUE.equals(request.recordatorioClienteActivo()) && diasFiltrados.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Selecciona al menos un plazo de recordatorio (7, 15 o 30 días tras el vencimiento)");
+        }
+        Empresa emp = empresaRepository.findByUsuarioId(usuario.getId()).orElseGet(() -> {
+            Empresa e = new Empresa();
+            e.setUsuario(usuario);
+            String n = usuario.getNombre();
+            e.setNombre(n != null && !n.isBlank() ? n : "");
+            return e;
+        });
+        emp.setRecordatorioClienteActivo(request.recordatorioClienteActivo());
+        if (diasFiltrados.isEmpty()) {
+            emp.setRecordatorioClienteDias("7,15,30");
+        } else {
+            emp.setRecordatorioClienteDias(diasFiltrados.stream().map(String::valueOf).collect(Collectors.joining(",")));
+        }
+        emp = empresaRepository.save(emp);
+        return toResponse(emp);
+    }
+
     public Empresa getEmpresaOrNull(Long usuarioId) {
         return empresaRepository.findByUsuarioId(usuarioId).orElse(null);
     }
@@ -237,7 +271,8 @@ public class EmpresaService {
     private EmpresaResponse toResponse(Empresa emp) {
         if (emp == null) {
             return new EmpresaResponse(null, "", null, null, null, null, null, null, null, null, null, null, null, null,
-                    false, false, null, false, null, null, null, null, null, null, null, null, null, null);
+                    false, false, null, false, null, null, null, null, null, null, null, null, null, null,
+                    false, List.of(7, 15, 30));
         }
         boolean mailConfigurado = emp.getMailUsername() != null && !emp.getMailUsername().isBlank()
                 && emp.getMailPassword() != null && !emp.getMailPassword().isBlank();
@@ -275,7 +310,31 @@ public class EmpresaService {
                 emp.getDescripcionActividadFiscal(),
                 emp.getNifIntracomunitario(),
                 emp.getEpigrafeIae(),
-                emp.getRubroAutonomoCodigo()
+                emp.getRubroAutonomoCodigo(),
+                emp.getRecordatorioClienteActivo() != null && emp.getRecordatorioClienteActivo(),
+                parseDiasRecordatorioLista(emp.getRecordatorioClienteDias())
         );
+    }
+
+    private static List<Integer> parseDiasRecordatorioLista(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return List.of(7, 15, 30);
+        }
+        List<Integer> out = new ArrayList<>();
+        for (String part : raw.split(",")) {
+            String t = part.trim();
+            if (t.isEmpty()) {
+                continue;
+            }
+            try {
+                int d = Integer.parseInt(t);
+                if (DIAS_RECORDATORIO_CLIENTE_PERMITIDOS.contains(d))
+                    out.add(d);
+            } catch (NumberFormatException ignored) {
+                // omitir token inválido
+            }
+        }
+        out.sort(Comparator.naturalOrder());
+        return out.isEmpty() ? List.of(7, 15, 30) : List.copyOf(out);
     }
 }

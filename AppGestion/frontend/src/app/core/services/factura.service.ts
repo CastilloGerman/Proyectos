@@ -39,6 +39,11 @@ export class FacturaService {
     return this.http.post<void>(`${this.apiUrl}/${id}/enviar-email`, email ? { email } : {});
   }
 
+  /** Recordatorio de cobro al cliente (vencimiento en ≤15 días o vencida; requiere SMTP). */
+  enviarRecordatorioCliente(id: number): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${id}/recordatorio/cobro`, null);
+  }
+
   registrarCobro(id: number, body: FacturaCobroRequest): Observable<Factura> {
     return this.http.post<Factura>(`${this.apiUrl}/${id}/cobros`, body);
   }

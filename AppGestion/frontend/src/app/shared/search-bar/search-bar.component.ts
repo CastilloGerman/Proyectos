@@ -229,12 +229,15 @@ export class SearchBarComponent implements OnDestroy {
   }
 
   onSelect(result: SearchResult): void {
-    const routes: Record<string, string> = {
-      factura: '/facturas',
-      presupuesto: '/presupuestos',
-      cliente: '/clientes',
-    };
-    this.router.navigate([routes[result.type], result.id]);
+    if (result.type === 'cliente') {
+      this.router.navigate(['/clientes', result.id, 'panel']);
+    } else {
+      const routes: Record<string, string> = {
+        factura: '/facturas',
+        presupuesto: '/presupuestos',
+      };
+      this.router.navigate([routes[result.type], result.id]);
+    }
     this.searchCtrl.setValue('', { emitEvent: false });
     this.results = [];
     this.groupedResults = [];

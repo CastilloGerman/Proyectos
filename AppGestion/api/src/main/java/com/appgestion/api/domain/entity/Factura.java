@@ -74,6 +74,10 @@ public class Factura {
     @Column(name = "recordatorio_enviado")
     private Boolean recordatorioEnviado = false;
 
+    /** Días (7,15,30) en los que ya se envió recordatorio al cliente; separados por coma. */
+    @Column(name = "recordatorio_cliente_marcas", length = 32)
+    private String recordatorioClienteMarcas;
+
     @Column(name = "payment_link_url", columnDefinition = "TEXT")
     private String paymentLinkUrl;
 
@@ -141,6 +145,9 @@ public class Factura {
 
     public Boolean getRecordatorioEnviado() { return recordatorioEnviado; }
     public void setRecordatorioEnviado(Boolean recordatorioEnviado) { this.recordatorioEnviado = recordatorioEnviado; }
+
+    public String getRecordatorioClienteMarcas() { return recordatorioClienteMarcas; }
+    public void setRecordatorioClienteMarcas(String recordatorioClienteMarcas) { this.recordatorioClienteMarcas = recordatorioClienteMarcas; }
 
     public String getNotas() { return notas; }
     public void setNotas(String notas) { this.notas = notas; }

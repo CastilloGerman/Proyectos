@@ -10,8 +10,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ConfigService } from '../../../core/services/config.service';
+import { Empresa } from '../../../core/models/empresa.model';
 import { SubscriptionService } from '../../../core/services/subscription.service';
 import { formatIbanDisplay, ibanValidator } from '../../../shared/validators/iban.validator';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
@@ -52,6 +55,8 @@ function bizumOpcionalValidator(): ValidatorFn {
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatDividerModule,
+    MatSlideToggleModule,
+    MatCheckboxModule,
   ],
   templateUrl: './metodos-pago.component.html',
   styleUrl: './metodos-pago.component.scss',
@@ -66,6 +71,7 @@ export class MetodosPagoComponent implements OnInit {
 
   readonly loading = signal(true);
   readonly saving = signal(false);
+  readonly savingRecordatorios = signal(false);
   readonly loadError = signal(false);
   readonly openingPortal = signal(false);
 
@@ -76,6 +82,13 @@ export class MetodosPagoComponent implements OnInit {
     defaultCondicionesPago: ['', [Validators.maxLength(200)]],
     ibanCuenta: ['', [ibanValidator()]],
     bizumTelefono: ['', [Validators.maxLength(20), bizumOpcionalValidator()]],
+  });
+
+  readonly recordatorioForm = this.fb.nonNullable.group({
+    activo: [false],
+    dia7: [true],
+    dia15: [true],
+    dia30: [true],
   });
 
   readonly vistaPdf = computed(() => {
@@ -104,6 +117,8 @@ export class MetodosPagoComponent implements OnInit {
           bizumTelefono: e.bizumTelefono || '',
         });
         this.form.markAsPristine();
+        this.aplicarRecordatoriosDesdeEmpresa(e);
+        this.recordatorioForm.markAsPristine();
         this.loading.set(false);
       },
       error: () => {
@@ -164,5 +179,55 @@ export class MetodosPagoComponent implements OnInit {
 
   irSuscripcion(): void {
     void this.router.navigate(['/cuenta/suscripcion']);
+  }
+
+  private aplicarRecordatoriosDesdeEmpresa(e: Empresa): void {
+    const dias = e.recordatorioClienteDias?.length ? e.recordatorioClienteDias : [7, 15, 30];
+    this.recordatorioForm.patchValue({
+      activo: e.recordatorioClienteActivo ?? false,
+      dia7: dias.includes(7),
+      dia15: dias.includes(15),
+      dia30: dias.includes(30),
+    });
+  }
+
+  private diasRecordatorioSeleccionados(): number[] {
+    const v = this.recordatorioForm.getRawValue();
+    const out: number[] = [];
+    if (v.dia7) out.push(7);
+    if (v.dia15) out.push(15);
+    if (v.dia30) out.push(30);
+    return out;
+  }
+
+  guardarRecordatorios(): void {
+    const activo = this.recordatorioForm.controls.activo.value;
+    const dias = this.diasRecordatorioSeleccionados();
+    if (activo && dias.length === 0) {
+      this.snackBar.open('Activa al menos un plazo (7, 15 o 30 días) o desactiva los recordatorios.', 'Cerrar', {
+        duration: 5000,
+      });
+      return;
+    }
+    this.savingRecordatorios.set(true);
+    const diasPayload = dias.length > 0 ? dias : [7, 15, 30];
+    this.config
+      .patchRecordatoriosCobro({
+        recordatorioClienteActivo: activo,
+        recordatorioClienteDias: diasPayload,
+      })
+      .subscribe({
+        next: (emp) => {
+          this.aplicarRecordatoriosDesdeEmpresa(emp);
+          this.recordatorioForm.markAsPristine();
+          this.snackBar.open('Recordatorios guardados', 'Cerrar', { duration: 3000 });
+          this.savingRecordatorios.set(false);
+        },
+        error: (err) => {
+          this.savingRecordatorios.set(false);
+          const msg = err.error?.message || err.error?.detail || err.error?.error || 'No se pudo guardar';
+          this.snackBar.open(typeof msg === 'string' ? msg : 'Error al guardar', 'Cerrar', { duration: 5000 });
+        },
+      });
   }
 }

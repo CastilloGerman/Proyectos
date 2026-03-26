@@ -460,6 +460,13 @@ export class FacturaFormComponent implements OnInit {
         this.items.clear();
         this.addItem();
         this.applyPaymentDefaultsFromEmpresa();
+        const preCliente = this.route.snapshot.queryParamMap.get('clienteId');
+        if (preCliente) {
+          const n = +preCliente;
+          if (!isNaN(n)) {
+            this.form.patchValue({ clienteId: n });
+          }
+        }
       }
     });
   }

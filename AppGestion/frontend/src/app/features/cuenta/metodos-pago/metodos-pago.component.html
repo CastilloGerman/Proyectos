@@ -115,6 +115,45 @@
       </mat-card-content>
     </mat-card>
 
+    <mat-card class="mp-card">
+      <mat-card-header>
+        <mat-card-title>Recordatorios automáticos al cliente</mat-card-title>
+        <mat-card-subtitle>
+          Correo al cliente (email del contacto) en los plazos indicados <strong>después de la fecha de vencimiento</strong>, si la factura sigue
+          pendiente de cobro.
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <form [formGroup]="recordatorioForm" (ngSubmit)="guardarRecordatorios()" class="mp-form mp-form--rec">
+          <mat-slide-toggle formControlName="activo" color="primary"> Activar recordatorios por email al cliente </mat-slide-toggle>
+          <p class="mp-hint mp-rec-intro">Elige uno o varios plazos (días tras el vencimiento):</p>
+          <div class="mp-rec-dias">
+            <mat-checkbox formControlName="dia7">A los 7 días</mat-checkbox>
+            <mat-checkbox formControlName="dia15">A los 15 días</mat-checkbox>
+            <mat-checkbox formControlName="dia30">A los 30 días</mat-checkbox>
+          </div>
+          <p class="mp-hint">
+            Requiere
+            <a routerLink="/cuenta/datos-empresa">correo de envío (SMTP) configurado</a>
+            en datos de la empresa. Por cada factura y plazo solo se envía un correo. Si el cliente no tiene email en su ficha, no se enviará.
+          </p>
+          <div class="mp-form-actions">
+            <button
+              mat-raised-button
+              color="primary"
+              type="submit"
+              [disabled]="savingRecordatorios() || recordatorioForm.pristine"
+            >
+              @if (savingRecordatorios()) {
+                <mat-progress-spinner diameter="20" mode="indeterminate" />
+              }
+              Guardar recordatorios
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+
     <p class="mp-footnote">
       Los datos de IBAN y Bizum se guardan cifrados en tránsito (HTTPS) y solo son accesibles para tu cuenta. No sustituyen al portal de Stripe para tu suscripción del software.
     </p>

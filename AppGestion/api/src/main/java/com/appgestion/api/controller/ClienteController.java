@@ -1,7 +1,9 @@
 package com.appgestion.api.controller;
 
 import com.appgestion.api.dto.request.ClienteRequest;
+import com.appgestion.api.dto.response.ClientePanelResponse;
 import com.appgestion.api.dto.response.ClienteResponse;
+import com.appgestion.api.service.ClientePanelService;
 import com.appgestion.api.service.ClienteService;
 import com.appgestion.api.service.CurrentUserService;
 import jakarta.validation.Valid;
@@ -16,10 +18,16 @@ import java.util.List;
 public class ClienteController {
 
     private final ClienteService clienteService;
+    private final ClientePanelService clientePanelService;
     private final CurrentUserService currentUserService;
 
-    public ClienteController(ClienteService clienteService, CurrentUserService currentUserService) {
+    public ClienteController(
+            ClienteService clienteService,
+            ClientePanelService clientePanelService,
+            CurrentUserService currentUserService
+    ) {
         this.clienteService = clienteService;
+        this.clientePanelService = clientePanelService;
         this.currentUserService = currentUserService;
     }
 
@@ -33,6 +41,12 @@ public class ClienteController {
     public ClienteResponse obtenerPorId(@PathVariable Long id) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
         return clienteService.obtenerPorId(id, usuarioId);
+    }
+
+    @GetMapping("/{id}/panel")
+    public ClientePanelResponse panel(@PathVariable Long id) {
+        Long usuarioId = currentUserService.getCurrentUsuario().getId();
+        return clientePanelService.obtenerPanel(id, usuarioId);
     }
 
     @PostMapping

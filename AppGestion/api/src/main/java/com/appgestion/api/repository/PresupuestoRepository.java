@@ -12,6 +12,8 @@ public interface PresupuestoRepository extends JpaRepository<Presupuesto, Long> 
 
     List<Presupuesto> findByUsuarioIdOrderByFechaCreacionDesc(Long usuarioId);
 
+    List<Presupuesto> findByUsuarioIdAndClienteIdOrderByFechaCreacionDesc(Long usuarioId, Long clienteId);
+
     Optional<Presupuesto> findByIdAndUsuarioId(Long id, Long usuarioId);
 
     boolean existsByIdAndUsuarioId(Long id, Long usuarioId);

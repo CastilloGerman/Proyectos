@@ -25,6 +25,7 @@ export const routes: Routes = [
       { path: 'materiales/:id', canActivate: [roleMutateGuard], loadComponent: () => import('./features/materiales/material-form/material-form.component').then(m => m.MaterialFormComponent) },
       { path: 'clientes', loadComponent: () => import('./features/clientes/cliente-list/cliente-list.component').then(m => m.ClienteListComponent) },
       { path: 'clientes/nuevo', canActivate: [roleMutateGuard], loadComponent: () => import('./features/clientes/cliente-form/cliente-form.component').then(m => m.ClienteFormComponent) },
+      { path: 'clientes/:id/panel', loadComponent: () => import('./features/clientes/cliente-panel/cliente-panel.component').then(m => m.ClientePanelComponent) },
       { path: 'clientes/:id', canActivate: [roleMutateGuard], loadComponent: () => import('./features/clientes/cliente-form/cliente-form.component').then(m => m.ClienteFormComponent) },
       { path: 'facturas/nuevo', canActivate: [roleMutateGuard], loadComponent: () => import('./features/facturas/factura-form/factura-form.component').then(m => m.FacturaFormComponent) },
       { path: 'facturas/:id', canActivate: [roleMutateGuard], loadComponent: () => import('./features/facturas/factura-form/factura-form.component').then(m => m.FacturaFormComponent) },

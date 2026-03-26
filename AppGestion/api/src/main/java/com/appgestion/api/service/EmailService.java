@@ -6,6 +6,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 
+import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -24,21 +25,21 @@ public class EmailService {
         this.empresaService = empresaService;
     }
 
-    @SuppressWarnings("null")
     public void enviarPdf(Long usuarioId, String to, String asunto, String cuerpo, byte[] pdf, String nombreArchivo) throws MessagingException {
         EmpresaMail mail = buildEmpresaMail(usuarioId);
         if (to == null || to.isBlank()) {
             throw new IllegalArgumentException("El cliente no tiene email registrado");
         }
 
-        String safeAsunto = Objects.requireNonNullElse(asunto, "");
-        String safeCuerpo = Objects.requireNonNullElse(cuerpo, "");
-        String safeNombreArchivo = Objects.requireNonNullElse(nombreArchivo, "documento.pdf");
-        String toAddress = to.trim();
+        String safeAsunto = Objects.requireNonNull(Objects.requireNonNullElse(asunto, ""));
+        String safeCuerpo = Objects.requireNonNull(Objects.requireNonNullElse(cuerpo, ""));
+        String safeNombreArchivo = Objects.requireNonNull(Objects.requireNonNullElse(nombreArchivo, "documento.pdf"));
+        String toAddress = Objects.requireNonNull(Objects.requireNonNull(to).trim());
+        String fromAddress = Objects.requireNonNull(mail.from);
 
         MimeMessage message = mail.sender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-        helper.setFrom(mail.from);
+        helper.setFrom(fromAddress);
         helper.setTo(toAddress);
         helper.setSubject(safeAsunto);
         helper.setText(safeCuerpo, true);
@@ -51,11 +52,63 @@ public class EmailService {
     }
 
     /**
+     * Correo HTML al cliente (factura, recordatorio); Reply-To al correo del autónomo si se indica.
+     */
+    public void enviarHtmlACliente(
+            Long usuarioId,
+            String to,
+            String replyToEmail,
+            String asunto,
+            String cuerpoHtml
+    ) throws MessagingException {
+        enviarHtmlACliente(usuarioId, to, replyToEmail, asunto, cuerpoHtml, null, null);
+    }
+
+    /**
+     * Igual que {@link #enviarHtmlACliente} pero con PDF adjunto (p. ej. factura).
+     */
+    public void enviarHtmlACliente(
+            Long usuarioId,
+            String to,
+            String replyToEmail,
+            String asunto,
+            String cuerpoHtml,
+            byte[] pdfAdjunto,
+            String nombreArchivoAdjunto
+    ) throws MessagingException {
+        EmpresaMail mail = buildEmpresaMail(usuarioId);
+        if (to == null || to.isBlank()) {
+            throw new IllegalArgumentException("El destinatario no tiene email");
+        }
+
+        String toAddress = Objects.requireNonNull(Objects.requireNonNull(to).trim());
+        String fromAddress = Objects.requireNonNull(mail.from);
+
+        MimeMessage message = mail.sender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        helper.setFrom(fromAddress);
+        helper.setTo(toAddress);
+        if (StringUtils.hasText(replyToEmail)) {
+            helper.setReplyTo(new InternetAddress(Objects.requireNonNull(Objects.requireNonNull(replyToEmail).trim())));
+        }
+        helper.setSubject(Objects.requireNonNull(Objects.requireNonNullElse(asunto, "")));
+        helper.setText(Objects.requireNonNull(Objects.requireNonNullElse(cuerpoHtml, "")), true);
+
+        if (pdfAdjunto != null && pdfAdjunto.length > 0) {
+            String fn = StringUtils.hasText(nombreArchivoAdjunto)
+                    ? Objects.requireNonNull(nombreArchivoAdjunto.trim())
+                    : "documento.pdf";
+            helper.addAttachment(fn, () -> new ByteArrayInputStream(pdfAdjunto), "application/pdf");
+        }
+
+        mail.sender.send(message);
+    }
+
+    /**
      * Envía al buzón de soporte usando el SMTP configurado en datos de empresa.
      *
      * @param replyToEmail email del usuario para responder (Reply-To)
      */
-    @SuppressWarnings("null")
     public void enviarSoporteConAdjuntos(
             Long usuarioId,
             String to,
@@ -72,21 +125,25 @@ public class EmailService {
             throw new IllegalArgumentException("Email de usuario no válido");
         }
 
+        String toAddress = Objects.requireNonNull(Objects.requireNonNull(to).trim());
+        String fromAddress = Objects.requireNonNull(mail.from);
+        String replyTo = Objects.requireNonNull(Objects.requireNonNull(replyToEmail).trim());
+
         MimeMessage message = mail.sender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-        helper.setFrom(mail.from);
-        helper.setTo(to.trim());
-        helper.setReplyTo(new InternetAddress(replyToEmail.trim()));
-        helper.setSubject(Objects.requireNonNullElse(asunto, ""));
-        helper.setText(Objects.requireNonNullElse(cuerpoHtml, ""), true);
+        helper.setFrom(fromAddress);
+        helper.setTo(toAddress);
+        helper.setReplyTo(new InternetAddress(replyTo));
+        helper.setSubject(Objects.requireNonNull(Objects.requireNonNullElse(asunto, "")));
+        helper.setText(Objects.requireNonNull(Objects.requireNonNullElse(cuerpoHtml, "")), true);
 
         if (adjuntos != null) {
             for (AdjuntoCorreo a : adjuntos) {
                 if (a == null || a.data() == null || a.data().length == 0) {
                     continue;
                 }
-                String fn = StringUtils.hasText(a.filename()) ? a.filename() : "adjunto";
-                String ct = StringUtils.hasText(a.contentType()) ? a.contentType() : "application/octet-stream";
+                String fn = StringUtils.hasText(a.filename()) ? Objects.requireNonNull(a.filename()) : "adjunto";
+                String ct = StringUtils.hasText(a.contentType()) ? Objects.requireNonNull(a.contentType()) : "application/octet-stream";
                 helper.addAttachment(fn, () -> new java.io.ByteArrayInputStream(a.data()), ct);
             }
         }

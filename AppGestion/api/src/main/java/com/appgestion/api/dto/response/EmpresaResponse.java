@@ -1,5 +1,7 @@
 package com.appgestion.api.dto.response;
 
+import java.util.List;
+
 public record EmpresaResponse(
         Long id,
         String nombre,
@@ -31,5 +33,8 @@ public record EmpresaResponse(
         String nifIntracomunitario,
         String epigrafeIae,
         /** Solo métricas internas; no se usa en PDF. */
-        String rubroAutonomoCodigo
+        String rubroAutonomoCodigo,
+        Boolean recordatorioClienteActivo,
+        /** Días tras el vencimiento en los que enviar (solo 7, 15 y 30). */
+        List<Integer> recordatorioClienteDias
 ) {}

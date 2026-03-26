@@ -74,6 +74,21 @@
   padding-top: 8px;
 }
 
+.mp-form--rec {
+  gap: 12px;
+}
+
+.mp-rec-intro {
+  margin-top: 8px;
+}
+
+.mp-rec-dias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: center;
+}
+
 .full {
   width: 100%;
 }
