@@ -22,6 +22,28 @@
   border-radius: var(--app-radius-md, 12px);
 }
 
+.pref-appearance {
+  padding-bottom: 8px;
+}
+
+.pref-section-title {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--app-text-primary, #0f172a);
+}
+
+.pref-appearance__hint {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--app-text-secondary, #64748b);
+}
+
+.pref-divider {
+  margin: 12px 0 20px;
+}
+
 .pref-form {
   display: flex;
   flex-direction: column;

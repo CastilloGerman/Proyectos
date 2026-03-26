@@ -113,7 +113,7 @@
       </mat-card-content>
     </mat-card>
   } @else {
-    <div class="ha-table-wrap mat-elevation-z1">
+    <div class="ha-table-block">
       <table class="ha-native-table">
         <thead>
           <tr>
@@ -127,7 +127,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (row of tableRows(); track row.id + '-' + pageIndex() + '-' + $index) {
+          @for (row of tableRows(); track row.id) {
             <tr
               [class.ha-row--fail]="!row.success"
               [class.ha-row--sensitive]="row.sensitive"
@@ -169,10 +169,37 @@
                 </button>
               </td>
             </tr>
+            @if (expandedId() === row.id) {
+              <tr class="ha-detail-row">
+                <td colspan="7">
+                  <mat-card class="ha-detail" appearance="outlined">
+                    <mat-card-content>
+                      <h3 class="ha-detail__title">Detalle del evento #{{ row.id }}</h3>
+                      <mat-divider />
+                      <dl class="ha-dl">
+                        <dt>User-Agent</dt>
+                        <dd>{{ row.userAgent ?? '—' }}</dd>
+                        <dt>Sesión</dt>
+                        <dd>{{ row.sessionId ?? '—' }}</dd>
+                        <dt>Recurso</dt>
+                        <dd>{{ row.resourcePath ?? '—' }}</dd>
+                        <dt>Trace / correlación</dt>
+                        <dd>{{ row.traceId ?? '—' }}</dd>
+                        <dt>Metadata (JSON)</dt>
+                        <dd>
+                          <pre class="ha-json">{{ metadataPretty(row.metadataJson) }}</pre>
+                        </dd>
+                      </dl>
+                    </mat-card-content>
+                  </mat-card>
+                </td>
+              </tr>
+            }
           }
         </tbody>
       </table>
       <mat-paginator
+        class="ha-paginator"
         [length]="pageMeta()?.totalElements ?? 0"
         [pageIndex]="pageIndex()"
         [pageSize]="pageSize()"
@@ -181,31 +208,6 @@
         (page)="onPage($event)"
       />
     </div>
-
-    @for (row of tableRows(); track row.id) {
-      @if (expandedId() === row.id) {
-        <mat-card class="ha-detail" appearance="outlined">
-          <mat-card-content>
-            <h3 class="ha-detail__title">Detalle del evento #{{ row.id }}</h3>
-            <mat-divider />
-            <dl class="ha-dl">
-              <dt>User-Agent</dt>
-              <dd>{{ row.userAgent ?? '—' }}</dd>
-              <dt>Sesión</dt>
-              <dd>{{ row.sessionId ?? '—' }}</dd>
-              <dt>Recurso</dt>
-              <dd>{{ row.resourcePath ?? '—' }}</dd>
-              <dt>Trace / correlación</dt>
-              <dd>{{ row.traceId ?? '—' }}</dd>
-              <dt>Metadata (JSON)</dt>
-              <dd>
-                <pre class="ha-json">{{ metadataPretty(row.metadataJson) }}</pre>
-              </dd>
-            </dl>
-          </mat-card-content>
-        </mat-card>
-      }
-    }
   }
 
   <mat-divider class="ha-foot-divider" />

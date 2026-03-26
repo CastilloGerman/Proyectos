@@ -1,7 +1,8 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, DestroyRef, OnInit, ViewChild, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { trigger, transition, query, stagger, animate, style } from '@angular/animations';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,6 +16,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSortModule, MatSort } from '@angular/material/sort';
 import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { EstadoBadgeComponent } from '../../../shared/estado-badge/estado-badge.component';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -44,6 +46,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
         MatSortModule,
         MatPaginatorModule,
         MatProgressSpinnerModule,
+        MatCheckboxModule,
         EstadoBadgeComponent,
         SkeletonComponent,
     ],
@@ -87,13 +90,46 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
         </mat-form-field>
         <mat-form-field appearance="outline" class="filter-estado">
           <mat-label>Estado pago</mat-label>
-          <mat-select (selectionChange)="applyEstadoFilter($event.value)" value="">
+          <mat-select [value]="estadoFilter" (selectionChange)="applyEstadoFilter($event.value)">
             <mat-option value="">Todos</mat-option>
             <mat-option value="No Pagada">No Pagada</mat-option>
             <mat-option value="Parcial">Parcial</mat-option>
             <mat-option value="Pagada">Pagada</mat-option>
           </mat-select>
         </mat-form-field>
+        <mat-form-field appearance="outline" class="filter-venc">
+          <mat-label>Vencimiento</mat-label>
+          <mat-select [value]="vencimientoFilter" (selectionChange)="applyVencimientoFilter($event.value)">
+            <mat-option value="">Todos</mat-option>
+            <mat-option value="vencidas">Vencidas (no cobradas)</mat-option>
+            <mat-option value="proximas7">Próximos 7 días</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="filter-emision-anio" matTooltip="Filtra por fecha de emisión de la factura">
+          <mat-label>Año emisión</mat-label>
+          <mat-select [value]="emisionYear" (selectionChange)="onEmisionYearChange($event.value)">
+            <mat-option value="">Todos</mat-option>
+            @for (y of emisionYearOptions; track y) {
+              <mat-option [value]="'' + y">{{ y }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="filter-emision-mes" matTooltip="Requiere elegir un año">
+          <mat-label>Mes emisión</mat-label>
+          <mat-select [value]="emisionMonth" [disabled]="!emisionYear" (selectionChange)="onEmisionMonthChange($event.value)">
+            <mat-option value="">Todo el año</mat-option>
+            @for (m of mesesEmisionCatalogo; track m.value) {
+              <mat-option [value]="m.value">{{ m.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-checkbox
+          class="filter-pendiente"
+          [checked]="pendienteCobroOnly"
+          (change)="applyPendienteCobroFilter($event.checked)"
+        >
+          Solo pendientes de cobro
+        </mat-checkbox>
       </div>
 
       @if (isLoading) {
@@ -225,6 +261,28 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
       min-width: 160px;
     }
 
+    .filter-venc {
+      min-width: 200px;
+    }
+
+    .filter-emision-anio {
+      min-width: 120px;
+    }
+
+    .filter-emision-mes {
+      min-width: 140px;
+    }
+
+    .filter-emision-anio .mat-mdc-form-field-subscript-wrapper,
+    .filter-emision-mes .mat-mdc-form-field-subscript-wrapper {
+      display: none;
+    }
+
+    .filter-pendiente {
+      align-self: center;
+      margin-left: 4px;
+    }
+
     .invoice-card {
       background: var(--app-bg-card);
       border-radius: var(--app-radius-lg, 16px);
@@ -287,6 +345,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
   `]
 })
 export class FacturaListComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   displayedColumns = ['numeroFactura', 'clienteNombre', 'fechaCreacion', 'fechaVencimiento', 'estadoPago', 'total', 'actions'];
   dataSource = new MatTableDataSource<Factura>([]);
   isLoading = false;
@@ -315,24 +374,63 @@ export class FacturaListComponent implements OnInit {
   private _paginator?: MatPaginator;
 
   private textFilter = '';
-  private estadoFilter = '';
+  estadoFilter = '';
+  vencimientoFilter = '';
+  pendienteCobroOnly = false;
+  /** Filtro por fecha de emisión: año (YYYY) y opcionalmente mes (01–12). */
+  emisionYear = '';
+  emisionMonth = '';
+
+  readonly mesesEmisionCatalogo = [
+    { value: '01', label: 'Enero' },
+    { value: '02', label: 'Febrero' },
+    { value: '03', label: 'Marzo' },
+    { value: '04', label: 'Abril' },
+    { value: '05', label: 'Mayo' },
+    { value: '06', label: 'Junio' },
+    { value: '07', label: 'Julio' },
+    { value: '08', label: 'Agosto' },
+    { value: '09', label: 'Septiembre' },
+    { value: '10', label: 'Octubre' },
+    { value: '11', label: 'Noviembre' },
+    { value: '12', label: 'Diciembre' },
+  ];
+
+  get emisionYearOptions(): number[] {
+    const cy = new Date().getFullYear();
+    const out: number[] = [];
+    for (let y = cy + 1; y >= cy - 15; y--) {
+      out.push(y);
+    }
+    return out;
+  }
 
   constructor(
     public auth: AuthService,
+    private route: ActivatedRoute,
+    private router: Router,
     private facturaService: FacturaService,
     private presupuestoService: PresupuestoService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar
   ) {
     this.dataSource.filterPredicate = (data: Factura, filter: string) => {
-      const [text, estado] = filter.split('||');
+      const parts = filter.split('||');
+      const text = parts[0] ?? '';
+      const estado = parts[1] ?? '';
+      const venc = parts[2] ?? '';
+      const pend = parts[3] ?? '0';
+      const emision = parts[4] ?? '';
       const textMatch = !text || (
         data.numeroFactura?.toLowerCase().includes(text) ||
         data.clienteNombre?.toLowerCase().includes(text) ||
         data.notas?.toLowerCase().includes(text)
       );
       const estadoMatch = !estado || data.estadoPago === estado;
-      return !!(textMatch && estadoMatch);
+      const vencMatch = FacturaListComponent.matchesVencimientoFilter(data, venc);
+      const pendMatch = pend !== '1' || FacturaListComponent.matchesPendienteCobroFilter(data);
+      const emisionMatch = FacturaListComponent.matchesEmisionFilter(data, emision);
+      return !!(textMatch && estadoMatch && vencMatch && pendMatch && emisionMatch);
     };
     this.dataSource.sortingDataAccessor = (row: Factura, column: string): string | number => {
       switch (column) {
@@ -362,7 +460,77 @@ export class FacturaListComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.route.queryParams.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const ep = params['estadoPago'];
+      if (ep === 'No Pagada' || ep === 'Parcial' || ep === 'Pagada') {
+        this.estadoFilter = ep;
+      } else {
+        this.estadoFilter = '';
+      }
+      const v = params['vencimiento'];
+      if (v === 'vencidas' || v === 'proximas7') {
+        this.vencimientoFilter = v;
+      } else {
+        this.vencimientoFilter = '';
+      }
+      this.pendienteCobroOnly = params['pendienteCobro'] === '1';
+      const em = params['emision'];
+      if (em && /^\d{4}-\d{2}$/.test(em)) {
+        const [y, mo] = em.split('-');
+        this.emisionYear = y;
+        this.emisionMonth = mo;
+      } else if (em && /^\d{4}$/.test(em)) {
+        this.emisionYear = em;
+        this.emisionMonth = '';
+      } else {
+        this.emisionYear = '';
+        this.emisionMonth = '';
+      }
+      if (this.dataSource.data.length) {
+        this.updateFilter();
+      }
+    });
     this.load();
+  }
+
+  private static matchesPendienteCobroFilter(f: Factura): boolean {
+    return (f.estadoPago ?? '').toLowerCase() !== 'pagada';
+  }
+
+  /** Misma lógica que el dashboard (salud de cobros). */
+  /** Token vacío, YYYY (todo el año) o YYYY-MM (mes concreto). */
+  private static matchesEmisionFilter(f: Factura, emision: string): boolean {
+    if (!emision) return true;
+    if (!f.fechaCreacion) return false;
+    const d = new Date(f.fechaCreacion);
+    if (Number.isNaN(d.getTime())) return false;
+    if (emision.length === 4) {
+      const y = parseInt(emision, 10);
+      return d.getFullYear() === y;
+    }
+    if (emision.length === 7 && emision.includes('-')) {
+      const [ys, ms] = emision.split('-');
+      const y = parseInt(ys, 10);
+      const m = parseInt(ms, 10);
+      return d.getFullYear() === y && d.getMonth() + 1 === m;
+    }
+    return true;
+  }
+
+  private static matchesVencimientoFilter(f: Factura, v: string): boolean {
+    if (!v) return true;
+    const e = (f.estadoPago ?? '').toLowerCase();
+    if (e === 'pagada') return false;
+    if (!f.fechaVencimiento) return false;
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const venc = new Date(f.fechaVencimiento);
+    venc.setHours(0, 0, 0, 0);
+    const enSieteDias = new Date(hoy);
+    enSieteDias.setDate(hoy.getDate() + 7);
+    if (v === 'vencidas') return venc < hoy;
+    if (v === 'proximas7') return venc >= hoy && venc <= enSieteDias;
+    return true;
   }
 
   load(): void {
@@ -371,7 +539,10 @@ export class FacturaListComponent implements OnInit {
       next: (data) => {
         this.dataSource.data = data;
         this.isLoading = false;
-        queueMicrotask(() => this.connectSortPaginator());
+        queueMicrotask(() => {
+          this.connectSortPaginator();
+          this.updateFilter();
+        });
       },
       error: () => {
         this.isLoading = false;
@@ -387,11 +558,79 @@ export class FacturaListComponent implements OnInit {
   applyEstadoFilter(estado: string): void {
     this.estadoFilter = estado;
     this.updateFilter();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { estadoPago: estado || null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  applyVencimientoFilter(v: string): void {
+    this.vencimientoFilter = v;
+    this.updateFilter();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { vencimiento: v || null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  applyPendienteCobroFilter(checked: boolean): void {
+    this.pendienteCobroOnly = checked;
+    this.updateFilter();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { pendienteCobro: checked ? '1' : null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  private buildEmisionQueryParam(): string | null {
+    if (!this.emisionYear) return null;
+    if (!this.emisionMonth) return this.emisionYear;
+    return `${this.emisionYear}-${this.emisionMonth}`;
+  }
+
+  onEmisionYearChange(year: string): void {
+    this.emisionYear = year || '';
+    if (!this.emisionYear) {
+      this.emisionMonth = '';
+    }
+    this.updateFilter();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { emision: this.buildEmisionQueryParam() },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  onEmisionMonthChange(month: string): void {
+    this.emisionMonth = month || '';
+    this.updateFilter();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { emision: this.buildEmisionQueryParam() },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   private updateFilter(): void {
-    this.dataSource.filter = `${this.textFilter}||${this.estadoFilter}`;
+    const pend = this.pendienteCobroOnly ? '1' : '0';
+    const emisionToken = this.buildEmisionFilterToken();
+    this.dataSource.filter = `${this.textFilter}||${this.estadoFilter}||${this.vencimientoFilter}||${pend}||${emisionToken}`;
     if (this.dataSource.paginator) this.dataSource.paginator.firstPage();
+  }
+
+  /** Misma semántica que el query param `emision`. */
+  private buildEmisionFilterToken(): string {
+    if (!this.emisionYear) return '';
+    if (!this.emisionMonth) return this.emisionYear;
+    return `${this.emisionYear}-${this.emisionMonth}`;
   }
 
   getVencimientoClass(factura: Factura): string {

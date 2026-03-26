@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -74,6 +75,7 @@ import { AuthService } from '../../../core/auth/auth.service';
   `]
 })
 export class InviteAcceptComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   token = '';
   loading = true;
   valid = false;
@@ -93,7 +95,7 @@ export class InviteAcceptComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.route.paramMap.subscribe((pm) => {
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((pm) => {
       this.token = pm.get('token') ?? '';
       if (!this.token) {
         this.loading = false;

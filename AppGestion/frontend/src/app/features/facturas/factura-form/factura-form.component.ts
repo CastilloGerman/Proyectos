@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -21,7 +22,7 @@ import { MaterialService } from '../../../core/services/material.service';
 import { Cliente } from '../../../core/models/cliente.model';
 import { Presupuesto } from '../../../core/models/presupuesto.model';
 import { Material } from '../../../core/models/material.model';
-import { Factura, FacturaCobro, FacturaItemRequest } from '../../../core/models/factura.model';
+import { Factura, FacturaCobro, FacturaItemRequest, FacturaRequest } from '../../../core/models/factura.model';
 
 @Component({
     selector: 'app-factura-form',
@@ -377,6 +378,7 @@ import { Factura, FacturaCobro, FacturaItemRequest } from '../../../core/models/
   `]
 })
 export class FacturaFormComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   form: FormGroup;
   cobroForm: FormGroup;
   clientes: Cliente[] = [];
@@ -441,10 +443,10 @@ export class FacturaFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.clienteService.getAll().subscribe((data) => (this.clientes = data));
-    this.presupuestoService.getAll().subscribe((data) => (this.presupuestos = data));
-    this.materialService.getAll().subscribe((data) => (this.materiales = data));
-    this.route.paramMap.subscribe((params) => {
+    this.clienteService.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data) => (this.clientes = data));
+    this.presupuestoService.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data) => (this.presupuestos = data));
+    this.materialService.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data) => (this.materiales = data));
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const id = params.get('id');
       if (id && id !== 'nuevo') {
         const numId = +id;
@@ -645,15 +647,22 @@ export class FacturaFormComponent implements OnInit {
       return;
     }
     const value = this.form.value;
-    const items: FacturaItemRequest[] = value.items.map((it: any) => ({
+    const rowItems = (value.items ?? []) as Array<{
+      materialId?: number | null;
+      tareaManual?: string;
+      cantidad: number | string;
+      precioUnitario: number | string;
+      aplicaIva?: boolean;
+    }>;
+    const items: FacturaItemRequest[] = rowItems.map((it) => ({
       materialId: it.materialId || undefined,
       tareaManual: it.tareaManual || undefined,
       cantidad: +it.cantidad,
       precioUnitario: +it.precioUnitario,
       aplicaIva: it.aplicaIva,
     }));
-    const payload: any = {
-      clienteId: value.clienteId,
+    const payload: FacturaRequest = {
+      clienteId: value.clienteId as number,
       items,
       metodoPago: value.metodoPago,
       estadoPago: value.estadoPago,

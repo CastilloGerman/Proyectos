@@ -31,7 +31,7 @@ import { environment } from '../../../environments/environment';
         ClipboardModule,
     ],
     template: `
-    <h2 mat-dialog-title>Enviar enlace de referido</h2>
+    <h2 mat-dialog-title class="dialog-title">Enviar enlace de referido</h2>
     <mat-dialog-content>
       <p class="hint">
         Se enviará un correo con un enlace para que esa persona cree <strong>su propia cuenta</strong>
@@ -76,10 +76,12 @@ import { environment } from '../../../environments/environment';
           <img src="assets/whatsapp-logo.png" alt="" class="wa-menu-logo" width="22" height="22" />
           <span>WhatsApp</span>
         </button>
-        <button mat-menu-item type="button" (click)="compartirNativo()" *ngIf="puedeCompartirNativo">
+        @if (puedeCompartirNativo) {
+        <button mat-menu-item type="button" (click)="compartirNativo()">
           <mat-icon>send</mat-icon>
           <span>Compartir (sistema)</span>
         </button>
+        }
       </mat-menu>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
@@ -90,10 +92,38 @@ import { environment } from '../../../environments/environment';
     </mat-dialog-actions>
   `,
     styles: [`
-    .full { width: 100%; }
-    .hint { font-size: 13px; color: rgba(0,0,0,0.6); margin-top: 0; line-height: 1.45; }
+    :host {
+      display: block;
+      color: var(--app-text-primary);
+    }
+    .full {
+      width: 100%;
+      --mdc-outlined-text-field-input-text-color: var(--app-text-primary);
+      --mdc-outlined-text-field-label-text-color: var(--app-text-secondary);
+      --mat-form-field-outlined-label-text-color: var(--app-text-secondary);
+    }
+    .dialog-title {
+      color: var(--app-text-primary);
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    .hint {
+      font-size: 13px;
+      color: var(--app-text-secondary);
+      margin-top: 0;
+      line-height: 1.45;
+    }
+    .hint strong {
+      color: var(--app-text-primary);
+      font-weight: 600;
+    }
     .section-hint { margin-bottom: 8px; }
-    .section-title { font-size: 14px; font-weight: 600; margin: 16px 0 0; color: rgba(0,0,0,0.87); }
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin: 16px 0 0;
+      color: var(--app-text-primary);
+    }
     .divider { margin: 16px 0 8px; }
     .link-field ::ng-deep .mat-mdc-form-field-subscript-wrapper { display: none; }
     .suffix-actions {

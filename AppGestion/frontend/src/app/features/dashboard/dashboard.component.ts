@@ -6,6 +6,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
 import { PresupuestoService } from '../../core/services/presupuesto.service';
 import { FacturaService } from '../../core/services/factura.service';
 import { MaterialService } from '../../core/services/material.service';
@@ -44,6 +47,8 @@ interface SaludCobros {
 export interface IngresoPorMes {
   name: string;
   value: number;
+  /** Clave YYYY-MM para detalle / interacción. */
+  key?: string;
 }
 
 /** Cliente ranqueado por número de operaciones (presupuestos + facturas). */
@@ -62,6 +67,9 @@ export interface TopCliente {
         MatIconModule,
         MatProgressBarModule,
         MatTooltipModule,
+        MatButtonToggleModule,
+        MatFormFieldModule,
+        MatSelectModule,
         RouterLink,
         EstadoBadgeComponent,
     ],
@@ -101,6 +109,7 @@ export interface TopCliente {
             <span class="kpi-value">{{ facturaStats.totalFacturado | number:'1.2-2' }} €</span>
             <span class="kpi-label">Total facturado</span>
           </div>
+          <a mat-button routerLink="/facturas" class="kpi-link">Ver facturas</a>
         </div>
         <div class="kpi-card kpi-pendiente">
           <div class="kpi-icon">
@@ -110,6 +119,7 @@ export interface TopCliente {
             <span class="kpi-value">{{ facturaStats.totalPendiente | number:'1.2-2' }} €</span>
             <span class="kpi-label">Por cobrar</span>
           </div>
+          <a mat-button routerLink="/facturas" [queryParams]="{ pendienteCobro: '1' }" class="kpi-link">Ver pendientes</a>
         </div>
       </section>
 
@@ -142,23 +152,71 @@ export interface TopCliente {
                 [matTooltip]="presupuestoStats.rechazados + ' rechazados'"
               ></div>
             </div>
-            <div class="distribution-legend">
-              <div class="legend-item">
-                <span class="dot pendiente"></span>
-                <span>Pendientes: {{ presupuestoStats.pendientes }}</span>
-              </div>
-              <div class="legend-item">
-                <span class="dot aceptado"></span>
-                <span>Aceptados: {{ presupuestoStats.aceptados }}</span>
-              </div>
-              <div class="legend-item">
-                <span class="dot ejecucion"></span>
-                <span>En ejecución: {{ presupuestoStats.enEjecucion }}</span>
-              </div>
-              <div class="legend-item">
-                <span class="dot rechazado"></span>
-                <span>Rechazados: {{ presupuestoStats.rechazados }}</span>
-              </div>
+            <div class="distribution-legend presupuesto-legend">
+              @if (presupuestoStats.pendientes > 0) {
+                <a
+                  class="legend-item legend-link"
+                  [routerLink]="['/presupuestos']"
+                  [queryParams]="{ estado: 'Pendiente' }"
+                  matTooltip="Ver presupuestos pendientes"
+                >
+                  <span class="dot pendiente"></span>
+                  <span>Pendientes: {{ presupuestoStats.pendientes }}</span>
+                </a>
+              } @else {
+                <div class="legend-item">
+                  <span class="dot pendiente"></span>
+                  <span>Pendientes: {{ presupuestoStats.pendientes }}</span>
+                </div>
+              }
+              @if (presupuestoStats.aceptados > 0) {
+                <a
+                  class="legend-item legend-link"
+                  [routerLink]="['/presupuestos']"
+                  [queryParams]="{ estado: 'Aceptado' }"
+                  matTooltip="Ver presupuestos aceptados"
+                >
+                  <span class="dot aceptado"></span>
+                  <span>Aceptados: {{ presupuestoStats.aceptados }}</span>
+                </a>
+              } @else {
+                <div class="legend-item">
+                  <span class="dot aceptado"></span>
+                  <span>Aceptados: {{ presupuestoStats.aceptados }}</span>
+                </div>
+              }
+              @if (presupuestoStats.enEjecucion > 0) {
+                <a
+                  class="legend-item legend-link"
+                  [routerLink]="['/presupuestos']"
+                  [queryParams]="{ estado: 'En ejecución' }"
+                  matTooltip="Ver presupuestos en ejecución"
+                >
+                  <span class="dot ejecucion"></span>
+                  <span>En ejecución: {{ presupuestoStats.enEjecucion }}</span>
+                </a>
+              } @else {
+                <div class="legend-item">
+                  <span class="dot ejecucion"></span>
+                  <span>En ejecución: {{ presupuestoStats.enEjecucion }}</span>
+                </div>
+              }
+              @if (presupuestoStats.rechazados > 0) {
+                <a
+                  class="legend-item legend-link"
+                  [routerLink]="['/presupuestos']"
+                  [queryParams]="{ estado: 'Rechazado' }"
+                  matTooltip="Ver presupuestos rechazados"
+                >
+                  <span class="dot rechazado"></span>
+                  <span>Rechazados: {{ presupuestoStats.rechazados }}</span>
+                </a>
+              } @else {
+                <div class="legend-item">
+                  <span class="dot rechazado"></span>
+                  <span>Rechazados: {{ presupuestoStats.rechazados }}</span>
+                </div>
+              }
             </div>
             <p class="stats-total">Valor total presupuestos: {{ presupuestoStats.totalValor | number:'1.2-2' }} €</p>
           </mat-card-content>
@@ -188,18 +246,54 @@ export interface TopCliente {
               ></div>
             </div>
             <div class="distribution-legend">
-              <div class="legend-item">
-                <span class="dot no-pagada"></span>
-                <span>No pagadas: {{ facturaStats.noPagadas }}</span>
-              </div>
-              <div class="legend-item">
-                <span class="dot parcial"></span>
-                <span>Parciales: {{ facturaStats.parciales }}</span>
-              </div>
-              <div class="legend-item">
-                <span class="dot pagada"></span>
-                <span>Pagadas: {{ facturaStats.pagadas }}</span>
-              </div>
+              @if (facturaStats.noPagadas > 0) {
+                <a
+                  class="legend-item legend-link"
+                  [routerLink]="['/facturas']"
+                  [queryParams]="{ estadoPago: 'No Pagada' }"
+                  matTooltip="Ver facturas no pagadas en el listado"
+                >
+                  <span class="dot no-pagada"></span>
+                  <span>No pagadas: {{ facturaStats.noPagadas }}</span>
+                </a>
+              } @else {
+                <div class="legend-item">
+                  <span class="dot no-pagada"></span>
+                  <span>No pagadas: {{ facturaStats.noPagadas }}</span>
+                </div>
+              }
+              @if (facturaStats.parciales > 0) {
+                <a
+                  class="legend-item legend-link"
+                  [routerLink]="['/facturas']"
+                  [queryParams]="{ estadoPago: 'Parcial' }"
+                  matTooltip="Ver facturas con pago parcial"
+                >
+                  <span class="dot parcial"></span>
+                  <span>Parciales: {{ facturaStats.parciales }}</span>
+                </a>
+              } @else {
+                <div class="legend-item">
+                  <span class="dot parcial"></span>
+                  <span>Parciales: {{ facturaStats.parciales }}</span>
+                </div>
+              }
+              @if (facturaStats.pagadas > 0) {
+                <a
+                  class="legend-item legend-link"
+                  [routerLink]="['/facturas']"
+                  [queryParams]="{ estadoPago: 'Pagada' }"
+                  matTooltip="Ver facturas pagadas"
+                >
+                  <span class="dot pagada"></span>
+                  <span>Pagadas: {{ facturaStats.pagadas }}</span>
+                </a>
+              } @else {
+                <div class="legend-item">
+                  <span class="dot pagada"></span>
+                  <span>Pagadas: {{ facturaStats.pagadas }}</span>
+                </div>
+              }
             </div>
             <div class="payment-summary">
               <span class="cobrado">Cobrado: {{ facturaStats.totalCobrado | number:'1.2-2' }} €</span>
@@ -221,7 +315,13 @@ export interface TopCliente {
               <span class="salud-importe">{{ saludCobros.importeVencido | number:'1.2-2' }} €</span>
             }
           </div>
-          <a mat-button routerLink="/facturas" class="salud-cta">Ver facturas</a>
+          <a
+            mat-button
+            [routerLink]="['/facturas']"
+            [queryParams]="saludCobros.vencidas > 0 ? { vencimiento: 'vencidas' } : {}"
+            class="salud-cta"
+            [matTooltip]="saludCobros.vencidas > 0 ? 'Listado filtrado: vencidas y no cobradas' : 'Ver todas las facturas'"
+          >Ver facturas</a>
         </div>
 
         <div class="salud-card salud-proximas" [class.salud-warn]="saludCobros.proximasAVencer > 0">
@@ -235,7 +335,13 @@ export interface TopCliente {
               <span class="salud-importe">{{ saludCobros.importeProximas | number:'1.2-2' }} €</span>
             }
           </div>
-          <a mat-button routerLink="/facturas" class="salud-cta">Ver facturas</a>
+          <a
+            mat-button
+            [routerLink]="['/facturas']"
+            [queryParams]="saludCobros.proximasAVencer > 0 ? { vencimiento: 'proximas7' } : {}"
+            class="salud-cta"
+            [matTooltip]="saludCobros.proximasAVencer > 0 ? 'Listado filtrado: vencen en los próximos 7 días' : 'Ver todas las facturas'"
+          >Ver facturas</a>
         </div>
 
         <div class="salud-card salud-ratio">
@@ -258,11 +364,32 @@ export interface TopCliente {
             <mat-icon class="section-icon chart">show_chart</mat-icon>
             <div class="chart-header-text">
               <mat-card-title>Ingresos por mes</mat-card-title>
-              <p class="chart-subtitle">Suma del total facturado en cada mes según la fecha de emisión de las facturas.</p>
+              <p class="chart-subtitle">{{ chartSubtitle }}</p>
             </div>
           </mat-card-header>
           <mat-card-content>
-            @if (ingresosPorMes.length === 0) {
+            <div class="chart-toolbar">
+              <mat-button-toggle-group
+                [value]="chartIngresosMode"
+                (change)="onChartIngresosModeChange($event.value)"
+                appearance="standard"
+                class="chart-mode-toggle"
+              >
+                <mat-button-toggle value="ultimoMes">Último mes</mat-button-toggle>
+                <mat-button-toggle value="anio">Año</mat-button-toggle>
+              </mat-button-toggle-group>
+              @if (chartIngresosMode === 'anio') {
+                <mat-form-field appearance="outline" class="chart-filter-year">
+                  <mat-label>Año</mat-label>
+                  <mat-select [value]="selectedChartYear" (selectionChange)="onChartYearChange($event.value)">
+                    @for (y of chartYearOptions; track y) {
+                      <mat-option [value]="y">{{ y }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              }
+            </div>
+            @if (facturasCount === 0) {
               <p class="chart-empty">No hay datos de facturación para mostrar. Crea facturas para ver el gráfico.</p>
             } @else {
               <div class="chart-wrap" [attr.aria-label]="'Gráfico de ingresos por mes'">
@@ -283,23 +410,79 @@ export interface TopCliente {
                   }
                   <!-- Eje X: línea -->
                   <line x1="70" y1="180" x2="578" y2="180" stroke="var(--app-border)" stroke-width="1"/>
-                  <text x="324" y="218" class="chart-axis-label" text-anchor="middle">Mes</text>
-                  <!-- Área de ingresos (path ajustado al nuevo origen 70) -->
-                  <path [attr.d]="ingresosAreaPath" fill="url(#ingresosGradient)" stroke="#1e3a8a" stroke-width="2" stroke-linejoin="round"/>
-                  <!-- Etiquetas de meses -->
-                  @for (item of ingresosPorMes; track item.name; let i = $index) {
+                  <text x="324" y="218" class="chart-axis-label" text-anchor="middle">{{ chartXAxisLabel }}</text>
+                  @if (chartIngresosMode === 'ultimoMes' && ultimoMesBarRect) {
+                    <rect
+                      [attr.x]="ultimoMesBarRect.x"
+                      [attr.y]="ultimoMesBarRect.y"
+                      [attr.width]="ultimoMesBarRect.width"
+                      [attr.height]="ultimoMesBarRect.height"
+                      fill="url(#ingresosGradient)"
+                      stroke="#1e3a8a"
+                      stroke-width="2"
+                      rx="4"
+                    />
+                  } @else if (chartIngresosMode === 'anio') {
+                    <path
+                      [attr.d]="ingresosAreaPath"
+                      fill="url(#ingresosGradient)"
+                      stroke="#1e3a8a"
+                      stroke-width="2"
+                      stroke-linejoin="round"
+                      pointer-events="none"
+                    />
+                  }
+                  <!-- Etiquetas de meses (no capturan el ratón: la capa de clic va encima) -->
+                  @for (item of ingresosPorMes; track item.key; let i = $index) {
                     <text
-                      [attr.x]="70 + (i + 0.5) * chartStepX"
+                      [attr.x]="chartLabelX(i)"
                       y="198"
                       class="chart-label"
                       text-anchor="middle"
+                      pointer-events="none"
                     >{{ item.name }}</text>
+                  }
+                  <!-- Zona clic por mes encima del gráfico (transparente no recibe clics sin pointer-events) -->
+                  @if (chartIngresosMode === 'anio') {
+                    @for (item of ingresosPorMes; track item.key; let i = $index) {
+                      <rect
+                        class="chart-hit-rect"
+                        [attr.x]="chartHitRectX(i)"
+                        y="20"
+                        [attr.width]="chartHitRectWidth()"
+                        height="160"
+                        fill="rgba(0,0,0,0)"
+                        pointer-events="all"
+                        [class.chart-hit-active]="hoveredChartMonth === i || monthDrillMonthIndex === i"
+                        (mouseenter)="onChartMonthHover(i)"
+                        (mouseleave)="onChartMonthLeave()"
+                        (click)="onChartMonthClick($event, i)"
+                        (keydown.enter)="selectMonthDetail(i)"
+                        role="button"
+                        [attr.aria-label]="'Ver detalle de ' + item.name + ' ' + selectedChartYear"
+                        tabindex="0"
+                      >
+                        <title>{{ chartMonthTooltip(i) }}</title>
+                      </rect>
+                    }
                   }
                 </svg>
                 <div class="chart-legend">
                   <span class="chart-legend-desc">Suma total del periodo mostrado:</span>
                   <span class="chart-legend-total">{{ chartTotal | number:'1.2-2' }} €</span>
                 </div>
+                @if (monthDrill && chartIngresosMode === 'anio') {
+                  <div class="month-drill">
+                    <div class="month-drill-head">
+                      <span class="month-drill-title">{{ monthDrill.label }}</span>
+                      <button mat-button type="button" (click)="clearMonthDrill()" class="month-drill-close">Cerrar</button>
+                    </div>
+                    <p class="month-drill-amount">
+                      Total facturado: <strong>{{ monthDrill.value | number:'1.2-2' }} €</strong>
+                    </p>
+                    <p class="month-drill-count">{{ monthDrill.facturasCount }} factura(s) en ese mes</p>
+                  </div>
+                }
               </div>
             }
           </mat-card-content>
@@ -620,7 +803,27 @@ export interface TopCliente {
       align-items: center;
       gap: 8px;
       font-size: 0.875rem;
-      color: rgba(0, 0, 0, 0.7);
+      color: var(--app-text-secondary);
+    }
+
+    .stats-card .distribution-legend .legend-link {
+      color: inherit;
+      text-decoration: none;
+      border-radius: 6px;
+      padding: 2px 4px;
+      margin: -2px -4px;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .stats-card .distribution-legend .legend-link:hover {
+      background: rgba(30, 58, 138, 0.08);
+      color: var(--app-primary, #1e3a8a);
+      text-decoration: underline;
+    }
+
+    .stats-card .distribution-legend .legend-link:focus-visible {
+      outline: 2px solid var(--app-primary, #1e3a8a);
+      outline-offset: 2px;
     }
 
     .dot {
@@ -639,7 +842,7 @@ export interface TopCliente {
 
     .stats-total, .payment-summary {
       font-size: 0.9rem;
-      color: rgba(0, 0, 0, 0.6);
+      color: var(--app-text-secondary);
       margin: 0;
     }
 
@@ -680,6 +883,74 @@ export interface TopCliente {
       font-size: 0.8125rem;
       color: var(--app-text-secondary, #64748b);
       line-height: 1.4;
+    }
+
+    .chart-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--app-space-md, 16px);
+      margin-bottom: var(--app-space-md, 16px);
+    }
+
+    .chart-mode-toggle {
+      flex-shrink: 0;
+    }
+
+    .chart-filter-year {
+      width: 120px;
+      margin: 0;
+    }
+
+    .chart-filter-year .mat-mdc-form-field-subscript-wrapper {
+      display: none;
+    }
+
+    .chart-hit-rect {
+      cursor: pointer;
+      outline: none;
+    }
+
+    .chart-hit-rect:focus-visible {
+      outline: 2px solid var(--app-primary, #1e3a8a);
+      outline-offset: -2px;
+    }
+
+    .chart-hit-active {
+      fill: rgba(30, 58, 138, 0.06);
+    }
+
+    .month-drill {
+      margin-top: var(--app-space-md, 16px);
+      padding: var(--app-space-md, 16px);
+      border-radius: var(--app-radius-md, 12px);
+      background: var(--app-bg-page, #f8fafc);
+      border: 1px solid var(--app-border);
+    }
+
+    .month-drill-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .month-drill-title {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--app-text-primary, #0f172a);
+    }
+
+    .month-drill-close {
+      flex-shrink: 0;
+    }
+
+    .month-drill-amount,
+    .month-drill-count {
+      margin: 4px 0 0 0;
+      font-size: 0.875rem;
+      color: var(--app-text-secondary, #64748b);
     }
 
     .section-icon.chart {
@@ -831,8 +1102,8 @@ export interface TopCliente {
     }
 
     .recent-name {
-      font-weight: 500;
-      color: #1e3a8a;
+      font-weight: 600;
+      color: var(--app-text-primary);
     }
 
     .recent-meta {
@@ -840,7 +1111,7 @@ export interface TopCliente {
       align-items: center;
       gap: 12px;
       font-size: 0.875rem;
-      color: rgba(0, 0, 0, 0.6);
+      color: var(--app-text-secondary);
     }
 
     .top-list .top-rank {
@@ -863,7 +1134,7 @@ export interface TopCliente {
     .pago-parcial { background: #fff8e1; color: #f9a825; }
 
     .empty {
-      color: rgba(0, 0, 0, 0.5);
+      color: var(--app-text-muted);
       font-style: italic;
       padding: 24px 0;
     }
@@ -895,9 +1166,9 @@ export interface TopCliente {
     }
 
     .salud-vencidas { border-left-color: #e2e8f0; }
-    .salud-vencidas.salud-alert { border-left-color: #ef4444; background: #fef2f2; }
+    .salud-vencidas.salud-alert { border-left-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
     .salud-proximas { border-left-color: #e2e8f0; }
-    .salud-proximas.salud-warn { border-left-color: #f59e0b; background: #fffbeb; }
+    .salud-proximas.salud-warn { border-left-color: #f59e0b; background: rgba(245, 158, 11, 0.12); }
     .salud-ratio { border-left-color: #1e3a8a; }
 
     .salud-icon mat-icon {
@@ -921,19 +1192,19 @@ export interface TopCliente {
     .salud-value {
       font-size: 1.75rem;
       font-weight: 600;
-      color: rgba(0,0,0,0.87);
+      color: var(--app-text-primary);
       line-height: 1.2;
     }
 
     .salud-label {
       font-size: 0.85rem;
-      color: rgba(0,0,0,0.6);
+      color: var(--app-text-secondary);
     }
 
     .salud-importe {
       font-size: 0.875rem;
       font-weight: 500;
-      color: rgba(0,0,0,0.75);
+      color: var(--app-text-secondary);
     }
 
     .salud-cta {
@@ -944,6 +1215,49 @@ export interface TopCliente {
     .salud-bar-wrap {
       margin-top: 4px;
       width: 100%;
+    }
+
+    :host-context(html.app-dark-theme) .salud-vencidas:not(.salud-alert),
+    :host-context(html.app-dark-theme) .salud-proximas:not(.salud-warn) {
+      border-left-color: rgba(255, 255, 255, 0.14);
+    }
+
+    :host-context(html.app-dark-theme) .salud-proximas.salud-warn {
+      background: rgba(180, 83, 9, 0.22);
+      border-left-color: #fbbf24;
+    }
+
+    :host-context(html.app-dark-theme) .salud-vencidas.salud-alert {
+      background: rgba(127, 29, 29, 0.35);
+      border-left-color: #f87171;
+    }
+
+    :host-context(html.app-dark-theme) .section-icon.presupuesto {
+      background: rgba(99, 102, 241, 0.22);
+      color: #c7d2fe;
+    }
+
+    :host-context(html.app-dark-theme) .section-icon.factura {
+      background: rgba(14, 165, 233, 0.18);
+      color: #7dd3fc;
+    }
+
+    :host-context(html.app-dark-theme) .section-icon.chart {
+      background: rgba(99, 102, 241, 0.2);
+      color: #a5b4fc;
+    }
+
+    :host-context(html.app-dark-theme) .stats-card .distribution-legend .legend-link:hover {
+      background: rgba(129, 140, 248, 0.14);
+      color: #e0e7ff;
+    }
+
+    :host-context(html.app-dark-theme) .chart-hit-active {
+      fill: rgba(129, 140, 248, 0.2);
+    }
+
+    :host-context(html.app-dark-theme) .kpi-icon {
+      background: rgba(255, 255, 255, 0.06);
     }
   `]
 })
@@ -974,8 +1288,14 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   };
   recentPresupuestos: Presupuesto[] = [];
   recentFacturas: Factura[] = [];
-  /** Últimos 12 meses: ingresos (total facturado) por mes para el gráfico. */
+  /** Datos del gráfico según modo (último mes natural o 12 meses del año elegido). */
   ingresosPorMes: IngresoPorMes[] = [];
+  /** Vista: un mes natural anterior o año completo. */
+  chartIngresosMode: 'ultimoMes' | 'anio' = 'anio';
+  /** Año del gráfico en modo «Año». */
+  selectedChartYear = new Date().getFullYear();
+  hoveredChartMonth: number | null = null;
+  monthDrill: { label: string; value: number; facturasCount: number; key: string } | null = null;
   /** Top clientes por frecuencia (presupuestos + facturas). */
   topClientes: TopCliente[] = [];
   /** Top materiales más utilizados (desde API). */
@@ -996,6 +1316,9 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   get chartStepX(): number {
     const n = this.ingresosPorMes.length;
+    if (this.chartIngresosMode === 'ultimoMes') {
+      return 0;
+    }
     return n <= 1 ? this.chartWidth : this.chartWidth / (n - 1);
   }
 
@@ -1003,10 +1326,49 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     return this.ingresosPorMes.reduce((s, d) => s + d.value, 0);
   }
 
+  get chartSubtitle(): string {
+    if (this.chartIngresosMode === 'ultimoMes') {
+      return 'Total facturado en el último mes natural (mes anterior al actual), según fecha de emisión.';
+    }
+    return 'Enero a diciembre del año seleccionado. Pasa el cursor sobre un mes o haz clic para ver importe y número de facturas.';
+  }
+
+  get chartXAxisLabel(): string {
+    return this.chartIngresosMode === 'ultimoMes' ? 'Periodo' : 'Mes';
+  }
+
+  get chartYearOptions(): number[] {
+    const y = new Date().getFullYear();
+    return [y - 4, y - 3, y - 2, y - 1, y, y + 1];
+  }
+
+  get monthDrillMonthIndex(): number | null {
+    if (!this.monthDrill?.key) return null;
+    const idx = this.ingresosPorMes.findIndex((d) => d.key === this.monthDrill!.key);
+    return idx >= 0 ? idx : null;
+  }
+
+  get ultimoMesBarRect(): { x: number; y: number; width: number; height: number } | null {
+    if (this.chartIngresosMode !== 'ultimoMes' || this.ingresosPorMes.length !== 1) return null;
+    const d = this.ingresosPorMes[0];
+    const maxVal = this.chartMaxValue;
+    const rangeY = this.chartBottomY - this.chartTopY;
+    const h = (d.value / maxVal) * rangeY;
+    const barW = 140;
+    const cx = this.chartPadLeft + this.chartWidth / 2;
+    return {
+      x: cx - barW / 2,
+      y: this.chartBottomY - h,
+      width: barW,
+      height: h,
+    };
+  }
+
   /** Valor máximo del eje Y para la escala. */
   get chartMaxValue(): number {
     const vals = this.ingresosPorMes.map((d) => d.value);
-    return vals.length === 0 ? 1 : Math.max(...vals);
+    const m = vals.length === 0 ? 0 : Math.max(...vals);
+    return m <= 0 ? 1 : m;
   }
 
   /** Marcas del eje Y: valor, posición y etiqueta formateada. */
@@ -1030,8 +1392,9 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     return value.toFixed(0);
   }
 
-  /** Path SVG del área de ingresos. */
+  /** Path SVG del área de ingresos (solo modo año). */
   get ingresosAreaPath(): string {
+    if (this.chartIngresosMode !== 'anio') return '';
     const data = this.ingresosPorMes;
     if (data.length === 0) return '';
     const maxVal = this.chartMaxValue;
@@ -1076,7 +1439,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
           .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
           .slice(0, 5);
         this.computeFacturaStats(facturas);
-        this.ingresosPorMes = this.computeIngresosPorMes(facturas);
+        this.ingresosPorMes = this.computeIngresosChartData(facturas);
 
         this.topMateriales = materiales;
         this.computeTopClientes();
@@ -1215,20 +1578,135 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   private static readonly MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-  private computeIngresosPorMes(facturas: Factura[]): IngresoPorMes[] {
-    const byMonth = new Map<string, number>();
+  chartLabelX(i: number): number {
+    if (this.chartIngresosMode === 'ultimoMes') {
+      return this.chartPadLeft + this.chartWidth / 2;
+    }
+    return this.chartPadLeft + i * this.chartStepX;
+  }
+
+  chartHitRectX(i: number): number {
+    const w = this.chartHitRectWidth();
+    const cx = this.chartPadLeft + i * this.chartStepX;
+    let left = Math.max(this.chartPadLeft, cx - w / 2);
+    const maxRight = 620 - this.chartPadRight;
+    if (left + w > maxRight) {
+      left = maxRight - w;
+    }
+    return left;
+  }
+
+  chartHitRectWidth(): number {
+    const n = this.ingresosPorMes.length;
+    if (n <= 1) return this.chartWidth;
+    return Math.min(this.chartWidth / n, this.chartStepX * 1.15);
+  }
+
+  chartMonthTooltip(i: number): string {
+    const item = this.ingresosPorMes[i];
+    if (!item?.key) return '';
+    const n = this.countFacturasInMonthKey(item.key);
+    return `${item.name} ${this.selectedChartYear}: ${item.value.toFixed(2)} € (${n} factura${n === 1 ? '' : 's'})`;
+  }
+
+  onChartIngresosModeChange(mode: 'ultimoMes' | 'anio'): void {
+    this.chartIngresosMode = mode;
+    this.monthDrill = null;
+    this.hoveredChartMonth = null;
+    this.ingresosPorMes = this.computeIngresosChartData(this.allFacturas);
+  }
+
+  onChartYearChange(year: number): void {
+    this.selectedChartYear = year;
+    this.monthDrill = null;
+    this.hoveredChartMonth = null;
+    this.ingresosPorMes = this.computeIngresosChartData(this.allFacturas);
+  }
+
+  onChartMonthHover(i: number): void {
+    this.hoveredChartMonth = i;
+  }
+
+  onChartMonthLeave(): void {
+    this.hoveredChartMonth = null;
+  }
+
+  onChartMonthClick(ev: MouseEvent, i: number): void {
+    ev.preventDefault();
+    ev.stopPropagation();
+    this.selectMonthDetail(i);
+  }
+
+  selectMonthDetail(i: number): void {
+    if (this.chartIngresosMode !== 'anio') return;
+    const item = this.ingresosPorMes[i];
+    if (!item?.key) return;
+    const [y, m] = item.key.split('-').map(Number);
+    const count = this.countFacturasInMonth(y, m - 1);
+    this.monthDrill = {
+      label: `${DashboardComponent.MESES[m - 1]} ${y}`,
+      value: item.value,
+      facturasCount: count,
+      key: item.key,
+    };
+  }
+
+  clearMonthDrill(): void {
+    this.monthDrill = null;
+  }
+
+  countFacturasInMonthKey(key?: string): number {
+    if (!key) return 0;
+    const [y, mm] = key.split('-').map(Number);
+    return this.countFacturasInMonth(y, mm - 1);
+  }
+
+  private countFacturasInMonth(year: number, monthIndex0: number): number {
+    let n = 0;
+    for (const f of this.allFacturas) {
+      const d = new Date(f.fechaCreacion);
+      if (d.getFullYear() === year && d.getMonth() === monthIndex0) n++;
+    }
+    return n;
+  }
+
+  private computeIngresosChartData(facturas: Factura[]): IngresoPorMes[] {
+    if (this.chartIngresosMode === 'ultimoMes') {
+      return this.computeUltimoMesNatural(facturas);
+    }
+    return this.computeIngresosYear(facturas, this.selectedChartYear);
+  }
+
+  private computeUltimoMesNatural(facturas: Factura[]): IngresoPorMes[] {
+    const now = new Date();
+    const target = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const y = target.getFullYear();
+    const m = target.getMonth();
+    const key = `${y}-${String(m + 1).padStart(2, '0')}`;
+    let total = 0;
     for (const f of facturas) {
       const d = new Date(f.fechaCreacion);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      byMonth.set(key, (byMonth.get(key) ?? 0) + (f.total ?? 0));
+      if (d.getFullYear() === y && d.getMonth() === m) {
+        total += f.total ?? 0;
+      }
     }
-    const entries = Array.from(byMonth.entries())
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .slice(-12);
-    return entries.map(([key, value]) => {
-      const [y, m] = key.split('-').map(Number);
-      const name = `${DashboardComponent.MESES[m - 1]} ${y}`;
-      return { name, value };
-    });
+    const name = `${DashboardComponent.MESES[m]} ${y}`;
+    return [{ name, value: total, key }];
+  }
+
+  private computeIngresosYear(facturas: Factura[], year: number): IngresoPorMes[] {
+    const result: IngresoPorMes[] = [];
+    for (let m = 0; m < 12; m++) {
+      const key = `${year}-${String(m + 1).padStart(2, '0')}`;
+      let total = 0;
+      for (const f of facturas) {
+        const d = new Date(f.fechaCreacion);
+        if (d.getFullYear() === year && d.getMonth() === m) {
+          total += f.total ?? 0;
+        }
+      }
+      result.push({ name: DashboardComponent.MESES[m], value: total, key });
+    }
+    return result;
   }
 }

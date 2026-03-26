@@ -44,6 +44,20 @@ $appgestion-theme: mat.m2-define-light-theme((
 
 @include mat.all-component-themes($appgestion-theme);
 
+$appgestion-dark-theme: mat.m2-define-dark-theme((
+  color: (
+    primary: $appgestion-primary,
+    accent: $appgestion-accent,
+    warn: $appgestion-warn,
+  ),
+  typography: mat.m2-define-typography-config(),
+  density: 0,
+));
+
+.app-dark-theme {
+  @include mat.all-component-colors($appgestion-dark-theme);
+}
+
 :root {
   --app-radius-sm: 8px;
   --app-radius-md: 12px;
@@ -177,4 +191,64 @@ app-search-bar input::placeholder {
 
 .mat-mdc-row:hover .mat-mdc-cell {
   background: rgba(30, 58, 138, 0.02);
+}
+
+/* —— Modo oscuro (activado en Preferencias; clase en <html>) —— */
+html.app-dark-theme {
+  --app-bg-page: #0f1419;
+  --app-bg-card: #1a222c;
+  --app-bg-warm: #5c2d22;
+  --app-bg-deep: #020617;
+  --app-border: rgba(255, 255, 255, 0.1);
+  --app-text-primary: #f8fafc;
+  --app-text-secondary: #cbd5e1;
+  --app-text-muted: #94a3b8;
+  --app-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --app-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --app-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+html.app-dark-theme .mat-mdc-header-row {
+  background: var(--app-bg-page) !important;
+}
+
+html.app-dark-theme .mat-mdc-row:hover .mat-mdc-cell {
+  background: rgba(129, 140, 248, 0.08);
+}
+
+html.app-dark-theme .mat-drawer-container {
+  background: var(--app-bg-page);
+}
+
+html.app-dark-theme .mat-mdc-dialog-container,
+html.app-dark-theme .mat-mdc-menu-panel {
+  --mat-dialog-container-color: var(--app-bg-card);
+}
+
+html.app-dark-theme .saas-sidebar .sidebar-nav a:hover {
+  background: rgba(129, 140, 248, 0.12);
+}
+
+html.app-dark-theme .saas-sidebar .sidebar-nav a.active {
+  background: rgba(99, 102, 241, 0.2);
+  color: #c7d2fe;
+}
+
+html.app-dark-theme .banner-readonly {
+  background: #3f1d1d;
+  color: #fecaca;
+}
+
+html.app-dark-theme .banner-trial {
+  background: #422006;
+  color: #fed7aa;
+}
+
+html.app-dark-theme .mat-mdc-card-title {
+  color: var(--app-text-primary);
+}
+
+html.app-dark-theme .mat-mdc-card-subtitle {
+  color: var(--app-text-secondary);
 }

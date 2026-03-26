@@ -25,6 +25,20 @@
   } @else {
     <mat-card class="pref-card">
       <mat-card-content>
+        <section class="pref-appearance" aria-labelledby="pref-appearance-title">
+          <h2 id="pref-appearance-title" class="pref-section-title">Apariencia</h2>
+          <mat-slide-toggle
+            [checked]="theme.isDark()"
+            (change)="theme.setDark($event.checked)"
+            color="primary"
+          >
+            Modo oscuro
+          </mat-slide-toggle>
+          <p class="pref-appearance__hint">
+            Interfaz más cómoda con poca luz. La preferencia se guarda en este navegador (no en el servidor).
+          </p>
+        </section>
+        <mat-divider class="pref-divider" />
         <form [formGroup]="form" (ngSubmit)="guardar()" class="pref-form">
           <mat-form-field appearance="outline" class="pref-field">
             <mat-label>Idioma de la interfaz</mat-label>

@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { ThemeService } from '../../../core/theme/theme.service';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -9,6 +10,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatDividerModule } from '@angular/material/divider';
 import { AuthService, UsuarioResponse } from '../../../core/auth/auth.service';
 import { CURRENCY_OPTIONS, LOCALE_OPTIONS, TIMEZONE_OPTIONS } from './preferencias-options';
 
@@ -25,6 +28,8 @@ import { CURRENCY_OPTIONS, LOCALE_OPTIONS, TIMEZONE_OPTIONS } from './preferenci
         MatIconModule,
         MatProgressSpinnerModule,
         MatSnackBarModule,
+        MatSlideToggleModule,
+        MatDividerModule,
     ],
     templateUrl: './preferencias.component.html',
     styleUrl: './preferencias.component.scss'
@@ -33,6 +38,7 @@ export class PreferenciasComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
+  readonly theme = inject(ThemeService);
 
   readonly locales = LOCALE_OPTIONS;
   /** Incluye moneda guardada aunque no esté en la lista corta. */

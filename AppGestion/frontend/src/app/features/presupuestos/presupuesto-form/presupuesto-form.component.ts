@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -505,8 +505,8 @@ export class PresupuestoFormComponent implements OnInit {
     }
   }
 
-  private getAllItems(): { ctrl: any; isManual: boolean }[] {
-    const result: { ctrl: any; isManual: boolean }[] = [];
+  private getAllItems(): { ctrl: AbstractControl; isManual: boolean }[] {
+    const result: { ctrl: AbstractControl; isManual: boolean }[] = [];
     this.materialItems.controls.forEach((c) => result.push({ ctrl: c, isManual: false }));
     this.manualItems.controls.forEach((c) => result.push({ ctrl: c, isManual: true }));
     return result;

@@ -1,6 +1,7 @@
-import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, DestroyRef, OnInit, ViewChild, AfterViewInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -64,7 +65,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
         </mat-form-field>
         <mat-form-field appearance="outline" class="filter-estado">
           <mat-label>Estado</mat-label>
-          <mat-select (selectionChange)="applyEstadoFilter($event.value)" value="">
+          <mat-select [value]="estadoFilter" (selectionChange)="applyEstadoFilter($event.value)">
             <mat-option value="">Todos</mat-option>
             <mat-option value="Pendiente">Pendiente</mat-option>
             <mat-option value="Aceptado">Aceptado</mat-option>
@@ -245,6 +246,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
   `]
 })
 export class PresupuestoListComponent implements OnInit, AfterViewInit {
+  private readonly destroyRef = inject(DestroyRef);
   displayedColumns = ['clienteNombre', 'fechaCreacion', 'estado', 'senal', 'total', 'actions'];
   dataSource = new MatTableDataSource<Presupuesto>([]);
 
@@ -252,10 +254,11 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   private textFilter = '';
-  private estadoFilter = '';
+  estadoFilter = '';
 
   constructor(
     public auth: AuthService,
+    private route: ActivatedRoute,
     private presupuestoService: PresupuestoService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
@@ -270,6 +273,17 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
+    this.route.queryParams.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const e = params['estado'];
+      if (e === 'Pendiente' || e === 'Aceptado' || e === 'Rechazado' || e === 'En ejecución') {
+        this.estadoFilter = e;
+      } else {
+        this.estadoFilter = '';
+      }
+      if (this.dataSource.data.length) {
+        this.updateFilter();
+      }
+    });
     this.load();
   }
 
@@ -298,6 +312,12 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
   applyEstadoFilter(estado: string): void {
     this.estadoFilter = estado;
     this.updateFilter();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { estado: estado || null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   private updateFilter(): void {

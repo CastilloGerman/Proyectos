@@ -1,5 +1,5 @@
-import { Component, NgZone, OnInit, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, DestroyRef, NgZone, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { map } from 'rxjs/operators';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
@@ -24,6 +24,7 @@ import { SearchBarComponent } from './shared/search-bar/search-bar.component';
 import { UserDropdownComponent } from './shared/user-dropdown/user-dropdown.component';
 import { NotificacionesService, NotificacionDto } from './core/services/notificaciones.service';
 import { environment } from '../environments/environment';
+import { ThemeService } from './core/theme/theme.service';
 
 @Component({
     selector: 'app-root',
@@ -312,9 +313,11 @@ import { environment } from '../environments/environment';
     .saas-content {
       flex: 1;
       min-width: 0;
+      /* Sin min-height:0 el flex item no puede encogerse y el overflow se reparte mal (scroll anidado / filas “vacías”). */
+      min-height: 0;
       max-width: 100%;
       padding: var(--app-space-lg, 24px);
-      overflow-x: hidden;
+      overflow-x: auto;
       overflow-y: auto;
       box-sizing: border-box;
     }
@@ -498,6 +501,9 @@ import { environment } from '../environments/environment';
   `]
 })
 export class AppComponent implements OnInit {
+  /** Fuerza la creación de ThemeService al arrancar (tema + localStorage). */
+  private readonly _theme = inject(ThemeService);
+
   /** Escritorio: false = barra visible (comportamiento actual). */
   sidebarCollapsed = false;
   /** Móvil (overlay): true = drawer abierto. */
@@ -512,6 +518,7 @@ export class AppComponent implements OnInit {
   readonly notificaciones = inject(NotificacionesService);
   private readonly router = inject(Router);
   private readonly ngZone = inject(NgZone);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly notifBadge = computed(() => {
     const n = this.notificaciones.unreadCount();
@@ -570,7 +577,7 @@ export class AppComponent implements OnInit {
     private subscriptionService: SubscriptionService,
     private snackBar: MatSnackBar,
     private http: HttpClient,
-    private dialog: MatDialog
+    private dialog: MatDialog,
   ) {}
 
   protected readonly environment = environment;
@@ -580,7 +587,12 @@ export class AppComponent implements OnInit {
       this.auth.refreshUser().subscribe();
       this.notificaciones.refreshUnreadCount();
     }
-    this.router.events.pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd)).subscribe(() => {
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
       if (this.auth.isAuthenticated()) {
         this.notificaciones.refreshUnreadCount();
         // Tras login o cambio de ruta el drawer aún puede estar midiendo; fuerza recálculo de MatProgressBar, flex, etc.

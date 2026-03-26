@@ -46,7 +46,7 @@ import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
         <mat-card-header>
           <mat-card-title>Rápido en obra</mat-card-title>
           <mat-card-subtitle
-            >Cliente, una o varias líneas de material/servicio y PDF en pocos segundos. Ideal desde el móvil.</mat-card-subtitle
+            >Cliente, líneas de material y/o tareas manuales y PDF en pocos segundos. Ideal desde el móvil.</mat-card-subtitle
           >
         </mat-card-header>
         <mat-card-content>
@@ -60,49 +60,90 @@ import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
               </mat-select>
             </mat-form-field>
 
-            <p class="lines-label">Líneas del presupuesto</p>
-            <div formArrayName="items" class="lines-block">
-              @for (line of items.controls; track line; let i = $index) {
-                <div [formGroupName]="i" class="line-row">
-                  <mat-form-field appearance="outline" class="fg-mat" subscriptSizing="fixed">
-                    <mat-label>Material</mat-label>
-                    <mat-select formControlName="materialId" (selectionChange)="onMaterial(i, $event.value)">
-                      <mat-option [value]="null">— Manual</mat-option>
-                      @for (m of materiales; track m.id) {
-                        <mat-option [value]="m.id">{{ m.nombre }}</mat-option>
-                      }
-                    </mat-select>
-                  </mat-form-field>
-                  <mat-form-field appearance="outline" class="fg-desc" subscriptSizing="fixed">
-                    <mat-label>Descripción</mat-label>
-                    <input matInput formControlName="descripcion" required autocomplete="off" />
-                  </mat-form-field>
-                  <mat-form-field appearance="outline" class="fg-qty" subscriptSizing="fixed">
-                    <mat-label>Cant.</mat-label>
-                    <input matInput type="number" formControlName="cantidad" min="0.001" step="0.01" />
-                  </mat-form-field>
-                  <mat-form-field appearance="outline" class="fg-pu" subscriptSizing="fixed">
-                    <mat-label>P. unit.</mat-label>
-                    <input matInput type="number" formControlName="precioUnitario" min="0" step="0.01" />
-                  </mat-form-field>
-                  <div class="line-actions">
-                    <button
-                      mat-icon-button
-                      type="button"
-                      class="btn-remove"
-                      (click)="removeLine(i)"
-                      [disabled]="items.length <= 1"
-                      matTooltip="Quitar línea">
-                      <mat-icon>delete_outline</mat-icon>
-                    </button>
+            <div class="section materiales-section">
+              <h3 class="section-title">Materiales</h3>
+              <p class="section-hint">Elige artículos del catálogo (mismo flujo que en presupuesto normal).</p>
+              <div formArrayName="materialItems" class="lines-block">
+                @for (line of materialItems.controls; track line; let i = $index) {
+                  <div [formGroupName]="i" class="line-row">
+                    <mat-form-field appearance="outline" class="fg-mat" subscriptSizing="fixed">
+                      <mat-label>Material</mat-label>
+                      <mat-select formControlName="materialId" (selectionChange)="onMaterial(i, $event.value)">
+                        <mat-option [value]="null">Seleccionar…</mat-option>
+                        @for (m of materiales; track m.id) {
+                          <mat-option [value]="m.id">{{ m.nombre }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="fg-desc" subscriptSizing="fixed">
+                      <mat-label>Descripción</mat-label>
+                      <input matInput formControlName="descripcion" autocomplete="off" />
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="fg-qty" subscriptSizing="fixed">
+                      <mat-label>Cant.</mat-label>
+                      <input matInput type="number" formControlName="cantidad" min="0.001" step="0.01" />
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="fg-pu" subscriptSizing="fixed">
+                      <mat-label>P. unit.</mat-label>
+                      <input matInput type="number" formControlName="precioUnitario" min="0" step="0.01" />
+                    </mat-form-field>
+                    <div class="line-actions">
+                      <button
+                        mat-icon-button
+                        type="button"
+                        class="btn-remove"
+                        (click)="removeMaterialLine(i)"
+                        [disabled]="totalLineCount() <= 1"
+                        matTooltip="Quitar línea">
+                        <mat-icon>delete_outline</mat-icon>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              }
+                }
+              </div>
+              <button mat-stroked-button type="button" class="add-line" (click)="addMaterialLine()">
+                <mat-icon>add</mat-icon>
+                Añadir material
+              </button>
             </div>
-            <button mat-stroked-button type="button" class="add-line" (click)="addLine()">
-              <mat-icon>add</mat-icon>
-              Añadir línea
-            </button>
+
+            <div class="section tareas-section">
+              <h3 class="section-title">Tareas manuales</h3>
+              <p class="section-hint">Trabajos sin artículo de catálogo (igual que en el presupuesto completo).</p>
+              <div formArrayName="manualItems" class="lines-block">
+                @for (line of manualItems.controls; track line; let i = $index) {
+                  <div [formGroupName]="i" class="line-row manual-row">
+                    <mat-form-field appearance="outline" class="fg-desc-manual" subscriptSizing="fixed">
+                      <mat-label>Descripción</mat-label>
+                      <input matInput formControlName="tareaManual" placeholder="Trabajo o concepto" autocomplete="off" />
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="fg-qty" subscriptSizing="fixed">
+                      <mat-label>Cant.</mat-label>
+                      <input matInput type="number" formControlName="cantidad" min="0.001" step="0.01" />
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="fg-pu" subscriptSizing="fixed">
+                      <mat-label>P. unit.</mat-label>
+                      <input matInput type="number" formControlName="precioUnitario" min="0" step="0.01" />
+                    </mat-form-field>
+                    <div class="line-actions">
+                      <button
+                        mat-icon-button
+                        type="button"
+                        class="btn-remove"
+                        (click)="removeManualLine(i)"
+                        [disabled]="totalLineCount() <= 1"
+                        matTooltip="Quitar línea">
+                        <mat-icon>delete_outline</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+              <button mat-stroked-button type="button" class="add-line" (click)="addManualLine()">
+                <mat-icon>add</mat-icon>
+                Añadir tarea manual
+              </button>
+            </div>
 
             <mat-checkbox formControlName="ivaHabilitado">IVA 21%</mat-checkbox>
             <div class="actions">
@@ -138,11 +179,35 @@ import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
     styles: [`
     .rapido-wrap { max-width: 720px; margin: 24px auto; padding: 0 16px; }
     .full { width: 100%; display: block; margin-bottom: 12px; }
-    .lines-label {
-      font-size: 13px;
+    .section { margin-bottom: 20px; }
+    .section-title {
+      font-size: 1rem;
       font-weight: 600;
-      color: rgba(0,0,0,0.7);
-      margin: 8px 0 10px;
+      margin: 0 0 4px;
+      color: var(--app-text-primary, #0f172a);
+    }
+    .section-hint {
+      font-size: 13px;
+      color: var(--app-text-secondary, #64748b);
+      margin: 0 0 10px;
+      line-height: 1.4;
+    }
+    .materiales-section {
+      padding: 12px 14px;
+      border-radius: var(--app-radius-md, 12px);
+      border: 1px solid rgba(30, 58, 138, 0.12);
+      background: rgba(30, 58, 138, 0.03);
+    }
+    .tareas-section {
+      padding: 12px 14px;
+      border-radius: var(--app-radius-md, 12px);
+      border: 1px solid rgba(180, 83, 9, 0.22);
+      /* Mismo criterio que materiales-section: tinte sutil, sin fondo fijo claro (rompe modo oscuro) */
+      background: rgba(180, 83, 9, 0.06);
+    }
+    :host-context(html.app-dark-theme) .tareas-section {
+      border-color: rgba(251, 191, 36, 0.28);
+      background: rgba(251, 191, 36, 0.1);
     }
     .lines-block { display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
     .line-row {
@@ -150,6 +215,9 @@ import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
       grid-template-columns: minmax(100px, 0.95fr) minmax(140px, 1.6fr) 76px 84px 44px;
       gap: 8px;
       align-items: start;
+    }
+    .manual-row {
+      grid-template-columns: minmax(160px, 2fr) 76px 84px 44px;
     }
     .line-row mat-form-field { margin: 0; width: 100%; }
     .line-actions {
@@ -160,11 +228,10 @@ import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
       min-height: 56px;
     }
     .btn-remove { margin-top: 0; }
-    .add-line { margin-bottom: 16px; }
+    .add-line { margin-bottom: 8px; }
     .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; align-items: center; }
     .wa-row { margin-top: 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
     .wa-hint { font-size: 12px; color: #64748b; }
-    /* Enlace propio: evita color accent (rojo/naranja) y el flex en columna de mat-stroked-button. */
     .wa-link {
       display: inline-flex;
       flex-direction: row;
@@ -210,8 +277,16 @@ import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
           'qty pu'
           'del del';
       }
+      .manual-row {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+          'desc desc'
+          'qty pu'
+          'del del';
+      }
       .fg-mat { grid-area: mat; }
       .fg-desc { grid-area: desc; }
+      .fg-desc-manual { grid-area: desc; }
       .fg-qty { grid-area: qty; }
       .fg-pu { grid-area: pu; }
       .line-actions { grid-area: del; justify-content: flex-end; min-height: unset; padding-top: 0; }
@@ -221,7 +296,8 @@ import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
 export class PresupuestoRapidoComponent implements OnInit {
   form = this.fb.group({
     clienteId: [null as number | null, Validators.required],
-    items: this.fb.array([this.createItemLine()]),
+    materialItems: this.fb.array([this.createMaterialLine()]),
+    manualItems: this.fb.array([]),
     ivaHabilitado: [true],
   });
 
@@ -238,8 +314,16 @@ export class PresupuestoRapidoComponent implements OnInit {
     private snackBar: MatSnackBar
   ) {}
 
-  get items(): FormArray {
-    return this.form.get('items') as FormArray;
+  get materialItems(): FormArray {
+    return this.form.get('materialItems') as FormArray;
+  }
+
+  get manualItems(): FormArray {
+    return this.form.get('manualItems') as FormArray;
+  }
+
+  totalLineCount(): number {
+    return this.materialItems.length + this.manualItems.length;
   }
 
   ngOnInit(): void {
@@ -247,29 +331,46 @@ export class PresupuestoRapidoComponent implements OnInit {
     this.materialService.getAll().subscribe((m) => (this.materiales = m));
   }
 
-  private createItemLine(): FormGroup {
+  private createMaterialLine(): FormGroup {
     return this.fb.group({
       materialId: [null as number | null],
-      descripcion: ['', Validators.required],
+      descripcion: [''],
       cantidad: [1, [Validators.required, Validators.min(0.001)]],
       precioUnitario: [0, [Validators.required, Validators.min(0)]],
     });
   }
 
-  addLine(): void {
-    this.items.push(this.createItemLine());
+  private createManualLine(): FormGroup {
+    return this.fb.group({
+      tareaManual: ['', Validators.required],
+      cantidad: [1, [Validators.required, Validators.min(0.001)]],
+      precioUnitario: [0, [Validators.required, Validators.min(0)]],
+    });
   }
 
-  removeLine(index: number): void {
-    if (this.items.length <= 1) return;
-    this.items.removeAt(index);
+  addMaterialLine(): void {
+    this.materialItems.push(this.createMaterialLine());
+  }
+
+  addManualLine(): void {
+    this.manualItems.push(this.createManualLine());
+  }
+
+  removeMaterialLine(index: number): void {
+    if (this.totalLineCount() <= 1) return;
+    this.materialItems.removeAt(index);
+  }
+
+  removeManualLine(index: number): void {
+    if (this.totalLineCount() <= 1) return;
+    this.manualItems.removeAt(index);
   }
 
   onMaterial(index: number, id: number | null): void {
     if (id == null) return;
     const mat = this.materiales.find((x) => x.id === id);
     if (mat) {
-      this.items.at(index).patchValue({
+      this.materialItems.at(index).patchValue({
         descripcion: mat.nombre,
         precioUnitario: mat.precioUnitario,
       });
@@ -278,14 +379,12 @@ export class PresupuestoRapidoComponent implements OnInit {
 
   private buildItemsPayload(): PresupuestoItemRequest[] {
     const out: PresupuestoItemRequest[] = [];
-    for (const ctrl of this.items.controls) {
+    for (const ctrl of this.materialItems.controls) {
       const v = (ctrl as FormGroup).getRawValue() as {
         materialId: number | null;
-        descripcion: string;
         cantidad: number;
         precioUnitario: number;
       };
-      const desc = v.descripcion?.trim() || '';
       if (v.materialId) {
         out.push({
           materialId: v.materialId,
@@ -294,9 +393,18 @@ export class PresupuestoRapidoComponent implements OnInit {
           aplicaIva: true,
           visiblePdf: true,
         });
-      } else {
+      }
+    }
+    for (const ctrl of this.manualItems.controls) {
+      const v = (ctrl as FormGroup).getRawValue() as {
+        tareaManual: string;
+        cantidad: number;
+        precioUnitario: number;
+      };
+      const desc = v.tareaManual?.trim() || '';
+      if (desc.length > 0) {
         out.push({
-          tareaManual: desc || 'Concepto',
+          tareaManual: desc,
           cantidad: +v.cantidad,
           precioUnitario: +v.precioUnitario,
           aplicaIva: true,
@@ -308,11 +416,18 @@ export class PresupuestoRapidoComponent implements OnInit {
   }
 
   crearYpdf(): void {
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
     const v = this.form.getRawValue();
     const itemPayload = this.buildItemsPayload();
     if (itemPayload.length === 0) {
-      this.snackBar.open('Añade al menos una línea válida', 'Cerrar', { duration: 3000 });
+      this.snackBar.open(
+        'Añade al menos una línea: elige un material o una tarea manual con descripción.',
+        'Cerrar',
+        { duration: 4500 }
+      );
       return;
     }
     this.loading = true;
@@ -347,7 +462,6 @@ export class PresupuestoRapidoComponent implements OnInit {
     });
   }
 
-  /** Texto del mensaje (mismo que en wa.me). */
   private waMessageText(cli: Cliente | undefined, presupuestoId: number): string {
     return `Hola${cli?.nombre ? ' ' + cli.nombre : ''}, te envío el presupuesto #${presupuestoId}. ¿Te encaja?`;
   }
@@ -358,10 +472,6 @@ export class PresupuestoRapidoComponent implements OnInit {
     setTimeout(() => URL.revokeObjectURL(url), 120_000);
   }
 
-  /**
-   * Intenta compartir PDF + texto (p. ej. WhatsApp con adjunto en móvil vía menú del sistema).
-   * Los enlaces wa.me no permiten archivos; esto es la opción estándar en navegadores.
-   */
   private async sharePdfOrOpenTab(blob: Blob, presupuestoId: number, cli: Cliente | undefined): Promise<void> {
     const text = this.waMessageText(cli, presupuestoId);
     const file = new File([blob], `Presupuesto-${presupuestoId}.pdf`, { type: 'application/pdf' });

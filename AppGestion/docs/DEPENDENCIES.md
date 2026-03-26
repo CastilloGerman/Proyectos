@@ -4,17 +4,17 @@
 
 ## API (Maven)
 
-Parent BOM: **Spring Boot 4.0.4** (`spring-boot-starter-parent`). Se usa `spring-boot-starter-classic` como puente de classpath; los starters concretos incluyen:
+Parent BOM: **Spring Boot 4.0.5** (`spring-boot-starter-parent`). Se usa `spring-boot-starter-classic` como puente de classpath; los starters concretos incluyen:
 
 | Grupo | Artefacto | Versión | Uso |
 |-------|-----------|---------|-----|
-| org.springframework.boot | spring-boot-starter-webmvc | 4.0.4 | REST API |
-| org.springframework.boot | spring-boot-starter-data-jpa | 4.0.4 | Persistencia |
-| org.springframework.boot | spring-boot-starter-validation | 4.0.4 | Validación |
-| org.springframework.boot | spring-boot-starter-security | 4.0.4 | Seguridad |
-| org.springframework.boot | spring-boot-starter-actuator | 4.0.4 | Health/actuator |
-| org.springframework.boot | spring-boot-starter-mail | 4.0.4 | Envío de correos |
-| org.springframework.boot | spring-boot-starter-flyway | 4.0.4 | Migraciones de esquema |
+| org.springframework.boot | spring-boot-starter-webmvc | 4.0.5 | REST API |
+| org.springframework.boot | spring-boot-starter-data-jpa | 4.0.5 | Persistencia |
+| org.springframework.boot | spring-boot-starter-validation | 4.0.5 | Validación |
+| org.springframework.boot | spring-boot-starter-security | 4.0.5 | Seguridad |
+| org.springframework.boot | spring-boot-starter-actuator | 4.0.5 | Health/actuator |
+| org.springframework.boot | spring-boot-starter-mail | 4.0.5 | Envío de correos |
+| org.springframework.boot | spring-boot-starter-flyway | 4.0.5 | Migraciones de esquema |
 | org.flywaydb | flyway-database-postgresql | (BOM) | Soporte Flyway para PostgreSQL 17+ |
 | io.jsonwebtoken | jjwt-api / jjwt-impl / jjwt-jackson | 0.12.6 | JWT |
 | com.stripe | stripe-java | 25.6.0 | Pagos |
@@ -27,7 +27,9 @@ Parent BOM: **Spring Boot 4.0.4** (`spring-boot-starter-parent`). Se usa `spring
 
 | Paquete | Versión | Uso |
 |---------|---------|-----|
-| @angular/core | ^20.3 | Framework |
-| @angular/material | ^20.2 | Componentes UI |
-| @angular/router | ^20.3 | Navegación |
+| @angular/core | ^21.2 | Framework |
+| @angular/material | ^21.2 | Componentes UI |
+| @angular/router | ^21.2 | Navegación |
+| typescript | ^6.0 | Compilación (strict) |
+| qrcode | ^1.5 | QR TOTP (CommonJS; declarado en `angular.json` → `allowedCommonJsDependencies`) |
 | rxjs | ~7.8 | Reactividad |

@@ -367,6 +367,81 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
       width: 100%;
       margin-top: 8px;
     }
+
+    /* Modo oscuro: misma paleta que el resto de la app (evita texto claro sobre tarjeta blanca). */
+    :host-context(html.app-dark-theme) .login-wrapper {
+      background: linear-gradient(165deg, #0c1220 0%, #141b2d 45%, #0f1419 100%);
+    }
+
+    :host-context(html.app-dark-theme) .login-card {
+      background: var(--app-bg-card);
+      border: 1px solid var(--app-border);
+      box-shadow: var(--app-shadow-lg);
+      color: var(--app-text-primary);
+    }
+
+    :host-context(html.app-dark-theme) .login-card input::placeholder {
+      color: var(--app-text-muted);
+      opacity: 1;
+    }
+
+    :host-context(html.app-dark-theme) .login-card .mat-mdc-form-field {
+      --mdc-outlined-text-field-input-text-color: var(--app-text-primary);
+      --mdc-outlined-text-field-label-text-color: var(--app-text-secondary);
+      --mdc-outlined-text-field-hover-label-text-color: var(--app-text-primary);
+      --mdc-outlined-text-field-focus-label-text-color: var(--app-text-secondary);
+      --mdc-outlined-text-field-outline-color: var(--app-border);
+      --mdc-outlined-text-field-hover-outline-color: rgba(148, 163, 184, 0.45);
+      --mdc-outlined-text-field-focus-outline-color: #818cf8;
+      --mat-form-field-outlined-label-text-color: var(--app-text-secondary);
+      --mat-form-field-outlined-label-text-populated-color: var(--app-text-secondary);
+      --mat-form-field-error-text-color: #fca5a5;
+    }
+
+    :host-context(html.app-dark-theme) .login-title {
+      color: var(--app-text-primary);
+    }
+
+    :host-context(html.app-dark-theme) .login-tagline {
+      color: #a5b4fc;
+    }
+
+    :host-context(html.app-dark-theme) .login-subtitle {
+      color: var(--app-text-secondary);
+    }
+
+    :host-context(html.app-dark-theme) .login-divider span {
+      color: var(--app-text-muted);
+    }
+
+    :host-context(html.app-dark-theme) .forgot-link,
+    :host-context(html.app-dark-theme) .register-link {
+      color: var(--app-text-secondary);
+    }
+
+    :host-context(html.app-dark-theme) .forgot-link:hover,
+    :host-context(html.app-dark-theme) .register-link:hover {
+      color: #c7d2fe;
+    }
+
+    :host-context(html.app-dark-theme) .login-totp-hint {
+      color: var(--app-text-secondary);
+    }
+
+    :host-context(html.app-dark-theme) .google-totp-box {
+      background: rgba(99, 102, 241, 0.12);
+      border-color: rgba(129, 140, 248, 0.35);
+    }
+
+    :host-context(html.app-dark-theme) .google-fallback-btn {
+      color: var(--app-text-primary);
+      background: rgba(255, 255, 255, 0.06);
+      border-color: var(--app-border);
+    }
+
+    :host-context(html.app-dark-theme) .google-fallback-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
   `]
 })
 export class LoginComponent implements OnInit, AfterViewInit {

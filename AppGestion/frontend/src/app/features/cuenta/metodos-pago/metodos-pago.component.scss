@@ -41,8 +41,9 @@
   margin-bottom: 20px;
 }
 
+/* No usar fallbacks claros fijos (--mat-sys-* con #f8fafc): sin token M3 válido rompen el contraste en modo oscuro */
 .mp-card--saas {
-  background: var(--mat-sys-surface-container-low, #f8fafc);
+  background: var(--app-bg-card);
 }
 
 .mp-hint {
@@ -97,8 +98,8 @@
   margin-top: 8px;
   padding: 12px 14px;
   border-radius: 8px;
-  background: var(--mat-sys-surface-container-low, #f1f5f9);
-  border: 1px solid var(--mat-sys-outline-variant, #e2e8f0);
+  background: var(--app-bg-page);
+  border: 1px solid var(--app-border);
 }
 
 .mp-preview__label {

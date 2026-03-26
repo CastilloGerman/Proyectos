@@ -11,6 +11,15 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600&family=Roboto:wght@300;400;500;700&family=Sora:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!-- display=block evita que se vean trozos de texto ("de", "re"…) antes de cargar la fuente de iconos -->
   <link href="https://fonts.googleapis.com/css2?family=Material+Icons&display=block" rel="stylesheet">
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem('appgestion-theme') === 'dark') {
+          document.documentElement.classList.add('app-dark-theme');
+        }
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>

@@ -11,7 +11,6 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { switchMap } from 'rxjs';
-import QRCode from 'qrcode';
 import { AuthService, UsuarioResponse } from '../../../core/auth/auth.service';
 
 @Component({
@@ -93,10 +92,14 @@ export class Totp2FaComponent implements OnInit {
     });
   }
 
-  private buildQr(url: string): void {
-    QRCode.toDataURL(url, { width: 220, margin: 2, errorCorrectionLevel: 'M' })
-      .then((dataUrl) => this.qrDataUrl.set(dataUrl))
-      .catch(() => this.qrDataUrl.set(null));
+  private async buildQr(url: string): Promise<void> {
+    try {
+      const { default: QRCode } = await import('qrcode');
+      const dataUrl = await QRCode.toDataURL(url, { width: 220, margin: 2, errorCorrectionLevel: 'M' });
+      this.qrDataUrl.set(dataUrl);
+    } catch {
+      this.qrDataUrl.set(null);
+    }
   }
 
   copySecret(): void {

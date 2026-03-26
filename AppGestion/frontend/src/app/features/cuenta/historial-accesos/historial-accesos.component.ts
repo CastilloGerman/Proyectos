@@ -1,5 +1,4 @@
 import {
-  ApplicationRef,
   Component,
   OnInit,
   computed,
@@ -74,7 +73,6 @@ export class HistorialAccesosComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly fb = inject(FormBuilder);
-  private readonly appRef = inject(ApplicationRef);
 
   readonly eventTypes = EVENT_TYPES;
 
@@ -85,7 +83,7 @@ export class HistorialAccesosComponent implements OnInit {
   readonly loadError = signal(false);
   readonly pageMeta = signal<AuditAccessPageDto | null>(null);
   readonly pageIndex = signal(0);
-  readonly pageSize = signal(20);
+  readonly pageSize = signal(10);
   readonly expandedId = signal<number | null>(null);
   readonly exporting = signal(false);
 
@@ -132,7 +130,6 @@ export class HistorialAccesosComponent implements OnInit {
         this.tableRows.set([...page.content]);
         this.pageMeta.set(page);
         this.loading.set(false);
-        this.appRef.tick();
       },
       error: (err) => {
         this.loadError.set(true);
@@ -144,6 +141,7 @@ export class HistorialAccesosComponent implements OnInit {
 
   aplicarFiltros(): void {
     this.pageIndex.set(0);
+    this.expandedId.set(null);
     this.cargar();
   }
 
@@ -158,12 +156,14 @@ export class HistorialAccesosComponent implements OnInit {
       usuarioId: '',
     });
     this.pageIndex.set(0);
+    this.expandedId.set(null);
     this.cargar();
   }
 
   onPage(ev: PageEvent): void {
     this.pageIndex.set(ev.pageIndex);
     this.pageSize.set(ev.pageSize);
+    this.expandedId.set(null);
     this.cargar();
   }
 

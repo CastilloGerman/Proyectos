@@ -41,8 +41,9 @@
   margin-bottom: 20px;
 }
 
+/* Tokens M3 con fallback claro rompen contraste en html.app-dark-theme (M2) */
 .df-card--mirror {
-  background: var(--mat-sys-surface-container-low, #f8fafc);
+  background: var(--app-bg-card);
 }
 
 .df-dl {
@@ -54,7 +55,7 @@
   grid-template-columns: minmax(120px, 34%) 1fr;
   gap: 8px 12px;
   padding: 8px 0;
-  border-bottom: 1px solid var(--mat-sys-outline-variant, #e2e8f0);
+  border-bottom: 1px solid var(--app-border);
 
   &:last-child {
     border-bottom: none;
