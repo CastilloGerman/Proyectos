@@ -6,10 +6,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
-  selector: 'app-subscription-success',
-  standalone: true,
-  imports: [RouterLink, MatCardModule, MatButtonModule, MatIconModule],
-  template: `
+    selector: 'app-subscription-success',
+    imports: [RouterLink, MatCardModule, MatButtonModule, MatIconModule],
+    template: `
     <div class="container">
       <mat-card class="card">
         <mat-card-header>
@@ -27,7 +26,7 @@ import { AuthService } from '../../../core/auth/auth.service';
       </mat-card>
     </div>
   `,
-  styles: [`
+    styles: [`
     .container {
       min-height: 100vh;
       display: flex;
@@ -46,7 +45,7 @@ import { AuthService } from '../../../core/auth/auth.service';
       width: 48px;
       height: 48px;
     }
-  `],
+  `]
 })
 export class SubscriptionSuccessComponent {
   constructor(private router: Router, private auth: AuthService) {

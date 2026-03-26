@@ -15,19 +15,18 @@ import { dataUrlFromStoredBase64 } from '../../core/utils/image-data-url';
 export type ConfigContext = 'presupuesto' | 'factura' | 'mail';
 
 @Component({
-  selector: 'app-config-empresa-dialog',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    MatDialogModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatTabsModule,
-    MatSnackBarModule,
-  ],
-  template: `
+    selector: 'app-config-empresa-dialog',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        MatDialogModule,
+        MatButtonModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatTabsModule,
+        MatSnackBarModule,
+    ],
+    template: `
     <h2 mat-dialog-title>Textos en los PDF</h2>
     <mat-dialog-content>
       <form [formGroup]="form">
@@ -149,7 +148,7 @@ export type ConfigContext = 'presupuesto' | 'factura' | 'mail';
       </button>
     </mat-dialog-actions>
   `,
-  styles: [`
+    styles: [`
     .tab-content {
       padding: 16px 0;
     }
@@ -166,7 +165,7 @@ export type ConfigContext = 'presupuesto' | 'factura' | 'mail';
     .firma-preview-wrap { margin: 12px 0; }
     .firma-preview { max-height: 100px; max-width: 200px; object-fit: contain; border: 1px solid #e0e0e0; border-radius: 4px; }
     .logo-preview { max-height: 72px; max-width: 200px; object-fit: contain; border: 1px solid #e0e0e0; border-radius: 4px; }
-  `],
+  `]
 })
 export class ConfigEmpresaDialogComponent implements OnInit {
   form: FormGroup;

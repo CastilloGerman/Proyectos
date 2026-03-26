@@ -16,20 +16,19 @@ import { environment } from '../../../../environments/environment';
 const DEFAULT_PLAN_LABEL = 'Plan profesional';
 
 @Component({
-  selector: 'app-suscripcion-plan',
-  standalone: true,
-  imports: [
-    CommonModule,
-    RouterLink,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-    MatDividerModule,
-  ],
-  templateUrl: './suscripcion-plan.component.html',
-  styleUrl: './suscripcion-plan.component.scss',
+    selector: 'app-suscripcion-plan',
+    imports: [
+        CommonModule,
+        RouterLink,
+        MatCardModule,
+        MatButtonModule,
+        MatIconModule,
+        MatProgressSpinnerModule,
+        MatSnackBarModule,
+        MatDividerModule,
+    ],
+    templateUrl: './suscripcion-plan.component.html',
+    styleUrl: './suscripcion-plan.component.scss'
 })
 export class SuscripcionPlanComponent implements OnInit {
   private readonly auth = inject(AuthService);

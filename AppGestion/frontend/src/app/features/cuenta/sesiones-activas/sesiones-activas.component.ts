@@ -12,20 +12,19 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { SesionDispositivoDto } from '../../../core/auth/models/auth.model';
 
 @Component({
-  selector: 'app-sesiones-activas',
-  standalone: true,
-  imports: [
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatChipsModule,
-    MatDividerModule,
-    RouterLink,
-    DatePipe,
-  ],
-  templateUrl: './sesiones-activas.component.html',
-  styleUrl: './sesiones-activas.component.scss',
+    selector: 'app-sesiones-activas',
+    imports: [
+        MatCardModule,
+        MatButtonModule,
+        MatIconModule,
+        MatProgressSpinnerModule,
+        MatChipsModule,
+        MatDividerModule,
+        RouterLink,
+        DatePipe,
+    ],
+    templateUrl: './sesiones-activas.component.html',
+    styleUrl: './sesiones-activas.component.scss'
 })
 export class SesionesActivasComponent implements OnInit {
   private readonly auth = inject(AuthService);

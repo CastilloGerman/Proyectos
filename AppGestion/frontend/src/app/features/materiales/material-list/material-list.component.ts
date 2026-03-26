@@ -13,18 +13,17 @@ import { Material } from '../../../core/models/material.model';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 
 @Component({
-  selector: 'app-material-list',
-  standalone: true,
-  imports: [
-    CommonModule,
-    RouterLink,
-    MatTableModule,
-    MatButtonModule,
-    MatIconModule,
-    MatSnackBarModule,
-    MatTooltipModule,
-  ],
-  template: `
+    selector: 'app-material-list',
+    imports: [
+        CommonModule,
+        RouterLink,
+        MatTableModule,
+        MatButtonModule,
+        MatIconModule,
+        MatSnackBarModule,
+        MatTooltipModule,
+    ],
+    template: `
     <div class="material-list">
       <div class="header">
         <h1>Materiales</h1>
@@ -71,7 +70,7 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .header {
       display: flex;
       justify-content: space-between;
@@ -86,7 +85,7 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
     .full-width {
       width: 100%;
     }
-  `],
+  `]
 })
 export class MaterialListComponent implements OnInit {
   displayedColumns = ['nombre', 'precioUnitario', 'unidadMedida', 'actions'];

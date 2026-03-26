@@ -2,17 +2,16 @@ import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
-  selector: 'app-skeleton',
-  standalone: true,
-  imports: [CommonModule],
-  template: `
+    selector: 'app-skeleton',
+    imports: [CommonModule],
+    template: `
     <div class="skeleton-wrapper">
       @for (i of rowsArray; track i) {
         <div class="skeleton-line"></div>
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .skeleton-wrapper {
       padding: 16px;
       background: #fff;
@@ -42,7 +41,7 @@ import { CommonModule } from '@angular/common';
       0% { background-position: 200% 0; }
       100% { background-position: -200% 0; }
     }
-  `],
+  `]
 })
 export class SkeletonComponent {
   @Input() rows = 10;

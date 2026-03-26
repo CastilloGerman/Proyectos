@@ -15,7 +15,6 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { AsyncPipe } from '@angular/common';
 import { AuthService } from './core/auth/auth.service';
 import { SubscriptionService } from './core/services/subscription.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -27,27 +26,25 @@ import { NotificacionesService, NotificacionDto } from './core/services/notifica
 import { environment } from '../environments/environment';
 
 @Component({
-  selector: 'app-root',
-  standalone: true,
-  imports: [
-    RouterOutlet,
-    RouterLink,
-    RouterLinkActive,
-    MatToolbarModule,
-    MatButtonModule,
-    MatSidenavModule,
-    MatListModule,
-    MatIconModule,
-    MatTooltipModule,
-    MatBadgeModule,
-    MatMenuModule,
-    MatDividerModule,
-    MatProgressSpinnerModule,
-    AsyncPipe,
-    SearchBarComponent,
-    UserDropdownComponent,
-  ],
-  template: `
+    selector: 'app-root',
+    imports: [
+        RouterOutlet,
+        RouterLink,
+        RouterLinkActive,
+        MatToolbarModule,
+        MatButtonModule,
+        MatSidenavModule,
+        MatListModule,
+        MatIconModule,
+        MatTooltipModule,
+        MatBadgeModule,
+        MatMenuModule,
+        MatDividerModule,
+        MatProgressSpinnerModule,
+        SearchBarComponent,
+        UserDropdownComponent,
+    ],
+    template: `
     @if (auth.isAuthenticated()) {
       <mat-sidenav-container class="saas-layout">
         <mat-sidenav
@@ -208,7 +205,7 @@ import { environment } from '../environments/environment';
       <router-outlet></router-outlet>
     }
   `,
-  styles: [`
+    styles: [`
     .saas-layout {
       height: 100vh;
       height: 100dvh;
@@ -498,7 +495,7 @@ import { environment } from '../environments/environment';
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
-  `],
+  `]
 })
 export class AppComponent implements OnInit {
   /** Escritorio: false = barra visible (comportamiento actual). */

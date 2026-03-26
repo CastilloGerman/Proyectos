@@ -12,22 +12,21 @@ import { MatDividerModule } from '@angular/material/divider';
 import { AuthService, UsuarioResponse } from '../../../core/auth/auth.service';
 
 @Component({
-  selector: 'app-config-cuenta',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatSlideToggleModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-    MatDividerModule,
-  ],
-  templateUrl: './config-cuenta.component.html',
-  styleUrl: './config-cuenta.component.scss',
+    selector: 'app-config-cuenta',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        RouterLink,
+        MatCardModule,
+        MatButtonModule,
+        MatIconModule,
+        MatSlideToggleModule,
+        MatProgressSpinnerModule,
+        MatSnackBarModule,
+        MatDividerModule,
+    ],
+    templateUrl: './config-cuenta.component.html',
+    styleUrl: './config-cuenta.component.scss'
 })
 export class ConfigCuentaComponent implements OnInit {
   private readonly fb = inject(FormBuilder);

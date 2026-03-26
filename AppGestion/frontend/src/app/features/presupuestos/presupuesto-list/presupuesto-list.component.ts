@@ -22,26 +22,25 @@ import { ConfigEmpresaDialogComponent } from '../../../shared/config-empresa-dia
 import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/enviar-email-dialog.component';
 
 @Component({
-  selector: 'app-presupuesto-list',
-  standalone: true,
-  imports: [
-    CommonModule,
-    RouterLink,
-    MatTableModule,
-    MatButtonModule,
-    MatIconModule,
-    MatChipsModule,
-    MatDialogModule,
-    MatSnackBarModule,
-    MatTooltipModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatSortModule,
-    MatPaginatorModule,
-    EstadoBadgeComponent,
-  ],
-  template: `
+    selector: 'app-presupuesto-list',
+    imports: [
+        CommonModule,
+        RouterLink,
+        MatTableModule,
+        MatButtonModule,
+        MatIconModule,
+        MatChipsModule,
+        MatDialogModule,
+        MatSnackBarModule,
+        MatTooltipModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatSelectModule,
+        MatSortModule,
+        MatPaginatorModule,
+        EstadoBadgeComponent,
+    ],
+    template: `
     <div class="presupuesto-list">
       <div class="header">
         <h1>Presupuestos</h1>
@@ -150,7 +149,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .presupuesto-list {
       max-width: 1400px;
       margin: 0 auto;
@@ -243,7 +242,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
     .senal-cell { font-size: 0.875rem; }
     .senal-ok { font-size: 16px; width: 16px; height: 16px; vertical-align: middle; color: #2e7d32; }
     .text-muted { color: rgba(0,0,0,0.38); }
-  `],
+  `]
 })
 export class PresupuestoListComponent implements OnInit, AfterViewInit {
   displayedColumns = ['clienteNombre', 'fechaCreacion', 'estado', 'senal', 'total', 'actions'];

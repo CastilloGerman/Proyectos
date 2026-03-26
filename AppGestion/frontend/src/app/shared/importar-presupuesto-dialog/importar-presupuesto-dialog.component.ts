@@ -11,16 +11,15 @@ export interface ImportarPresupuestoDialogData {
 }
 
 @Component({
-  selector: 'app-importar-presupuesto-dialog',
-  standalone: true,
-  imports: [
-    CommonModule,
-    MatDialogModule,
-    MatButtonModule,
-    MatTableModule,
-    MatProgressSpinnerModule,
-  ],
-  template: `
+    selector: 'app-importar-presupuesto-dialog',
+    imports: [
+        CommonModule,
+        MatDialogModule,
+        MatButtonModule,
+        MatTableModule,
+        MatProgressSpinnerModule,
+    ],
+    template: `
     <h2 mat-dialog-title>Importar presupuesto como factura</h2>
     <mat-dialog-content>
       <p class="info">Selecciona un presupuesto pendiente para convertirlo en factura. El presupuesto pasará a estado "Aceptado".</p>
@@ -55,7 +54,7 @@ export interface ImportarPresupuestoDialogData {
       <button mat-button mat-dialog-close>Cancelar</button>
     </mat-dialog-actions>
   `,
-  styles: [`
+    styles: [`
     .info {
       margin-bottom: 16px;
       color: rgba(0,0,0,0.6);
@@ -69,7 +68,7 @@ export interface ImportarPresupuestoDialogData {
       width: 100%;
       min-width: 400px;
     }
-  `],
+  `]
 })
 export class ImportarPresupuestoDialogComponent {
   displayedColumns = ['clienteNombre', 'fechaCreacion', 'total', 'select'];

@@ -22,25 +22,24 @@ import { dataUrlFromStoredBase64 } from '../../../core/utils/image-data-url';
 const MAX_IMAGE_BYTES = 380_000;
 
 @Component({
-  selector: 'app-datos-empresa',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-    MatDividerModule,
-    MatExpansionModule,
-    MatSelectModule,
-  ],
-  templateUrl: './datos-empresa.component.html',
-  styleUrl: './datos-empresa.component.scss',
+    selector: 'app-datos-empresa',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        RouterLink,
+        MatCardModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatButtonModule,
+        MatIconModule,
+        MatProgressSpinnerModule,
+        MatSnackBarModule,
+        MatDividerModule,
+        MatExpansionModule,
+        MatSelectModule,
+    ],
+    templateUrl: './datos-empresa.component.html',
+    styleUrl: './datos-empresa.component.scss'
 })
 export class DatosEmpresaComponent implements OnInit {
   private readonly fb = inject(FormBuilder);

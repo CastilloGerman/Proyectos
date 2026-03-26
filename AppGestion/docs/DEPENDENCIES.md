@@ -22,7 +22,7 @@
 
 | Paquete | Versión | Uso |
 |---------|---------|-----|
-| @angular/core | ^17.3 | Framework |
-| @angular/material | ^17.3 | Componentes UI |
-| @angular/router | ^17.3 | Navegación |
+| @angular/core | ^20.3 | Framework |
+| @angular/material | ^20.2 | Componentes UI |
+| @angular/router | ^20.3 | Navegación |
 | rxjs | ~7.8 | Reactividad |

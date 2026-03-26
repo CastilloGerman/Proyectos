@@ -38,25 +38,24 @@ const PH_FACT =
   'Ejemplo: Gracias por su confianza. Para cualquier consulta puede llamarnos o escribirnos.';
 
 @Component({
-  selector: 'app-plantillas-documentos',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatButtonModule,
-    MatButtonToggleModule,
-    MatIconModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-    MatTooltipModule,
-  ],
-  templateUrl: './plantillas-documentos.component.html',
-  styleUrl: './plantillas-documentos.component.scss',
+    selector: 'app-plantillas-documentos',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        RouterLink,
+        MatCardModule,
+        MatButtonModule,
+        MatButtonToggleModule,
+        MatIconModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatSelectModule,
+        MatProgressSpinnerModule,
+        MatSnackBarModule,
+        MatTooltipModule,
+    ],
+    templateUrl: './plantillas-documentos.component.html',
+    styleUrl: './plantillas-documentos.component.scss'
 })
 export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
   readonly placeholderPresupuesto = PH_PRESU;

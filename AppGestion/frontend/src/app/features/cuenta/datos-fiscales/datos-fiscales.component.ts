@@ -28,24 +28,23 @@ const REGIMEN_BASE: readonly string[] = [
 ];
 
 @Component({
-  selector: 'app-datos-fiscales',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-    MatDividerModule,
-  ],
-  templateUrl: './datos-fiscales.component.html',
-  styleUrl: './datos-fiscales.component.scss',
+    selector: 'app-datos-fiscales',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        RouterLink,
+        MatCardModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatSelectModule,
+        MatButtonModule,
+        MatIconModule,
+        MatProgressSpinnerModule,
+        MatSnackBarModule,
+        MatDividerModule,
+    ],
+    templateUrl: './datos-fiscales.component.html',
+    styleUrl: './datos-fiscales.component.scss'
 })
 export class DatosFiscalesComponent implements OnInit {
   private readonly fb = inject(FormBuilder);

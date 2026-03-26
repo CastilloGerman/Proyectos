@@ -54,19 +54,18 @@ export interface TopCliente {
 }
 
 @Component({
-  selector: 'app-dashboard',
-  standalone: true,
-  imports: [
-    CommonModule,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressBarModule,
-    MatTooltipModule,
-    RouterLink,
-    EstadoBadgeComponent,
-  ],
-  template: `
+    selector: 'app-dashboard',
+    imports: [
+        CommonModule,
+        MatCardModule,
+        MatButtonModule,
+        MatIconModule,
+        MatProgressBarModule,
+        MatTooltipModule,
+        RouterLink,
+        EstadoBadgeComponent,
+    ],
+    template: `
     <div class="dashboard">
       <header class="dashboard-header">
         <h1>Dashboard</h1>
@@ -423,7 +422,7 @@ export interface TopCliente {
       </section>
     </div>
   `,
-  styles: [`
+    styles: [`
     .dashboard {
       max-width: 1200px;
       margin: 0 auto;
@@ -946,7 +945,7 @@ export interface TopCliente {
       margin-top: 4px;
       width: 100%;
     }
-  `],
+  `]
 })
 export class DashboardComponent implements OnInit, AfterViewInit {
   presupuestosCount = 0;

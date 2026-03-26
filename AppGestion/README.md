@@ -8,7 +8,7 @@ SaaS multiusuario para gestión de presupuestos y facturas. Aplicación web con 
 
 ```
 ┌─────────────────────────────────────┐
-│   Angular 17 (Frontend SPA)         │
+│   Angular 20 (Frontend SPA)         │
 │   - Login/Registro JWT              │
 │   - CRUD Clientes, Presupuestos,    │
 │     Facturas                        │
@@ -223,7 +223,7 @@ $env:STRIPE_WEBHOOK_SECRET = "whsec_..."
 ## Dependencias
 
 - **API**: Spring Boot 3.5, JWT (jjwt 0.12), Stripe Java, PostgreSQL. Ver `docs/DEPENDENCIES.md`.
-- **Frontend**: Angular 17, Angular Material, RxJS. Ver `frontend/README.md`.
+- **Frontend**: Angular 20, Angular Material, RxJS. Ver `frontend/README.md`.
 
 ## Licencia
 

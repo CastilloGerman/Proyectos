@@ -28,10 +28,9 @@ export const CUENTA_SECCION_TITLES: Record<string, string> = {
 };
 
 @Component({
-  selector: 'app-cuenta-seccion',
-  standalone: true,
-  imports: [MatCardModule, MatButtonModule, MatIconModule, RouterLink, DatePipe],
-  template: `
+    selector: 'app-cuenta-seccion',
+    imports: [MatCardModule, MatButtonModule, MatIconModule, RouterLink, DatePipe],
+    template: `
     @if (currentSlug === 'plantillas') {
       <div class="rich-wrap">
         <a mat-button routerLink="/dashboard" class="rich-back">
@@ -138,7 +137,7 @@ export const CUENTA_SECCION_TITLES: Record<string, string> = {
       </div>
     }
   `,
-  styles: `
+    styles: `
     .cuenta-wrap {
       max-width: 560px;
       margin: 0 auto;
@@ -234,7 +233,7 @@ export const CUENTA_SECCION_TITLES: Record<string, string> = {
       gap: 12px;
       justify-content: center;
     }
-  `,
+  `
 })
 export class CuentaSeccionComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);

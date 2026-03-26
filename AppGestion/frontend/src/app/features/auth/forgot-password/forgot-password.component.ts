@@ -9,17 +9,16 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
-  selector: 'app-forgot-password',
-  standalone: true,
-  imports: [
-    ReactiveFormsModule,
-    RouterLink,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatProgressSpinnerModule,
-  ],
-  template: `
+    selector: 'app-forgot-password',
+    imports: [
+        ReactiveFormsModule,
+        RouterLink,
+        MatFormFieldModule,
+        MatInputModule,
+        MatButtonModule,
+        MatProgressSpinnerModule,
+    ],
+    template: `
     <div class="forgot-wrapper">
       <div class="forgot-container">
         <div class="forgot-card">
@@ -56,7 +55,7 @@ import { AuthService } from '../../../core/auth/auth.service';
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .forgot-wrapper {
       min-height: 100vh;
       display: flex;
@@ -147,7 +146,7 @@ import { AuthService } from '../../../core/auth/auth.service';
       vertical-align: middle;
       margin-right: 8px;
     }
-  `],
+  `]
 })
 export class ForgotPasswordComponent {
   form: FormGroup;

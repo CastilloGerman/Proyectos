@@ -23,10 +23,9 @@ const BADGE_CONFIG: Record<string, BadgeConfig> = {
 };
 
 @Component({
-  selector: 'app-estado-badge',
-  standalone: true,
-  imports: [CommonModule, MatIconModule, MatTooltipModule],
-  template: `
+    selector: 'app-estado-badge',
+    imports: [CommonModule, MatIconModule, MatTooltipModule],
+    template: `
     <span
       class="estado-badge"
       [class]="config.cssClass"
@@ -36,7 +35,7 @@ const BADGE_CONFIG: Record<string, BadgeConfig> = {
       {{ estado }}
     </span>
   `,
-  styles: [`
+    styles: [`
     .estado-badge {
       display: inline-flex;
       align-items: center;
@@ -62,7 +61,7 @@ const BADGE_CONFIG: Record<string, BadgeConfig> = {
     .badge-aceptado  { background: #dcfce7; color: #166534; }
     .badge-rechazado { background: #fee2e2; color: #b91c1c; }
     .badge-ejecucion { background: #ffedd5; color: #c2410c; }
-  `],
+  `]
 })
 export class EstadoBadgeComponent {
   @Input({ required: true }) estado!: string;

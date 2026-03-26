@@ -13,21 +13,20 @@ import { SubscriptionService } from '../../../core/services/subscription.service
 import { SubscriptionInvoice } from '../../../core/models/subscription-invoice.model';
 
 @Component({
-  selector: 'app-historial-suscripcion',
-  standalone: true,
-  imports: [
-    CommonModule,
-    RouterLink,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-    MatDividerModule,
-    MatTableModule,
-  ],
-  templateUrl: './historial-suscripcion.component.html',
-  styleUrl: './historial-suscripcion.component.scss',
+    selector: 'app-historial-suscripcion',
+    imports: [
+        CommonModule,
+        RouterLink,
+        MatCardModule,
+        MatButtonModule,
+        MatIconModule,
+        MatProgressSpinnerModule,
+        MatSnackBarModule,
+        MatDividerModule,
+        MatTableModule,
+    ],
+    templateUrl: './historial-suscripcion.component.html',
+    styleUrl: './historial-suscripcion.component.scss'
 })
 export class HistorialSuscripcionComponent implements OnInit {
   private readonly auth = inject(AuthService);

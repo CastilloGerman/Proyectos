@@ -10,18 +10,17 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ClienteService } from '../../../core/services/cliente.service';
 
 @Component({
-  selector: 'app-cliente-form',
-  standalone: true,
-  imports: [
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatSnackBarModule,
-  ],
-  template: `
+    selector: 'app-cliente-form',
+    imports: [
+        ReactiveFormsModule,
+        RouterLink,
+        MatCardModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatButtonModule,
+        MatSnackBarModule,
+    ],
+    template: `
     <div class="cliente-form">
       <mat-card>
         <mat-card-header>
@@ -77,7 +76,7 @@ import { ClienteService } from '../../../core/services/cliente.service';
       </mat-card>
     </div>
   `,
-  styles: [`
+    styles: [`
     .full-width {
       width: 100%;
       display: block;
@@ -89,7 +88,7 @@ import { ClienteService } from '../../../core/services/cliente.service';
       gap: 16px;
       margin-top: 24px;
     }
-  `],
+  `]
 })
 export class ClienteFormComponent implements OnInit {
   form: FormGroup;

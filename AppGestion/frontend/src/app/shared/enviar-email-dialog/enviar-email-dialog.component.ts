@@ -12,17 +12,16 @@ export interface EnviarEmailDialogData {
 }
 
 @Component({
-  selector: 'app-enviar-email-dialog',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    MatDialogModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-  ],
-  template: `
+    selector: 'app-enviar-email-dialog',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        MatDialogModule,
+        MatButtonModule,
+        MatFormFieldModule,
+        MatInputModule,
+    ],
+    template: `
     <h2 mat-dialog-title>{{ data.titulo }}</h2>
     <mat-dialog-content>
       @if (data.emailCliente) {
@@ -43,7 +42,7 @@ export interface EnviarEmailDialogData {
       </button>
     </mat-dialog-actions>
   `,
-  styles: [`
+    styles: [`
     .info {
       margin-bottom: 16px;
       color: rgba(0, 0, 0, 0.7);
@@ -52,7 +51,7 @@ export interface EnviarEmailDialogData {
       width: 100%;
       min-width: 280px;
     }
-  `],
+  `]
 })
 export class EnviarEmailDialogComponent {
   emailControl = new FormControl('', [Validators.required, Validators.email]);

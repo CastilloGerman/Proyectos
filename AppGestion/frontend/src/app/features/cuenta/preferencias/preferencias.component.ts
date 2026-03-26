@@ -13,22 +13,21 @@ import { AuthService, UsuarioResponse } from '../../../core/auth/auth.service';
 import { CURRENCY_OPTIONS, LOCALE_OPTIONS, TIMEZONE_OPTIONS } from './preferencias-options';
 
 @Component({
-  selector: 'app-preferencias',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatFormFieldModule,
-    MatSelectModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-  ],
-  templateUrl: './preferencias.component.html',
-  styleUrl: './preferencias.component.scss',
+    selector: 'app-preferencias',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        RouterLink,
+        MatCardModule,
+        MatFormFieldModule,
+        MatSelectModule,
+        MatButtonModule,
+        MatIconModule,
+        MatProgressSpinnerModule,
+        MatSnackBarModule,
+    ],
+    templateUrl: './preferencias.component.html',
+    styleUrl: './preferencias.component.scss'
 })
 export class PreferenciasComponent implements OnInit {
   private readonly fb = inject(FormBuilder);

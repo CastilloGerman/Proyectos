@@ -12,17 +12,16 @@ import { Cliente } from '../../../core/models/cliente.model';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 
 @Component({
-  selector: 'app-cliente-list',
-  standalone: true,
-  imports: [
-    RouterLink,
-    MatTableModule,
-    MatButtonModule,
-    MatIconModule,
-    MatSnackBarModule,
-    MatTooltipModule,
-  ],
-  template: `
+    selector: 'app-cliente-list',
+    imports: [
+        RouterLink,
+        MatTableModule,
+        MatButtonModule,
+        MatIconModule,
+        MatSnackBarModule,
+        MatTooltipModule,
+    ],
+    template: `
     <div class="cliente-list">
       <div class="header">
         <h1>Clientes</h1>
@@ -92,7 +91,7 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .header {
       display: flex;
       justify-content: space-between;
@@ -148,7 +147,7 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
       font-size: 0.9375rem;
       line-height: 1.5;
     }
-  `],
+  `]
 })
 export class ClienteListComponent implements OnInit {
   displayedColumns = ['nombre', 'estadoPanel', 'email', 'telefono', 'actions'];

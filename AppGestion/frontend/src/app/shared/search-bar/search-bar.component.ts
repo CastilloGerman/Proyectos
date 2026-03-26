@@ -26,18 +26,17 @@ export interface SearchResult {
 }
 
 @Component({
-  selector: 'app-search-bar',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatIconModule,
-    MatAutocompleteModule,
-    MatProgressSpinnerModule,
-  ],
-  template: `
+    selector: 'app-search-bar',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatIconModule,
+        MatAutocompleteModule,
+        MatProgressSpinnerModule,
+    ],
+    template: `
     <div class="search-wrap">
       <div class="search-box">
         <mat-icon class="search-icon">search</mat-icon>
@@ -75,7 +74,7 @@ export interface SearchResult {
       </mat-autocomplete>
     </div>
   `,
-  styles: [`
+    styles: [`
     .search-wrap {
       display: flex;
       align-items: center;
@@ -155,7 +154,7 @@ export interface SearchResult {
       color: rgba(0, 0, 0, 0.55);
       margin-left: 8px;
     }
-  `],
+  `]
 })
 export class SearchBarComponent implements OnDestroy {
   searchCtrl = new FormControl('');

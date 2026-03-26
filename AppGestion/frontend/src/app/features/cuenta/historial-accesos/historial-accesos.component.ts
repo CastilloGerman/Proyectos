@@ -51,29 +51,28 @@ const EVENT_TYPES: { value: string; label: string }[] = [
 ];
 
 @Component({
-  selector: 'app-historial-accesos',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    DatePipe,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatTableModule,
-    MatPaginatorModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatChipsModule,
-    MatTooltipModule,
-    MatDividerModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-  ],
-  templateUrl: './historial-accesos.component.html',
-  styleUrl: './historial-accesos.component.scss',
+    selector: 'app-historial-accesos',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        RouterLink,
+        DatePipe,
+        MatCardModule,
+        MatButtonModule,
+        MatIconModule,
+        MatTableModule,
+        MatPaginatorModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatSelectModule,
+        MatChipsModule,
+        MatTooltipModule,
+        MatDividerModule,
+        MatProgressSpinnerModule,
+        MatSnackBarModule,
+    ],
+    templateUrl: './historial-accesos.component.html',
+    styleUrl: './historial-accesos.component.scss'
 })
 export class HistorialAccesosComponent implements OnInit {
   private readonly api = inject(AuditAccessApiService);

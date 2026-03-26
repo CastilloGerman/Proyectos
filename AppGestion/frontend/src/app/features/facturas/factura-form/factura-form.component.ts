@@ -24,23 +24,22 @@ import { Material } from '../../../core/models/material.model';
 import { Factura, FacturaCobro, FacturaItemRequest } from '../../../core/models/factura.model';
 
 @Component({
-  selector: 'app-factura-form',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatButtonModule,
-    MatIconModule,
-    MatCheckboxModule,
-    MatSnackBarModule,
-    MatDividerModule,
-  ],
-  template: `
+    selector: 'app-factura-form',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        RouterLink,
+        MatCardModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatSelectModule,
+        MatButtonModule,
+        MatIconModule,
+        MatCheckboxModule,
+        MatSnackBarModule,
+        MatDividerModule,
+    ],
+    template: `
     <div class="factura-form">
       <mat-card>
         <mat-card-header>
@@ -251,7 +250,7 @@ import { Factura, FacturaCobro, FacturaItemRequest } from '../../../core/models/
       </mat-card>
     </div>
   `,
-  styles: [`
+    styles: [`
     .full-width {
       width: 100%;
       display: block;
@@ -375,7 +374,7 @@ import { Factura, FacturaCobro, FacturaItemRequest } from '../../../core/models/
       padding: 8px 10px;
       border-radius: 4px;
     }
-  `],
+  `]
 })
 export class FacturaFormComponent implements OnInit {
   form: FormGroup;

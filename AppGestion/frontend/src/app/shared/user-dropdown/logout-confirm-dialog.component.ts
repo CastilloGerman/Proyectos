@@ -7,10 +7,9 @@ import { MatDialogModule } from '@angular/material/dialog';
  * No expone el JWT en UI; la acción delega en AuthService.logout().
  */
 @Component({
-  selector: 'app-logout-confirm-dialog',
-  standalone: true,
-  imports: [MatDialogModule, MatButtonModule],
-  template: `
+    selector: 'app-logout-confirm-dialog',
+    imports: [MatDialogModule, MatButtonModule],
+    template: `
     <h2 mat-dialog-title>Cerrar sesión</h2>
     <mat-dialog-content class="dlg-body">
       <p>¿Seguro que quieres salir? Tendrás que volver a iniciar sesión para acceder a tus datos.</p>
@@ -21,7 +20,7 @@ import { MatDialogModule } from '@angular/material/dialog';
       <button mat-flat-button type="button" color="warn" [mat-dialog-close]="true">Cerrar sesión</button>
     </mat-dialog-actions>
   `,
-  styles: `
+    styles: `
     .dlg-body {
       padding-top: 0;
       max-width: 360px;
@@ -31,6 +30,6 @@ import { MatDialogModule } from '@angular/material/dialog';
       color: var(--app-text-secondary, #64748b);
       margin-bottom: 0;
     }
-  `,
+  `
 })
 export class LogoutConfirmDialogComponent {}

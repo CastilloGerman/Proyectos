@@ -9,18 +9,17 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MaterialService } from '../../../core/services/material.service';
 
 @Component({
-  selector: 'app-material-form',
-  standalone: true,
-  imports: [
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatSnackBarModule,
-  ],
-  template: `
+    selector: 'app-material-form',
+    imports: [
+        ReactiveFormsModule,
+        RouterLink,
+        MatCardModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatButtonModule,
+        MatSnackBarModule,
+    ],
+    template: `
     <div class="material-form">
       <mat-card>
         <mat-card-header>
@@ -53,7 +52,7 @@ import { MaterialService } from '../../../core/services/material.service';
       </mat-card>
     </div>
   `,
-  styles: [`
+    styles: [`
     .full-width {
       width: 100%;
       display: block;
@@ -65,7 +64,7 @@ import { MaterialService } from '../../../core/services/material.service';
       gap: 16px;
       margin-top: 24px;
     }
-  `],
+  `]
 })
 export class MaterialFormComponent implements OnInit {
   form: FormGroup;

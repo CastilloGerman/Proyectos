@@ -16,17 +16,16 @@ function passwordMatchValidator(g: AbstractControl): ValidationErrors | null {
 }
 
 @Component({
-  selector: 'app-reset-password',
-  standalone: true,
-  imports: [
-    ReactiveFormsModule,
-    RouterLink,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatProgressSpinnerModule,
-  ],
-  template: `
+    selector: 'app-reset-password',
+    imports: [
+        ReactiveFormsModule,
+        RouterLink,
+        MatFormFieldModule,
+        MatInputModule,
+        MatButtonModule,
+        MatProgressSpinnerModule,
+    ],
+    template: `
     <div class="reset-wrapper">
       <div class="reset-container">
         <div class="reset-card">
@@ -71,7 +70,7 @@ function passwordMatchValidator(g: AbstractControl): ValidationErrors | null {
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .reset-wrapper {
       min-height: 100vh;
       display: flex;
@@ -162,7 +161,7 @@ function passwordMatchValidator(g: AbstractControl): ValidationErrors | null {
       vertical-align: middle;
       margin-right: 8px;
     }
-  `],
+  `]
 })
 export class ResetPasswordComponent implements OnInit {
   form: FormGroup;

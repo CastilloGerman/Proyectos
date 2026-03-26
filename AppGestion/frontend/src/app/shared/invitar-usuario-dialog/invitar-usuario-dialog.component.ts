@@ -15,23 +15,22 @@ import { AuthService } from '../../core/auth/auth.service';
 import { environment } from '../../../environments/environment';
 
 @Component({
-  selector: 'app-invitar-usuario-dialog',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    MatDialogModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatSnackBarModule,
-    MatIconModule,
-    MatTooltipModule,
-    MatMenuModule,
-    MatDividerModule,
-    ClipboardModule,
-  ],
-  template: `
+    selector: 'app-invitar-usuario-dialog',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        MatDialogModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatButtonModule,
+        MatSnackBarModule,
+        MatIconModule,
+        MatTooltipModule,
+        MatMenuModule,
+        MatDividerModule,
+        ClipboardModule,
+    ],
+    template: `
     <h2 mat-dialog-title>Enviar enlace de referido</h2>
     <mat-dialog-content>
       <p class="hint">
@@ -90,7 +89,7 @@ import { environment } from '../../../environments/environment';
       </button>
     </mat-dialog-actions>
   `,
-  styles: [`
+    styles: [`
     .full { width: 100%; }
     .hint { font-size: 13px; color: rgba(0,0,0,0.6); margin-top: 0; line-height: 1.45; }
     .section-hint { margin-bottom: 8px; }
@@ -110,7 +109,7 @@ import { environment } from '../../../environments/environment';
       margin-right: 12px;
       vertical-align: middle;
     }
-  `],
+  `]
 })
 export class InvitarUsuarioDialogComponent {
   form = this.fb.group({

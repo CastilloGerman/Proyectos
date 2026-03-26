@@ -13,20 +13,19 @@ import { ClienteFacturaResumen, ClientePanel } from '../../../core/models/client
 import { EstadoBadgeComponent } from '../../../shared/estado-badge/estado-badge.component';
 
 @Component({
-  selector: 'app-cliente-panel',
-  standalone: true,
-  imports: [
-    CommonModule,
-    RouterLink,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatTableModule,
-    MatTooltipModule,
-    MatProgressSpinnerModule,
-    EstadoBadgeComponent,
-  ],
-  template: `
+    selector: 'app-cliente-panel',
+    imports: [
+        CommonModule,
+        RouterLink,
+        MatCardModule,
+        MatButtonModule,
+        MatIconModule,
+        MatTableModule,
+        MatTooltipModule,
+        MatProgressSpinnerModule,
+        EstadoBadgeComponent,
+    ],
+    template: `
     <div class="cliente-panel">
       @if (loading) {
         <div class="loading-wrap">
@@ -243,8 +242,8 @@ import { EstadoBadgeComponent } from '../../../shared/estado-badge/estado-badge.
       }
     </div>
   `,
-  styles: [
-    `
+    styles: [
+        `
       .cliente-panel {
         max-width: 1100px;
         margin: 0 auto;
@@ -378,7 +377,7 @@ import { EstadoBadgeComponent } from '../../../shared/estado-badge/estado-badge.
         color: #e65100;
       }
     `,
-  ],
+    ]
 })
 export class ClientePanelComponent implements OnInit {
   panel: ClientePanel | null = null;

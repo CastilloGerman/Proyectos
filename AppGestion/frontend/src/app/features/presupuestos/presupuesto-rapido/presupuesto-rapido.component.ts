@@ -25,23 +25,22 @@ import { Material } from '../../../core/models/material.model';
 import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
 
 @Component({
-  selector: 'app-presupuesto-rapido',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatButtonModule,
-    MatCheckboxModule,
-    MatSnackBarModule,
-    MatIconModule,
-    MatTooltipModule,
-  ],
-  template: `
+    selector: 'app-presupuesto-rapido',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        RouterLink,
+        MatCardModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatSelectModule,
+        MatButtonModule,
+        MatCheckboxModule,
+        MatSnackBarModule,
+        MatIconModule,
+        MatTooltipModule,
+    ],
+    template: `
     <div class="rapido-wrap">
       <mat-card>
         <mat-card-header>
@@ -136,7 +135,7 @@ import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
       </mat-card>
     </div>
   `,
-  styles: [`
+    styles: [`
     .rapido-wrap { max-width: 720px; margin: 24px auto; padding: 0 16px; }
     .full { width: 100%; display: block; margin-bottom: 12px; }
     .lines-label {
@@ -217,7 +216,7 @@ import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
       .fg-pu { grid-area: pu; }
       .line-actions { grid-area: del; justify-content: flex-end; min-height: unset; padding-top: 0; }
     }
-  `],
+  `]
 })
 export class PresupuestoRapidoComponent implements OnInit {
   form = this.fb.group({

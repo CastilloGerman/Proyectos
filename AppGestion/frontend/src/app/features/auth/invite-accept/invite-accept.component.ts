@@ -10,19 +10,18 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
-  selector: 'app-invite-accept',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatSnackBarModule,
-  ],
-  template: `
+    selector: 'app-invite-accept',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        RouterLink,
+        MatCardModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatButtonModule,
+        MatSnackBarModule,
+    ],
+    template: `
     <div class="invite-wrap">
       <mat-card class="invite-card">
         <mat-card-header>
@@ -58,7 +57,7 @@ import { AuthService } from '../../../core/auth/auth.service';
       </mat-card>
     </div>
   `,
-  styles: [`
+    styles: [`
     .invite-wrap {
       min-height: 100vh;
       display: flex;
@@ -72,7 +71,7 @@ import { AuthService } from '../../../core/auth/auth.service';
     .error { color: #b91c1c; }
     .email-line { margin-bottom: 8px; font-size: 14px; }
     .info-line { font-size: 13px; color: rgba(0,0,0,0.65); line-height: 1.45; margin-bottom: 16px; }
-  `],
+  `]
 })
 export class InviteAcceptComponent implements OnInit {
   token = '';

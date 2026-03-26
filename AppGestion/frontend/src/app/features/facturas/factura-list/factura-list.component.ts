@@ -28,39 +28,38 @@ import { ConfigEmpresaDialogComponent } from '../../../shared/config-empresa-dia
 import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/enviar-email-dialog.component';
 
 @Component({
-  selector: 'app-factura-list',
-  standalone: true,
-  imports: [
-    CommonModule,
-    RouterLink,
-    MatTableModule,
-    MatButtonModule,
-    MatIconModule,
-    MatChipsModule,
-    MatSnackBarModule,
-    MatTooltipModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatSortModule,
-    MatPaginatorModule,
-    MatProgressSpinnerModule,
-    EstadoBadgeComponent,
-    SkeletonComponent,
-  ],
-  animations: [
-    trigger('listAnimation', [
-      transition(':enter', [
-        query('tr.mat-row', [
-          style({ opacity: 0, transform: 'translateY(12px)' }),
-          stagger('50ms', [
-            animate('200ms ease-out', style({ opacity: 1, transform: 'translateY(0)' })),
-          ]),
-        ], { optional: true }),
-      ]),
-    ]),
-  ],
-  template: `
+    selector: 'app-factura-list',
+    imports: [
+        CommonModule,
+        RouterLink,
+        MatTableModule,
+        MatButtonModule,
+        MatIconModule,
+        MatChipsModule,
+        MatSnackBarModule,
+        MatTooltipModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatSelectModule,
+        MatSortModule,
+        MatPaginatorModule,
+        MatProgressSpinnerModule,
+        EstadoBadgeComponent,
+        SkeletonComponent,
+    ],
+    animations: [
+        trigger('listAnimation', [
+            transition(':enter', [
+                query('tr.mat-row', [
+                    style({ opacity: 0, transform: 'translateY(12px)' }),
+                    stagger('50ms', [
+                        animate('200ms ease-out', style({ opacity: 1, transform: 'translateY(0)' })),
+                    ]),
+                ], { optional: true }),
+            ]),
+        ]),
+    ],
+    template: `
     <div class="factura-list">
       <div class="header">
         <h1>Facturas</h1>
@@ -184,7 +183,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .factura-list {
       max-width: 1400px;
       margin: 0 auto;
@@ -285,7 +284,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
     .venc-ok { color: rgba(0,0,0,0.6); }
     .venc-warn { color: #e65100; font-weight: 500; }
     .venc-overdue { color: #c62828; font-weight: 500; }
-  `],
+  `]
 })
 export class FacturaListComponent implements OnInit {
   displayedColumns = ['numeroFactura', 'clienteNombre', 'fechaCreacion', 'fechaVencimiento', 'estadoPago', 'total', 'actions'];

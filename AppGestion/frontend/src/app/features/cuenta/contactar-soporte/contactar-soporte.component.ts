@@ -13,22 +13,21 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { environment } from '../../../../environments/environment';
 
 @Component({
-  selector: 'app-contactar-soporte',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-  ],
-  templateUrl: './contactar-soporte.component.html',
-  styleUrl: './contactar-soporte.component.scss',
+    selector: 'app-contactar-soporte',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        RouterLink,
+        MatCardModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatButtonModule,
+        MatIconModule,
+        MatProgressSpinnerModule,
+        MatSnackBarModule,
+    ],
+    templateUrl: './contactar-soporte.component.html',
+    styleUrl: './contactar-soporte.component.scss'
 })
 export class ContactarSoporteComponent {
   private readonly fb = inject(FormBuilder);

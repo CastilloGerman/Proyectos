@@ -15,23 +15,22 @@ import QRCode from 'qrcode';
 import { AuthService, UsuarioResponse } from '../../../core/auth/auth.service';
 
 @Component({
-  selector: 'app-totp-2fa',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-    MatDividerModule,
-  ],
-  templateUrl: './totp-2fa.component.html',
-  styleUrl: './totp-2fa.component.scss',
+    selector: 'app-totp-2fa',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        RouterLink,
+        MatCardModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatButtonModule,
+        MatIconModule,
+        MatProgressSpinnerModule,
+        MatSnackBarModule,
+        MatDividerModule,
+    ],
+    templateUrl: './totp-2fa.component.html',
+    styleUrl: './totp-2fa.component.scss'
 })
 export class Totp2FaComponent implements OnInit {
   private readonly fb = inject(FormBuilder);

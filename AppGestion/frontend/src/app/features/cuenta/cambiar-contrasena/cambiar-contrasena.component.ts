@@ -15,23 +15,22 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { passwordMatchValidator } from '../../../shared/validators/password-match.validator';
 
 @Component({
-  selector: 'app-cambiar-contrasena',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-    MatDividerModule,
-  ],
-  templateUrl: './cambiar-contrasena.component.html',
-  styleUrl: './cambiar-contrasena.component.scss',
+    selector: 'app-cambiar-contrasena',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        RouterLink,
+        MatCardModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatButtonModule,
+        MatIconModule,
+        MatProgressSpinnerModule,
+        MatSnackBarModule,
+        MatDividerModule,
+    ],
+    templateUrl: './cambiar-contrasena.component.html',
+    styleUrl: './cambiar-contrasena.component.scss'
 })
 export class CambiarContrasenaComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);

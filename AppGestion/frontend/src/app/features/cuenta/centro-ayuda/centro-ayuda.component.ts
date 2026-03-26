@@ -10,19 +10,18 @@ import { environment } from '../../../../environments/environment';
 import { HELP_FAQ, HELP_GUIDE_TILES, HELP_QUICK_STEPS, HELP_VIDEOS } from './centro-ayuda.data';
 
 @Component({
-  selector: 'app-centro-ayuda',
-  standalone: true,
-  imports: [
-    RouterLink,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatExpansionModule,
-  ],
-  templateUrl: './centro-ayuda.component.html',
-  styleUrl: './centro-ayuda.component.scss',
+    selector: 'app-centro-ayuda',
+    imports: [
+        RouterLink,
+        MatCardModule,
+        MatButtonModule,
+        MatIconModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatExpansionModule,
+    ],
+    templateUrl: './centro-ayuda.component.html',
+    styleUrl: './centro-ayuda.component.scss'
 })
 export class CentroAyudaComponent {
   readonly externalHelpUrl = environment.helpCenterUrl?.trim() ?? '';

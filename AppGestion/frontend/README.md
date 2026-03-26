@@ -1,6 +1,6 @@
 # AppGestion Frontend
 
-Interfaz web Angular 17 para el SaaS de gestión de presupuestos y facturas.
+Interfaz web Angular 20 para el SaaS de gestión de presupuestos y facturas.
 
 ## Requisitos
 
@@ -33,7 +33,7 @@ Salida en `dist/appgestion-frontend/`.
 
 | Paquete | Versión | Uso |
 |---------|---------|-----|
-| @angular/core | 17.3 | Framework |
-| @angular/material | 17.3 | Componentes UI |
-| @angular/router | 17.3 | Navegación |
+| @angular/core | ^20.3 | Framework |
+| @angular/material | ^20.2 | Componentes UI |
+| @angular/router | ^20.3 | Navegación |
 | rxjs | 7.8 | Reactividad |

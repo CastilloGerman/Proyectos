@@ -18,11 +18,10 @@ import { USER_MENU_SECTIONS, UserMenuItem } from './user-menu.config';
 import { LogoutConfirmDialogComponent } from './logout-confirm-dialog.component';
 
 @Component({
-  selector: 'app-user-dropdown',
-  standalone: true,
-  imports: [RouterLink, MatIconModule, MatSnackBarModule],
-  templateUrl: './user-dropdown.component.html',
-  styleUrl: './user-dropdown.component.scss',
+    selector: 'app-user-dropdown',
+    imports: [RouterLink, MatIconModule, MatSnackBarModule],
+    templateUrl: './user-dropdown.component.html',
+    styleUrl: './user-dropdown.component.scss'
 })
 export class UserDropdownComponent {
   readonly auth = inject(AuthService);

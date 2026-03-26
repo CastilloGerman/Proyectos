@@ -18,22 +18,21 @@ import {
 } from '../../../core/services/notificaciones.service';
 
 @Component({
-  selector: 'app-notificaciones',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatButtonModule,
-    MatButtonToggleModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-    MatDividerModule,
-  ],
-  templateUrl: './notificaciones.component.html',
-  styleUrl: './notificaciones.component.scss',
+    selector: 'app-notificaciones',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        RouterLink,
+        MatCardModule,
+        MatButtonModule,
+        MatButtonToggleModule,
+        MatIconModule,
+        MatProgressSpinnerModule,
+        MatSnackBarModule,
+        MatDividerModule,
+    ],
+    templateUrl: './notificaciones.component.html',
+    styleUrl: './notificaciones.component.scss'
 })
 export class NotificacionesComponent implements OnInit {
   readonly notifSvc = inject(NotificacionesService);

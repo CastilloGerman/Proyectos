@@ -43,27 +43,26 @@ function fechaNacimientoOpcionalValida(c: AbstractControl): ValidationErrors | n
 }
 
 @Component({
-  selector: 'app-perfil',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-    MatDividerModule,
-    MatDatepickerModule,
-    MatNativeDateModule,
-    MatSelectModule,
-  ],
-  providers: [{ provide: MAT_DATE_LOCALE, useValue: 'es-ES' }],
-  templateUrl: './perfil.component.html',
-  styleUrl: './perfil.component.scss',
+    selector: 'app-perfil',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        RouterLink,
+        MatCardModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatButtonModule,
+        MatIconModule,
+        MatProgressSpinnerModule,
+        MatSnackBarModule,
+        MatDividerModule,
+        MatDatepickerModule,
+        MatNativeDateModule,
+        MatSelectModule,
+    ],
+    providers: [{ provide: MAT_DATE_LOCALE, useValue: 'es-ES' }],
+    templateUrl: './perfil.component.html',
+    styleUrl: './perfil.component.scss'
 })
 export class PerfilComponent implements OnInit {
   private readonly fb = inject(FormBuilder);

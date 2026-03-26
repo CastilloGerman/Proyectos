@@ -40,26 +40,25 @@ function bizumOpcionalValidator(): ValidatorFn {
 }
 
 @Component({
-  selector: 'app-metodos-pago',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-    MatDividerModule,
-    MatSlideToggleModule,
-    MatCheckboxModule,
-  ],
-  templateUrl: './metodos-pago.component.html',
-  styleUrl: './metodos-pago.component.scss',
+    selector: 'app-metodos-pago',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        RouterLink,
+        MatCardModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatSelectModule,
+        MatButtonModule,
+        MatIconModule,
+        MatProgressSpinnerModule,
+        MatSnackBarModule,
+        MatDividerModule,
+        MatSlideToggleModule,
+        MatCheckboxModule,
+    ],
+    templateUrl: './metodos-pago.component.html',
+    styleUrl: './metodos-pago.component.scss'
 })
 export class MetodosPagoComponent implements OnInit {
   private readonly fb = inject(FormBuilder);

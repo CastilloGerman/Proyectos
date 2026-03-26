@@ -12,19 +12,18 @@ import { AuthService } from '../../../core/auth/auth.service';
 const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.apps.googleusercontent.com';
 
 @Component({
-  selector: 'app-login',
-  standalone: true,
-  imports: [
-    ReactiveFormsModule,
-    FormsModule,
-    RouterLink,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-  ],
-  template: `
+    selector: 'app-login',
+    imports: [
+        ReactiveFormsModule,
+        FormsModule,
+        RouterLink,
+        MatFormFieldModule,
+        MatInputModule,
+        MatButtonModule,
+        MatProgressSpinnerModule,
+        MatSnackBarModule,
+    ],
+    template: `
     <div class="login-wrapper">
       <div class="login-container">
         <div class="login-card">
@@ -123,7 +122,7 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .login-wrapper {
       min-height: 100vh;
       display: flex;
@@ -368,7 +367,7 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
       width: 100%;
       margin-top: 8px;
     }
-  `],
+  `]
 })
 export class LoginComponent implements OnInit, AfterViewInit {
   @ViewChild('googleButtonRef') googleButtonRef!: ElementRef<HTMLDivElement>;

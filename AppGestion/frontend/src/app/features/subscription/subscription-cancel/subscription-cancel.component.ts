@@ -5,10 +5,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
 @Component({
-  selector: 'app-subscription-cancel',
-  standalone: true,
-  imports: [RouterLink, MatCardModule, MatButtonModule, MatIconModule],
-  template: `
+    selector: 'app-subscription-cancel',
+    imports: [RouterLink, MatCardModule, MatButtonModule, MatIconModule],
+    template: `
     <div class="container">
       <mat-card class="card">
         <mat-card-header>
@@ -26,7 +25,7 @@ import { MatIconModule } from '@angular/material/icon';
       </mat-card>
     </div>
   `,
-  styles: [`
+    styles: [`
     .container {
       min-height: 100vh;
       display: flex;
@@ -45,6 +44,6 @@ import { MatIconModule } from '@angular/material/icon';
       width: 48px;
       height: 48px;
     }
-  `],
+  `]
 })
 export class SubscriptionCancelComponent {}

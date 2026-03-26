@@ -24,25 +24,24 @@ import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
 const IVA_RATE = 0.21;
 
 @Component({
-  selector: 'app-presupuesto-form',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatButtonModule,
-    MatIconModule,
-    MatCheckboxModule,
-    MatSnackBarModule,
-    MatChipsModule,
-    MatTooltipModule,
-    FormsModule,
-  ],
-  template: `
+    selector: 'app-presupuesto-form',
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        RouterLink,
+        MatCardModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatSelectModule,
+        MatButtonModule,
+        MatIconModule,
+        MatCheckboxModule,
+        MatSnackBarModule,
+        MatChipsModule,
+        MatTooltipModule,
+        FormsModule,
+    ],
+    template: `
     <div class="presupuesto-form">
       <mat-card>
         <mat-card-header>
@@ -244,7 +243,7 @@ const IVA_RATE = 0.21;
       </mat-card>
     </div>
   `,
-  styles: [`
+    styles: [`
     .full-width { width: 100%; display: block; margin-bottom: 16px; }
     .form-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 20px; }
     .form-row mat-form-field { flex: 1; min-width: 200px; }
@@ -293,7 +292,7 @@ const IVA_RATE = 0.21;
     .summary-row.total { font-weight: 600; font-size: 18px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #a5d6a7; }
 
     .actions { display: flex; gap: 16px; margin-top: 24px; }
-  `],
+  `]
 })
 export class PresupuestoFormComponent implements OnInit {
   readonly plantillaVarsHint =

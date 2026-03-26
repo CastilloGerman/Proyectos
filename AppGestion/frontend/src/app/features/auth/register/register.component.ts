@@ -9,18 +9,17 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
-  selector: 'app-register',
-  standalone: true,
-  imports: [
-    ReactiveFormsModule,
-    RouterLink,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-  ],
-  template: `
+    selector: 'app-register',
+    imports: [
+        ReactiveFormsModule,
+        RouterLink,
+        MatFormFieldModule,
+        MatInputModule,
+        MatButtonModule,
+        MatProgressSpinnerModule,
+        MatSnackBarModule,
+    ],
+    template: `
     <div class="register-wrapper">
       <div class="register-container">
         <div class="register-card">
@@ -58,7 +57,7 @@ import { AuthService } from '../../../core/auth/auth.service';
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .register-wrapper {
       min-height: 100vh;
       display: flex;
@@ -181,7 +180,7 @@ import { AuthService } from '../../../core/auth/auth.service';
       vertical-align: middle;
       margin-right: 8px;
     }
-  `],
+  `]
 })
 export class RegisterComponent implements OnInit {
   form: FormGroup;
