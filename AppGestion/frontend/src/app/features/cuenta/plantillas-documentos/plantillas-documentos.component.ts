@@ -390,7 +390,7 @@ export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
 }
 
 /**
- * Construye una data URL con MIME acorde a la firma del binario (PNG/JPEG/GIF/WebP).
+ * Construye una data URL con MIME según la cabecera del binario (PNG/JPEG/GIF/WebP).
  * El API solo envía el Base64 crudo.
  */
 function buildImageDataUrlFromBase64(b64: string): string {

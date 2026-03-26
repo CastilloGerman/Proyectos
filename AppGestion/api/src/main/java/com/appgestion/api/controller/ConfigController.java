@@ -73,7 +73,7 @@ public class ConfigController {
         return empresaService.actualizarDatosFiscales(request, usuario);
     }
 
-    /** Textos al pie de PDFs de presupuesto y factura (sin tocar logo, firma ni correo). */
+    /** Textos al pie de PDFs de presupuesto y factura (sin tocar logo ni correo). */
     @PatchMapping("/empresa/plantillas-pdf")
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public EmpresaResponse actualizarPlantillasPdf(@Valid @RequestBody PlantillasPdfPatchRequest request) {

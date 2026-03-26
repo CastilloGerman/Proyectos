@@ -138,32 +138,6 @@
 
       <mat-card class="empresa-card">
         <mat-card-header>
-          <mat-card-title>Firma en PDF</mat-card-title>
-          <mat-card-subtitle>Opcional. Imagen al pie de presupuestos y facturas (mismo límite de tamaño).</mat-card-subtitle>
-        </mat-card-header>
-        <mat-card-content>
-          @if (firmaPreviewSrc) {
-            <div class="empresa-preview-wrap">
-              <img [src]="firmaPreviewSrc" alt="Vista previa firma" class="empresa-preview empresa-preview--firma" />
-            </div>
-          } @else {
-            <p class="empresa-hint-muted">Sin firma en imagen.</p>
-          }
-          <div class="empresa-img-actions">
-            <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" #firmaInput (change)="onFirmaFile($event)" hidden />
-            <button mat-stroked-button type="button" (click)="firmaInput.click()">
-              <mat-icon>draw</mat-icon>
-              Subir firma
-            </button>
-            @if (firmaPreviewSrc || tieneFirmaGuardada) {
-              <button mat-button type="button" color="warn" (click)="quitarFirma()">Quitar firma</button>
-            }
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card class="empresa-card">
-        <mat-card-header>
           <mat-card-title>Notas al pie</mat-card-title>
           <mat-card-subtitle>Texto fijo al final de cada PDF (condiciones, IVA, datos bancarios, etc.)</mat-card-subtitle>
         </mat-card-header>

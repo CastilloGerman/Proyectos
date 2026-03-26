@@ -203,9 +203,6 @@ public class FacturaPdfService {
         } catch (IOException e) {
             log.warn("No se pudo añadir QR al PDF de factura: {}", e.getMessage());
         }
-        if (empresa != null && empresa.getFirmaImagen() != null && empresa.getFirmaImagen().length > 0) {
-            PdfFirmaHelper.agregarFirmaSiExiste(document, empresa.getFirmaImagen(), smallFont);
-        }
     }
 
     private void addInfoRow(PdfPTable table, String label, String value, Font labelFont, Font valueFont) {

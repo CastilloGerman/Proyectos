@@ -1,11 +1,15 @@
 {
   "java.configuration.updateBuildConfiguration": "automatic",
   "java.import.maven.enabled": true,
+  "java.import.gradle.enabled": false,
+  "java.import.maven.offline": false,
+  "java.project.importOnFirstTimeStartup": "automatic",
+  "java.eclipse.downloadSources": true,
+  "java.jdt.ls.lombokSupport.enabled": true,
+  "java.configuration.maven.notCoveredPluginExecutionSeverity": "ignore",
   "java.compile.nullAnalysis.mode": "automatic",
+  "java.errors.incompleteClasspath.severity": "ignore",
   "files.exclude": {
-    "**/.classpath": true,
-    "**/.project": true,
-    "**/.settings": true,
     "**/target": true
   },
   "java.import.exclusions": [

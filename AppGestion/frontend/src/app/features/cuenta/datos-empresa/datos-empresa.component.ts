@@ -77,11 +77,6 @@ export class DatosEmpresaComponent implements OnInit {
   nuevaLogoBase64: string | null = null;
   tieneLogoGuardada = false;
 
-  firmaPreviewSrc: string | null = null;
-  firmaCambiada: 'none' | 'set' | 'clear' = 'none';
-  nuevaFirmaBase64: string | null = null;
-  tieneFirmaGuardada = false;
-
   ngOnInit(): void {
     this.cargar();
   }
@@ -106,11 +101,6 @@ export class DatosEmpresaComponent implements OnInit {
     this.logoCambiada = 'none';
     this.nuevaLogoBase64 = null;
 
-    this.tieneFirmaGuardada = !!(e.tieneFirma && e.firmaImagenBase64);
-    this.firmaPreviewSrc = dataUrlFromStoredBase64(e.firmaImagenBase64 ?? null);
-    this.firmaCambiada = 'none';
-    this.nuevaFirmaBase64 = null;
-
     this.form.patchValue({
       nombre: e.nombre ?? '',
       direccion: e.direccion ?? '',
@@ -133,14 +123,6 @@ export class DatosEmpresaComponent implements OnInit {
   }
 
   onLogoFile(ev: Event): void {
-    this.procesarImagen(ev, 'logo');
-  }
-
-  onFirmaFile(ev: Event): void {
-    this.procesarImagen(ev, 'firma');
-  }
-
-  private procesarImagen(ev: Event, tipo: 'logo' | 'firma'): void {
     const input = ev.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
@@ -161,17 +143,10 @@ export class DatosEmpresaComponent implements OnInit {
       const r = reader.result as string;
       const comma = r.indexOf(',');
       const b64 = comma >= 0 ? r.slice(comma + 1) : r;
-      if (tipo === 'logo') {
-        this.logoPreviewSrc = r;
-        this.nuevaLogoBase64 = b64;
-        this.logoCambiada = 'set';
-        this.tieneLogoGuardada = true;
-      } else {
-        this.firmaPreviewSrc = r;
-        this.nuevaFirmaBase64 = b64;
-        this.firmaCambiada = 'set';
-        this.tieneFirmaGuardada = true;
-      }
+      this.logoPreviewSrc = r;
+      this.nuevaLogoBase64 = b64;
+      this.logoCambiada = 'set';
+      this.tieneLogoGuardada = true;
     };
     reader.readAsDataURL(file);
     input.value = '';
@@ -182,14 +157,6 @@ export class DatosEmpresaComponent implements OnInit {
     this.nuevaLogoBase64 = null;
     this.logoCambiada = 'clear';
     this.tieneLogoGuardada = false;
-    this.form.markAsDirty();
-  }
-
-  quitarFirma(): void {
-    this.firmaPreviewSrc = null;
-    this.nuevaFirmaBase64 = null;
-    this.firmaCambiada = 'clear';
-    this.tieneFirmaGuardada = false;
     this.form.markAsDirty();
   }
 
@@ -225,12 +192,6 @@ export class DatosEmpresaComponent implements OnInit {
       payload['logoImagenBase64'] = '';
     } else if (this.logoCambiada === 'set' && this.nuevaLogoBase64) {
       payload['logoImagenBase64'] = this.nuevaLogoBase64;
-    }
-
-    if (this.firmaCambiada === 'clear') {
-      payload['firmaImagenBase64'] = '';
-    } else if (this.firmaCambiada === 'set' && this.nuevaFirmaBase64) {
-      payload['firmaImagenBase64'] = this.nuevaFirmaBase64;
     }
 
     this.saving.set(true);

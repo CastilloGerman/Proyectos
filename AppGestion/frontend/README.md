@@ -19,6 +19,10 @@ npm install
 npm start
 ```
 
+Equivale a `ng serve` usando el Angular CLI instalado en `node_modules` (no hace falta instalar `ng` global).
+
+Si prefieres invocar el CLI a mano, usa **`npx ng`** (por ejemplo `npx ng serve`, `npx ng build`). En PowerShell/CMD, el comando suelto **`ng`** solo funciona si instalaste `@angular/cli` con `npm install -g @angular/cli`.
+
 Abre `http://localhost:4200`. El proxy envía las peticiones a `/api` al backend en `http://localhost:8081`.
 
 ## Build

@@ -100,12 +100,12 @@
     </mat-card-content>
   </mat-card>
 
-  @if (loading() && dataSource.data.length === 0) {
+  @if (loading() && tableRows().length === 0) {
     <div class="ha-state">
       <mat-progress-spinner diameter="40" mode="indeterminate" />
       <span>Cargando eventos…</span>
     </div>
-  } @else if (loadError() && dataSource.data.length === 0) {
+  } @else if (loadError() && tableRows().length === 0) {
     <mat-card appearance="outlined">
       <mat-card-content>
         <p>No se pudo cargar el historial.</p>
@@ -114,74 +114,63 @@
     </mat-card>
   } @else {
     <div class="ha-table-wrap mat-elevation-z1">
-      <table mat-table [dataSource]="dataSource" class="ha-table">
-        <ng-container matColumnDef="occurredAt">
-          <th mat-header-cell *matHeaderCellDef>Fecha (UTC)</th>
-          <td mat-cell *matCellDef="let row">
-            {{ row.occurredAt | date: 'dd/MM/yyyy HH:mm:ss' : 'UTC' : 'es' }}
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="userEmail">
-          <th mat-header-cell *matHeaderCellDef>Usuario</th>
-          <td mat-cell *matCellDef="let row">{{ row.userEmail ?? '—' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="eventType">
-          <th mat-header-cell *matHeaderCellDef>Evento</th>
-          <td mat-cell *matCellDef="let row">
-            <span [matTooltip]="row.eventType">{{ eventoEtiqueta(row.eventType) }}</span>
-            @if (row.sensitive) {
-              <mat-chip-set class="ha-chips">
-                <mat-chip color="warn">Sensible</mat-chip>
-              </mat-chip-set>
-            }
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="ip">
-          <th mat-header-cell *matHeaderCellDef>IP</th>
-          <td mat-cell *matCellDef="let row">{{ row.ipAddress ?? '—' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="success">
-          <th mat-header-cell *matHeaderCellDef>Estado</th>
-          <td mat-cell *matCellDef="let row">
-            @if (row.success) {
-              <span class="ha-ok">Éxito</span>
-            } @else {
-              <span class="ha-fail">Fallo</span>
-            }
-            @if (row.failureReason) {
-              <div class="ha-reason">{{ row.failureReason }}</div>
-            }
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="country">
-          <th mat-header-cell *matHeaderCellDef>Ubicación</th>
-          <td mat-cell *matCellDef="let row">
-            {{ row.countryCode ?? '—' }}
-            @if (!row.countryCode && row.userAgent) {
-              <mat-icon class="ha-hint-icon" [matTooltip]="row.userAgent" matTooltipShowDelay="200">info_outline</mat-icon>
-            }
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="expand">
-          <th mat-header-cell *matHeaderCellDef></th>
-          <td mat-cell *matCellDef="let row">
-            <button
-              mat-icon-button
-              type="button"
-              [attr.aria-expanded]="expandedId() === row.id"
-              (click)="toggleExpand(row); $event.stopPropagation()"
+      <table class="ha-native-table">
+        <thead>
+          <tr>
+            <th scope="col">Fecha (UTC)</th>
+            <th scope="col">Usuario</th>
+            <th scope="col">Evento</th>
+            <th scope="col">IP</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Ubicación</th>
+            <th scope="col" class="ha-native-table__col-expand" aria-label="Detalle"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of tableRows(); track row.id + '-' + pageIndex() + '-' + $index) {
+            <tr
+              [class.ha-row--fail]="!row.success"
+              [class.ha-row--sensitive]="row.sensitive"
             >
-              <mat-icon>{{ expandedId() === row.id ? 'expand_less' : 'expand_more' }}</mat-icon>
-            </button>
-          </td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr
-          mat-row
-          *matRowDef="let row; columns: displayedColumns"
-          [class.ha-row--fail]="!row.success"
-          [class.ha-row--sensitive]="row.sensitive"
-        ></tr>
+              <td>{{ row.occurredAt | date: 'dd/MM/yyyy HH:mm:ss' : 'UTC' : 'es' }}</td>
+              <td>{{ row.userEmail ?? '—' }}</td>
+              <td>
+                <span [matTooltip]="row.eventType">{{ eventoEtiqueta(row.eventType) }}</span>
+                @if (row.sensitive) {
+                  <span class="ha-chip-warn">Sensible</span>
+                }
+              </td>
+              <td>{{ row.ipAddress ?? '—' }}</td>
+              <td>
+                @if (row.success) {
+                  <span class="ha-ok">Éxito</span>
+                } @else {
+                  <span class="ha-fail">Fallo</span>
+                }
+                @if (row.failureReason) {
+                  <div class="ha-reason">{{ row.failureReason }}</div>
+                }
+              </td>
+              <td>
+                {{ row.countryCode ?? '—' }}
+                @if (!row.countryCode && row.userAgent) {
+                  <mat-icon class="ha-hint-icon" [matTooltip]="row.userAgent" matTooltipShowDelay="200">info_outline</mat-icon>
+                }
+              </td>
+              <td class="ha-native-table__col-expand">
+                <button
+                  type="button"
+                  class="ha-expand-btn"
+                  [attr.aria-expanded]="expandedId() === row.id"
+                  [attr.aria-label]="expandedId() === row.id ? 'Ocultar detalle' : 'Ver detalle'"
+                  (click)="toggleExpand(row); $event.stopPropagation()"
+                >
+                  <mat-icon>{{ expandedId() === row.id ? 'expand_less' : 'expand_more' }}</mat-icon>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
       </table>
       <mat-paginator
         [length]="pageMeta()?.totalElements ?? 0"
@@ -193,7 +182,7 @@
       />
     </div>
 
-    @for (row of dataSource.data; track row.id) {
+    @for (row of tableRows(); track row.id) {
       @if (expandedId() === row.id) {
         <mat-card class="ha-detail" appearance="outlined">
           <mat-card-content>

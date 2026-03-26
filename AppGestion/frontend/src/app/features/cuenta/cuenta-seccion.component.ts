@@ -47,7 +47,7 @@ export const CUENTA_SECCION_TITLES: Record<string, string> = {
           </p>
           <p class="rich-hint">
             <mat-icon class="rich-hint__icon">info</mat-icon>
-            Mientras tanto, el aspecto de tus PDF depende de los datos de empresa, el logo, la firma y los textos al
+            Mientras tanto, el aspecto de tus PDF depende de los datos de empresa, el logo y los textos al
             pie que ya puedes editar en otras pantallas. Así tus documentos siguen saliendo con tu marca.
           </p>
           <div class="rich-actions">

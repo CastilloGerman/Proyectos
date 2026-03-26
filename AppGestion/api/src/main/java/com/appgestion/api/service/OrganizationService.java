@@ -6,7 +6,7 @@ import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.repository.OrganizationMemberRepository;
 import com.appgestion.api.repository.OrganizationRepository;
 import com.appgestion.api.repository.UsuarioRepository;
-import org.springframework.lang.NonNull;
+import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

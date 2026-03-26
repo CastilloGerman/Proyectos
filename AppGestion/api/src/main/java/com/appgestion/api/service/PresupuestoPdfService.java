@@ -141,9 +141,6 @@ public class PresupuestoPdfService {
         } catch (DocumentException | IOException ignored) {
             // sin QR si falla la generación
         }
-        if (empresa != null && empresa.getFirmaImagen() != null && empresa.getFirmaImagen().length > 0) {
-            PdfFirmaHelper.agregarFirmaSiExiste(document, empresa.getFirmaImagen(), smallFont);
-        }
     }
 
     private void addTableHeader(PdfPTable table, Font font) {

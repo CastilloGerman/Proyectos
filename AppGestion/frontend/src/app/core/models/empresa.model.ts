@@ -15,8 +15,6 @@ export interface Empresa {
   mailUsername?: string;
   mailPassword?: string;
   mailConfigurado?: boolean;
-  tieneFirma?: boolean;
-  firmaImagenBase64?: string | null;
   tieneLogo?: boolean;
   logoImagenBase64?: string | null;
   /** Valores por defecto en nuevas facturas (cobro a clientes). */

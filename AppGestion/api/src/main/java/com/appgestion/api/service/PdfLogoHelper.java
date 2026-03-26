@@ -16,8 +16,9 @@ import java.io.IOException;
 /** Coloca logo y título principal en la cabecera del PDF (OpenPDF). */
 public final class PdfLogoHelper {
 
-    private static final float LOGO_MAX_WIDTH_PT = 110f;
-    private static final float LOGO_MAX_HEIGHT_PT = 56f;
+    /** Caja máxima del logo en pt (scaleToFit); algo mayor que antes para mejor legibilidad en PDF. */
+    private static final float LOGO_MAX_WIDTH_PT = 145f;
+    private static final float LOGO_MAX_HEIGHT_PT = 72f;
 
     private PdfLogoHelper() {}
 
@@ -32,7 +33,7 @@ public final class PdfLogoHelper {
             img.scaleToFit(LOGO_MAX_WIDTH_PT, LOGO_MAX_HEIGHT_PT);
             PdfPTable row = new PdfPTable(2);
             row.setWidthPercentage(100);
-            row.setWidths(new float[]{1.15f, 2.85f});
+            row.setWidths(new float[]{1.28f, 2.72f});
             PdfPCell cImg = new PdfPCell(img, false);
             cImg.setBorder(Rectangle.NO_BORDER);
             cImg.setVerticalAlignment(Element.ALIGN_MIDDLE);

@@ -1,8 +1,7 @@
 import {
-  ChangeDetectorRef,
+  ApplicationRef,
   Component,
   OnInit,
-  ViewChild,
   computed,
   inject,
   signal,
@@ -14,11 +13,9 @@ import { PageEvent, MatPaginatorModule } from '@angular/material/paginator';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTable, MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -60,12 +57,10 @@ const EVENT_TYPES: { value: string; label: string }[] = [
         MatCardModule,
         MatButtonModule,
         MatIconModule,
-        MatTableModule,
         MatPaginatorModule,
         MatFormFieldModule,
         MatInputModule,
         MatSelectModule,
-        MatChipsModule,
         MatTooltipModule,
         MatDividerModule,
         MatProgressSpinnerModule,
@@ -79,14 +74,12 @@ export class HistorialAccesosComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly fb = inject(FormBuilder);
-  private readonly cdr = inject(ChangeDetectorRef);
-
-  @ViewChild(MatTable) private matTable?: MatTable<AuditAccessEventDto>;
+  private readonly appRef = inject(ApplicationRef);
 
   readonly eventTypes = EVENT_TYPES;
-  readonly displayedColumns = ['occurredAt', 'userEmail', 'eventType', 'ip', 'success', 'country', 'expand'] as const;
 
-  readonly dataSource = new MatTableDataSource<AuditAccessEventDto>([]);
+  /** Filas de la página actual (tabla HTML nativa, sin mat-table/CDK). */
+  readonly tableRows = signal<AuditAccessEventDto[]>([]);
 
   readonly loading = signal(false);
   readonly loadError = signal(false);
@@ -136,11 +129,10 @@ export class HistorialAccesosComponent implements OnInit {
     };
     this.api.list(q).subscribe({
       next: (page) => {
-        this.dataSource.data = page.content;
+        this.tableRows.set([...page.content]);
         this.pageMeta.set(page);
         this.loading.set(false);
-        this.cdr.markForCheck();
-        queueMicrotask(() => this.matTable?.renderRows());
+        this.appRef.tick();
       },
       error: (err) => {
         this.loadError.set(true);

@@ -29,7 +29,6 @@ import java.util.stream.Collectors;
 @Service
 public class EmpresaService {
 
-    private static final int MAX_FIRMA_BYTES = 400_000;
     private static final int MAX_LOGO_BYTES = 400_000;
 
     private static final Set<String> METODOS_PAGO_PERMITIDOS = Set.of("Transferencia", "Efectivo", "Tarjeta", "Bizum");
@@ -68,27 +67,6 @@ public class EmpresaService {
         if (request.mailPort() != null) emp.setMailPort(request.mailPort());
         if (request.mailUsername() != null) emp.setMailUsername(request.mailUsername());
         if (request.mailPassword() != null && !request.mailPassword().isBlank()) emp.setMailPassword(request.mailPassword());
-        if (request.firmaImagenBase64() != null) {
-            if (request.firmaImagenBase64().isBlank()) {
-                emp.setFirmaImagen(null);
-            } else {
-                String raw = request.firmaImagenBase64().trim();
-                int comma = raw.indexOf(',');
-                if (raw.startsWith("data:") && comma > 0) {
-                    raw = raw.substring(comma + 1);
-                }
-                try {
-                    byte[] decoded = Base64.getDecoder().decode(raw);
-                    if (decoded.length > MAX_FIRMA_BYTES) {
-                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                "La imagen de firma no puede superar " + (MAX_FIRMA_BYTES / 1024) + " KB");
-                    }
-                    emp.setFirmaImagen(decoded);
-                } catch (IllegalArgumentException e) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Imagen de firma en Base64 no válida");
-                }
-            }
-        }
         if (request.logoImagenBase64() != null) {
             if (request.logoImagenBase64().isBlank()) {
                 emp.setLogoImagen(null);
@@ -270,15 +248,38 @@ public class EmpresaService {
 
     private EmpresaResponse toResponse(Empresa emp) {
         if (emp == null) {
-            return new EmpresaResponse(null, "", null, null, null, null, null, null, null, null, null, null, null, null,
-                    false, false, null, false, null, null, null, null, null, null, null, null, null, null,
-                    false, List.of(7, 15, 30));
+            return new EmpresaResponse(
+                    null,
+                    "",
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    false,
+                    false,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    false,
+                    List.of(7, 15, 30));
         }
         boolean mailConfigurado = emp.getMailUsername() != null && !emp.getMailUsername().isBlank()
                 && emp.getMailPassword() != null && !emp.getMailPassword().isBlank();
-        byte[] firma = emp.getFirmaImagen();
-        boolean tieneFirma = firma != null && firma.length > 0;
-        String firmaB64 = tieneFirma ? Base64.getEncoder().encodeToString(firma) : null;
         byte[] logo = emp.getLogoImagen();
         boolean tieneLogo = logo != null && logo.length > 0;
         String logoB64 = tieneLogo ? Base64.getEncoder().encodeToString(logo) : null;
@@ -298,8 +299,6 @@ public class EmpresaService {
                 emp.getMailPort(),
                 emp.getMailUsername(),
                 mailConfigurado,
-                tieneFirma,
-                firmaB64,
                 tieneLogo,
                 logoB64,
                 emp.getDefaultMetodoPago(),

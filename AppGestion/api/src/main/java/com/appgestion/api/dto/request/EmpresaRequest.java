@@ -16,10 +16,6 @@ public record EmpresaRequest(
         String mailUsername,
         String mailPassword,
         /**
-         * Base64 de imagen firma (PNG/JPEG). null = no cambiar; cadena vacía = eliminar firma.
-         */
-        String firmaImagenBase64,
-        /**
          * Base64 de logo cabecera (PNG/JPEG). null = no cambiar; cadena vacía = eliminar logo.
          */
         String logoImagenBase64,

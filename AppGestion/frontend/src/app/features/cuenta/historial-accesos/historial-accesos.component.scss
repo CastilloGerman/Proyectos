@@ -116,14 +116,48 @@
   background: var(--mat-sys-surface, #fff);
 }
 
-.ha-table {
+/* Tabla HTML nativa (sin mat-table). Sin table-layout:fixed para evitar columnas colapsadas en algunos navegadores */
+.ha-native-table {
   width: 100%;
   min-width: 720px;
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #0f172a;
+  background: #fff;
 }
 
-/* Evita celdas “invisibles” si el tema no propaga color al cuerpo de la tabla */
-.ha-table .mat-mdc-cell {
-  color: var(--app-text-primary, #0f172a);
+.ha-native-table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--app-border, rgba(15, 23, 42, 0.12));
+  background: var(--app-bg-page, #f6f4f1);
+  vertical-align: bottom;
+}
+
+.ha-native-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--app-border, rgba(15, 23, 42, 0.08));
+  vertical-align: top;
+  word-wrap: break-word;
+  color: #0f172a;
+  -webkit-text-fill-color: #0f172a;
+}
+
+.ha-native-table__col-expand {
+  width: 52px;
+  text-align: right;
+  vertical-align: middle;
+}
+
+.ha-native-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .ha-row--fail {
@@ -152,14 +186,41 @@
   margin-top: 2px;
 }
 
-.ha-chips {
-  display: inline-flex;
+.ha-chip-warn {
+  display: inline-block;
   margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(245, 158, 11, 0.18);
+  color: #b45309;
   vertical-align: middle;
+}
 
-  mat-chip {
-    min-height: 22px;
-    font-size: 11px;
+.ha-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  vertical-align: middle;
+  -webkit-tap-highlight-color: transparent;
+
+  &:hover {
+    background: rgba(15, 23, 42, 0.06);
+  }
+
+  mat-icon {
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
   }
 }
 
