@@ -29,10 +29,12 @@ SaaS multiusuario para gestión de presupuestos y facturas. Aplicación web con 
 
 ## Requisitos
 
-- **Java 17**
+- **Java 21** (JDK LTS)
 - **Maven 3.9+**
-- **Node.js 18+**
-- **PostgreSQL 14+**
+- **Node.js 24.14.1 LTS** (o `>=24.14.1`; `.nvmrc` y `.node-version` en la raíz del proyecto)
+- **PostgreSQL 17+**
+
+Este repositorio no incluye `Dockerfile`, `docker-compose` ni workflows de GitHub Actions; usa las versiones anteriores en tu JDK, Node y servidor PostgreSQL locales o en tu propia CI.
 
 ## Orden de activación
 

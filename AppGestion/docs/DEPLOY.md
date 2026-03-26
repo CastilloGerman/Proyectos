@@ -65,6 +65,7 @@ Si el repositorio es público o se comparte, asume que cualquier secreto en Git 
 
 ## 3. Base de datos (PostgreSQL)
 
+- Se recomienda **PostgreSQL 17** (LTS actual del proyecto en documentación); versiones anteriores pueden funcionar si el driver y las migraciones son compatibles.
 - La API debe poder conectar a PostgreSQL desde el entorno de ejecución.
 - Ejecuta las migraciones **Flyway** antes o en el arranque coherente con tu estrategia; con `validate`, el esquema debe coincidir con las migraciones aplicadas.
 - Haz **backup** de la BD antes de migrar en producción.

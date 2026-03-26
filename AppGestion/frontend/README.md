@@ -4,8 +4,8 @@ Interfaz web Angular 17 para el SaaS de gestión de presupuestos y facturas.
 
 ## Requisitos
 
-- Node.js 18+
-- npm 9+
+- Node.js 24.14.1 LTS (ver `.nvmrc` / `.node-version` en la raíz del monorepo)
+- npm (incluido con Node; suele ser 11.x con Node 24)
 
 ## Instalación
 
