@@ -8,7 +8,6 @@ import com.appgestion.api.dto.response.FacturaResponse;
 import com.appgestion.api.service.FacturaRecordatorioClienteService;
 import com.appgestion.api.service.FacturaService;
 import com.appgestion.api.service.CurrentUserService;
-import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -76,11 +75,6 @@ public class FacturaController {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.BAD_REQUEST,
                     e.getMessage());
-        } catch (MessagingException e) {
-            throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.BAD_REQUEST,
-                    "No se pudo enviar el correo. Revisa el SMTP en datos de la empresa: "
-                            + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
         } catch (Exception e) {
             org.slf4j.LoggerFactory.getLogger(FacturaController.class).warn(
                     "Error recordatorio cliente factura {}: {}", id, e.getMessage(), e);
@@ -101,11 +95,11 @@ public class FacturaController {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.BAD_REQUEST,
                     e.getMessage());
-        } catch (jakarta.mail.MessagingException | RuntimeException e) {
+        } catch (RuntimeException e) {
             org.slf4j.LoggerFactory.getLogger(FacturaController.class).warn("Error al enviar email factura {}: {}", id, e.getMessage(), e);
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error al enviar el email: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
+                    "Error al encolar el envío: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
         }
     }
 

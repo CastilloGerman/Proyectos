@@ -31,6 +31,13 @@ export const routes: Routes = [
       { path: 'facturas/:id', canActivate: [roleMutateGuard], loadComponent: () => import('./features/facturas/factura-form/factura-form.component').then(m => m.FacturaFormComponent) },
       { path: 'facturas', loadComponent: () => import('./features/facturas/factura-list/factura-list.component').then(m => m.FacturaListComponent) },
       {
+        path: 'declaraciones-hacienda',
+        loadComponent: () =>
+          import('./features/fiscal/declaraciones-hacienda/declaraciones-hacienda.component').then(
+            (m) => m.DeclaracionesHaciendaComponent,
+          ),
+      },
+      {
         path: 'cuenta/perfil',
         loadComponent: () => import('./features/cuenta/perfil/perfil.component').then((m) => m.PerfilComponent),
       },

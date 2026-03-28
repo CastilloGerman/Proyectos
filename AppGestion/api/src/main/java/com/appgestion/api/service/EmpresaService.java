@@ -3,6 +3,8 @@ package com.appgestion.api.service;
 import com.appgestion.api.catalog.RubroAutonomoCatalog;
 import com.appgestion.api.domain.entity.Empresa;
 import com.appgestion.api.domain.entity.Usuario;
+import com.appgestion.api.domain.enums.EmailProviderMode;
+import com.appgestion.api.domain.enums.OAuthOnFailureMode;
 import com.appgestion.api.dto.request.EmpresaRequest;
 import com.appgestion.api.dto.request.DatosFiscalesPatchRequest;
 import com.appgestion.api.dto.request.MetodosCobroPatchRequest;
@@ -16,6 +18,7 @@ import com.appgestion.api.util.NifIvaIntraValidator;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
@@ -97,6 +100,24 @@ public class EmpresaService {
             } else {
                 emp.setRubroAutonomoCodigo(rubro);
             }
+        }
+        if (request.emailProvider() != null && !request.emailProvider().isBlank()) {
+            try {
+                emp.setEmailProvider(EmailProviderMode.valueOf(request.emailProvider().trim()));
+            } catch (IllegalArgumentException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Modo de envío de correo no válido");
+            }
+        }
+        if (request.oauthOnFailure() != null && !request.oauthOnFailure().isBlank()) {
+            try {
+                emp.setOauthOnFailure(OAuthOnFailureMode.valueOf(request.oauthOnFailure().trim()));
+            } catch (IllegalArgumentException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Política ante fallo OAuth no válida");
+            }
+        }
+        if (request.systemFromOverride() != null) {
+            String sfo = request.systemFromOverride().trim();
+            emp.setSystemFromOverride(sfo.isEmpty() ? null : sfo);
         }
         emp = empresaRepository.save(emp);
         return toResponse(emp);
@@ -276,7 +297,13 @@ public class EmpresaService {
                     null,
                     null,
                     false,
-                    List.of(7, 15, 30));
+                    List.of(7, 15, 30),
+                    EmailProviderMode.system.name(),
+                    null,
+                    false,
+                    null,
+                    OAuthOnFailureMode.system.name(),
+                    null);
         }
         boolean mailConfigurado = emp.getMailUsername() != null && !emp.getMailUsername().isBlank()
                 && emp.getMailPassword() != null && !emp.getMailPassword().isBlank();
@@ -311,7 +338,13 @@ public class EmpresaService {
                 emp.getEpigrafeIae(),
                 emp.getRubroAutonomoCodigo(),
                 emp.getRecordatorioClienteActivo() != null && emp.getRecordatorioClienteActivo(),
-                parseDiasRecordatorioLista(emp.getRecordatorioClienteDias())
+                parseDiasRecordatorioLista(emp.getRecordatorioClienteDias()),
+                emp.getEmailProvider() != null ? emp.getEmailProvider().name() : EmailProviderMode.system.name(),
+                emp.getOauthProvider(),
+                StringUtils.hasText(emp.getOauthRefreshTokenEnc()),
+                emp.getOauthConnectedAt(),
+                emp.getOauthOnFailure() != null ? emp.getOauthOnFailure().name() : OAuthOnFailureMode.system.name(),
+                emp.getSystemFromOverride()
         );
     }
 

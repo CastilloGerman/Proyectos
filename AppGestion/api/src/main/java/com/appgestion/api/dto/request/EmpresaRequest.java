@@ -22,5 +22,11 @@ public record EmpresaRequest(
         /**
          * Código de rubro (métricas). null = no modificar el valor guardado; "" = borrar.
          */
-        String rubroAutonomoCodigo
+        String rubroAutonomoCodigo,
+        /** system | gmail | outlook | smtp_legacy — null = no cambiar */
+        String emailProvider,
+        /** system | fail — null = no cambiar */
+        String oauthOnFailure,
+        /** Remitente From en modo system (override); null = no cambiar */
+        String systemFromOverride
 ) {}

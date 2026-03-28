@@ -155,15 +155,103 @@
         </mat-card-content>
       </mat-card>
 
+      <mat-card class="empresa-card">
+        <mat-card-header>
+          <mat-card-title>Envío de correo</mat-card-title>
+          <mat-card-subtitle>
+            Por defecto los mensajes salen por el servicio de la aplicación (no necesitas configurar nada). Opcionalmente puedes usar tu Gmail o Microsoft.
+          </mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content class="empresa-fields empresa-fields--email-mode">
+          <mat-radio-group formControlName="emailProvider" class="empresa-radio-stack">
+            <mat-radio-button value="system">Correo de la aplicación (recomendado)</mat-radio-button>
+            <mat-radio-button value="gmail">Mi cuenta Gmail (OAuth)</mat-radio-button>
+            <mat-radio-button value="outlook">Mi cuenta Microsoft / Outlook (OAuth)</mat-radio-button>
+            <mat-radio-button value="smtp_legacy">SMTP manual (solo migración desde configuración antigua)</mat-radio-button>
+          </mat-radio-group>
+
+          @if (form.controls.emailProvider.value === 'system') {
+            <mat-form-field appearance="outline" class="full">
+              <mat-label>Remitente visible (opcional, modo aplicación)</mat-label>
+              <input matInput formControlName="systemFromOverride" placeholder="Nombre y dirección From (opcional)" maxlength="255" />
+              <mat-hint>Si lo dejas vacío, usa el remitente por defecto del servidor.</mat-hint>
+            </mat-form-field>
+          }
+
+          @if (form.controls.emailProvider.value === 'gmail' || form.controls.emailProvider.value === 'outlook') {
+            <div class="empresa-oauth-actions">
+              @if (form.controls.emailProvider.value === 'gmail' && !googleOAuthConfigured) {
+                <p class="empresa-hint-warn">
+                  OAuth de Google no está configurado en el servidor. Añade las variables de entorno o
+                  <code>app.email.google.*</code> en
+                  <code>application-local.yml</code>
+                  (ver <code>docs/EMAIL-OAUTH-SETUP.md</code>).
+                </p>
+              }
+              @if (form.controls.emailProvider.value === 'outlook' && !microsoftOAuthConfigured) {
+                <p class="empresa-hint-warn">
+                  OAuth de Microsoft no está configurado en el servidor. Añade
+                  <code>app.email.microsoft.*</code>
+                  o las variables documentadas en <code>docs/EMAIL-OAUTH-SETUP.md</code>.
+                </p>
+              }
+              <p class="empresa-hint-muted">
+                Estado:
+                @if (oauthConnected) {
+                  <strong>Conectado</strong>
+                } @else {
+                  <span>No conectado — pulsa el botón del proveedor para autorizar el envío.</span>
+                }
+              </p>
+              <div class="empresa-row empresa-row--wrap">
+                @if (form.controls.emailProvider.value === 'gmail') {
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    color="primary"
+                    (click)="conectarGoogle()"
+                    [disabled]="oauthConnecting || !googleOAuthConfigured"
+                  >
+                    Conectar Gmail
+                  </button>
+                }
+                @if (form.controls.emailProvider.value === 'outlook') {
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    color="primary"
+                    (click)="conectarMicrosoft()"
+                    [disabled]="oauthConnecting || !microsoftOAuthConfigured"
+                  >
+                    Conectar Microsoft
+                  </button>
+                }
+                @if (oauthConnected) {
+                  <button mat-button type="button" color="warn" (click)="desconectarOAuth()">Desconectar cuenta</button>
+                }
+              </div>
+              <mat-form-field appearance="outline" class="full">
+                <mat-label>Si OAuth falla</mat-label>
+                <mat-select formControlName="oauthOnFailure">
+                  <mat-option value="system">Enviar por el correo de la aplicación (recomendado)</mat-option>
+                  <mat-option value="fail">No enviar el correo</mat-option>
+                </mat-select>
+                <mat-hint>Se aplica si el token caduca o el proveedor rechaza el envío.</mat-hint>
+              </mat-form-field>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+
       <mat-accordion class="empresa-accordion">
         <mat-expansion-panel>
           <mat-expansion-panel-header>
-            <mat-panel-title>Correo para enviar PDF (SMTP)</mat-panel-title>
+            <mat-panel-title>Correo SMTP (heredado)</mat-panel-title>
             <mat-panel-description>Opcional · {{ mailConfigurado ? 'Configurado' : 'No configurado' }}</mat-panel-description>
           </mat-expansion-panel-header>
           <div class="empresa-fields empresa-fields--smtp">
             <p class="empresa-hint-muted">
-              Si lo rellenas, podrás enviar presupuestos y facturas por email desde la app. La contraseña no se muestra al volver a abrir esta pantalla.
+              Configuración antigua por usuario y contraseña. Elige «SMTP manual» arriba solo si debes seguir usando este método; para nuevas cuentas recomendamos el correo de la aplicación o OAuth.
             </p>
             <mat-form-field appearance="outline" class="full">
               <mat-label>Servidor SMTP</mat-label>

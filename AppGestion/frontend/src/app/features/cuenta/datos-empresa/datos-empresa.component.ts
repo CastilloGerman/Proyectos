@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -9,9 +9,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { take } from 'rxjs';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatSelectModule } from '@angular/material/select';
+import { MatRadioModule } from '@angular/material/radio';
 import { nifValidator } from '../../../shared/validators/nif.validator';
 import { RUBRO_AUTONOMO_CATEGORIAS } from './rubro-autonomo.catalog';
 import { ConfigService } from '../../../core/services/config.service';
@@ -37,6 +39,7 @@ const MAX_IMAGE_BYTES = 380_000;
         MatDividerModule,
         MatExpansionModule,
         MatSelectModule,
+        MatRadioModule,
     ],
     templateUrl: './datos-empresa.component.html',
     styleUrl: './datos-empresa.component.scss'
@@ -45,6 +48,8 @@ export class DatosEmpresaComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly config = inject(ConfigService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly rubroCategorias = RUBRO_AUTONOMO_CATEGORIAS;
 
@@ -68,16 +73,33 @@ export class DatosEmpresaComponent implements OnInit {
     mailUsername: ['', [Validators.maxLength(150)]],
     mailPassword: ['', [Validators.maxLength(255)]],
     rubroAutonomoCodigo: [''],
+    emailProvider: ['system' as 'system' | 'gmail' | 'outlook' | 'smtp_legacy'],
+    oauthOnFailure: ['system' as 'system' | 'fail'],
+    systemFromOverride: ['', [Validators.maxLength(255)]],
   });
 
   mailConfigurado = false;
+  oauthConnected = false;
+  /** Si el servidor tiene credenciales OAuth (evita 503 al pulsar Conectar). */
+  googleOAuthConfigured = false;
+  microsoftOAuthConfigured = false;
 
   logoPreviewSrc: string | null = null;
   logoCambiada: 'none' | 'set' | 'clear' = 'none';
   nuevaLogoBase64: string | null = null;
   tieneLogoGuardada = false;
 
+  oauthConnecting = false;
+
   ngOnInit(): void {
+    const oauth = this.route.snapshot.queryParamMap.get('oauth');
+    if (oauth === 'success') {
+      this.snackBar.open('Cuenta de correo conectada correctamente', 'Cerrar', { duration: 4000 });
+      void this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+    } else if (oauth === 'error') {
+      this.snackBar.open('No se pudo completar la conexión con el proveedor de correo', 'Cerrar', { duration: 5000 });
+      void this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+    }
     this.cargar();
   }
 
@@ -85,7 +107,22 @@ export class DatosEmpresaComponent implements OnInit {
     this.loadError.set(false);
     this.loading.set(true);
     this.config.getEmpresa().subscribe({
-      next: (e: Empresa) => this.aplicarEmpresa(e),
+      next: (e: Empresa) => {
+        this.aplicarEmpresa(e);
+        this.config.getEmailOAuthStatus().subscribe({
+          next: (s) => {
+            this.googleOAuthConfigured = s.googleOAuthConfigured;
+            this.microsoftOAuthConfigured = s.microsoftOAuthConfigured;
+            this.oauthConnected = s.oauthConnected;
+            this.loading.set(false);
+          },
+          error: () => {
+            this.googleOAuthConfigured = false;
+            this.microsoftOAuthConfigured = false;
+            this.loading.set(false);
+          },
+        });
+      },
       error: () => {
         this.loadError.set(true);
         this.loading.set(false);
@@ -96,6 +133,7 @@ export class DatosEmpresaComponent implements OnInit {
 
   private aplicarEmpresa(e: Empresa): void {
     this.mailConfigurado = e.mailConfigurado ?? false;
+    this.oauthConnected = e.oauthConnected ?? false;
     this.tieneLogoGuardada = !!(e.tieneLogo && e.logoImagenBase64);
     this.logoPreviewSrc = dataUrlFromStoredBase64(e.logoImagenBase64 ?? null);
     this.logoCambiada = 'none';
@@ -117,6 +155,9 @@ export class DatosEmpresaComponent implements OnInit {
       mailUsername: e.mailUsername ?? '',
       mailPassword: '',
       rubroAutonomoCodigo: e.rubroAutonomoCodigo ?? '',
+      emailProvider: (e.emailProvider as 'system' | 'gmail' | 'outlook' | 'smtp_legacy') ?? 'system',
+      oauthOnFailure: (e.oauthOnFailure as 'system' | 'fail') ?? 'system',
+      systemFromOverride: e.systemFromOverride ?? '',
     });
     this.form.markAsPristine();
     this.loading.set(false);
@@ -194,6 +235,11 @@ export class DatosEmpresaComponent implements OnInit {
       payload['logoImagenBase64'] = this.nuevaLogoBase64;
     }
 
+    payload['emailProvider'] = v.emailProvider;
+    payload['oauthOnFailure'] = v.oauthOnFailure;
+    const sfo = v.systemFromOverride?.trim();
+    payload['systemFromOverride'] = sfo || '';
+
     this.saving.set(true);
     this.config.saveEmpresa(payload as Partial<Empresa>).subscribe({
       next: (updated) => {
@@ -207,6 +253,56 @@ export class DatosEmpresaComponent implements OnInit {
           err.error?.message || err.error?.detail || err.error?.error || 'No se pudo guardar. Revisa los datos.';
         this.snackBar.open(typeof msg === 'string' ? msg : 'No se pudo guardar', 'Cerrar', { duration: 5000 });
       },
+    });
+  }
+
+  conectarGoogle(): void {
+    this.oauthConnecting = true;
+    this.config
+      .getGoogleEmailAuthorizeUrl()
+      .pipe(take(1))
+      .subscribe({
+        next: (r) => {
+          window.location.href = r.url;
+        },
+        error: (err) => {
+          this.oauthConnecting = false;
+          const msg = this.httpErrorMessage(err, 'No se pudo iniciar la conexión con Google');
+          this.snackBar.open(msg, 'Cerrar', { duration: 8000 });
+        },
+      });
+  }
+
+  conectarMicrosoft(): void {
+    this.oauthConnecting = true;
+    this.config
+      .getMicrosoftEmailAuthorizeUrl()
+      .pipe(take(1))
+      .subscribe({
+        next: (r) => {
+          window.location.href = r.url;
+        },
+        error: (err) => {
+          this.oauthConnecting = false;
+          const msg = this.httpErrorMessage(err, 'No se pudo iniciar la conexión con Microsoft');
+          this.snackBar.open(msg, 'Cerrar', { duration: 8000 });
+        },
+      });
+  }
+
+  private httpErrorMessage(err: unknown, fallback: string): string {
+    const e = err as { error?: { detail?: string; message?: string; error?: string } };
+    const raw = e?.error?.detail ?? e?.error?.message ?? e?.error?.error ?? fallback;
+    return typeof raw === 'string' ? raw : fallback;
+  }
+
+  desconectarOAuth(): void {
+    this.config.disconnectEmailOAuth().subscribe({
+      next: () => {
+        this.snackBar.open('Cuenta de correo desconectada', 'Cerrar', { duration: 3000 });
+        this.cargar();
+      },
+      error: () => this.snackBar.open('No se pudo desconectar', 'Cerrar', { duration: 4000 }),
     });
   }
 }

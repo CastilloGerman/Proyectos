@@ -8,15 +8,16 @@ import com.appgestion.api.dto.request.EnviarEmailRequest;
 import com.appgestion.api.dto.response.PresupuestoItemResponse;
 import com.appgestion.api.dto.response.PresupuestoResponse;
 import com.appgestion.api.repository.ClienteRepository;
+import com.appgestion.api.repository.EmpresaRepository;
 import com.appgestion.api.repository.FacturaRepository;
 import com.appgestion.api.repository.MaterialRepository;
 import com.appgestion.api.repository.PresupuestoRepository;
+import com.appgestion.api.util.EmailCopy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import jakarta.mail.MessagingException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -26,6 +27,7 @@ public class PresupuestoService {
 
     private final PresupuestoRepository presupuestoRepository;
     private final ClienteRepository clienteRepository;
+    private final EmpresaRepository empresaRepository;
     private final MaterialRepository materialRepository;
     private final FacturaRepository facturaRepository;
     private final PresupuestoPdfService presupuestoPdfService;
@@ -33,12 +35,14 @@ public class PresupuestoService {
 
     public PresupuestoService(PresupuestoRepository presupuestoRepository,
                               ClienteRepository clienteRepository,
+                              EmpresaRepository empresaRepository,
                               MaterialRepository materialRepository,
                               FacturaRepository facturaRepository,
                               PresupuestoPdfService presupuestoPdfService,
                               EmailService emailService) {
         this.presupuestoRepository = presupuestoRepository;
         this.clienteRepository = clienteRepository;
+        this.empresaRepository = empresaRepository;
         this.materialRepository = materialRepository;
         this.facturaRepository = facturaRepository;
         this.presupuestoPdfService = presupuestoPdfService;
@@ -129,8 +133,9 @@ public class PresupuestoService {
         return presupuestoPdfService.generarPdf(presupuesto, usuarioId);
     }
 
-    @Transactional(readOnly = true)
-    public void enviarPorEmail(Long id, Long usuarioId, EnviarEmailRequest request) throws MessagingException {
+    /** No usar readOnly: encola fila en {@code email_jobs} (escritura). */
+    @Transactional
+    public void enviarPorEmail(Long id, Long usuarioId, EnviarEmailRequest request) {
         Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(id, usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
         String email = request != null && request.email() != null && !request.email().isBlank()
@@ -142,7 +147,10 @@ public class PresupuestoService {
         byte[] pdf = presupuestoPdfService.generarPdf(presupuesto, usuarioId);
         String nombreArchivo = "presupuesto-" + id + ".pdf";
         String asunto = "Presupuesto - " + (presupuesto.getCliente() != null ? presupuesto.getCliente().getNombre() : "");
-        String cuerpo = "<p>Adjunto encontrará el presupuesto solicitado.</p><p>Saludos cordiales.</p>";
+        String nombreEmpresa = empresaRepository.findByUsuarioId(usuarioId).map(e -> e.getNombre()).orElse(null);
+        String nombreCliente = presupuesto.getCliente() != null ? presupuesto.getCliente().getNombre() : null;
+        String cuerpo = EmailCopy.prefijoClienteEmpresa(nombreCliente, nombreEmpresa)
+                + "<p>Adjunto encontrará el presupuesto solicitado.</p><p>Saludos cordiales.</p>";
         emailService.enviarPdf(usuarioId, email, asunto, cuerpo, pdf, nombreArchivo);
     }
 

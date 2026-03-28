@@ -5,6 +5,7 @@ import com.appgestion.api.domain.entity.Factura;
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.repository.EmpresaRepository;
 import com.appgestion.api.repository.FacturaRepository;
+import com.appgestion.api.util.EmailCopy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -25,7 +26,7 @@ import java.util.Set;
 
 /**
  * Recordatorios por email al <strong>cliente</strong> (no al autónomo), a los 7, 15 o 30 días
- * <strong>después</strong> de la fecha de vencimiento, si la empresa lo tiene activo y correo SMTP configurado.
+ * <strong>después</strong> de la fecha de vencimiento, si la empresa lo tiene activo (envío por cola: sistema u OAuth).
  */
 @Service
 public class FacturaRecordatorioClienteService {
@@ -216,7 +217,7 @@ public class FacturaRecordatorioClienteService {
         String asunto = String.format("Recordatorio de pago: factura %s · %s", numero, nombreEmisor);
 
         StringBuilder cuerpo = new StringBuilder();
-        cuerpo.append("<p>Estimado/a ").append(escapeHtml(clienteNombre)).append(",</p>");
+        cuerpo.append(EmailCopy.prefijoClienteEmpresa(clienteNombre, nombreEmisor));
         cuerpo.append("<p>Le recordamos la factura <strong>").append(escapeHtml(numero)).append("</strong>");
         cuerpo.append(" con fecha de vencimiento el <strong>").append(fechaVenc).append("</strong>");
         cuerpo.append(" e importe <strong>pendiente de ").append(importe).append("</strong>.</p>");

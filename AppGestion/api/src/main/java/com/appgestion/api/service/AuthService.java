@@ -17,12 +17,13 @@ import com.appgestion.api.dto.request.UpdatePreferenciasRequest;
 import com.appgestion.api.dto.response.AuthResponse;
 import com.appgestion.api.dto.response.TotpSetupStartResponse;
 import com.appgestion.api.dto.response.UsuarioResponse;
+import com.appgestion.api.repository.EmpresaRepository;
 import com.appgestion.api.repository.UsuarioRepository;
+import com.appgestion.api.util.EmailCopy;
 import com.appgestion.api.security.JwtService;
 import com.appgestion.api.security.SecurityUtils;
 import com.appgestion.api.security.TotpService;
 import com.appgestion.api.validation.UserPreferencesValidator;
-import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -56,6 +57,7 @@ public class AuthService {
     private static final int TOTP_PENDING_MINUTES = 10;
 
     private final UsuarioRepository usuarioRepository;
+    private final EmpresaRepository empresaRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final SubscriptionService subscriptionService;
@@ -71,6 +73,7 @@ public class AuthService {
     private String frontendUrl;
 
     public AuthService(UsuarioRepository usuarioRepository,
+                       EmpresaRepository empresaRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
                        SubscriptionService subscriptionService,
@@ -82,6 +85,7 @@ public class AuthService {
                        SessionService sessionService,
                        AuditAccessService auditAccessService) {
         this.usuarioRepository = usuarioRepository;
+        this.empresaRepository = empresaRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.subscriptionService = subscriptionService;
@@ -456,15 +460,17 @@ public class AuthService {
                 httpRequest, null, "/auth/forgot-password", null);
 
         String resetLink = frontendUrl + "/reset-password?token=" + token;
-        String asunto = "Recuperación de contraseña - AppGestion";
-        String cuerpo = "<p>Hola,</p><p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace (válido " + PASSWORD_RESET_EXPIRY_HOURS + " hora(s)):</p>"
+        String asunto = "Recuperación de contraseña - " + EmailCopy.PRODUCT_NAME;
+        String nombreEmpresa = empresaRepository.findByUsuarioId(usuario.getId()).map(e -> e.getNombre()).orElse(null);
+        String cuerpo = EmailCopy.prefijoDestinatarioEmpresa(usuario.getNombre(), nombreEmpresa)
+                + "<p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace (válido " + PASSWORD_RESET_EXPIRY_HOURS + " hora(s)):</p>"
                 + "<p><a href=\"" + resetLink + "\">Restablecer contraseña</a></p>"
                 + "<p>Si no solicitaste este cambio, ignora este correo.</p>";
 
         try {
             emailService.enviarPdf(usuario.getId(), usuario.getEmail(), asunto, cuerpo, null, null);
             log.info("Email de recuperación enviado a {}", usuario.getEmail());
-        } catch (MessagingException | IllegalArgumentException e) {
+        } catch (Exception e) {
             log.warn("No se pudo enviar email de recuperación a {}: {}", usuario.getEmail(), e.getMessage());
         }
     }

@@ -1,0 +1,235 @@
+<div class="dh-page">
+  @if (plazoMensaje(); as plazo) {
+    <div class="dh-banner" role="status">
+      <mat-icon>event</mat-icon>
+      <span>{{ plazo }}</span>
+    </div>
+  }
+
+  <div class="dh-header">
+    <h1>Declaraciones Hacienda</h1>
+    <p class="dh-sub">
+      Ayuda orientativa para el IVA (estilo Modelo 303) y un listado de clientes respecto al umbral del 347. Los importes salen de tus datos en la app; la presentación oficial sigue siendo en la sede de la AEAT, con tu gestor si lo necesitas.
+    </p>
+  </div>
+
+  <mat-card class="dh-card">
+    <mat-card-header>
+      <mat-card-title>Resumen trimestral (303)</mat-card-title>
+      <mat-card-subtitle>Base y cuotas a partir de facturas de venta registradas en la aplicación</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="dh-alert dh-alert--warning" role="note">
+        <mat-icon class="dh-alert__icon">warning</mat-icon>
+        <div class="dh-alert__body">
+          <strong class="dh-alert__title">Resumen orientativo, sin validez fiscal oficial</strong>
+          <p>
+            No sustituye el <strong>Modelo 303</strong> oficial ni replica las <strong>casillas numeradas</strong> ni la lógica exacta de la AEAT. Solo suma totales útiles a partir de tus facturas de venta.
+          </p>
+          <p class="dh-alert__emphasis">
+            Consulta siempre con tu gestor o asesor antes de presentar el 303 u otras obligaciones tributarias.
+          </p>
+        </div>
+      </div>
+
+      <div class="dh-alert dh-alert--info" role="note">
+        <mat-icon class="dh-alert__icon">account_balance</mat-icon>
+        <div class="dh-alert__body">
+          <strong class="dh-alert__title">IVA soportado (compras / gastos) no disponible en esta versión</strong>
+          <p>
+            En el 303 intervienen dos lados: el IVA que cobras a clientes (<strong>repercutido</strong>) y el IVA de tus compras (<strong>soportado</strong>). La diferencia orienta lo que suele ingresarse a Hacienda.
+          </p>
+          <p>
+            Aquí solo hay registro de <strong>ventas</strong>, por eso el IVA soportado se muestra como <strong>0&nbsp;€</strong>. El resultado orientativo puede ser <strong>mayor</strong> que el que te corresponda en la práctica.
+          </p>
+          <p class="dh-alert__emphasis">
+            Incluye tus gastos manualmente en tu propia hoja o gestoría hasta que exista un módulo de compras en la app.
+          </p>
+        </div>
+      </div>
+
+      @if (criterio === 'CAJA') {
+        <div class="dh-alert dh-alert--caja" role="note">
+          <mat-icon class="dh-alert__icon">payments</mat-icon>
+          <div class="dh-alert__body">
+            <strong class="dh-alert__title">Criterio de caja y cobros parciales (MVP)</strong>
+            <p>
+              Con <strong>caja</strong>, cada factura pagada se imputa al trimestre de la fecha del <strong>último cobro</strong> registrado (no se prorratea el importe entre trimestres).
+            </p>
+            <p>
+              Ejemplo: cobros parciales en enero y marzo imputan <strong>toda</strong> la factura al trimestre del último pago, no 400&nbsp;€ en un trimestre y 600&nbsp;€ en otro.
+            </p>
+            <p class="dh-alert__emphasis">
+              Para operaciones complejas, confirma el criterio con tu gestor.
+            </p>
+          </div>
+        </div>
+      }
+
+      <mat-accordion class="dh-accordion">
+        <mat-expansion-panel>
+          <mat-expansion-panel-header>
+            <mat-panel-title>Modelo 303 oficial y casillas de la AEAT</mat-panel-title>
+          </mat-expansion-panel-header>
+          <p>
+            El modelo que presentas en la sede electrónica tiene <strong>casillas concretas</strong> (01, 02, 03…) y reglas fiscales definidas por la AEAT. Este pantallazo calcula totales a partir de tus facturas de la app; <strong>no mapea</strong> esos importes a casillas oficiales ni valida combinaciones de operaciones.
+          </p>
+          <p>Úsalo como apoyo; la presentación válida es la que hagas (o tu gestor) en la AEAT.</p>
+        </mat-expansion-panel>
+        <mat-expansion-panel>
+          <mat-expansion-panel-header>
+            <mat-panel-title>IVA repercutido, IVA soportado y “resultado”</mat-panel-title>
+          </mat-expansion-panel-header>
+          <p>
+            El <strong>IVA repercutido</strong> refleja lo asociado a tus ventas registradas aquí. El <strong>IVA soportado</strong> sería el de tus compras y gastos deducibles; al no tener aún un módulo de gastos, lo mostramos en cero.
+          </p>
+          <p>
+            Por eso el <strong>resultado orientativo</strong> (repercutido menos soportado) puede verse “demasiado alto”: falta restar el IVA de tus compras. En una siguiente iteración se podrá registrar compras en la aplicación.
+          </p>
+        </mat-expansion-panel>
+        <mat-expansion-panel>
+          <mat-expansion-panel-header>
+            <mat-panel-title>Criterio de caja: último cobro y límites del MVP</mat-panel-title>
+          </mat-expansion-panel-header>
+          <p>
+            En modo <strong>caja</strong> solo entran facturas marcadas como pagadas y usamos la fecha del <strong>último cobro</strong> por factura. Es una simplificación razonable para un primer alcance.
+          </p>
+          <p>
+            Si una factura tiene varios cobros parciales en distintos meses o trimestres, la imputación “correcta” en algunos casos sería <strong>prorratear por importe</strong>; eso no está implementado. Mientras tanto, toda la factura cuenta en el trimestre del último cobro.
+          </p>
+        </mat-expansion-panel>
+      </mat-accordion>
+
+      <div class="dh-filters">
+        <mat-form-field appearance="outline">
+          <mat-label>Año</mat-label>
+          <mat-select [(ngModel)]="year" name="year">
+            @for (y of years; track y) {
+              <mat-option [value]="y">{{ y }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Trimestre</mat-label>
+          <mat-select [(ngModel)]="trimestre" name="trimestre">
+            @for (t of trimestres; track t) {
+              <mat-option [value]="t">T{{ t }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <div class="dh-criterio">
+          <label class="dh-label">Criterio</label>
+          <mat-radio-group [(ngModel)]="criterio" name="criterio" (change)="onCriterioChange()">
+            <mat-radio-button value="DEVENGO">Devengo (fecha expedición)</mat-radio-button>
+            <mat-radio-button value="CAJA">Caja (último cobro)</mat-radio-button>
+          </mat-radio-group>
+        </div>
+        <mat-checkbox
+          [(ngModel)]="soloPagadas"
+          name="soloPagadas"
+          [disabled]="criterio === 'CAJA'"
+        >
+          Solo facturas pagadas (solo aplica a devengo)
+        </mat-checkbox>
+        <div class="dh-actions">
+          <button mat-raised-button color="primary" type="button" (click)="cargar303()" [disabled]="loading()">
+            @if (loading()) {
+              <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+              Actualizar
+            }
+          </button>
+          <button mat-stroked-button type="button" (click)="exportarPdf()" [disabled]="loading() || !resumen()">
+            <mat-icon>picture_as_pdf</mat-icon>
+            Exportar PDF
+          </button>
+        </div>
+      </div>
+
+      @if (resumen(); as r) {
+        <div class="dh-resumen">
+          <div class="dh-row">
+            <span class="dh-k">Período</span>
+            <span class="dh-v">{{ r.fechaDesde }} — {{ r.fechaHasta }}</span>
+          </div>
+          <div class="dh-row">
+            <span class="dh-k">Facturas</span>
+            <span class="dh-v">{{ r.numeroFacturas }}</span>
+          </div>
+          <div class="dh-row dh-dest">
+            <span class="dh-k">Base imponible</span>
+            <span class="dh-v">{{ r.baseImponibleTotal | number : '1.2-2' }} €</span>
+          </div>
+          <div class="dh-row dh-dest">
+            <span class="dh-k">IVA repercutido</span>
+            <span class="dh-v">{{ r.ivaRepercutido | number : '1.2-2' }} €</span>
+          </div>
+          <div class="dh-row dh-row--muted">
+            <span class="dh-k">IVA soportado <span class="dh-tag">solo ventas en app</span></span>
+            <span class="dh-v">{{ r.ivaSoportado | number : '1.2-2' }} €</span>
+          </div>
+          <p class="dh-inline-hint">
+            Sin compras registradas en la aplicación, este valor permanece en 0&nbsp;€; no sustituye el IVA deducible de tus gastos reales.
+          </p>
+          <div class="dh-row dh-result" [class.dh-result--favor]="!r.resultadoEsIngreso">
+            <span class="dh-k">
+              {{ r.resultadoEsIngreso ? 'Resultado orientativo (ingreso)' : 'Resultado orientativo (compensación / a favor)' }}
+            </span>
+            <span class="dh-v">{{ r.resultadoIva | number : '1.2-2' }} €</span>
+          </div>
+          <p class="dh-result-footnote">
+            Con IVA soportado en 0&nbsp;€, este importe no representa la cuota a ingresar o compensar en el modelo oficial hasta que incorpores tus compras.
+          </p>
+          <p class="dh-nota">{{ r.ivaSoportadoNota }}</p>
+          @for (a of r.advertencias; track a) {
+            <p class="dh-adv">• {{ a }}</p>
+          }
+          <p class="dh-legal">{{ r.avisoLegal }}</p>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="dh-card dh-card--347">
+    <mat-card-header>
+      <mat-card-title>Modelo 347 (orientativo)</mat-card-title>
+      <mat-card-subtitle>
+        Clientes con NIF y base anual &gt; {{ modelo347()?.umbralEuros ?? '3005.06' }} € (criterio devengo, año del selector del 303). No sustituye el 347 oficial ni sus casillas.
+      </mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <button mat-stroked-button type="button" (click)="cargar347()" [disabled]="loading347()" class="dh-btn-347">
+        @if (loading347()) {
+          <mat-spinner diameter="20"></mat-spinner>
+        } @else {
+          Actualizar listado 347
+        }
+      </button>
+
+      @if (modelo347(); as m347) {
+        <p class="dh-347-count">Clientes por encima del umbral: <strong>{{ m347.totalClientesUmbral }}</strong></p>
+        <p class="dh-legal">{{ m347.avisoLegal }}</p>
+        @if (m347.clientes.length > 0) {
+          <table mat-table [dataSource]="m347.clientes" class="dh-table">
+            <ng-container matColumnDef="nombre">
+              <th mat-header-cell *matHeaderCellDef>Cliente</th>
+              <td mat-cell *matCellDef="let row">{{ row.nombre }}</td>
+            </ng-container>
+            <ng-container matColumnDef="dni">
+              <th mat-header-cell *matHeaderCellDef>NIF/CIF</th>
+              <td mat-cell *matCellDef="let row">{{ row.dni }}</td>
+            </ng-container>
+            <ng-container matColumnDef="base">
+              <th mat-header-cell *matHeaderCellDef>Base anual (€)</th>
+              <td mat-cell *matCellDef="let row">{{ row.baseImponibleAnual | number : '1.2-2' }}</td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="displayedColumns347"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns347"></tr>
+          </table>
+        } @else {
+          <p class="dh-empty">No hay clientes que superen el umbral con los datos actuales.</p>
+        }
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

@@ -1,6 +1,10 @@
 package com.appgestion.api.domain.entity;
 
+import com.appgestion.api.domain.enums.EmailProviderMode;
+import com.appgestion.api.domain.enums.OAuthOnFailureMode;
 import jakarta.persistence.*;
+
+import java.time.Instant;
 
 @Entity
 @Table(name = "empresas")
@@ -55,6 +59,32 @@ public class Empresa {
 
     @Column(name = "mail_password", length = 255)
     private String mailPassword;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "email_provider", nullable = false, length = 32)
+    private EmailProviderMode emailProvider = EmailProviderMode.system;
+
+    @Column(name = "oauth_provider", length = 32)
+    private String oauthProvider;
+
+    @Column(name = "oauth_access_token_enc", columnDefinition = "TEXT")
+    private String oauthAccessTokenEnc;
+
+    @Column(name = "oauth_refresh_token_enc", columnDefinition = "TEXT")
+    private String oauthRefreshTokenEnc;
+
+    @Column(name = "oauth_token_expires_at")
+    private Instant oauthTokenExpiresAt;
+
+    @Column(name = "oauth_connected_at")
+    private Instant oauthConnectedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "oauth_on_failure", nullable = false, length = 16)
+    private OAuthOnFailureMode oauthOnFailure = OAuthOnFailureMode.system;
+
+    @Column(name = "system_from_override", length = 255)
+    private String systemFromOverride;
 
     /**
      * Imagen de firma para PDFs (PNG/JPEG).
@@ -152,6 +182,34 @@ public class Empresa {
 
     public String getMailPassword() { return mailPassword; }
     public void setMailPassword(String mailPassword) { this.mailPassword = mailPassword; }
+
+    public EmailProviderMode getEmailProvider() { return emailProvider; }
+    public void setEmailProvider(EmailProviderMode emailProvider) {
+        this.emailProvider = emailProvider != null ? emailProvider : EmailProviderMode.system;
+    }
+
+    public String getOauthProvider() { return oauthProvider; }
+    public void setOauthProvider(String oauthProvider) { this.oauthProvider = oauthProvider; }
+
+    public String getOauthAccessTokenEnc() { return oauthAccessTokenEnc; }
+    public void setOauthAccessTokenEnc(String oauthAccessTokenEnc) { this.oauthAccessTokenEnc = oauthAccessTokenEnc; }
+
+    public String getOauthRefreshTokenEnc() { return oauthRefreshTokenEnc; }
+    public void setOauthRefreshTokenEnc(String oauthRefreshTokenEnc) { this.oauthRefreshTokenEnc = oauthRefreshTokenEnc; }
+
+    public Instant getOauthTokenExpiresAt() { return oauthTokenExpiresAt; }
+    public void setOauthTokenExpiresAt(Instant oauthTokenExpiresAt) { this.oauthTokenExpiresAt = oauthTokenExpiresAt; }
+
+    public Instant getOauthConnectedAt() { return oauthConnectedAt; }
+    public void setOauthConnectedAt(Instant oauthConnectedAt) { this.oauthConnectedAt = oauthConnectedAt; }
+
+    public OAuthOnFailureMode getOauthOnFailure() { return oauthOnFailure; }
+    public void setOauthOnFailure(OAuthOnFailureMode oauthOnFailure) {
+        this.oauthOnFailure = oauthOnFailure != null ? oauthOnFailure : OAuthOnFailureMode.system;
+    }
+
+    public String getSystemFromOverride() { return systemFromOverride; }
+    public void setSystemFromOverride(String systemFromOverride) { this.systemFromOverride = systemFromOverride; }
 
     public byte[] getFirmaImagen() { return firmaImagen; }
     public void setFirmaImagen(byte[] firmaImagen) { this.firmaImagen = firmaImagen; }

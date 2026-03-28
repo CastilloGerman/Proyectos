@@ -53,7 +53,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        var appEndpoints = new String[]{"/presupuestos/**", "/facturas/**", "/clientes/**", "/materiales/**", "/subscription/**", "/config/**", "/dev/**"};
+        var appEndpoints = new String[]{"/presupuestos/**", "/facturas/**", "/fiscal/**", "/clientes/**", "/materiales/**", "/subscription/**", "/config/**", "/dev/**"};
 
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
@@ -66,6 +66,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/auth/register", "/auth/login", "/auth/google", "/auth/forgot-password", "/auth/reset-password",
                                 "/auth/invite/**").permitAll()
+                        .requestMatchers("/auth/email/oauth/*/callback").permitAll()
                         .requestMatchers("/webhook/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/auth/me", "/auth/profile", "/auth/account-settings", "/auth/preferences", "/auth/change-password", "/auth/totp/**", "/auth/support/**", "/auth/notifications/**", "/auth/sessions", "/auth/sessions/**", "/auth/logout", "/auth/audit-access", "/auth/audit-access/**").authenticated()

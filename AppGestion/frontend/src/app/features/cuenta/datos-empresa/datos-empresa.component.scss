@@ -57,6 +57,28 @@
   padding-top: 0 !important;
 }
 
+.empresa-fields--email-mode {
+  gap: 16px;
+}
+
+.empresa-radio-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.empresa-oauth-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.empresa-row--wrap {
+  align-items: center;
+}
+
 .empresa-row {
   display: flex;
   flex-wrap: wrap;
@@ -78,6 +100,20 @@
 
 .smtp-port {
   max-width: 160px;
+}
+
+.empresa-hint-warn {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--mat-sys-error, #b3261e) 12%, transparent);
+  color: var(--app-text-primary, #0f172a);
+  font-size: 14px;
+  line-height: 1.45;
+  code {
+    font-size: 0.85em;
+    word-break: break-all;
+  }
 }
 
 .empresa-hint-muted {

@@ -91,6 +91,25 @@ app:
       enabled: ${SESSIONS_CLEANUP_ENABLED:true}
       # Borra registros cuyo expiresAt es anterior a (ahora - N días). Mínimo efectivo: 1.
       retention-days: ${SESSIONS_CLEANUP_RETENTION_DAYS:30}
+  # Email: outbox en BD + worker; modo system = Resend. En producción configura SPF/DKIM/DMARC del dominio de envío según el proveedor.
+  email:
+    # Clave para cifrar tokens OAuth (obligatoria si usas Gmail/Outlook; en local el perfil define un valor por defecto)
+    token-encryption-key: ${APP_EMAIL_TOKEN_SECRET:}
+    worker-delay-ms: 3000
+    oauth-pending-cleanup-ms: 600000
+    system-from: ${APP_EMAIL_SYSTEM_FROM:Noemi <onboarding@resend.dev>}
+    resend:
+      api-key: ${RESEND_API_KEY:}
+      webhook-secret: ${RESEND_WEBHOOK_SECRET:}
+    google:
+      client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
+      client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}
+      redirect-uri: ${GOOGLE_OAUTH_REDIRECT_URI:http://localhost:8081/auth/email/oauth/google/callback}
+    microsoft:
+      client-id: ${MICROSOFT_OAUTH_CLIENT_ID:}
+      client-secret: ${MICROSOFT_OAUTH_CLIENT_SECRET:}
+      redirect-uri: ${MICROSOFT_OAUTH_REDIRECT_URI:http://localhost:8081/auth/email/oauth/microsoft/callback}
+      tenant: ${MICROSOFT_OAUTH_TENANT:common}
   audit:
     access:
       # Último octeto IPv4 a 0 (o equivalente IPv6); recomendado en UE.
@@ -121,6 +140,8 @@ app:
     allowed-origin-patterns: "http://*:4200,http://127.0.0.1:4200"
   jwt:
     secret: ${JWT_SECRET:local-dev-only-minimum-thirty-two-characters-long-for-hs256}
+  email:
+    token-encryption-key: ${APP_EMAIL_TOKEN_SECRET:local-dev-email-token-key-min-32-chars-for-aes-256}
   security:
     auth-rate-limit:
       enabled: true

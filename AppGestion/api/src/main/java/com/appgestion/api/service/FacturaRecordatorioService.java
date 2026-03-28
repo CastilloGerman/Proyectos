@@ -1,7 +1,9 @@
 package com.appgestion.api.service;
 
 import com.appgestion.api.domain.entity.Factura;
+import com.appgestion.api.repository.EmpresaRepository;
 import com.appgestion.api.repository.FacturaRepository;
+import com.appgestion.api.util.EmailCopy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,15 +22,18 @@ public class FacturaRecordatorioService {
     private static final int DIAS_AVISO_PREVIO = 3;
 
     private final FacturaRepository facturaRepository;
+    private final EmpresaRepository empresaRepository;
     private final EmailService emailService;
     /** Base URL del front (sin barra final); para icono WhatsApp en HTML del correo. */
     private final String frontendBaseUrl;
 
     public FacturaRecordatorioService(
             FacturaRepository facturaRepository,
+            EmpresaRepository empresaRepository,
             EmailService emailService,
             @Value("${app.frontend-url:http://localhost:4200}") String frontendUrl) {
         this.facturaRepository = facturaRepository;
+        this.empresaRepository = empresaRepository;
         this.emailService = emailService;
         String base = frontendUrl == null ? "" : frontendUrl.trim();
         this.frontendBaseUrl = base.endsWith("/") ? base.substring(0, base.length() - 1) : base;
@@ -65,6 +70,8 @@ public class FacturaRecordatorioService {
         String numero = factura.getNumeroFactura();
         String importe = String.format("%.2f €", factura.getTotal());
         String fechaVenc = venc != null ? venc.format(DATE_FMT) : "—";
+        Long uid = factura.getUsuario().getId();
+        String nombreEmpresa = empresaRepository.findByUsuarioId(uid).map(e -> e.getNombre()).orElse(null);
 
         String asunto = vencida
                 ? "⚠ Factura vencida sin cobrar: " + numero + " · " + clienteNombre
@@ -74,15 +81,16 @@ public class FacturaRecordatorioService {
                 ? "<span style='color:#c62828'>VENCIDA el " + fechaVenc + "</span>"
                 : "<span style='color:#e65100'>Vence el " + fechaVenc + "</span>";
 
-        String cuerpo = "<p>Hola,</p>" +
+        String nombreUsuario = factura.getUsuario().getNombre();
+        String cuerpo = EmailCopy.prefijoDestinatarioEmpresa(nombreUsuario, nombreEmpresa) +
                 "<p>Te recordamos que tienes una factura pendiente de cobro:</p>" +
                 "<table style='border-collapse:collapse;margin:16px 0'>" +
-                "<tr><td style='padding:6px 16px 6px 0;color:#666'>Nº Factura</td><td><strong>" + numero + "</strong></td></tr>" +
-                "<tr><td style='padding:6px 16px 6px 0;color:#666'>Cliente</td><td><strong>" + clienteNombre + "</strong></td></tr>" +
-                "<tr><td style='padding:6px 16px 6px 0;color:#666'>Importe</td><td><strong>" + importe + "</strong></td></tr>" +
+                "<tr><td style='padding:6px 16px 6px 0;color:#666'>Nº Factura</td><td><strong>" + EmailCopy.htmlEscape(numero) + "</strong></td></tr>" +
+                "<tr><td style='padding:6px 16px 6px 0;color:#666'>Cliente</td><td><strong>" + EmailCopy.htmlEscape(clienteNombre) + "</strong></td></tr>" +
+                "<tr><td style='padding:6px 16px 6px 0;color:#666'>Importe</td><td><strong>" + EmailCopy.htmlEscape(importe) + "</strong></td></tr>" +
                 "<tr><td style='padding:6px 16px 6px 0;color:#666'>Vencimiento</td><td>" + estado + "</td></tr>" +
                 "</table>" +
-                "<p>Accede a Noemí para actualizar el estado de cobro.</p>";
+                "<p>Accede a " + EmailCopy.htmlEscape(EmailCopy.PRODUCT_NAME) + " para actualizar el estado de cobro.</p>";
 
         String wa = WhatsAppLinkService.enlaceRecordatorioFactura(factura);
         if (wa != null) {
@@ -106,6 +114,6 @@ public class FacturaRecordatorioService {
 
         cuerpo += "<p style='color:#999;font-size:12px'>Este mensaje ha sido generado automáticamente.</p>";
 
-        emailService.enviarPdf(factura.getUsuario().getId(), emailUsuario, asunto, cuerpo, null, null);
+        emailService.enviarPdf(uid, emailUsuario, asunto, cuerpo, null, null);
     }
 }

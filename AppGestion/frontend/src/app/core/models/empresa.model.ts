@@ -33,4 +33,12 @@ export interface Empresa {
   recordatorioClienteActivo?: boolean;
   /** Días tras el vencimiento (solo 7, 15, 30). */
   recordatorioClienteDias?: number[];
+  /** system | gmail | outlook | smtp_legacy */
+  emailProvider?: string;
+  oauthProvider?: string | null;
+  oauthConnected?: boolean;
+  oauthConnectedAt?: string | null;
+  /** system | fail — si OAuth falla */
+  oauthOnFailure?: string;
+  systemFromOverride?: string | null;
 }

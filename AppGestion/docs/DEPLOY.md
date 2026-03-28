@@ -45,13 +45,26 @@ Si el repositorio es público o se comparte, asume que cualquier secreto en Git 
 - **`CORS_ALLOWED_ORIGINS`**: dominios del frontend, **separados por coma** (ej. `https://app.tudominio.com`).
 - Con credenciales en CORS no puede usarse `*`; debe ser una lista explícita.
 
-### Correo (opcional pero necesario si envías PDFs o recuperación de contraseña)
+### Correo (envío transaccional y cola)
 
-- `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`
+La API encola el correo en base de datos y un worker envía según la configuración de cada organización. En **modo por defecto (system)** se usa el proveedor **Resend** vía HTTP.
+
+- **`RESEND_API_KEY`** — obligatoria en producción si quieres que salgan correos (facturas, PDFs, recuperación de contraseña, soporte, etc.). Define el valor **solo** en el servidor, CI o gestor de secretos; **nunca** en Git.  
+  - Equivalente en YAML: `app.email.resend.api-key` (solo si inyectas configuración por archivo en el servidor, no en el repo).
+- **`APP_EMAIL_SYSTEM_FROM`** (opcional) — remitente por defecto del modo system, en formato `Nombre <correo@dominio-verificado>`. Debe coincidir con un dominio **verificado** en Resend.  
+  - Equivalente: `app.email.system-from`.
+- **`APP_EMAIL_TOKEN_SECRET`** — obligatoria si las organizaciones **conectan Gmail u Outlook (OAuth)**; cifra tokens en reposo. Cadena larga y aleatoria (≥ 32 caracteres recomendado).  
+  - Equivalente: `app.email.token-encryption-key`.
+- **OAuth (solo si usas “Conectar Gmail / Microsoft” en datos de empresa):** `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI`, y/o análogas de Microsoft (`MICROSOFT_OAUTH_*`), alineadas con las URLs públicas de tu API. Guía paso a paso en [EMAIL-OAUTH-SETUP.md](EMAIL-OAUTH-SETUP.md).
+- **Webhook Resend (opcional, deliverability):** `RESEND_WEBHOOK_SECRET` si validas firmas en el backend; el endpoint `POST /webhook/resend` persiste eventos para análisis.
+
+**DNS (operación):** en el dominio de envío configura **SPF**, **DKIM** y **DMARC** según la documentación de Resend; no son variables de la app pero son necesarios para buena entregabilidad.
+
+**SMTP clásico (`MAIL_*`)** solo aplica si en alguna organización sigues usando el modo **SMTP manual** heredado; el flujo por defecto no depende de `spring.mail` para el envío de negocio.
 
 ### Otros
 
-- `FRONTEND_URL` — base del SPA para enlaces en emails (reset password, etc.)
+- `FRONTEND_URL` — base del SPA para enlaces en emails (reset password, etc.) y redirecciones tras OAuth de correo
 
 ### Sesiones por dispositivo (tabla `usuario_sesion`)
 
@@ -149,7 +162,10 @@ Revisión orientativa antes del go-live (complementa §1–2). No sustituye un p
 - [ ] Actuator: endpoints expuestos revisados en el entorno real; estrategia de health/liveness definida si hay balanceador u orquestador
 - [ ] BD migrada con Flyway y backup realizado (incluye tabla `usuario_sesion` si tu versión la incorpora)
 - [ ] (Opcional) `SESSIONS_CLEANUP_ENABLED` / `SESSIONS_CLEANUP_RETENTION_DAYS` revisados
-- [ ] SMTP configurado si usas envío de correo
+- [ ] **Resend:** `RESEND_API_KEY` en secretos del entorno; remitente `APP_EMAIL_SYSTEM_FROM` alineado con dominio verificado en Resend
+- [ ] (Si OAuth de correo) `APP_EMAIL_TOKEN_SECRET` y credenciales OAuth de Google/Microsoft con redirect URIs a `https://tu-api/.../auth/email/oauth/.../callback`
+- [ ] (Opcional) DNS del dominio de envío: SPF / DKIM / DMARC (Resend)
+- [ ] (Solo si alguna org sigue en SMTP legacy) `MAIL_*` o credenciales SMTP en servidor
 - [ ] Frontend build apuntando a la URL de la API de producción
 - [ ] Ningún perfil `local` ni endpoints de desarrollo expuestos en el servidor
 - [ ] (Opcional) Nivel de log en prod sin `DEBUG` en paquetes que impriman datos sensibles

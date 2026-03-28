@@ -102,6 +102,8 @@ public class SubscriptionCheckFilter extends OncePerRequestFilter {
                 || path.contains("/auth/support")
                 || path.contains("/auth/notifications")
                 // Datos de empresa en PDFs: permitir guardar aunque la suscripción esté en solo lectura.
-                || path.contains("/config/empresa");
+                || path.contains("/config/empresa")
+                // Conectar / desconectar OAuth de correo (afecta envío, no facturación directa).
+                || path.contains("/auth/email/oauth");
     }
 }

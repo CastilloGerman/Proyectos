@@ -1,5 +1,6 @@
 import { AfterViewInit, Component, OnInit, ViewChild, ElementRef, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { AboutComponent } from '../about/about.component';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -22,8 +23,10 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
         MatButtonModule,
         MatProgressSpinnerModule,
         MatSnackBarModule,
+        AboutComponent,
     ],
     template: `
+    <div class="login-page" id="login-page-top">
     <div class="login-wrapper">
       <div class="login-container">
         <div class="login-card">
@@ -34,9 +37,10 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
           <p class="login-subtitle">Gestiona clientes, presupuestos y facturas en un solo lugar.</p>
           <h1 class="login-title">Iniciar sesión</h1>
           <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form">
-            <mat-form-field appearance="outline" class="full-width">
+            <mat-form-field appearance="outline" floatLabel="always" class="full-width">
               <mat-label>Email</mat-label>
-              <input matInput formControlName="email" type="email" placeholder="tu@email.com">
+              <input matInput formControlName="email" type="email" autocomplete="email">
+              <mat-hint class="login-email-hint">ej. nombre&#64;correo.com</mat-hint>
               @if (form.get('email')?.hasError('required') && form.get('email')?.touched) {
                 <mat-error>El email es obligatorio</mat-error>
               }
@@ -44,15 +48,15 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
                 <mat-error>Email inválido</mat-error>
               }
             </mat-form-field>
-            <mat-form-field appearance="outline" class="full-width">
+            <mat-form-field appearance="outline" floatLabel="always" class="full-width">
               <mat-label>Contraseña</mat-label>
-              <input matInput formControlName="password" type="password">
+              <input matInput formControlName="password" type="password" autocomplete="current-password">
               @if (form.get('password')?.hasError('required') && form.get('password')?.touched) {
                 <mat-error>La contraseña es obligatoria</mat-error>
               }
             </mat-form-field>
             @if (totpStep()) {
-              <mat-form-field appearance="outline" class="full-width">
+              <mat-form-field appearance="outline" floatLabel="always" class="full-width">
                 <mat-label>Código de verificación (2FA)</mat-label>
                 <input
                   matInput
@@ -60,8 +64,8 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
                   inputmode="numeric"
                   maxlength="6"
                   autocomplete="one-time-code"
-                  placeholder="000000"
                 />
+                <mat-hint>6 dígitos</mat-hint>
                 @if (form.get('totpCode')?.hasError('required') && form.get('totpCode')?.touched) {
                   <mat-error>Introduce el código de 6 dígitos de tu app</mat-error>
                 }
@@ -94,7 +98,7 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
           @if (googleTotpStep()) {
             <div class="google-totp-box">
               <p class="login-totp-hint">Tu cuenta tiene 2FA activo. Introduce el código de tu app.</p>
-              <mat-form-field appearance="outline" class="full-width">
+              <mat-form-field appearance="outline" floatLabel="always" class="full-width">
                 <mat-label>Código 2FA</mat-label>
                 <input
                   matInput
@@ -104,6 +108,7 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
                   maxlength="6"
                   autocomplete="one-time-code"
                 />
+                <mat-hint>6 dígitos</mat-hint>
               </mat-form-field>
               <button
                 mat-stroked-button
@@ -120,17 +125,90 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
           <a routerLink="/register" class="register-link">¿No tienes cuenta? Regístrate</a>
         </div>
       </div>
+      <button
+        type="button"
+        class="scroll-down-btn"
+        aria-label="Desplazar a la sección sobre Noemí"
+        (click)="scrollToAbout()"
+      >
+        <span class="scroll-down-btn-label">Nuestra historia</span>
+        <svg class="scroll-down-btn-icon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path fill="currentColor" d="M12 15.5l-6-6 1.4-1.4L12 12.7l4.6-4.6L18 9.5l-6 6z"/>
+        </svg>
+      </button>
+    </div>
+    <div #aboutAnchor class="login-about-anchor">
+      <app-about />
+    </div>
     </div>
   `,
     styles: [`
+    .login-page {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
     .login-wrapper {
       min-height: 100vh;
+      position: relative;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 24px;
+      padding-bottom: 80px;
       background: linear-gradient(160deg, #e8ecf4 0%, #d4dceb 40%, #c9d1e0 100%);
       transition: background 0.4s ease;
+    }
+
+    .login-about-anchor {
+      flex-shrink: 0;
+    }
+
+    @keyframes scrollHint {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(5px); }
+    }
+
+    .scroll-down-btn {
+      position: absolute;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.85);
+      color: #1e3a8a;
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(30, 58, 138, 0.12);
+      animation: scrollHint 2.5s ease-in-out infinite;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .scroll-down-btn:hover {
+      background: #fff;
+      color: #172554;
+      animation-play-state: paused;
+      transform: translateX(-50%);
+    }
+
+    .scroll-down-btn-label {
+      letter-spacing: 0.02em;
+    }
+
+    .scroll-down-btn-icon {
+      display: block;
+      opacity: 0.9;
     }
 
     .login-container {
@@ -293,6 +371,10 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
       min-width: 64px;
     }
 
+    .login-email-hint {
+      font-size: 0.8rem;
+    }
+
     .full-width ::ng-deep .mdc-notched-outline__leading,
     .full-width ::ng-deep .mdc-notched-outline__notch,
     .full-width ::ng-deep .mdc-notched-outline__trailing {
@@ -396,6 +478,7 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
       --mat-form-field-outlined-label-text-color: var(--app-text-secondary);
       --mat-form-field-outlined-label-text-populated-color: var(--app-text-secondary);
       --mat-form-field-error-text-color: #fca5a5;
+      --mat-form-field-hint-text-color: var(--app-text-muted);
     }
 
     :host-context(html.app-dark-theme) .login-title {
@@ -442,10 +525,23 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
     :host-context(html.app-dark-theme) .google-fallback-btn:hover {
       background: rgba(255, 255, 255, 0.1);
     }
+
+    :host-context(html.app-dark-theme) .scroll-down-btn {
+      background: rgba(26, 34, 44, 0.92);
+      color: #c7d2fe;
+      border: 1px solid var(--app-border);
+      box-shadow: var(--app-shadow-md);
+    }
+
+    :host-context(html.app-dark-theme) .scroll-down-btn:hover {
+      background: rgba(36, 46, 60, 0.98);
+      color: #e0e7ff;
+    }
   `]
 })
 export class LoginComponent implements OnInit, AfterViewInit {
   @ViewChild('googleButtonRef') googleButtonRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('aboutAnchor') aboutAnchor!: ElementRef<HTMLElement>;
   form: FormGroup;
   loading = false;
   readonly totpStep = signal(false);
@@ -482,6 +578,10 @@ export class LoginComponent implements OnInit, AfterViewInit {
     if (this.auth.isAuthenticated()) {
       this.router.navigate(['/dashboard']);
     }
+  }
+
+  scrollToAbout(): void {
+    this.aboutAnchor?.nativeElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   ngAfterViewInit(): void {

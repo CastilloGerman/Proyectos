@@ -73,11 +73,11 @@ public class PresupuestoController {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.BAD_REQUEST,
                     e.getMessage());
-        } catch (jakarta.mail.MessagingException | RuntimeException e) {
+        } catch (RuntimeException e) {
             log.warn("Error al enviar email presupuesto {}: {}", id, e.getMessage(), e);
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error al enviar el email: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
+                    "Error al encolar el envío: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
         }
     }
 

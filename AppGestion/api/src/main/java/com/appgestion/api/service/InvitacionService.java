@@ -8,10 +8,11 @@ import com.appgestion.api.dto.request.AcceptInvitacionRequest;
 import com.appgestion.api.dto.request.CreateInvitacionRequest;
 import com.appgestion.api.dto.response.AuthResponse;
 import com.appgestion.api.dto.response.InviteVerifyResponse;
+import com.appgestion.api.repository.EmpresaRepository;
 import com.appgestion.api.repository.InvitacionRepository;
 import com.appgestion.api.repository.UsuarioRepository;
+import com.appgestion.api.util.EmailCopy;
 import com.appgestion.api.security.JwtService;
-import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -41,6 +42,7 @@ public class InvitacionService {
 
     private final InvitacionRepository invitacionRepository;
     private final UsuarioRepository usuarioRepository;
+    private final EmpresaRepository empresaRepository;
     private final JwtService jwtService;
     private final SubscriptionService subscriptionService;
     private final EmailService emailService;
@@ -54,6 +56,7 @@ public class InvitacionService {
 
     public InvitacionService(InvitacionRepository invitacionRepository,
                              UsuarioRepository usuarioRepository,
+                             EmpresaRepository empresaRepository,
                              JwtService jwtService,
                              SubscriptionService subscriptionService,
                              EmailService emailService,
@@ -63,6 +66,7 @@ public class InvitacionService {
                              AuditAccessService auditAccessService) {
         this.invitacionRepository = invitacionRepository;
         this.usuarioRepository = usuarioRepository;
+        this.empresaRepository = empresaRepository;
         this.jwtService = jwtService;
         this.subscriptionService = subscriptionService;
         this.emailService = emailService;
@@ -90,8 +94,10 @@ public class InvitacionService {
         invitacionRepository.save(inv);
 
         String link = frontendUrl + "/invite/" + rawToken;
-        String asunto = "Te han invitado a probar AppGestion";
-        String cuerpo = "<p>Alguien te ha enviado un enlace para crear tu propia cuenta en AppGestion.</p>"
+        String nombreEmpresaInvitador = empresaRepository.findByUsuarioId(inviterUsuarioId).map(e -> e.getNombre()).orElse(null);
+        String asunto = "Te han invitado a probar " + EmailCopy.PRODUCT_NAME;
+        String cuerpo = EmailCopy.prefijoSoloEmpresa(nombreEmpresaInvitador)
+                + "<p>Alguien te ha enviado un enlace para crear tu propia cuenta en " + EmailCopy.htmlEscape(EmailCopy.PRODUCT_NAME) + ".</p>"
                 + "<p>Tendrás un periodo de prueba; después, para seguir creando y editando necesitarás una suscripción activa.</p>"
                 + "<p><a href=\"" + link + "\">Crear mi cuenta</a></p>"
                 + "<p>El enlace caduca en " + INVITE_VALID_DAYS + " días.</p>";
@@ -99,7 +105,7 @@ public class InvitacionService {
         try {
             emailService.enviarPdf(inviterUsuarioId, email, asunto, cuerpo, null, null);
             log.info("Invitación enviada a {}", email);
-        } catch (MessagingException | IllegalArgumentException | IllegalStateException e) {
+        } catch (Exception e) {
             log.warn("Invitación creada pero no se pudo enviar email a {}: {}. Enlace (solo logs): {}", email, e.getMessage(), link);
         }
     }

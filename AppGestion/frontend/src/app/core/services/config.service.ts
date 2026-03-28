@@ -7,6 +7,7 @@ import { environment } from '../../../environments/environment';
 @Injectable({ providedIn: 'root' })
 export class ConfigService {
   private readonly apiUrl = `${environment.apiUrl}/config`;
+  private readonly rootApi = environment.apiUrl;
 
   constructor(private http: HttpClient) {}
 
@@ -40,6 +41,24 @@ export class ConfigService {
    * PDF de vista previa (OpenPDF, misma pipeline que producción).
    * notasPie null = usar textos guardados en servidor.
    */
+  /** URL de autorización OAuth (el cliente debe hacer window.location = url). Requiere JWT. */
+  getGoogleEmailAuthorizeUrl(): Observable<OAuthAuthorizeUrlResponse> {
+    return this.http.get<OAuthAuthorizeUrlResponse>(`${this.rootApi}/auth/email/oauth/google/authorize-url`);
+  }
+
+  getMicrosoftEmailAuthorizeUrl(): Observable<OAuthAuthorizeUrlResponse> {
+    return this.http.get<OAuthAuthorizeUrlResponse>(`${this.rootApi}/auth/email/oauth/microsoft/authorize-url`);
+  }
+
+  disconnectEmailOAuth(): Observable<void> {
+    return this.http.delete<void>(`${this.rootApi}/auth/email/oauth/disconnect`);
+  }
+
+  /** Estado OAuth + si el servidor tiene credenciales de Google/Microsoft. */
+  getEmailOAuthStatus(): Observable<EmailOAuthStatusResponse> {
+    return this.http.get<EmailOAuthStatusResponse>(`${this.rootApi}/auth/email/oauth/status`);
+  }
+
   postPlantillasPdfPreview(body: PlantillasPdfPreviewPayload): Observable<ArrayBuffer> {
     const headers = new HttpHeaders({
       'Content-Type': 'application/json',
@@ -79,6 +98,21 @@ export interface PlantillasPdfPayload {
 export type PlantillasPdfPreviewTipo = 'PRESUPUESTO' | 'FACTURA';
 
 export type PlantillasPdfPreviewEscenario = 'DEFAULT' | 'MIXED_IVA' | 'LONG_LINES' | 'LONG_FOOTER';
+
+export interface OAuthAuthorizeUrlResponse {
+  url: string;
+}
+
+export interface EmailOAuthStatusResponse {
+  emailProvider: string;
+  oauthProvider: string | null;
+  oauthConnected: boolean;
+  oauthConnectedAt: string | null;
+  oauthOnFailure: string;
+  systemFromOverride: string | null;
+  googleOAuthConfigured: boolean;
+  microsoftOAuthConfigured: boolean;
+}
 
 export interface PlantillasPdfPreviewPayload {
   tipo: PlantillasPdfPreviewTipo;

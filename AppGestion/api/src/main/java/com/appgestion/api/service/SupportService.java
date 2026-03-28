@@ -2,11 +2,9 @@ package com.appgestion.api.service;
 
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.support.AdjuntoCorreo;
-import jakarta.mail.MessagingException;
+import com.appgestion.api.repository.EmpresaRepository;
+import com.appgestion.api.util.EmailCopy;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.mail.autoconfigure.MailProperties;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,7 +18,7 @@ import java.util.Set;
 
 /**
  * Envío de solicitudes de soporte al buzón configurado (no expuesto al cliente).
- * Usa {@code spring.mail.*} si hay usuario/contraseña; si no, el SMTP de la empresa del usuario.
+ * Encola el correo; el worker envía según la configuración de la organización (modo system / OAuth / SMTP legacy).
  */
 @Service
 public class SupportService {
@@ -35,20 +33,15 @@ public class SupportService {
     private static final Set<String> EXTENSIONES_ADJUNTO_SOPORTE = Set.of(
             ".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".mov", ".webm", ".pdf");
 
-    private final JavaMailSender javaMailSender;
-    private final MailProperties mailProperties;
     private final EmailService emailService;
+    private final EmpresaRepository empresaRepository;
     private final String supportInbox;
 
-    public SupportService(
-            JavaMailSender javaMailSender,
-            MailProperties mailProperties,
-            EmailService emailService,
-            @Value("${app.support.inbox-email}") String supportInbox
-    ) {
-        this.javaMailSender = javaMailSender;
-        this.mailProperties = mailProperties;
+    public SupportService(EmailService emailService,
+                          EmpresaRepository empresaRepository,
+                          @Value("${app.support.inbox-email}") String supportInbox) {
         this.emailService = emailService;
+        this.empresaRepository = empresaRepository;
         this.supportInbox = supportInbox != null ? supportInbox.trim() : "";
     }
 
@@ -84,55 +77,18 @@ public class SupportService {
             adjuntos.add(new AdjuntoCorreo(safeName, f.getBytes(), ct));
         }
 
-        String subject = "[AppGestion Soporte] " + truncate(asunto.trim(), ASUNTO_MAX);
-        String bodyHtml = buildBodyHtml(usuario, mensaje.trim());
+        String subject = "[" + EmailCopy.PRODUCT_NAME + " Soporte] " + truncate(asunto.trim(), ASUNTO_MAX);
+        String nombreEmpresa = empresaRepository.findByUsuarioId(usuario.getId()).map(e -> e.getNombre()).orElse(null);
+        String bodyHtml = EmailCopy.prefijoDestinatarioEmpresa(usuario.getNombre(), nombreEmpresa)
+                + buildBodyHtml(usuario, mensaje.trim());
 
         try {
-            if (canUseSystemMail()) {
-                enviarConSpringMail(usuario, subject, bodyHtml, adjuntos);
-            } else {
-                emailService.enviarSoporteConAdjuntos(
-                        usuario.getId(), supportInbox, subject, bodyHtml, adjuntos, usuario.getEmail());
-            }
-        } catch (MessagingException e) {
+            emailService.enviarSoporteConAdjuntos(
+                    usuario.getId(), supportInbox, subject, bodyHtml, adjuntos, usuario.getEmail());
+        } catch (Exception e) {
             throw new IllegalStateException(
-                    "No se pudo enviar el correo. Revisa la configuración SMTP o inténtalo más tarde.", e);
+                    "No se pudo enviar el correo. Revisa la configuración de envío o inténtalo más tarde.", e);
         }
-    }
-
-    private boolean canUseSystemMail() {
-        String u = mailProperties.getUsername();
-        String p = mailProperties.getPassword();
-        return StringUtils.hasText(u) && StringUtils.hasText(p);
-    }
-
-    private void enviarConSpringMail(Usuario usuario, String subject, String bodyHtml, List<AdjuntoCorreo> adjuntos)
-            throws MessagingException {
-        var message = javaMailSender.createMimeMessage();
-        var helper = new MimeMessageHelper(message, true, "UTF-8");
-        String from = Objects.requireNonNull(
-                Objects.requireNonNull(mailProperties.getUsername(), "mail username").trim(), "from");
-        String inbox = Objects.requireNonNull(supportInbox, "support inbox");
-        String replyTo = Objects.requireNonNull(
-                Objects.requireNonNull(usuario.getEmail(), "usuario email").trim(), "replyTo");
-        String subj = Objects.requireNonNull(subject, "subject");
-        String body = Objects.requireNonNull(bodyHtml, "body");
-        helper.setFrom(from);
-        helper.setTo(inbox);
-        helper.setReplyTo(replyTo);
-        helper.setSubject(subj);
-        helper.setText(body, true);
-        for (AdjuntoCorreo a : adjuntos) {
-            String fn = Objects.requireNonNull(Objects.requireNonNullElse(a.filename(), "adjunto"), "filename");
-            String ct = Objects.requireNonNull(
-                    Objects.requireNonNullElse(a.contentType(), "application/octet-stream"), "contentType");
-            helper.addAttachment(
-                    fn,
-                    () -> new java.io.ByteArrayInputStream(Objects.requireNonNull(a.data(), "adjunto data")),
-                    ct
-            );
-        }
-        javaMailSender.send(message);
     }
 
     private static void validarTexto(String asunto, String mensaje) {

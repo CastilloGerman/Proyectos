@@ -94,6 +94,10 @@ import { ThemeService } from './core/theme/theme.service';
               <mat-icon matListItemIcon>receipt</mat-icon>
               <span matListItemTitle>Facturas</span>
             </a>
+            <a mat-list-item routerLink="/declaraciones-hacienda" routerLinkActive="active">
+              <mat-icon matListItemIcon>account_balance</mat-icon>
+              <span matListItemTitle>Declaraciones Hacienda</span>
+            </a>
           </mat-nav-list>
         </mat-sidenav>
         <mat-sidenav-content class="saas-main">

@@ -6,8 +6,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Tarea diaria (08:00): recordatorios al autónomo (vencimiento próximo) y, si está activado,
- * recordatorios por email al cliente (7 / 15 / 30 días tras el vencimiento). Requiere SMTP en empresa.
+ * Tarea diaria (08:00): encola recordatorios al autónomo (vencimiento próximo) y, si está activado en empresa,
+ * recordatorios al cliente (7 / 15 / 30 días tras el vencimiento). El envío real lo hace el worker
+ * (modo system / Resend, OAuth o SMTP legacy según {@code empresas.email_provider}).
  */
 @Component
 public class FacturaRecordatorioJob {

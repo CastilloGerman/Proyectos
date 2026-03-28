@@ -14,7 +14,6 @@ import com.appgestion.api.repository.FacturaRepository;
 import com.appgestion.api.repository.MaterialRepository;
 import com.appgestion.api.repository.PresupuestoRepository;
 import com.appgestion.api.util.NifValidator;
-import jakarta.mail.MessagingException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -245,7 +244,7 @@ public class FacturaService {
     }
 
     @Transactional(readOnly = true)
-    public void enviarPorEmail(Long id, Long usuarioId, EnviarEmailRequest request) throws MessagingException {
+    public void enviarPorEmail(Long id, Long usuarioId, EnviarEmailRequest request) {
         facturaEmailService.enviarPorEmail(id, usuarioId, request);
     }
 

@@ -1,5 +1,6 @@
 package com.appgestion.api.dto.response;
 
+import java.time.Instant;
 import java.util.List;
 
 public record EmpresaResponse(
@@ -33,5 +34,11 @@ public record EmpresaResponse(
         String rubroAutonomoCodigo,
         Boolean recordatorioClienteActivo,
         /** Días tras el vencimiento en los que enviar (solo 7, 15 y 30). */
-        List<Integer> recordatorioClienteDias
+        List<Integer> recordatorioClienteDias,
+        String emailProvider,
+        String oauthProvider,
+        Boolean oauthConnected,
+        Instant oauthConnectedAt,
+        String oauthOnFailure,
+        String systemFromOverride
 ) {}
