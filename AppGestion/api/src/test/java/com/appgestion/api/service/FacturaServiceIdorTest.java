@@ -37,6 +37,7 @@ class FacturaServiceIdorTest {
     @Mock FacturaEmailService facturaEmailService;
     @Mock FacturaCobroService facturaCobroService;
     @Mock FacturaPaymentLinkService facturaPaymentLinkService;
+    @Mock ClienteService clienteService;
 
     @InjectMocks FacturaService facturaService;
 

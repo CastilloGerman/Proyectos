@@ -119,8 +119,9 @@
 .about-carousel-viewport {
   overflow: hidden;
   border-radius: 20px;
-  aspect-ratio: 4 / 5;
-  background: #eceae6;
+  /* Relación más ancha que 4/5: las fotos de obra son mayormente horizontales; con cover rellenan sin bandas grises */
+  aspect-ratio: 4 / 3;
+  background: #1a1f26;
 }
 
 .about-carousel-track {
@@ -134,11 +135,11 @@
   display: flex;
   flex-grow: 0;
   flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: stretch;
   min-width: 0;
   height: 100%;
-  padding: clamp(0.35rem, 2vw, 0.65rem);
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -146,9 +147,7 @@
   display: block;
   width: 100%;
   height: 100%;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
 }
 

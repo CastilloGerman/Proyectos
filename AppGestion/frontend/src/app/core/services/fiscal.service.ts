@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { FiscalCriterio, Modelo303Resumen, Modelo347Resumen } from '../models/fiscal.model';
+import { FiscalCriterio, FiscalPlazoActual, Modelo303Resumen, Modelo347Resumen } from '../models/fiscal.model';
 
 @Injectable({ providedIn: 'root' })
 export class FiscalService {
@@ -44,5 +44,9 @@ export class FiscalService {
   getModelo347(year: number): Observable<Modelo347Resumen> {
     const params = new HttpParams().set('year', String(year));
     return this.http.get<Modelo347Resumen>(`${this.base}/modelo347`, { params });
+  }
+
+  getPlazoActual(): Observable<FiscalPlazoActual> {
+    return this.http.get<FiscalPlazoActual>(`${this.base}/plazo-actual`);
   }
 }

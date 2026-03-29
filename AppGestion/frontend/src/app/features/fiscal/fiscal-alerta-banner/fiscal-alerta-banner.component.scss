@@ -1,0 +1,130 @@
+.fab {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px;
+  margin-bottom: var(--app-space-md, 16px);
+  border-radius: var(--app-radius-md, 12px);
+  border: 1px solid transparent;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.fab__icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  font-size: 22px;
+  margin-top: 2px;
+}
+
+.fab__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.fab__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--app-text-primary, #0f172a);
+}
+
+.fab__title--urgent {
+  font-weight: 700;
+}
+
+.fab__warn {
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+  color: #b45309;
+}
+
+.fab__sub {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--app-text-secondary, #64748b);
+}
+
+.fab__adv {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #7f1d1d;
+  line-height: 1.4;
+}
+
+.fab__muted {
+  color: var(--app-text-secondary, #64748b);
+  font-size: 0.88rem;
+}
+
+.fab--verde {
+  background: rgba(22, 163, 74, 0.1);
+  border-color: rgba(22, 163, 74, 0.28);
+}
+
+.fab--verde .fab__icon {
+  color: #15803d;
+}
+
+.fab--amarillo {
+  background: rgba(234, 179, 8, 0.12);
+  border-color: rgba(202, 138, 4, 0.35);
+}
+
+.fab--amarillo .fab__icon {
+  color: #b45309;
+}
+
+.fab--rojo {
+  background: rgba(220, 38, 38, 0.1);
+  border-color: rgba(220, 38, 38, 0.28);
+}
+
+.fab--rojo .fab__icon {
+  color: #b91c1c;
+}
+
+.fab--loading,
+.fab--error {
+  background: rgba(15, 23, 42, 0.04);
+  border-color: var(--app-border, rgba(15, 23, 42, 0.1));
+}
+
+.fab--error .fab__icon {
+  color: #b91c1c;
+}
+
+:host-context(html.app-dark-theme) .fab__title {
+  color: var(--app-text-primary, #f8fafc);
+}
+
+:host-context(html.app-dark-theme) .fab__sub,
+:host-context(html.app-dark-theme) .fab__muted {
+  color: var(--app-text-secondary, #cbd5e1);
+}
+
+:host-context(html.app-dark-theme) .fab--verde {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+:host-context(html.app-dark-theme) .fab--amarillo {
+  background: rgba(250, 204, 21, 0.1);
+  border-color: rgba(250, 204, 21, 0.35);
+}
+
+:host-context(html.app-dark-theme) .fab--rojo {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+:host-context(html.app-dark-theme) .fab__adv {
+  color: #fecaca;
+}

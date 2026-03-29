@@ -1,7 +1,12 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Cliente, ClienteRequest } from '../models/cliente.model';
+import {
+  Cliente,
+  ClienteCompletoRequest,
+  ClienteProvisionalRequest,
+  ClienteRequest,
+} from '../models/cliente.model';
 import { ClientePanel } from '../models/cliente-panel.model';
 import { environment } from '../../../environments/environment';
 
@@ -11,9 +16,20 @@ export class ClienteService {
 
   constructor(private http: HttpClient) {}
 
-  getAll(q?: string): Observable<Cliente[]> {
-    const params = q ? { params: { q } } : {};
-    return this.http.get<Cliente[]>(this.apiUrl, params);
+  getAll(q?: string, estado?: string): Observable<Cliente[]> {
+    let params = new HttpParams();
+    if (q) params = params.set('q', q);
+    if (estado) params = params.set('estado', estado);
+    const opts = params.keys().length ? { params } : {};
+    return this.http.get<Cliente[]>(this.apiUrl, opts);
+  }
+
+  createProvisional(body: ClienteProvisionalRequest): Observable<Cliente> {
+    return this.http.post<Cliente>(`${this.apiUrl}/provisional`, body);
+  }
+
+  completar(id: number, body: ClienteCompletoRequest): Observable<Cliente> {
+    return this.http.put<Cliente>(`${this.apiUrl}/${id}/completar`, body);
   }
 
   getById(id: number): Observable<Cliente> {

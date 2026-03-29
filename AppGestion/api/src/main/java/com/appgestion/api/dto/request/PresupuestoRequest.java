@@ -19,8 +19,9 @@ public record PresupuestoRequest(
         Double descuentoGlobalPorcentaje,
         Double descuentoGlobalFijo,
         Boolean descuentoAntesIva,
-        /** Texto con variables inteligentes para el PDF (opcional). */
-        String textoClausulas,
+        /** Claves del catálogo (servidor); vacío o null en creación usa predeterminadas del perfil si existen. */
+        List<String> condicionesActivas,
+        String notaAdicional,
         Double senalImporte,
         Boolean senalPagada
 ) {

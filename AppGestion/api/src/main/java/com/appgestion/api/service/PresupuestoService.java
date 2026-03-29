@@ -12,6 +12,7 @@ import com.appgestion.api.repository.EmpresaRepository;
 import com.appgestion.api.repository.FacturaRepository;
 import com.appgestion.api.repository.MaterialRepository;
 import com.appgestion.api.repository.PresupuestoRepository;
+import com.appgestion.api.repository.UsuarioRepository;
 import com.appgestion.api.util.EmailCopy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,8 @@ public class PresupuestoService {
     private final FacturaRepository facturaRepository;
     private final PresupuestoPdfService presupuestoPdfService;
     private final EmailService emailService;
+    private final PresupuestoCondicionesService presupuestoCondicionesService;
+    private final UsuarioRepository usuarioRepository;
 
     public PresupuestoService(PresupuestoRepository presupuestoRepository,
                               ClienteRepository clienteRepository,
@@ -39,7 +42,9 @@ public class PresupuestoService {
                               MaterialRepository materialRepository,
                               FacturaRepository facturaRepository,
                               PresupuestoPdfService presupuestoPdfService,
-                              EmailService emailService) {
+                              EmailService emailService,
+                              PresupuestoCondicionesService presupuestoCondicionesService,
+                              UsuarioRepository usuarioRepository) {
         this.presupuestoRepository = presupuestoRepository;
         this.clienteRepository = clienteRepository;
         this.empresaRepository = empresaRepository;
@@ -47,6 +52,22 @@ public class PresupuestoService {
         this.facturaRepository = facturaRepository;
         this.presupuestoPdfService = presupuestoPdfService;
         this.emailService = emailService;
+        this.presupuestoCondicionesService = presupuestoCondicionesService;
+        this.usuarioRepository = usuarioRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> obtenerMisCondicionesPredeterminadas(Long usuarioId) {
+        Usuario u = usuarioRepository.findById(usuarioId).orElseThrow();
+        return presupuestoCondicionesService.desdeJson(u.getCondicionesPresupuestoPredeterminadas());
+    }
+
+    @Transactional
+    public void guardarMisCondicionesPredeterminadas(Long usuarioId, List<String> claves) {
+        Usuario u = usuarioRepository.findById(usuarioId).orElseThrow();
+        u.setCondicionesPresupuestoPredeterminadas(presupuestoCondicionesService.aJson(
+                presupuestoCondicionesService.normalizarClaves(claves != null ? claves : List.of())));
+        usuarioRepository.save(u);
     }
 
     @Transactional(readOnly = true)
@@ -61,6 +82,33 @@ public class PresupuestoService {
             );
         }
         return stream.toList();
+    }
+
+    /**
+     * Creación: {@code condicionesActivas == null} en JSON → se aplican predeterminadas del perfil;
+     * lista vacía o con ítems → se respeta tal cual (sin mezclar con perfil).
+     */
+    private void aplicarCondicionesYNotaCrear(Presupuesto presupuesto, PresupuestoRequest request, Long usuarioId) {
+        List<String> claves;
+        if (request.condicionesActivas() == null) {
+            Usuario u = usuarioRepository.findById(usuarioId).orElse(null);
+            claves = u != null
+                    ? presupuestoCondicionesService.desdeJson(u.getCondicionesPresupuestoPredeterminadas())
+                    : List.of();
+        } else {
+            claves = presupuestoCondicionesService.normalizarClaves(request.condicionesActivas());
+        }
+        presupuesto.setCondicionesActivasJson(presupuestoCondicionesService.aJson(claves));
+        String nota = request.notaAdicional();
+        presupuesto.setNotaAdicional(nota != null && !nota.isBlank() ? nota.strip() : null);
+    }
+
+    private void aplicarCondicionesYNotaActualizar(Presupuesto presupuesto, PresupuestoRequest request) {
+        List<String> claves = presupuestoCondicionesService.normalizarClaves(
+                request.condicionesActivas() != null ? request.condicionesActivas() : List.of());
+        presupuesto.setCondicionesActivasJson(presupuestoCondicionesService.aJson(claves));
+        String nota = request.notaAdicional();
+        presupuesto.setNotaAdicional(nota != null && !nota.isBlank() ? nota.strip() : null);
     }
 
     @Transactional(readOnly = true)
@@ -83,7 +131,7 @@ public class PresupuestoService {
         presupuesto.setDescuentoGlobalPorcentaje(request.descuentoGlobalPorcentaje());
         presupuesto.setDescuentoGlobalFijo(request.descuentoGlobalFijo());
         presupuesto.setDescuentoAntesIva(request.descuentoAntesIva());
-        presupuesto.setTextoClausulas(request.textoClausulas());
+        aplicarCondicionesYNotaCrear(presupuesto, request, usuario.getId());
         presupuesto.setSenalImporte(request.senalImporte());
         presupuesto.setSenalPagada(request.senalPagada());
 
@@ -107,7 +155,7 @@ public class PresupuestoService {
         presupuesto.setDescuentoGlobalPorcentaje(request.descuentoGlobalPorcentaje());
         presupuesto.setDescuentoGlobalFijo(request.descuentoGlobalFijo());
         presupuesto.setDescuentoAntesIva(request.descuentoAntesIva());
-        presupuesto.setTextoClausulas(request.textoClausulas());
+        aplicarCondicionesYNotaActualizar(presupuesto, request);
         presupuesto.setSenalImporte(request.senalImporte());
         presupuesto.setSenalPagada(request.senalPagada());
 
@@ -237,11 +285,16 @@ public class PresupuestoService {
                 .map(f -> f.getId())
                 .orElse(null);
 
+        var cli = presupuesto.getCliente();
+        String estadoCliente = cli != null && cli.getEstadoCliente() != null
+                ? cli.getEstadoCliente().name()
+                : null;
         return new PresupuestoResponse(
                 presupuesto.getId(),
-                Objects.requireNonNull(Objects.requireNonNull(presupuesto.getCliente()).getId()),
-                presupuesto.getCliente().getNombre(),
-                presupuesto.getCliente().getEmail(),
+                Objects.requireNonNull(Objects.requireNonNull(cli).getId()),
+                cli.getNombre(),
+                estadoCliente,
+                cli.getEmail(),
                 presupuesto.getFechaCreacion(),
                 presupuesto.getSubtotal(),
                 presupuesto.getIva(),
@@ -252,7 +305,8 @@ public class PresupuestoService {
                 Optional.ofNullable(presupuesto.getDescuentoGlobalFijo()).orElse(0.0),
                 Optional.ofNullable(presupuesto.getDescuentoAntesIva()).orElse(true),
                 items,
-                presupuesto.getTextoClausulas(),
+                presupuestoCondicionesService.desdeJson(presupuesto.getCondicionesActivasJson()),
+                presupuesto.getNotaAdicional(),
                 presupuesto.getSenalImporte(),
                 Optional.ofNullable(presupuesto.getSenalPagada()).orElse(false),
                 facturaId

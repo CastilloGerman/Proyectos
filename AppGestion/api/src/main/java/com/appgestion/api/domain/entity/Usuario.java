@@ -122,6 +122,10 @@ public class Usuario {
     @Column(name = "totp_pending_expires_at")
     private LocalDateTime totpPendingExpiresAt;
 
+    /** JSON array de claves de condiciones marcadas por defecto en presupuestos nuevos. */
+    @Column(name = "condiciones_presupuesto_predeterminadas", columnDefinition = "TEXT")
+    private String condicionesPresupuestoPredeterminadas;
+
     @PrePersist
     protected void onCreate() {
         fechaCreacion = LocalDateTime.now();
@@ -223,4 +227,9 @@ public class Usuario {
 
     public LocalDateTime getTotpPendingExpiresAt() { return totpPendingExpiresAt; }
     public void setTotpPendingExpiresAt(LocalDateTime totpPendingExpiresAt) { this.totpPendingExpiresAt = totpPendingExpiresAt; }
+
+    public String getCondicionesPresupuestoPredeterminadas() { return condicionesPresupuestoPredeterminadas; }
+    public void setCondicionesPresupuestoPredeterminadas(String condicionesPresupuestoPredeterminadas) {
+        this.condicionesPresupuestoPredeterminadas = condicionesPresupuestoPredeterminadas;
+    }
 }

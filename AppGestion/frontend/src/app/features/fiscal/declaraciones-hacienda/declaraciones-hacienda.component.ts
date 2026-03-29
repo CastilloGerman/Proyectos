@@ -15,6 +15,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { FiscalService } from '../../../core/services/fiscal.service';
 import { FiscalCriterio, Modelo303Resumen, Modelo347Resumen } from '../../../core/models/fiscal.model';
+import { FiscalAlertaBannerComponent } from '../fiscal-alerta-banner/fiscal-alerta-banner.component';
 
 const DEFAULT_DOC_TITLE = 'Noemí - Web de Gestión';
 
@@ -34,6 +35,7 @@ const DEFAULT_DOC_TITLE = 'Noemí - Web de Gestión';
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatExpansionModule,
+    FiscalAlertaBannerComponent,
   ],
   templateUrl: './declaraciones-hacienda.component.html',
   styleUrl: './declaraciones-hacienda.component.scss',
@@ -56,10 +58,6 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
   readonly years = this.buildYears();
   readonly trimestres = [1, 2, 3, 4] as const;
   readonly displayedColumns347 = ['nombre', 'dni', 'base'] as const;
-
-  plazoMensaje(): string | null {
-    return mensajePlazoModelo303();
-  }
 
   cargar303(): void {
     this.loading.set(true);
@@ -141,30 +139,4 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
     }
     return out;
   }
-}
-
-const MESES_CIERRE: { mes: number; nombre: string }[] = [
-  { mes: 0, nombre: 'enero' },
-  { mes: 3, nombre: 'abril' },
-  { mes: 6, nombre: 'julio' },
-  { mes: 9, nombre: 'octubre' },
-];
-
-/** Ventana informativa: del día 10 al 20 de meses de cierre trimestral típico. */
-function mensajePlazoModelo303(): string | null {
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  const y = hoy.getFullYear();
-  for (const { mes, nombre } of MESES_CIERRE) {
-    const inicio = new Date(y, mes, 10);
-    const fin = new Date(y, mes, 20);
-    if (hoy >= inicio && hoy <= fin) {
-      const msPorDia = 86400000;
-      const dias = Math.ceil((fin.getTime() - hoy.getTime()) / msPorDia);
-      const tail =
-        dias > 1 ? `Quedan ${dias} días hasta el 20 de ${nombre}.` : dias === 1 ? 'Queda 1 día hasta el 20.' : 'Hoy es día 20 o posterior en esta ventana.';
-      return `Recuerda: los plazos oficiales del IVA los publica la AEAT. ${tail} Verifica en la sede electrónica.`;
-    }
-  }
-  return null;
 }

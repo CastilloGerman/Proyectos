@@ -2,11 +2,14 @@ package com.appgestion.api.controller;
 
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.request.EnviarEmailRequest;
+import com.appgestion.api.dto.request.PresupuestoCondicionesPredeterminadasRequest;
 import com.appgestion.api.dto.request.PresupuestoRequest;
 import com.appgestion.api.dto.response.FacturaResponse;
+import com.appgestion.api.dto.response.PresupuestoCondicionDisponibleResponse;
 import com.appgestion.api.dto.response.PresupuestoResponse;
 import com.appgestion.api.service.CurrentUserService;
 import com.appgestion.api.service.FacturaService;
+import com.appgestion.api.service.PresupuestoCondicionesService;
 import com.appgestion.api.service.PresupuestoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
@@ -29,13 +32,36 @@ public class PresupuestoController {
     private final PresupuestoService presupuestoService;
     private final FacturaService facturaService;
     private final CurrentUserService currentUserService;
+    private final PresupuestoCondicionesService presupuestoCondicionesService;
 
     public PresupuestoController(PresupuestoService presupuestoService,
                                  FacturaService facturaService,
-                                 CurrentUserService currentUserService) {
+                                 CurrentUserService currentUserService,
+                                 PresupuestoCondicionesService presupuestoCondicionesService) {
         this.presupuestoService = presupuestoService;
         this.facturaService = facturaService;
         this.currentUserService = currentUserService;
+        this.presupuestoCondicionesService = presupuestoCondicionesService;
+    }
+
+    @GetMapping("/condiciones-disponibles")
+    public List<PresupuestoCondicionDisponibleResponse> condicionesDisponibles() {
+        currentUserService.getCurrentUsuario();
+        return presupuestoCondicionesService.listarDisponibles();
+    }
+
+    @GetMapping("/mis-condiciones-predeterminadas")
+    public List<String> misCondicionesPredeterminadas() {
+        Long uid = currentUserService.getCurrentUsuario().getId();
+        return presupuestoService.obtenerMisCondicionesPredeterminadas(uid);
+    }
+
+    @PutMapping("/mis-condiciones-predeterminadas")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public void guardarMisCondicionesPredeterminadas(@RequestBody PresupuestoCondicionesPredeterminadasRequest body) {
+        Long uid = currentUserService.getCurrentUsuario().getId();
+        presupuestoService.guardarMisCondicionesPredeterminadas(uid,
+                body != null && body.claves() != null ? body.claves() : List.of());
     }
 
     @GetMapping

@@ -45,6 +45,8 @@ export interface UsuarioResponse {
   canWrite?: boolean;
   totpEnabled?: boolean;
   totpEnrollmentPending?: boolean;
+  /** Claves de condiciones activas por defecto en presupuestos nuevos (GET /auth/me). */
+  condicionesPresupuestoPredeterminadas?: string[];
 }
 
 @Injectable({ providedIn: 'root' })

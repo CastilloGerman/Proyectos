@@ -16,6 +16,48 @@ Si el repositorio es público o se comparte, asume que cualquier secreto en Git 
 
 ---
 
+## Lanzamiento a producción (pasos ordenados)
+
+Secuencia orientativa para el **primer go-live**. Los detalles de cada variable y el checklist final están en las secciones **§2**, **§8** y **§9**.
+
+1. **Dominio y HTTPS**  
+   Define la URL pública del **frontend** (SPA) y la de la **API** (mismo host con ruta `/api` o subdominio tipo `api.tudominio.com`). Activa **HTTPS** en el proxy, CDN o PaaS (certificados válidos).
+
+2. **Base de datos**  
+   Crea la instancia **PostgreSQL** (versión alineada con la documentación del proyecto). Reserva `SPRING_DATASOURCE_URL`, `DB_USERNAME` y `DB_PASSWORD` solo en el entorno de ejecución. Planifica **backup** antes de aplicar migraciones en producción.
+
+3. **Correo transaccional (Resend)**  
+   En [Resend](https://resend.com), **verifica un dominio** que controlas y añade en DNS los registros que indiquen (SPF, DKIM, etc.). Genera `RESEND_API_KEY` y configúrala en secretos del servidor.  
+   - Configura **`APP_EMAIL_SYSTEM_FROM`** con un remitente de ese dominio (p. ej. `Noemí <noreply@tudominio.com>`). El remitente por defecto `onboarding@resend.dev` no sirve para entregar a clientes reales de forma fiable.  
+   - **Importante:** sin dominio verificado, Resend en modo de prueba solo permite enviar al correo asociado a la cuenta; recuperación de contraseña, facturas y demás correos a usuarios finales requieren dominio verificado en producción.
+
+4. **Stripe**  
+   Cuando pases a cobros reales, usa claves **live** en el dashboard: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY` y URLs de éxito, cancelación y portal del cliente apuntando a `https://tu-dominio-front/...` (ver `application.yml` / variables `STRIPE_*_URL`).
+
+5. **Variables de entorno de la API**  
+   Fija al menos: `SPRING_PROFILES_ACTIVE=prod`, `JWT_SECRET` (≥ 32 caracteres, aleatorio), `CORS_ALLOWED_ORIGINS` (orígenes exactos del SPA, separados por coma), `FRONTEND_URL` (base del SPA para enlaces en correos y OAuth de correo), base de datos, Resend y Stripe. Lista completa en **§2**.  
+   Si las organizaciones usarán **Gmail u Outlook** desde la app: `APP_EMAIL_TOKEN_SECRET` y credenciales OAuth con redirect URI `https://tu-api/.../auth/email/oauth/.../callback` — guía en [EMAIL-OAUTH-SETUP.md](EMAIL-OAUTH-SETUP.md).
+
+6. **Inicio de sesión con Google (botón en el login del SPA)**  
+   En Google Cloud Console → credenciales del cliente OAuth usado por el frontend, añade en **Orígenes de JavaScript autorizados** la URL exacta del SPA en producción (incluido esquema y puerto si aplica). Sin esto, el navegador mostrará errores de tipo *origin is not allowed*.
+
+7. **Migraciones Flyway**  
+   Asegura que el esquema esté al día antes o durante el primer arranque con perfil `prod` (`ddl-auto=validate`). Haz un **backup** de la BD antes de migrar en un entorno ya en uso.
+
+8. **Desplegar la API**  
+   Ejecuta la API con el conjunto de variables de producción. **No** uses `SPRING_PROFILES_ACTIVE=local` en servidores expuestos a Internet.
+
+9. **Construir y desplegar el frontend**  
+   `ng build --configuration production` (sustituye `environment.ts` por `environment.prod.ts`). Sirve los estáticos detrás de HTTPS. Revisa que `apiUrl` en producción apunte correctamente a la API (mismo origen + `/api` o URL absoluta, según tu proxy).
+
+10. **Webhook de Stripe**  
+    En el dashboard de Stripe, registra `https://tu-api-publica/webhook/stripe` y el **signing secret** que coincida con `STRIPE_WEBHOOK_SECRET`.
+
+11. **Comprobaciones finales**  
+    Sigue el **checklist de §8**, las pruebas de **§9** y, si aplica, revisa en base de datos la tabla `email_jobs` (estado `SENT` vs `DEAD` y `last_error`) si algún correo no llega.
+
+---
+
 ## 1. Perfil Spring (API)
 
 - **Producción:** `SPRING_PROFILES_ACTIVE=prod`
@@ -152,6 +194,8 @@ Revisión orientativa antes del go-live (complementa §1–2). No sustituye un p
 ---
 
 ## 8. Checklist antes de publicar
+
+Complemento de la sección **Lanzamiento a producción (pasos ordenados)**; úsalo como lista de cierre antes de abrir tráfico real.
 
 - [ ] `SPRING_PROFILES_ACTIVE=prod`
 - [ ] `JWT_SECRET` fuerte y único (solo en secretos del entorno, no en Git)

@@ -54,8 +54,15 @@ public class EmailDispatchService {
 
     public void dispatch(EmailJob job) throws Exception {
         EmailJobPayload payload = objectMapper.readValue(job.getPayloadJson(), EmailJobPayload.class);
+        // Sin fila en `empresas` (usuario nunca guardó datos de empresa): mismo criterio que EmpresaService — entidad en memoria con modo system (Resend).
         Empresa emp = empresaRepository.findByUsuarioId(job.getUsuario().getId())
-                .orElseThrow(() -> new IllegalStateException("Empresa no encontrada para el usuario."));
+                .orElseGet(() -> {
+                    Empresa e = new Empresa();
+                    e.setUsuario(job.getUsuario());
+                    String n = job.getUsuario().getNombre();
+                    e.setNombre(n != null && !n.isBlank() ? n : "");
+                    return e;
+                });
         EmailProviderMode mode = emp.getEmailProvider() != null ? emp.getEmailProvider() : EmailProviderMode.system;
 
         try {

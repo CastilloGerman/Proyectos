@@ -1,5 +1,6 @@
 package com.appgestion.api.domain.entity;
 
+import com.appgestion.api.domain.enums.EstadoCliente;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -39,6 +40,10 @@ public class Cliente {
     @Column(length = 50)
     private String dni;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_cliente", nullable = false, length = 20)
+    private EstadoCliente estadoCliente = EstadoCliente.PROVISIONAL;
+
     @Column(name = "fecha_creacion", updatable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
 
@@ -76,6 +81,11 @@ public class Cliente {
 
     public String getDni() { return dni; }
     public void setDni(String dni) { this.dni = dni; }
+
+    public EstadoCliente getEstadoCliente() { return estadoCliente; }
+    public void setEstadoCliente(EstadoCliente estadoCliente) {
+        this.estadoCliente = estadoCliente != null ? estadoCliente : EstadoCliente.PROVISIONAL;
+    }
 
     public LocalDateTime getFechaCreacion() { return fechaCreacion; }
     public void setFechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }

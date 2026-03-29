@@ -21,6 +21,8 @@ import { Presupuesto } from '../../../core/models/presupuesto.model';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfigEmpresaDialogComponent } from '../../../shared/config-empresa-dialog/config-empresa-dialog.component';
 import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/enviar-email-dialog.component';
+import { CompletarClienteFiscalDialogComponent } from '../../../shared/completar-cliente-fiscal-dialog/completar-cliente-fiscal-dialog.component';
+import { Observable } from 'rxjs';
 
 @Component({
     selector: 'app-presupuesto-list',
@@ -362,16 +364,47 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
   }
 
   crearFactura(presupuesto: Presupuesto): void {
-    this.presupuestoService.createFacturaFromPresupuesto(presupuesto.id).subscribe({
-      next: (factura) => {
-        this.snackBar.open('Factura creada. El presupuesto ha pasado a estado Aceptado.', 'Cerrar', { duration: 4000 });
-        this.load();
-        this.router.navigate(['/facturas', factura.id]);
-      },
-      error: (err) => {
-        this.snackBar.open(err.error?.message || 'Error al crear factura', 'Cerrar', { duration: 4000 });
-      },
-    });
+    const ejecutarFactura = () => {
+      this.presupuestoService.createFacturaFromPresupuesto(presupuesto.id).subscribe({
+        next: (factura) => {
+          this.snackBar.open('Factura creada. El presupuesto ha pasado a estado Aceptado.', 'Cerrar', { duration: 4000 });
+          this.load();
+          this.router.navigate(['/facturas', factura.id]);
+        },
+        error: (err) => {
+          const msg = err.error?.message ?? err.error?.detail ?? '';
+          const texto = typeof msg === 'string' ? msg : '';
+          if (
+            err.status === 400 &&
+            texto.includes('completar los datos fiscales')
+          ) {
+            this.abrirCompletarCliente(presupuesto).subscribe((ok) => {
+              if (ok) ejecutarFactura();
+            });
+          } else {
+            this.snackBar.open(texto || 'Error al crear factura', 'Cerrar', { duration: 5000 });
+          }
+        },
+      });
+    };
+
+    if (presupuesto.clienteEstado === 'PROVISIONAL') {
+      this.abrirCompletarCliente(presupuesto).subscribe((ok) => {
+        if (ok) ejecutarFactura();
+      });
+    } else {
+      ejecutarFactura();
+    }
+  }
+
+  private abrirCompletarCliente(p: Presupuesto): Observable<boolean> {
+    return this.dialog
+      .open(CompletarClienteFiscalDialogComponent, {
+        width: '520px',
+        maxWidth: '95vw',
+        data: { clienteId: p.clienteId, clienteNombre: p.clienteNombre },
+      })
+      .afterClosed();
   }
 
   enviarEmail(presupuesto: Presupuesto): void {

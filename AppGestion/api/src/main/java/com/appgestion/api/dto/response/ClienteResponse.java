@@ -12,5 +12,6 @@ public record ClienteResponse(
         String provincia,
         String pais,
         String dni,
-        LocalDateTime fechaCreacion
+        LocalDateTime fechaCreacion,
+        String estadoCliente
 ) {}

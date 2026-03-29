@@ -20,9 +20,11 @@ public class PresupuestoPdfService {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private final EmpresaService empresaService;
+    private final PresupuestoCondicionesService presupuestoCondicionesService;
 
-    public PresupuestoPdfService(EmpresaService empresaService) {
+    public PresupuestoPdfService(EmpresaService empresaService, PresupuestoCondicionesService presupuestoCondicionesService) {
         this.empresaService = empresaService;
+        this.presupuestoCondicionesService = presupuestoCondicionesService;
     }
     private static final Color HEADER_BG = new Color(45, 55, 72);
     private static final Color ROW_ALT = new Color(248, 250, 252);
@@ -108,14 +110,31 @@ public class PresupuestoPdfService {
         PdfPTable totalesTable = crearTablaTotales(presupuesto, cellFont);
         document.add(totalesTable);
 
-        String clausulasExpandidas = DocumentTemplateService.expandirPresupuesto(
-                presupuesto.getTextoClausulas(), presupuesto);
-        if (clausulasExpandidas != null && !clausulasExpandidas.isBlank()) {
-            for (String linea : clausulasExpandidas.split("\\r?\\n")) {
+        Font sectionFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.DARK_GRAY);
+        var claves = presupuestoCondicionesService.desdeJson(presupuesto.getCondicionesActivasJson());
+        var textosCond = presupuestoCondicionesService.textosPdfEnOrden(claves);
+        if (!textosCond.isEmpty()) {
+            Paragraph secCond = new Paragraph("Condiciones", sectionFont);
+            secCond.setSpacingBefore(16);
+            secCond.setSpacingAfter(6);
+            document.add(secCond);
+            for (String t : textosCond) {
+                Paragraph cl = new Paragraph("\u2022 " + t, smallFont);
+                cl.setSpacingBefore(2);
+                document.add(cl);
+            }
+        }
+        String nota = presupuesto.getNotaAdicional();
+        if (nota != null && !nota.isBlank()) {
+            Paragraph secNota = new Paragraph("Notas", sectionFont);
+            secNota.setSpacingBefore(textosCond.isEmpty() ? 16 : 12);
+            secNota.setSpacingAfter(6);
+            document.add(secNota);
+            for (String linea : nota.split("\\r?\\n")) {
                 if (!linea.isBlank()) {
-                    Paragraph cl = new Paragraph(linea.trim(), smallFont);
-                    cl.setSpacingBefore(4);
-                    document.add(cl);
+                    Paragraph p = new Paragraph(linea.trim(), smallFont);
+                    p.setSpacingBefore(2);
+                    document.add(p);
                 }
             }
         }

@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ThemeService } from '../../../core/theme/theme.service';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -13,14 +13,22 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatDividerModule } from '@angular/material/divider';
 import { AuthService, UsuarioResponse } from '../../../core/auth/auth.service';
+import {
+  CondicionesPresupuestoFormValue,
+  PresupuestoCondicionDisponible,
+} from '../../../core/models/presupuesto-condiciones.model';
+import { PresupuestoService } from '../../../core/services/presupuesto.service';
+import { CondicionesPresupuestoComponent } from '../../presupuestos/condiciones-presupuesto/condiciones-presupuesto.component';
 import { CURRENCY_OPTIONS, LOCALE_OPTIONS, TIMEZONE_OPTIONS } from './preferencias-options';
 
 @Component({
     selector: 'app-preferencias',
     imports: [
         CommonModule,
+        FormsModule,
         ReactiveFormsModule,
         RouterLink,
+        CondicionesPresupuestoComponent,
         MatCardModule,
         MatFormFieldModule,
         MatSelectModule,
@@ -37,6 +45,7 @@ import { CURRENCY_OPTIONS, LOCALE_OPTIONS, TIMEZONE_OPTIONS } from './preferenci
 export class PreferenciasComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
+  private readonly presupuestoService = inject(PresupuestoService);
   private readonly snackBar = inject(MatSnackBar);
   readonly theme = inject(ThemeService);
 
@@ -48,8 +57,15 @@ export class PreferenciasComponent implements OnInit {
 
   readonly loading = signal(true);
   readonly saving = signal(false);
+  readonly savingCondiciones = signal(false);
   readonly loadError = signal(false);
   readonly me = signal<UsuarioResponse | null>(null);
+  /** Catálogo de condiciones (API); mismas claves que en el formulario de presupuesto. */
+  readonly condicionesCatalogo = signal<PresupuestoCondicionDisponible[]>([]);
+  /** Evita spinner infinito si la petición falla o devuelve []. */
+  readonly condicionesPresupuestosListo = signal(false);
+  /** Valor del CVA (solo se usan las claves activas; nota siempre vacía aquí). */
+  condicionesPredModel: CondicionesPresupuestoFormValue = { condicionesActivas: [], notaAdicional: '' };
 
   readonly form = this.fb.nonNullable.group({
     locale: ['es', Validators.required],
@@ -82,6 +98,21 @@ export class PreferenciasComponent implements OnInit {
             currencyCode: cur,
           });
           this.form.markAsPristine();
+          this.condicionesPresupuestosListo.set(false);
+          this.presupuestoService.getCondicionesDisponibles().subscribe({
+            next: (cat) => {
+              this.condicionesCatalogo.set(cat);
+              this.condicionesPredModel = {
+                condicionesActivas: [...(data.condicionesPresupuestoPredeterminadas ?? [])],
+                notaAdicional: '',
+              };
+              this.condicionesPresupuestosListo.set(true);
+            },
+            error: () => {
+              this.condicionesCatalogo.set([]);
+              this.condicionesPresupuestosListo.set(true);
+            },
+          });
         } else {
           this.loadError.set(true);
         }
@@ -129,5 +160,32 @@ export class PreferenciasComponent implements OnInit {
 
   reintentar(): void {
     this.ngOnInit();
+  }
+
+  guardarCondicionesPredeterminadas(): void {
+    if (this.savingCondiciones()) return;
+    this.savingCondiciones.set(true);
+    this.presupuestoService.guardarMisCondicionesPredeterminadas(this.condicionesPredModel.condicionesActivas).subscribe({
+      next: () => {
+        this.auth.refreshUser().subscribe({
+          next: (u) => {
+            if (u) {
+              this.me.set(u);
+            }
+            this.snackBar.open('Condiciones por defecto guardadas', 'Cerrar', { duration: 3000 });
+            this.savingCondiciones.set(false);
+          },
+          error: () => {
+            this.savingCondiciones.set(false);
+            this.snackBar.open('Guardado; no se pudo refrescar el perfil', 'Cerrar', { duration: 4000 });
+          },
+        });
+      },
+      error: (err) => {
+        this.savingCondiciones.set(false);
+        const msg = err.error?.message || err.error?.detail || 'No se pudo guardar';
+        this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+      },
+    });
   }
 }

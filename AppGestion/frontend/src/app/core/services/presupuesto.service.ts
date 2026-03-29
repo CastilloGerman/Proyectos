@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { PresupuestoCondicionDisponible } from '../models/presupuesto-condiciones.model';
 import { Presupuesto, PresupuestoRequest } from '../models/presupuesto.model';
 import { Factura } from '../models/factura.model';
 import { environment } from '../../../environments/environment';
@@ -42,5 +43,19 @@ export class PresupuestoService {
 
   enviarPorEmail(id: number, email?: string): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/${id}/enviar-email`, email ? { email } : {});
+  }
+
+  /** Textos y claves del catálogo (única fuente de verdad en API). */
+  getCondicionesDisponibles(): Observable<PresupuestoCondicionDisponible[]> {
+    return this.http.get<PresupuestoCondicionDisponible[]>(`${this.apiUrl}/condiciones-disponibles`);
+  }
+
+  /** Condiciones marcadas por defecto para presupuestos nuevos (perfil). */
+  getMisCondicionesPredeterminadas(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.apiUrl}/mis-condiciones-predeterminadas`);
+  }
+
+  guardarMisCondicionesPredeterminadas(claves: string[]): Observable<void> {
+    return this.http.put<void>(`${this.apiUrl}/mis-condiciones-predeterminadas`, { claves });
   }
 }

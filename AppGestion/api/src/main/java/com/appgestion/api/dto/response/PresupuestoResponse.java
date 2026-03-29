@@ -7,6 +7,8 @@ public record PresupuestoResponse(
         Long id,
         Long clienteId,
         String clienteNombre,
+        /** PROVISIONAL o COMPLETO; null si el cliente no está cargado. */
+        String clienteEstado,
         String clienteEmail,
         LocalDateTime fechaCreacion,
         Double subtotal,
@@ -18,7 +20,8 @@ public record PresupuestoResponse(
         Double descuentoGlobalFijo,
         Boolean descuentoAntesIva,
         List<PresupuestoItemResponse> items,
-        String textoClausulas,
+        List<String> condicionesActivas,
+        String notaAdicional,
         Double senalImporte,
         Boolean senalPagada,
         /** Id de factura generada desde este presupuesto, si existe. */

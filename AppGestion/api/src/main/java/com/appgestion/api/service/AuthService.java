@@ -26,6 +26,8 @@ import com.appgestion.api.security.TotpService;
 import com.appgestion.api.validation.UserPreferencesValidator;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -68,6 +70,8 @@ public class AuthService {
     private final NotificacionService notificacionService;
     private final SessionService sessionService;
     private final AuditAccessService auditAccessService;
+    private final Environment environment;
+    private final PresupuestoCondicionesService presupuestoCondicionesService;
 
     @Value("${app.frontend-url:http://localhost:4200}")
     private String frontendUrl;
@@ -83,7 +87,9 @@ public class AuthService {
                        TotpService totpService,
                        NotificacionService notificacionService,
                        SessionService sessionService,
-                       AuditAccessService auditAccessService) {
+                       AuditAccessService auditAccessService,
+                       Environment environment,
+                       PresupuestoCondicionesService presupuestoCondicionesService) {
         this.usuarioRepository = usuarioRepository;
         this.empresaRepository = empresaRepository;
         this.passwordEncoder = passwordEncoder;
@@ -96,6 +102,8 @@ public class AuthService {
         this.notificacionService = notificacionService;
         this.sessionService = sessionService;
         this.auditAccessService = auditAccessService;
+        this.environment = environment;
+        this.presupuestoCondicionesService = presupuestoCondicionesService;
     }
 
     @Transactional
@@ -256,7 +264,8 @@ public class AuthService {
                 usuario.getFechaNacimiento(),
                 usuario.getGenero(),
                 usuario.getNacionalidadIso(),
-                usuario.getPaisResidenciaIso()
+                usuario.getPaisResidenciaIso(),
+                presupuestoCondicionesService.desdeJson(usuario.getCondicionesPresupuestoPredeterminadas())
         );
     }
 
@@ -460,6 +469,9 @@ public class AuthService {
                 httpRequest, null, "/auth/forgot-password", null);
 
         String resetLink = frontendUrl + "/reset-password?token=" + token;
+        if (environment.acceptsProfiles(Profiles.of("local"))) {
+            log.info("Perfil local: enlace de recuperación de contraseña (útil si Resend sandbox no entrega el correo): {}", resetLink);
+        }
         String asunto = "Recuperación de contraseña - " + EmailCopy.PRODUCT_NAME;
         String nombreEmpresa = empresaRepository.findByUsuarioId(usuario.getId()).map(e -> e.getNombre()).orElse(null);
         String cuerpo = EmailCopy.prefijoDestinatarioEmpresa(usuario.getNombre(), nombreEmpresa)

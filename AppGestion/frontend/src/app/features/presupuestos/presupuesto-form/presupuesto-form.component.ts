@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { forkJoin } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -12,6 +13,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatRadioModule } from '@angular/material/radio';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/auth/auth.service';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
@@ -20,6 +22,8 @@ import { MaterialService } from '../../../core/services/material.service';
 import { Cliente } from '../../../core/models/cliente.model';
 import { Material } from '../../../core/models/material.model';
 import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
+import { CondicionesPresupuestoFormValue, PresupuestoCondicionDisponible } from '../../../core/models/presupuesto-condiciones.model';
+import { CondicionesPresupuestoComponent } from '../condiciones-presupuesto/condiciones-presupuesto.component';
 
 const IVA_RATE = 0.21;
 
@@ -39,7 +43,9 @@ const IVA_RATE = 0.21;
         MatSnackBarModule,
         MatChipsModule,
         MatTooltipModule,
+        MatRadioModule,
         FormsModule,
+        CondicionesPresupuestoComponent,
     ],
     template: `
     <div class="presupuesto-form">
@@ -50,16 +56,51 @@ const IVA_RATE = 0.21;
         <mat-card-content>
           <form [formGroup]="form" (ngSubmit)="onSubmit()">
             <!-- 1. Cliente y Estado -->
-            <div class="form-row">
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Cliente</mat-label>
-                <mat-select formControlName="clienteId" required>
-                  @for (c of clientes; track c.id) {
-                    <mat-option [value]="c.id">{{ c.nombre }}</mat-option>
-                  }
-                </mat-select>
-                <mat-error>Selecciona un cliente</mat-error>
-              </mat-form-field>
+            <div class="form-row cliente-block">
+              <div class="cliente-modo">
+                <mat-label class="modo-label">Cliente del presupuesto</mat-label>
+                <mat-radio-group
+                  [(ngModel)]="clienteModo"
+                  [ngModelOptions]="{standalone: true}"
+                  (ngModelChange)="onClienteModoChange($event)"
+                  class="modo-radios"
+                >
+                  <mat-radio-button value="existente">Seleccionar cliente existente</mat-radio-button>
+                  <mat-radio-button value="nuevo">Cliente nuevo rápido</mat-radio-button>
+                </mat-radio-group>
+              </div>
+              @if (clienteModo === 'existente') {
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Cliente</mat-label>
+                  <mat-select formControlName="clienteId" required>
+                    <mat-select-trigger>
+                      {{ nombreClienteSeleccionado() }}
+                    </mat-select-trigger>
+                    @for (c of clientes; track c.id) {
+                      <mat-option [value]="c.id">
+                        <span class="opt-line">
+                          <span>{{ c.nombre }}</span>
+                          @if (c.estadoCliente === 'PROVISIONAL') {
+                            <span class="badge-fiscal">Sin datos fiscales</span>
+                          }
+                        </span>
+                      </mat-option>
+                    }
+                  </mat-select>
+                  <mat-error>Selecciona un cliente</mat-error>
+                </mat-form-field>
+              } @else {
+                <div class="nuevo-rapido">
+                  <mat-form-field appearance="outline" class="nombre-nuevo">
+                    <mat-label>Nombre del cliente</mat-label>
+                    <input matInput [(ngModel)]="nombreClienteNuevo" [ngModelOptions]="{standalone: true}" placeholder="Ej. Juan García" />
+                  </mat-form-field>
+                  <button type="button" mat-stroked-button color="primary" (click)="crearClienteRapido()"
+                    [disabled]="!auth.canMutate() || !nombreClienteNuevo.trim()">
+                    Crear y continuar
+                  </button>
+                </div>
+              }
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Estado</mat-label>
                 <mat-select formControlName="estado">
@@ -162,14 +203,12 @@ const IVA_RATE = 0.21;
               </mat-checkbox>
             </div>
 
-            <!-- Texto inteligente para el PDF -->
-            <div class="section clausulas-section">
-              <h3>Texto adicional en el PDF (plantilla)</h3>
-              <p class="hint-clausulas">{{ plantillaVarsHint }}</p>
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Cláusulas o condiciones (aparecen tras los totales)</mat-label>
-                <textarea matInput formControlName="textoClausulas" rows="5" [placeholder]="plantillaPlaceholder"></textarea>
-              </mat-form-field>
+            <!-- Condiciones predefinidas (API) + nota libre; sin variables técnicas en pantalla -->
+            <div class="section condiciones-compact">
+              <app-condiciones-presupuesto
+                [disponibles]="condicionesCatalogo"
+                formControlName="condiciones"
+              />
             </div>
 
             <!-- Señal / anticipo -->
@@ -234,7 +273,12 @@ const IVA_RATE = 0.21;
 
             <div class="actions">
               <button mat-button type="button" routerLink="/presupuestos">Cancelar</button>
-              <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || form.pending || !auth.canMutate()">
+              <button
+                mat-raised-button
+                color="primary"
+                type="submit"
+                [disabled]="botonCrearDeshabilitado()"
+              >
                 {{ isEdit ? 'Guardar' : 'Crear' }}
               </button>
             </div>
@@ -247,6 +291,21 @@ const IVA_RATE = 0.21;
     .full-width { width: 100%; display: block; margin-bottom: 16px; }
     .form-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 20px; }
     .form-row mat-form-field { flex: 1; min-width: 200px; }
+    .cliente-block { flex-direction: column; align-items: stretch; }
+    .cliente-modo { width: 100%; margin-bottom: 8px; }
+    .modo-label { display: block; font-size: 12px; color: #666; margin-bottom: 8px; }
+    .modo-radios { display: flex; flex-wrap: wrap; gap: 16px; }
+    .opt-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .badge-fiscal {
+      font-size: 11px;
+      font-weight: 500;
+      color: #64748b;
+      background: #f1f5f9;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .nuevo-rapido { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; width: 100%; }
+    .nombre-nuevo { flex: 1; min-width: 200px; }
 
     .section {
       margin: 24px 0;
@@ -261,10 +320,9 @@ const IVA_RATE = 0.21;
     .tareas-section { background: #fff8f0; border-color: #f0d9c5; }
     .discount-section { background: #f5f5f5; border-color: #e0e0e0; }
     .cost-summary { background: #e8f5e9; border: 1px solid #c8e6c9; }
-    .clausulas-section { background: #f3f0ff; border-color: #d4c4f0; }
+    .condiciones-compact { background: #f8fafc; border-color: #e2e8f0; padding-top: 16px; padding-bottom: 16px; }
     .senal-section { background: #fff8e6; border-color: #ffe0a3; }
     .hint-senal { font-size: 12px; color: #6d4c00; margin: 0 0 12px 0; }
-    .hint-clausulas { font-size: 12px; color: #5c4d7a; margin: 0 0 12px 0; line-height: 1.5; }
 
     .top-materiales { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
     .top-label { font-size: 12px; color: #666; }
@@ -295,17 +353,18 @@ const IVA_RATE = 0.21;
   `]
 })
 export class PresupuestoFormComponent implements OnInit {
-  readonly plantillaVarsHint =
-    'Variables: {{cliente.nombre}}, {{cliente.email}}, {{cliente.telefono}}, {{cliente.direccion}}, {{fecha}}, {{fecha_hora}}, {{subtotal}}, {{iva}}, {{total}}, {{estado}}, {{presupuesto.id}}';
-  readonly plantillaPlaceholder = 'Ej.: Presupuesto válido según condiciones acordadas con {{cliente.nombre}}.';
-
   form: FormGroup;
+  /** Catálogo de condiciones (solo claves + textos desde API). */
+  condicionesCatalogo: PresupuestoCondicionDisponible[] = [];
   clientes: Cliente[] = [];
   materiales: Material[] = [];
   topMateriales: Material[] = [];
   showVisibilityColumn = false;
   isEdit = false;
   id?: number;
+  /** existente: desplegable; nuevo: solo nombre y alta rápida. */
+  clienteModo: 'existente' | 'nuevo' = 'existente';
+  nombreClienteNuevo = '';
 
   get materialItems(): FormArray {
     return this.form.get('materialItems') as FormArray;
@@ -317,6 +376,11 @@ export class PresupuestoFormComponent implements OnInit {
 
   get costesResumen() {
     return this.calcularCostesResumen();
+  }
+
+  /** El botón no depende de filas vacías: la validación fuerte está en onSubmit. */
+  botonCrearDeshabilitado(): boolean {
+    return !this.auth.canMutate() || this.form.pending;
   }
 
   constructor(
@@ -336,7 +400,10 @@ export class PresupuestoFormComponent implements OnInit {
       descuentoGlobalPorcentaje: [0],
       descuentoGlobalFijo: [0],
       descuentoAntesIva: [true],
-      textoClausulas: [''],
+      condiciones: this.fb.control<CondicionesPresupuestoFormValue>({
+        condicionesActivas: [],
+        notaAdicional: '',
+      }),
       senalImporte: [null as number | null],
       senalPagada: [false],
       materialItems: this.fb.array([]),
@@ -362,8 +429,12 @@ export class PresupuestoFormComponent implements OnInit {
     if (id && id !== 'nuevo') {
       this.isEdit = true;
       this.id = +id;
-      this.presupuestoService.getById(this.id).subscribe({
-        next: (p) => {
+      forkJoin({
+        p: this.presupuestoService.getById(this.id),
+        disp: this.presupuestoService.getCondicionesDisponibles(),
+      }).subscribe({
+        next: ({ p, disp }) => {
+          this.condicionesCatalogo = disp;
           this.form.patchValue({
             clienteId: p.clienteId,
             estado: p.estado,
@@ -371,7 +442,10 @@ export class PresupuestoFormComponent implements OnInit {
             descuentoGlobalPorcentaje: p.descuentoGlobalPorcentaje ?? 0,
             descuentoGlobalFijo: p.descuentoGlobalFijo ?? 0,
             descuentoAntesIva: p.descuentoAntesIva ?? true,
-            textoClausulas: p.textoClausulas ?? '',
+            condiciones: {
+              condicionesActivas: p.condicionesActivas ?? [],
+              notaAdicional: p.notaAdicional ?? '',
+            },
             senalImporte: p.senalImporte ?? null,
             senalPagada: p.senalPagada ?? false,
           });
@@ -400,6 +474,21 @@ export class PresupuestoFormComponent implements OnInit {
       });
     } else {
       this.isEdit = false;
+      forkJoin({
+        disp: this.presupuestoService.getCondicionesDisponibles(),
+        def: this.presupuestoService.getMisCondicionesPredeterminadas(),
+      }).subscribe({
+        next: ({ disp, def }) => {
+          this.condicionesCatalogo = disp;
+          this.form.patchValue({
+            condiciones: {
+              condicionesActivas: def ?? [],
+              notaAdicional: '',
+            },
+          });
+        },
+        error: () => showError('No se pudieron cargar las condiciones del presupuesto.'),
+      });
       const preCliente = this.route.snapshot.queryParamMap.get('clienteId');
       if (preCliente) {
         const n = +preCliente;
@@ -407,8 +496,39 @@ export class PresupuestoFormComponent implements OnInit {
           this.form.patchValue({ clienteId: n });
         }
       }
+      this.addMaterialItem();
     }
-    // No añadir fila vacía por defecto: el usuario añade desde "Más usados" o "Añadir material"
+  }
+
+  /** Texto del campo cerrado: solo nombre (el badge solo se muestra en la lista). */
+  nombreClienteSeleccionado(): string {
+    const id = this.form.get('clienteId')?.value as number | null | undefined;
+    if (id == null) return '';
+    return this.clientes.find((c) => c.id === id)?.nombre ?? '';
+  }
+
+  onClienteModoChange(m: 'existente' | 'nuevo'): void {
+    if (m === 'nuevo') {
+      this.form.patchValue({ clienteId: null });
+    }
+  }
+
+  crearClienteRapido(): void {
+    const n = this.nombreClienteNuevo?.trim();
+    if (!n) return;
+    this.clienteService.createProvisional({ nombre: n }).subscribe({
+      next: (c) => {
+        this.clientes = [...this.clientes, c].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+        this.form.patchValue({ clienteId: c.id });
+        this.snackBar.open('Cliente creado. Puedes continuar con el presupuesto.', 'Cerrar', { duration: 3500 });
+        this.clienteModo = 'existente';
+        this.nombreClienteNuevo = '';
+      },
+      error: (err) => {
+        const msg = err.error?.message || err.error?.detail || 'Error al crear el cliente';
+        this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+      },
+    });
   }
 
   private createItemGroup(values: {
@@ -424,7 +544,8 @@ export class PresupuestoFormComponent implements OnInit {
   }): FormGroup {
     return this.fb.group({
       materialId: [values.materialId],
-      tareaManual: [values.tareaManual, Validators.required],
+      // Sin required aquí: una fila vacía no debe bloquear el botón Crear; onSubmit exige líneas con contenido.
+      tareaManual: [values.tareaManual],
       cantidad: [values.cantidad, [Validators.required, Validators.min(0.001)]],
       precioUnitario: [values.precioUnitario, [Validators.required, Validators.min(0)]],
       aplicaIva: [values.aplicaIva],
@@ -476,6 +597,15 @@ export class PresupuestoFormComponent implements OnInit {
   }
 
   addMaterialFromTop(material: Material): void {
+    const mid = material.id;
+    for (let i = 0; i < this.materialItems.length; i++) {
+      const g = this.materialItems.at(i) as FormGroup;
+      if (g.get('materialId')?.value === mid) {
+        const cur = +(g.get('cantidad')?.value ?? 0);
+        g.patchValue({ cantidad: cur + 1 });
+        return;
+      }
+    }
     this.materialItems.push(
       this.createItemGroup({
         materialId: material.id,
@@ -571,9 +701,18 @@ export class PresupuestoFormComponent implements OnInit {
       const hasDesc = v.tareaManual != null && String(v.tareaManual).trim().length > 0;
       return hasMaterial || hasDesc;
     });
-    if (this.form.invalid || validItems.length === 0) {
+    if (!this.form.get('clienteId')?.value) {
       this.form.markAllAsTouched();
-      this.snackBar.open('Selecciona un cliente y añade al menos un material (selecciona del desplegable) o tarea manual', 'Cerrar', { duration: 4000 });
+      this.snackBar.open('Selecciona un cliente o crea uno nuevo con «Crear y continuar».', 'Cerrar', { duration: 4500 });
+      return;
+    }
+    if (validItems.length === 0) {
+      this.form.markAllAsTouched();
+      this.snackBar.open(
+        'Añade al menos una línea con material del catálogo o una tarea manual con descripción.',
+        'Cerrar',
+        { duration: 4500 }
+      );
       return;
     }
     const items: PresupuestoItemRequest[] = validItems.map(({ ctrl }) => {
@@ -590,6 +729,7 @@ export class PresupuestoFormComponent implements OnInit {
       };
     });
     const value = this.form.value;
+    const cond = value.condiciones as CondicionesPresupuestoFormValue | undefined;
     const payload = {
       clienteId: value.clienteId,
       items,
@@ -598,7 +738,8 @@ export class PresupuestoFormComponent implements OnInit {
       descuentoGlobalPorcentaje: +(value.descuentoGlobalPorcentaje ?? 0),
       descuentoGlobalFijo: +(value.descuentoGlobalFijo ?? 0),
       descuentoAntesIva: value.descuentoAntesIva !== false,
-      textoClausulas: (value.textoClausulas as string)?.trim() || undefined,
+      condicionesActivas: cond?.condicionesActivas ?? [],
+      notaAdicional: cond?.notaAdicional?.trim() ? cond.notaAdicional.trim() : undefined,
       senalImporte: value.senalImporte != null && value.senalImporte !== '' ? +value.senalImporte : undefined,
       senalPagada: !!value.senalPagada,
     };

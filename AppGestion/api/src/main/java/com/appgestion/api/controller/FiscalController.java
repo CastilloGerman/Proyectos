@@ -2,10 +2,12 @@ package com.appgestion.api.controller;
 
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.domain.enums.FiscalCriterioImputacion;
+import com.appgestion.api.dto.response.FiscalPlazoActualResponse;
 import com.appgestion.api.dto.response.Modelo303ResumenResponse;
 import com.appgestion.api.dto.response.Modelo347ResumenResponse;
 import com.appgestion.api.service.CurrentUserService;
 import com.appgestion.api.service.FiscalPdfService;
+import com.appgestion.api.service.FiscalPlazosService;
 import com.appgestion.api.service.FiscalService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -23,16 +25,28 @@ public class FiscalController {
 
     private final FiscalService fiscalService;
     private final FiscalPdfService fiscalPdfService;
+    private final FiscalPlazosService fiscalPlazosService;
     private final CurrentUserService currentUserService;
 
     public FiscalController(
             FiscalService fiscalService,
             FiscalPdfService fiscalPdfService,
+            FiscalPlazosService fiscalPlazosService,
             CurrentUserService currentUserService
     ) {
         this.fiscalService = fiscalService;
         this.fiscalPdfService = fiscalPdfService;
+        this.fiscalPlazosService = fiscalPlazosService;
         this.currentUserService = currentUserService;
+    }
+
+    /**
+     * Próximo plazo orientativo de presentación del Modelo 303 (sin persistencia; cálculo en tiempo real).
+     */
+    @GetMapping("/plazo-actual")
+    public FiscalPlazoActualResponse plazoActual() {
+        currentUserService.getCurrentUsuario();
+        return fiscalPlazosService.calcularPlazoActual();
     }
 
     /**

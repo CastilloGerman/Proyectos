@@ -24,6 +24,8 @@ export interface Presupuesto {
   id: number;
   clienteId: number;
   clienteNombre: string;
+  /** PROVISIONAL | COMPLETO — desde API para facturación sin GET extra. */
+  clienteEstado?: string | null;
   clienteEmail?: string;
   fechaCreacion: string;
   subtotal: number;
@@ -36,8 +38,10 @@ export interface Presupuesto {
   descuentoGlobalPorcentaje?: number;
   descuentoGlobalFijo?: number;
   descuentoAntesIva?: boolean;
-  /** Texto extra en PDF con variables {{cliente.nombre}}, {{total}}, etc. */
-  textoClausulas?: string | null;
+  /** Claves de condiciones predefinidas activas (catálogo en servidor). */
+  condicionesActivas?: string[] | null;
+  /** Texto libre opcional al pie del PDF. */
+  notaAdicional?: string | null;
   /** Importe de señal / anticipo acordado. */
   senalImporte?: number | null;
   /** Si la señal ya fue cobrada. */
@@ -53,7 +57,8 @@ export interface PresupuestoRequest {
   descuentoGlobalPorcentaje?: number;
   descuentoGlobalFijo?: number;
   descuentoAntesIva?: boolean;
-  textoClausulas?: string;
+  condicionesActivas?: string[];
+  notaAdicional?: string;
   senalImporte?: number;
   senalPagada?: boolean;
 }

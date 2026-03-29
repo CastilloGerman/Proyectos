@@ -548,6 +548,8 @@ export class LoginComponent implements OnInit, AfterViewInit {
   readonly googleTotpStep = signal(false);
   googleTotpCode = '';
   private pendingGoogleToken: string | null = null;
+  /** Evita [GSI_LOGGER]: initialize() múltiples veces (p. ej. doble montaje en dev). */
+  private static gsiInitializedForClientId: string | null = null;
   /** Valor fijo para evitar que el chunk lazy reciba un environment sin googleClientId; el botón real siempre se muestra. */
   readonly googleClientId = DEFAULT_GOOGLE_CLIENT_ID;
 
@@ -616,10 +618,13 @@ export class LoginComponent implements OnInit, AfterViewInit {
       console.warn('[Login] Google GSI no disponible o contenedor no listo.');
       return;
     }
-    win.google.accounts.id.initialize({
-      client_id: this.googleClientId,
-      callback: (response: { credential: string }) => this.onGoogleCredential(response.credential),
-    });
+    if (LoginComponent.gsiInitializedForClientId !== this.googleClientId) {
+      win.google.accounts.id.initialize({
+        client_id: this.googleClientId,
+        callback: (response: { credential: string }) => this.onGoogleCredential(response.credential),
+      });
+      LoginComponent.gsiInitializedForClientId = this.googleClientId;
+    }
     win.google.accounts.id.renderButton(this.googleButtonRef.nativeElement, {
       type: 'standard',
       theme: 'outline',

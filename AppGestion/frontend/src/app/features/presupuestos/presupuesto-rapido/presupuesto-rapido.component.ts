@@ -17,9 +17,12 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatRadioModule } from '@angular/material/radio';
+import { FormsModule } from '@angular/forms';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
 import { ClienteService } from '../../../core/services/cliente.service';
 import { MaterialService } from '../../../core/services/material.service';
+import { AuthService } from '../../../core/auth/auth.service';
 import { Cliente } from '../../../core/models/cliente.model';
 import { Material } from '../../../core/models/material.model';
 import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
@@ -39,6 +42,8 @@ import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
         MatSnackBarModule,
         MatIconModule,
         MatTooltipModule,
+        MatRadioModule,
+        FormsModule,
     ],
     template: `
     <div class="rapido-wrap">
@@ -51,14 +56,54 @@ import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
         </mat-card-header>
         <mat-card-content>
           <form [formGroup]="form" (ngSubmit)="crearYpdf()">
-            <mat-form-field appearance="outline" class="full" subscriptSizing="fixed">
-              <mat-label>Cliente</mat-label>
-              <mat-select formControlName="clienteId" required>
-                @for (c of clientes; track c.id) {
-                  <mat-option [value]="c.id">{{ c.nombre }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
+            <div class="cliente-block">
+              <span class="modo-label">Cliente</span>
+              <mat-radio-group
+                [(ngModel)]="clienteModo"
+                [ngModelOptions]="{standalone: true}"
+                (ngModelChange)="onClienteModoChange($event)"
+                class="modo-radios"
+              >
+                <mat-radio-button value="existente">Existente</mat-radio-button>
+                <mat-radio-button value="nuevo">Nuevo rápido (solo nombre)</mat-radio-button>
+              </mat-radio-group>
+              @if (clienteModo === 'existente') {
+                <mat-form-field appearance="outline" class="full" subscriptSizing="fixed">
+                  <mat-label>Cliente</mat-label>
+                  <mat-select formControlName="clienteId" required>
+                    <mat-select-trigger>
+                      {{ nombreClienteSeleccionado() }}
+                    </mat-select-trigger>
+                    @for (c of clientes; track c.id) {
+                      <mat-option [value]="c.id">
+                        <span class="opt-line">
+                          <span>{{ c.nombre }}</span>
+                          @if (c.estadoCliente === 'PROVISIONAL') {
+                            <span class="badge-fiscal">Sin datos fiscales</span>
+                          }
+                        </span>
+                      </mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              } @else {
+                <div class="nuevo-rapido">
+                  <mat-form-field appearance="outline" class="nombre-nuevo" subscriptSizing="fixed">
+                    <mat-label>Nombre del cliente</mat-label>
+                    <input matInput [(ngModel)]="nombreClienteNuevo" [ngModelOptions]="{standalone: true}" placeholder="Ej. Juan García" autocomplete="name" />
+                  </mat-form-field>
+                  <button
+                    type="button"
+                    mat-stroked-button
+                    color="primary"
+                    (click)="crearClienteRapido()"
+                    [disabled]="!auth.canMutate() || !nombreClienteNuevo.trim()"
+                  >
+                    Crear y usar
+                  </button>
+                </div>
+              }
+            </div>
 
             <div class="section materiales-section">
               <h3 class="section-title">Materiales</h3>
@@ -178,6 +223,20 @@ import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
   `,
     styles: [`
     .rapido-wrap { max-width: 720px; margin: 24px auto; padding: 0 16px; }
+    .cliente-block { margin-bottom: 16px; }
+    .modo-label { display: block; font-size: 12px; color: var(--app-text-secondary, #64748b); margin-bottom: 8px; }
+    .modo-radios { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+    .opt-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .badge-fiscal {
+      font-size: 11px;
+      font-weight: 500;
+      color: #64748b;
+      background: #f1f5f9;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .nuevo-rapido { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+    .nombre-nuevo { flex: 1; min-width: 200px; }
     .full { width: 100%; display: block; margin-bottom: 12px; }
     .section { margin-bottom: 20px; }
     .section-title {
@@ -305,9 +364,12 @@ export class PresupuestoRapidoComponent implements OnInit {
   materiales: Material[] = [];
   loading = false;
   ultimoClienteWa: string | null = null;
+  clienteModo: 'existente' | 'nuevo' = 'existente';
+  nombreClienteNuevo = '';
 
   constructor(
     private fb: FormBuilder,
+    public auth: AuthService,
     private presupuestoService: PresupuestoService,
     private clienteService: ClienteService,
     private materialService: MaterialService,
@@ -329,6 +391,37 @@ export class PresupuestoRapidoComponent implements OnInit {
   ngOnInit(): void {
     this.clienteService.getAll().subscribe((c) => (this.clientes = c));
     this.materialService.getAll().subscribe((m) => (this.materiales = m));
+  }
+
+  /** Texto del campo cerrado: solo nombre (el badge solo se muestra en la lista). */
+  nombreClienteSeleccionado(): string {
+    const id = this.form.get('clienteId')?.value as number | null | undefined;
+    if (id == null) return '';
+    return this.clientes.find((c) => c.id === id)?.nombre ?? '';
+  }
+
+  onClienteModoChange(m: 'existente' | 'nuevo'): void {
+    if (m === 'nuevo') {
+      this.form.patchValue({ clienteId: null });
+    }
+  }
+
+  crearClienteRapido(): void {
+    const n = this.nombreClienteNuevo.trim();
+    if (!n) return;
+    this.clienteService.createProvisional({ nombre: n }).subscribe({
+      next: (c) => {
+        this.clientes = [...this.clientes, c].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+        this.form.patchValue({ clienteId: c.id });
+        this.snackBar.open('Cliente creado. Elige material y genera el PDF.', 'Cerrar', { duration: 3500 });
+        this.clienteModo = 'existente';
+        this.nombreClienteNuevo = '';
+      },
+      error: (err) => {
+        const msg = err.error?.message || err.error?.detail || 'Error al crear el cliente';
+        this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+      },
+    });
   }
 
   private createMaterialLine(): FormGroup {

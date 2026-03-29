@@ -2,6 +2,7 @@ package com.appgestion.api.dto.response;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record UsuarioResponse(
         Long id,
@@ -30,5 +31,7 @@ public record UsuarioResponse(
         LocalDate fechaNacimiento,
         String genero,
         String nacionalidadIso,
-        String paisResidenciaIso
+        String paisResidenciaIso,
+        /** Claves de condiciones marcadas por defecto en presupuestos nuevos (catálogo servidor). */
+        List<String> condicionesPresupuestoPredeterminadas
 ) {}

@@ -23,6 +23,11 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
     ],
     template: `
     <div class="cliente-list">
+      @if (provisionalesCount > 0) {
+        <div class="banner-fiscal" role="status">
+          Tienes {{ provisionalesCount }} cliente{{ provisionalesCount === 1 ? '' : 's' }} sin datos fiscales completos.
+        </div>
+      }
       <div class="header">
         <h1>Clientes</h1>
         @if (auth.canMutate()) {
@@ -92,6 +97,16 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
     </div>
   `,
     styles: [`
+    .banner-fiscal {
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      font-size: 0.9375rem;
+      color: #475569;
+    }
+
     .header {
       display: flex;
       justify-content: space-between;
@@ -152,6 +167,7 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
 export class ClienteListComponent implements OnInit {
   displayedColumns = ['nombre', 'estadoPanel', 'email', 'telefono', 'actions'];
   dataSource = new MatTableDataSource<Cliente>([]);
+  provisionalesCount = 0;
 
   constructor(
     public auth: AuthService,
@@ -167,6 +183,7 @@ export class ClienteListComponent implements OnInit {
   load(): void {
     this.clienteService.getAll().subscribe((data) => {
       this.dataSource.data = data;
+      this.provisionalesCount = data.filter((c) => c.estadoCliente === 'PROVISIONAL').length;
     });
   }
 

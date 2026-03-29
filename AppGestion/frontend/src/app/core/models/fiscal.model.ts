@@ -1,5 +1,18 @@
 export type FiscalCriterio = 'DEVENGO' | 'CAJA';
 
+/** Urgencia del plazo de presentación (Modelo 303), calculada en la API. */
+export type FiscalPlazoEstado = 'VERDE' | 'AMARILLO' | 'ROJO';
+
+export interface FiscalPlazoActual {
+  trimestre: string;
+  fechaLimite: string;
+  diasRestantes: number;
+  estado: FiscalPlazoEstado;
+  mensaje: string;
+  plazoAnteriorVencido: boolean;
+  mensajeAdvertencia: string | null;
+}
+
 export interface Modelo303Resumen {
   anio: number;
   trimestre: number;

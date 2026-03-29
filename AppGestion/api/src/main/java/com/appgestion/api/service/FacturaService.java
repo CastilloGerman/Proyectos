@@ -44,6 +44,7 @@ public class FacturaService {
     private final FacturaEmailService facturaEmailService;
     private final FacturaCobroService facturaCobroService;
     private final FacturaPaymentLinkService facturaPaymentLinkService;
+    private final ClienteService clienteService;
 
     public FacturaService(FacturaRepository facturaRepository,
                           ClienteRepository clienteRepository,
@@ -56,7 +57,8 @@ public class FacturaService {
                           FacturaResponseMapper facturaResponseMapper,
                           FacturaEmailService facturaEmailService,
                           FacturaCobroService facturaCobroService,
-                          FacturaPaymentLinkService facturaPaymentLinkService) {
+                          FacturaPaymentLinkService facturaPaymentLinkService,
+                          ClienteService clienteService) {
         this.facturaRepository = facturaRepository;
         this.clienteRepository = clienteRepository;
         this.empresaRepository = empresaRepository;
@@ -69,6 +71,7 @@ public class FacturaService {
         this.facturaEmailService = facturaEmailService;
         this.facturaCobroService = facturaCobroService;
         this.facturaPaymentLinkService = facturaPaymentLinkService;
+        this.clienteService = clienteService;
     }
 
     @Transactional(readOnly = true)
@@ -267,6 +270,8 @@ public class FacturaService {
     }
 
     private void validarDatosFactura(Long usuarioId, Cliente cliente) {
+        clienteService.validarClienteParaFactura(cliente.getId(), usuarioId);
+
         Empresa empresa = empresaRepository.findByUsuarioId(usuarioId).orElse(null);
         if (empresa == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe configurar los datos de la empresa antes de emitir facturas");
@@ -284,18 +289,19 @@ public class FacturaService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El NIF de la empresa no es válido");
         }
 
+        // Cliente COMPLETO: DNI, dirección y CP obligatorios; provincia/país opcionales en alta rápida.
         if (cliente.getCodigoPostal() == null || cliente.getCodigoPostal().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El código postal del cliente es obligatorio para facturación");
         }
-        if (cliente.getProvincia() == null || cliente.getProvincia().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La provincia del cliente es obligatoria para facturación");
-        }
-        if (cliente.getPais() == null || cliente.getPais().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El país del cliente es obligatorio para facturación");
-        }
         String nifCliente = cliente.getDni();
-        if (nifCliente != null && !nifCliente.isBlank() && !NifValidator.esValido(nifCliente)) {
+        if (nifCliente == null || nifCliente.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El NIF del cliente es obligatorio para facturación");
+        }
+        if (!NifValidator.esValido(nifCliente)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El NIF del cliente no es válido");
+        }
+        if (cliente.getDireccion() == null || cliente.getDireccion().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La dirección del cliente es obligatoria para facturación");
         }
     }
 

@@ -1,0 +1,27 @@
+@if (loading()) {
+  <div class="fab fab--loading" role="status" aria-busy="true">
+    <mat-icon class="fab__icon">schedule</mat-icon>
+    <span class="fab__muted">Cargando plazo fiscal…</span>
+  </div>
+} @else if (loadError()) {
+  <div class="fab fab--error" role="alert">
+    <mat-icon class="fab__icon">error_outline</mat-icon>
+    <span class="fab__muted">No se pudo cargar el plazo de presentación.</span>
+  </div>
+} @else if (data(); as d) {
+  <div [class]="claseEstado(d.estado)" role="region" [attr.aria-label]="'Plazo Modelo 303, estado ' + d.estado">
+    <mat-icon class="fab__icon" aria-hidden="true">calendar_month</mat-icon>
+    <div class="fab__body">
+      <p class="fab__title">
+        @if (d.estado === 'ROJO') {
+          <mat-icon class="fab__warn" aria-hidden="true">warning</mat-icon>
+        }
+        <span [class.fab__title--urgent]="d.estado === 'ROJO'">{{ tituloPlazo(d) }}</span>
+      </p>
+      <p class="fab__sub">{{ d.mensaje }}</p>
+      @if (d.mensajeAdvertencia) {
+        <p class="fab__adv">{{ d.mensajeAdvertencia }}</p>
+      }
+    </div>
+  </div>
+}

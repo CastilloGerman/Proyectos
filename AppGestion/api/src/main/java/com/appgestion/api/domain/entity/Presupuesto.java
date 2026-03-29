@@ -48,9 +48,13 @@ public class Presupuesto {
     @Column(name = "descuento_antes_iva")
     private Boolean descuentoAntesIva = true;
 
-    /** Texto extra en PDF; admite variables {{cliente.nombre}}, {{total}}, etc. */
-    @Column(name = "texto_clausulas", columnDefinition = "TEXT")
-    private String textoClausulas;
+    /** JSON array de claves de condición activas (catálogo en servidor). */
+    @Column(name = "condiciones_activas", columnDefinition = "TEXT")
+    private String condicionesActivasJson;
+
+    /** Texto libre opcional tras las condiciones en el PDF. */
+    @Column(name = "nota_adicional", columnDefinition = "TEXT")
+    private String notaAdicional;
 
     @Column(name = "senal_importe")
     private Double senalImporte;
@@ -102,8 +106,11 @@ public class Presupuesto {
     public Boolean getDescuentoAntesIva() { return descuentoAntesIva; }
     public void setDescuentoAntesIva(Boolean descuentoAntesIva) { this.descuentoAntesIva = descuentoAntesIva; }
 
-    public String getTextoClausulas() { return textoClausulas; }
-    public void setTextoClausulas(String textoClausulas) { this.textoClausulas = textoClausulas; }
+    public String getCondicionesActivasJson() { return condicionesActivasJson; }
+    public void setCondicionesActivasJson(String condicionesActivasJson) { this.condicionesActivasJson = condicionesActivasJson; }
+
+    public String getNotaAdicional() { return notaAdicional; }
+    public void setNotaAdicional(String notaAdicional) { this.notaAdicional = notaAdicional; }
 
     public Double getSenalImporte() { return senalImporte; }
     public void setSenalImporte(Double senalImporte) { this.senalImporte = senalImporte; }

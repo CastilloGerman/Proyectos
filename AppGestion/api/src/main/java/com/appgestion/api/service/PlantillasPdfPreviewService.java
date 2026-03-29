@@ -118,7 +118,8 @@ public class PlantillasPdfPreviewService {
         p.setFechaCreacion(LocalDateTime.of(2025, 3, 22, 10, 30));
         p.setEstado("Pendiente");
         p.setIvaHabilitado(true);
-        p.setTextoClausulas(null);
+        p.setCondicionesActivasJson(null);
+        p.setNotaAdicional(null);
 
         List<PresupuestoItem> items = new ArrayList<>();
         switch (escenario) {

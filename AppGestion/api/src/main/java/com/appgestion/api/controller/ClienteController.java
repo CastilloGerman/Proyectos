@@ -1,5 +1,7 @@
 package com.appgestion.api.controller;
 
+import com.appgestion.api.dto.request.ClienteCompletoRequest;
+import com.appgestion.api.dto.request.ClienteProvisionalRequest;
 import com.appgestion.api.dto.request.ClienteRequest;
 import com.appgestion.api.dto.response.ClientePanelResponse;
 import com.appgestion.api.dto.response.ClienteResponse;
@@ -32,9 +34,12 @@ public class ClienteController {
     }
 
     @GetMapping
-    public List<ClienteResponse> listar(@RequestParam(required = false) String q) {
+    public List<ClienteResponse> listar(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String estado
+    ) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
-        return clienteService.listar(usuarioId, q);
+        return clienteService.listar(usuarioId, q, estado);
     }
 
     @GetMapping("/{id}")
@@ -47,6 +52,20 @@ public class ClienteController {
     public ClientePanelResponse panel(@PathVariable Long id) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
         return clientePanelService.obtenerPanel(id, usuarioId);
+    }
+
+    @PostMapping("/provisional")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ClienteResponse crearProvisional(@Valid @RequestBody ClienteProvisionalRequest request) {
+        var usuario = currentUserService.getCurrentUsuario();
+        return clienteService.crearClienteProvisional(request.nombre(), usuario);
+    }
+
+    @PutMapping("/{id}/completar")
+    public ClienteResponse completar(@PathVariable Long id, @Valid @RequestBody ClienteCompletoRequest request) {
+        Long usuarioId = currentUserService.getCurrentUsuario().getId();
+        return clienteService.completarCliente(id, request, usuarioId);
     }
 
     @PostMapping
