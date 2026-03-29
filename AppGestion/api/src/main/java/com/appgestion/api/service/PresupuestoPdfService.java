@@ -21,8 +21,9 @@ public class PresupuestoPdfService {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private final EmpresaService empresaService;
     private final PresupuestoCondicionesService presupuestoCondicionesService;
-
-    public PresupuestoPdfService(EmpresaService empresaService, PresupuestoCondicionesService presupuestoCondicionesService) {
+    public PresupuestoPdfService(
+            EmpresaService empresaService,
+            PresupuestoCondicionesService presupuestoCondicionesService) {
         this.empresaService = empresaService;
         this.presupuestoCondicionesService = presupuestoCondicionesService;
     }
@@ -152,14 +153,6 @@ public class PresupuestoPdfService {
             notas.setSpacingBefore(20);
             document.add(notas);
         }
-        double total = Optional.ofNullable(presupuesto.getTotal()).orElse(0.0);
-        String qrRef = "Presupuesto #" + presupuesto.getId()
-                + " | Total " + String.format("%.2f €", total);
-        try {
-            PdfQrHelper.agregarQr(document, qrRef, smallFont);
-        } catch (DocumentException | IOException ignored) {
-            // sin QR si falla la generación
-        }
     }
 
     private void addTableHeader(PdfPTable table, Font font) {
@@ -221,6 +214,22 @@ public class PresupuestoPdfService {
         Font boldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.DARK_GRAY);
         totalesTable.addCell(new Phrase("TOTAL:", boldFont));
         totalesTable.addCell(new Phrase(String.format("%.2f €", total), boldFont));
+
+        if (Boolean.TRUE.equals(presupuesto.getTieneAnticipo()) && presupuesto.getImporteAnticipo() != null) {
+            double ant = presupuesto.getImporteAnticipo().doubleValue();
+            if (ant > 0) {
+                totalesTable.addCell(new Phrase("Anticipo / seña (IVA incl.):", cellFont));
+                totalesTable.addCell(new Phrase(String.format("- %.2f €", ant), cellFont));
+                double pendiente = Math.max(0.0, total - ant);
+                Font pendFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, new Color(0x15, 0x65, 0xc0));
+                totalesTable.addCell(new Phrase("Pendiente a cobrar:", pendFont));
+                totalesTable.addCell(new Phrase(String.format("%.2f €", pendiente), pendFont));
+                if (Boolean.TRUE.equals(presupuesto.getAnticipoFacturado())) {
+                    totalesTable.addCell(new Phrase("Factura de anticipo emitida (restante por factura final).", cellFont));
+                    totalesTable.addCell(new Phrase("", cellFont));
+                }
+            }
+        }
 
         return totalesTable;
     }

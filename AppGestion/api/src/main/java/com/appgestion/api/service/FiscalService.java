@@ -65,12 +65,20 @@ public class FiscalService {
                     "Criterio caja: solo entran facturas marcadas como Pagada con al menos un cobro registrado; " +
                             "la fecha usada es la del último cobro (MAX) por factura."
             );
+            advertencias.add(
+                    "Factura de anticipo: al generarla se registra un cobro automático con la fecha del anticipo " +
+                            "para que el criterio caja pueda imputar el IVA en el trimestre del cobro."
+            );
         } else {
             soloPagadasEnRespuesta = soloFacturasPagadas;
             row = fiscalQueryRepository.aggregateVentasModelo303Devengo(usuarioId, desde, hasta, soloFacturasPagadas);
             if (soloFacturasPagadas) {
                 advertencias.add("Filtro activo: solo facturas con estado Pagada (criterio devengo por fecha de expedición).");
             }
+            advertencias.add(
+                    "Facturas finales con anticipo: la base y el IVA mostrados son solo los del tramo remanente; " +
+                            "el anticipo ya se contabilizó en la factura de anticipo (sin duplicar en el mismo trimestre si las fechas difieren)."
+            );
         }
 
         row = unwrapNativeTupleRow(row);

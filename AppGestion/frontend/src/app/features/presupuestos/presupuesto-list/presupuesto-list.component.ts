@@ -94,14 +94,14 @@ import { Observable } from 'rxjs';
               <app-estado-badge [estado]="row.estado"></app-estado-badge>
             </td>
           </ng-container>
-          <ng-container matColumnDef="senal">
-            <th mat-header-cell *matHeaderCellDef>Señal</th>
-            <td mat-cell *matCellDef="let row" class="senal-cell">
-              @if (row.senalImporte != null && row.senalImporte > 0) {
-                <span [matTooltip]="row.senalPagada ? 'Señal cobrada' : 'Señal pendiente'">
-                  {{ row.senalImporte | number:'1.2-2' }} €
-                  @if (row.senalPagada) {
-                    <mat-icon class="senal-ok">check_circle</mat-icon>
+          <ng-container matColumnDef="anticipo">
+            <th mat-header-cell *matHeaderCellDef>Anticipo</th>
+            <td mat-cell *matCellDef="let row" class="anticipo-cell">
+              @if (row.tieneAnticipo && row.importeAnticipo != null && row.importeAnticipo > 0) {
+                <span [matTooltip]="row.anticipoFacturado ? 'Anticipo facturado' : 'Anticipo registrado (pendiente de factura de anticipo)'">
+                  {{ row.importeAnticipo | number:'1.2-2' }} €
+                  @if (row.anticipoFacturado) {
+                    <mat-icon class="anticipo-ok">receipt</mat-icon>
                   }
                 </span>
               } @else {
@@ -242,14 +242,14 @@ import { Observable } from 'rxjs';
     .estado-aceptado { background: #e8f5e9; color: #2e7d32; }
     .estado-rechazado { background: #ffebee; color: #c62828; }
 
-    .senal-cell { font-size: 0.875rem; }
-    .senal-ok { font-size: 16px; width: 16px; height: 16px; vertical-align: middle; color: #2e7d32; }
+    .anticipo-cell { font-size: 0.875rem; }
+    .anticipo-ok { font-size: 16px; width: 16px; height: 16px; vertical-align: middle; color: #1565c0; }
     .text-muted { color: rgba(0,0,0,0.38); }
   `]
 })
 export class PresupuestoListComponent implements OnInit, AfterViewInit {
   private readonly destroyRef = inject(DestroyRef);
-  displayedColumns = ['clienteNombre', 'fechaCreacion', 'estado', 'senal', 'total', 'actions'];
+  displayedColumns = ['clienteNombre', 'fechaCreacion', 'estado', 'anticipo', 'total', 'actions'];
   dataSource = new MatTableDataSource<Presupuesto>([]);
 
   @ViewChild(MatSort) sort!: MatSort;
@@ -356,7 +356,7 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
     });
   }
 
-  /** Muestra Facturar si el presupuesto admite conversión y aún no tiene factura. */
+  /** Muestra Facturar si el presupuesto admite conversión y aún no tiene factura principal. */
   puedeFacturar(p: Presupuesto): boolean {
     if (p.facturaId != null && p.facturaId !== undefined) return false;
     const e = (p.estado || '').trim().toLowerCase();
@@ -365,9 +365,15 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
 
   crearFactura(presupuesto: Presupuesto): void {
     const ejecutarFactura = () => {
-      this.presupuestoService.createFacturaFromPresupuesto(presupuesto.id).subscribe({
+      const req = presupuesto.tieneAnticipo
+        ? this.presupuestoService.createFacturaFinalFromPresupuesto(presupuesto.id)
+        : this.presupuestoService.createFacturaFromPresupuesto(presupuesto.id);
+      req.subscribe({
         next: (factura) => {
-          this.snackBar.open('Factura creada. El presupuesto ha pasado a estado Aceptado.', 'Cerrar', { duration: 4000 });
+          const msg = presupuesto.tieneAnticipo
+            ? 'Factura final creada (si aún no existía, también se emitió la factura de anticipo).'
+            : 'Factura creada. El presupuesto ha pasado a estado Aceptado.';
+          this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
           this.load();
           this.router.navigate(['/facturas', factura.id]);
         },

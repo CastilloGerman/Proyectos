@@ -1,6 +1,8 @@
 package com.appgestion.api.domain.entity;
 
+import com.appgestion.api.domain.enums.TipoFactura;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -83,6 +85,17 @@ public class Factura {
 
     @Column(name = "payment_link_id", length = 120)
     private String paymentLinkId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_factura", length = 20, nullable = false)
+    private TipoFactura tipoFactura = TipoFactura.NORMAL;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "factura_anticipo_id")
+    private Factura facturaAnticipoReferencia;
+
+    @Column(name = "importe_anticipo_descontado", precision = 10, scale = 2)
+    private BigDecimal importeAnticipoDescontado;
 
     @Column(length = 1000)
     private String notas;
@@ -169,4 +182,13 @@ public class Factura {
 
     public String getPaymentLinkId() { return paymentLinkId; }
     public void setPaymentLinkId(String paymentLinkId) { this.paymentLinkId = paymentLinkId; }
+
+    public TipoFactura getTipoFactura() { return tipoFactura; }
+    public void setTipoFactura(TipoFactura tipoFactura) { this.tipoFactura = tipoFactura != null ? tipoFactura : TipoFactura.NORMAL; }
+
+    public Factura getFacturaAnticipoReferencia() { return facturaAnticipoReferencia; }
+    public void setFacturaAnticipoReferencia(Factura facturaAnticipoReferencia) { this.facturaAnticipoReferencia = facturaAnticipoReferencia; }
+
+    public BigDecimal getImporteAnticipoDescontado() { return importeAnticipoDescontado; }
+    public void setImporteAnticipoDescontado(BigDecimal importeAnticipoDescontado) { this.importeAnticipoDescontado = importeAnticipoDescontado; }
 }

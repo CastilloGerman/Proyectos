@@ -129,7 +129,7 @@ public class EmpresaService {
         if (!metodo.isEmpty() && !METODOS_PAGO_PERMITIDOS.contains(metodo)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Método de pago no reconocido");
         }
-        String ibanRaw = request.ibanCuenta() != null ? request.ibanCuenta().trim().replaceAll("\\s+", "") : "";
+        String ibanRaw = request.ibanCuenta() != null ? IbanValidator.normalize(request.ibanCuenta()) : "";
         if (!ibanRaw.isEmpty() && !IbanValidator.isValid(ibanRaw)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "IBAN no válido");
         }

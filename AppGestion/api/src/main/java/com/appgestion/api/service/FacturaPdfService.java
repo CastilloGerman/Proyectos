@@ -2,12 +2,10 @@ package com.appgestion.api.service;
 
 import com.appgestion.api.constant.TaxConstants;
 import com.appgestion.api.domain.entity.*;
+import com.appgestion.api.domain.enums.TipoFactura;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 import org.springframework.stereotype.Service;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
@@ -22,8 +20,6 @@ import java.util.Optional;
  */
 @Service
 public class FacturaPdfService {
-
-    private static final Logger log = LoggerFactory.getLogger(FacturaPdfService.class);
 
     private static final Color HEADER_BG = new Color(45, 55, 72);
     private static final Color ROW_ALT = new Color(248, 250, 252);
@@ -173,6 +169,18 @@ public class FacturaPdfService {
         PdfPTable totalesTable = crearTablaTotales(factura, cellFont);
         document.add(totalesTable);
 
+        if (factura.getTipoFactura() == TipoFactura.FINAL_CON_ANTICIPO && factura.getFacturaAnticipoReferencia() != null) {
+            Factura fa = factura.getFacturaAnticipoReferencia();
+            String fechaAnt = fa.getFechaExpedicion() != null ? fa.getFechaExpedicion().format(DATE_FORMAT) : "";
+            Paragraph pieAnt = new Paragraph(
+                    "Anticipo facturado mediante " + (fa.getNumeroFactura() != null ? fa.getNumeroFactura() : "")
+                            + (fechaAnt.isEmpty() ? "" : " con fecha " + fechaAnt) + ".",
+                    smallFont
+            );
+            pieAnt.setSpacingBefore(6);
+            document.add(pieAnt);
+        }
+
         // Notas al pie (configurables). null = usar las guardadas en empresa; no null = texto explícito (vista previa).
         String pieFactura;
         if (notasPieFacturaOverride != null) {
@@ -191,17 +199,6 @@ public class FacturaPdfService {
             Paragraph notasFactura = new Paragraph("Notas: " + factura.getNotas(), smallFont);
             notasFactura.setSpacingBefore(8);
             document.add(notasFactura);
-        }
-        String qrPayload = factura.getPaymentLinkUrl();
-        if (qrPayload == null || qrPayload.isBlank()) {
-            qrPayload = "Factura "
-                    + Optional.ofNullable(factura.getNumeroFactura()).orElse("")
-                    + " | id:" + factura.getId();
-        }
-        try {
-            PdfQrHelper.agregarQr(document, qrPayload, smallFont);
-        } catch (IOException e) {
-            log.warn("No se pudo añadir QR al PDF de factura: {}", e.getMessage());
         }
     }
 
@@ -273,8 +270,26 @@ public class FacturaPdfService {
             totalesTable.addCell(new Phrase(String.format("%.2f €", iva), cellFont));
         }
         Font boldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.DARK_GRAY);
-        totalesTable.addCell(new Phrase("TOTAL (" + (factura.getMoneda() != null ? factura.getMoneda() : "EUR") + "):", boldFont));
-        totalesTable.addCell(new Phrase(String.format("%.2f €", total), boldFont));
+        Font redFont = FontFactory.getFont(FontFactory.HELVETICA, 9, new Color(120, 53, 15));
+
+        if (factura.getTipoFactura() == TipoFactura.FINAL_CON_ANTICIPO
+                && factura.getImporteAnticipoDescontado() != null
+                && factura.getFacturaAnticipoReferencia() != null) {
+            double brutoRemanente = subtotal + iva;
+            totalesTable.addCell(new Phrase("Subtotal (remanente):", cellFont));
+            totalesTable.addCell(new Phrase(String.format("%.2f €", brutoRemanente), cellFont));
+            Factura fa = factura.getFacturaAnticipoReferencia();
+            String ref = fa.getNumeroFactura() != null ? fa.getNumeroFactura() : "";
+            double desc = factura.getImporteAnticipoDescontado().doubleValue();
+            totalesTable.addCell(new Phrase("(-) Anticipo facturado " + ref + ":", redFont));
+            totalesTable.addCell(new Phrase(String.format("- %.2f €", desc), redFont));
+            Font totalPagarFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.DARK_GRAY);
+            totalesTable.addCell(new Phrase("Total a pagar:", totalPagarFont));
+            totalesTable.addCell(new Phrase(String.format("%.2f €", total), totalPagarFont));
+        } else {
+            totalesTable.addCell(new Phrase("TOTAL (" + (factura.getMoneda() != null ? factura.getMoneda() : "EUR") + "):", boldFont));
+            totalesTable.addCell(new Phrase(String.format("%.2f €", total), boldFont));
+        }
 
         return totalesTable;
     }

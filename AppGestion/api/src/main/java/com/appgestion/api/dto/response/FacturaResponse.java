@@ -27,5 +27,9 @@ public record FacturaResponse(
         String notas,
         List<FacturaItemResponse> items,
         String paymentLinkUrl,
+        String tipoFactura,
+        Long facturaAnticipoId,
+        String numeroFacturaAnticipo,
+        Double importeAnticipoDescontado,
         List<FacturaCobroResponse> cobros
 ) {}

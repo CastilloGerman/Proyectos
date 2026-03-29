@@ -42,10 +42,11 @@ export interface Presupuesto {
   condicionesActivas?: string[] | null;
   /** Texto libre opcional al pie del PDF. */
   notaAdicional?: string | null;
-  /** Importe de señal / anticipo acordado. */
-  senalImporte?: number | null;
-  /** Si la señal ya fue cobrada. */
-  senalPagada?: boolean;
+  /** Anticipo fiscal registrado (antes de facturar el anticipo). */
+  tieneAnticipo?: boolean;
+  importeAnticipo?: number | null;
+  anticipoFacturado?: boolean;
+  fechaAnticipo?: string | null;
   items: PresupuestoItem[];
 }
 
@@ -59,6 +60,23 @@ export interface PresupuestoRequest {
   descuentoAntesIva?: boolean;
   condicionesActivas?: string[];
   notaAdicional?: string;
-  senalImporte?: number;
-  senalPagada?: boolean;
+}
+
+/** Registro de anticipo (POST /presupuestos/:id/anticipo). */
+export interface AnticipoRegistroRequest {
+  importeAnticipo: number;
+  fechaAnticipo: string;
+}
+
+/** Resumen de importes del flujo de anticipo (GET resumen-anticipo). */
+export interface AnticipoResumen {
+  totalPresupuesto: number;
+  importeAnticipo: number;
+  baseAnticipo: number;
+  ivaAnticipo: number;
+  importePendiente: number;
+  basePendiente: number;
+  ivaPendiente: number;
+  anticipoYaFacturado: boolean;
+  tieneAnticipoRegistrado: boolean;
 }

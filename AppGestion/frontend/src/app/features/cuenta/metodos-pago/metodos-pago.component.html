@@ -62,7 +62,7 @@
       </mat-card-header>
       <mat-card-content>
         <form [formGroup]="form" (ngSubmit)="guardar()" class="mp-form">
-          <mat-form-field appearance="outline" class="full">
+          <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
             <mat-label>Forma de pago por defecto</mat-label>
             <mat-select formControlName="defaultMetodoPago">
               <mat-option value="Transferencia">Transferencia bancaria</mat-option>
@@ -73,16 +73,27 @@
             <mat-hint>Aparece en el PDF como “Forma de pago”</mat-hint>
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="full">
+          <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
             <mat-label>IBAN (opcional)</mat-label>
-            <input matInput formControlName="ibanCuenta" placeholder="ES00 0000 0000 0000 0000 0000" autocomplete="off" />
+            <input
+              matInput
+              formControlName="ibanCuenta"
+              placeholder="ES00 0000 0000 00 0000000000"
+              autocomplete="off"
+              maxlength="40"
+              (blur)="onIbanBlur()"
+            />
             @if (form.controls.ibanCuenta.hasError('ibanInvalido') && form.controls.ibanCuenta.touched) {
-              <mat-error>IBAN no válido</mat-error>
+              <mat-error>
+                IBAN no válido: comprueba los dígitos (en España, 24 caracteres: ES + 22 números). Puedes escribirlo con espacios.
+              </mat-error>
             }
-            <mat-hint>Recomendado si cobras por transferencia. Sin espacios al guardar.</mat-hint>
+            <mat-hint>
+              Recomendado si cobras por transferencia. Puedes usar el formato con espacios; al guardar se envía sin separadores.
+            </mat-hint>
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="full">
+          <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
             <mat-label>Teléfono Bizum (opcional)</mat-label>
             <input matInput formControlName="bizumTelefono" placeholder="600 000 000" autocomplete="tel" />
             @if (form.controls.bizumTelefono.hasError('bizumInvalido') && form.controls.bizumTelefono.touched) {
@@ -90,7 +101,7 @@
             }
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="full">
+          <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
             <mat-label>Condiciones de pago por defecto</mat-label>
             <input matInput formControlName="defaultCondicionesPago" maxlength="200" placeholder="Ej. Transferencia a 30 días" />
             <mat-hint align="end">{{ form.controls.defaultCondicionesPago.value.length }}/200</mat-hint>
@@ -133,9 +144,9 @@
             <mat-checkbox formControlName="dia30">A los 30 días</mat-checkbox>
           </div>
           <p class="mp-hint">
-            Requiere
-            <a routerLink="/cuenta/datos-empresa">correo de envío (SMTP) configurado</a>
-            en datos de la empresa. Por cada factura y plazo solo se envía un correo. Si el cliente no tiene email en su ficha, no se enviará.
+            Por defecto los recordatorios se envían con el correo de la aplicación; no hace falta configurar SMTP. Si prefieres usar tu Gmail, Microsoft u otro método, puedes cambiarlo en
+            <a routerLink="/cuenta/datos-empresa">datos de la empresa</a>
+            (envío de correo). Por cada factura y plazo solo se envía un correo. Si el cliente no tiene email en su ficha, no se enviará.
           </p>
           <div class="mp-form-actions">
             <button

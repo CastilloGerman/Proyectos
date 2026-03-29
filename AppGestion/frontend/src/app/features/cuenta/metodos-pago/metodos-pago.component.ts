@@ -16,7 +16,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { ConfigService } from '../../../core/services/config.service';
 import { Empresa } from '../../../core/models/empresa.model';
 import { SubscriptionService } from '../../../core/services/subscription.service';
-import { formatIbanDisplay, ibanValidator } from '../../../shared/validators/iban.validator';
+import { formatIbanDisplay, ibanValidator, normalizarIbanParaValidar } from '../../../shared/validators/iban.validator';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 
 const BIZUM_MOVIL_ES = /^[6-9]\d{8}$/;
@@ -93,7 +93,7 @@ export class MetodosPagoComponent implements OnInit {
   readonly vistaPdf = computed(() => {
     const v = this.form.getRawValue();
     const metodo = v.defaultMetodoPago || 'Transferencia';
-    const ibanFmt = formatIbanDisplay(v.ibanCuenta?.replace(/\s/g, '') || '');
+    const ibanFmt = formatIbanDisplay(v.ibanCuenta || '');
     const parts: string[] = [metodo];
     if (metodo === 'Transferencia' && ibanFmt) parts.push(`IBAN ${ibanFmt}`);
     if (metodo === 'Bizum' && v.bizumTelefono?.trim()) parts.push(`Bizum ${v.bizumTelefono.trim()}`);
@@ -139,7 +139,7 @@ export class MetodosPagoComponent implements OnInit {
       .patchMetodosCobro({
         defaultMetodoPago: v.defaultMetodoPago.trim(),
         defaultCondicionesPago: v.defaultCondicionesPago.trim(),
-        ibanCuenta: v.ibanCuenta.replace(/\s/g, '').trim(),
+        ibanCuenta: normalizarIbanParaValidar(v.ibanCuenta),
         bizumTelefono: biz ? normalizarDigitosBizum(biz) : '',
       })
       .subscribe({
@@ -178,6 +178,20 @@ export class MetodosPagoComponent implements OnInit {
 
   irSuscripcion(): void {
     void this.router.navigate(['/cuenta/suscripcion']);
+  }
+
+  /** Formato español legible (ESkk BBBB GGGG CC …) al salir del campo; no cambia el valor si está incompleto. */
+  onIbanBlur(): void {
+    const c = this.form.controls.ibanCuenta;
+    const raw = c.value?.trim();
+    if (!raw) return;
+    const norm = normalizarIbanParaValidar(raw);
+    if (norm.length === 0) return;
+    if (norm.startsWith('ES') && norm.length !== 24) return;
+    const formatted = formatIbanDisplay(raw);
+    if (formatted !== c.value) {
+      c.setValue(formatted, { emitEvent: true });
+    }
   }
 
   private aplicarRecordatoriosDesdeEmpresa(e: Empresa): void {

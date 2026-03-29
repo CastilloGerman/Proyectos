@@ -21,9 +21,7 @@ public record PresupuestoRequest(
         Boolean descuentoAntesIva,
         /** Claves del catálogo (servidor); vacío o null en creación usa predeterminadas del perfil si existen. */
         List<String> condicionesActivas,
-        String notaAdicional,
-        Double senalImporte,
-        Boolean senalPagada
+        String notaAdicional
 ) {
     public PresupuestoRequest {
         if (ivaHabilitado == null) ivaHabilitado = true;
@@ -31,6 +29,5 @@ public record PresupuestoRequest(
         if (descuentoGlobalPorcentaje == null) descuentoGlobalPorcentaje = 0.0;
         if (descuentoGlobalFijo == null) descuentoGlobalFijo = 0.0;
         if (descuentoAntesIva == null) descuentoAntesIva = true;
-        if (senalPagada == null) senalPagada = false;
     }
 }

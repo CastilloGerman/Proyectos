@@ -2,6 +2,7 @@ package com.appgestion.api.service;
 
 import com.appgestion.api.domain.entity.Factura;
 import com.appgestion.api.domain.entity.FacturaCobro;
+import com.appgestion.api.domain.enums.TipoFactura;
 import com.appgestion.api.dto.response.FacturaCobroResponse;
 import com.appgestion.api.dto.response.FacturaItemResponse;
 import com.appgestion.api.dto.response.FacturaResponse;
@@ -31,6 +32,13 @@ public class FacturaResponseMapper {
                         c.getId(), c.getImporte(), c.getFecha(), c.getMetodo(), c.getNotas(), c.getCreatedAt()))
                 .toList();
 
+        TipoFactura tf = factura.getTipoFactura() != null ? factura.getTipoFactura() : TipoFactura.NORMAL;
+        Factura ref = factura.getFacturaAnticipoReferencia();
+        Long facturaAnticipoId = ref != null ? ref.getId() : null;
+        String numeroFacturaAnticipo = ref != null ? ref.getNumeroFactura() : null;
+        Double importeAnticipoDescontado = factura.getImporteAnticipoDescontado() != null
+                ? factura.getImporteAnticipoDescontado().doubleValue() : null;
+
         return new FacturaResponse(
                 factura.getId(),
                 factura.getNumeroFactura(),
@@ -54,6 +62,10 @@ public class FacturaResponseMapper {
                 factura.getNotas(),
                 items,
                 factura.getPaymentLinkUrl(),
+                tf.name(),
+                facturaAnticipoId,
+                numeroFacturaAnticipo,
+                importeAnticipoDescontado,
                 cobros
         );
     }

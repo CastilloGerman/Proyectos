@@ -3,10 +3,13 @@ package com.appgestion.api.controller;
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.request.EnviarEmailRequest;
 import com.appgestion.api.dto.request.PresupuestoCondicionesPredeterminadasRequest;
+import com.appgestion.api.dto.request.AnticipoRegistroRequest;
 import com.appgestion.api.dto.request.PresupuestoRequest;
+import com.appgestion.api.dto.response.AnticipoResumenDTO;
 import com.appgestion.api.dto.response.FacturaResponse;
 import com.appgestion.api.dto.response.PresupuestoCondicionDisponibleResponse;
 import com.appgestion.api.dto.response.PresupuestoResponse;
+import com.appgestion.api.service.AnticipoService;
 import com.appgestion.api.service.CurrentUserService;
 import com.appgestion.api.service.FacturaService;
 import com.appgestion.api.service.PresupuestoCondicionesService;
@@ -31,15 +34,18 @@ public class PresupuestoController {
 
     private final PresupuestoService presupuestoService;
     private final FacturaService facturaService;
+    private final AnticipoService anticipoService;
     private final CurrentUserService currentUserService;
     private final PresupuestoCondicionesService presupuestoCondicionesService;
 
     public PresupuestoController(PresupuestoService presupuestoService,
                                  FacturaService facturaService,
+                                 AnticipoService anticipoService,
                                  CurrentUserService currentUserService,
                                  PresupuestoCondicionesService presupuestoCondicionesService) {
         this.presupuestoService = presupuestoService;
         this.facturaService = facturaService;
+        this.anticipoService = anticipoService;
         this.currentUserService = currentUserService;
         this.presupuestoCondicionesService = presupuestoCondicionesService;
     }
@@ -113,6 +119,36 @@ public class PresupuestoController {
     public FacturaResponse crearFacturaDesdePresupuesto(@PathVariable Long id) {
         Usuario usuario = currentUserService.getCurrentUsuario();
         return facturaService.crearDesdePresupuesto(id, usuario);
+    }
+
+    @PostMapping("/{id}/anticipo")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public PresupuestoResponse registrarAnticipo(@PathVariable Long id, @Valid @RequestBody AnticipoRegistroRequest body) {
+        Long uid = currentUserService.getCurrentUsuario().getId();
+        anticipoService.registrarAnticipo(id, body.importeAnticipo(), body.fechaAnticipo(), uid);
+        return presupuestoService.obtenerPorId(id, uid);
+    }
+
+    @PostMapping("/{id}/factura-anticipo")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @ResponseStatus(HttpStatus.CREATED)
+    public FacturaResponse generarFacturaAnticipo(@PathVariable Long id) {
+        Usuario usuario = currentUserService.getCurrentUsuario();
+        return anticipoService.generarFacturaAnticipo(id, usuario.getId(), usuario);
+    }
+
+    @PostMapping("/{id}/factura-final")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @ResponseStatus(HttpStatus.CREATED)
+    public FacturaResponse generarFacturaFinal(@PathVariable Long id) {
+        Usuario usuario = currentUserService.getCurrentUsuario();
+        return anticipoService.generarFacturaFinal(id, usuario.getId(), usuario);
+    }
+
+    @GetMapping("/{id}/resumen-anticipo")
+    public AnticipoResumenDTO resumenAnticipo(@PathVariable Long id) {
+        Long uid = currentUserService.getCurrentUsuario().getId();
+        return anticipoService.calcularResumenAnticipo(id, uid);
     }
 
     @PostMapping

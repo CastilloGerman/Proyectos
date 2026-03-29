@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { forkJoin } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -14,6 +15,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatRadioModule } from '@angular/material/radio';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/auth/auth.service';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
@@ -21,7 +23,8 @@ import { ClienteService } from '../../../core/services/cliente.service';
 import { MaterialService } from '../../../core/services/material.service';
 import { Cliente } from '../../../core/models/cliente.model';
 import { Material } from '../../../core/models/material.model';
-import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
+import { AnticipoResumen, PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
+import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { CondicionesPresupuestoFormValue, PresupuestoCondicionDisponible } from '../../../core/models/presupuesto-condiciones.model';
 import { CondicionesPresupuestoComponent } from '../condiciones-presupuesto/condiciones-presupuesto.component';
 
@@ -44,6 +47,7 @@ const IVA_RATE = 0.21;
         MatChipsModule,
         MatTooltipModule,
         MatRadioModule,
+        MatDialogModule,
         FormsModule,
         CondicionesPresupuestoComponent,
     ],
@@ -54,6 +58,15 @@ const IVA_RATE = 0.21;
           <mat-card-title>{{ isEdit ? 'Editar presupuesto' : 'Nuevo presupuesto' }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
+          @if (!isEdit) {
+            <div class="section anticipo-section anticipo-cartel-solo">
+              <h3>Anticipo / seña</h3>
+              <p class="hint-anticipo">
+                Tras <strong>guardar</strong> el presupuesto, vuelve a abrirlo con estado <strong>Aceptado</strong> o <strong>En ejecución</strong>
+                para registrar el anticipo cobrado y emitir las facturas (anticipo y final).
+              </p>
+            </div>
+          }
           <form [formGroup]="form" (ngSubmit)="onSubmit()">
             <!-- 1. Cliente y Estado -->
             <div class="form-row cliente-block">
@@ -211,18 +224,78 @@ const IVA_RATE = 0.21;
               />
             </div>
 
-            <!-- Señal / anticipo -->
-            <div class="section senal-section">
-              <h3>Señal / anticipo</h3>
-              <p class="hint-senal">Importe acordado como señal y si ya se cobró (referencia interna).</p>
-              <div class="discount-fields">
-                <mat-form-field appearance="outline">
-                  <mat-label>Importe señal (€)</mat-label>
-                  <input matInput type="number" formControlName="senalImporte" min="0" step="0.01" placeholder="0">
-                </mat-form-field>
-                <mat-checkbox formControlName="senalPagada">Señal cobrada</mat-checkbox>
-              </div>
+            @if (mostrarSeccionAnticipo()) {
+            @if (estadoMuestraFlujoAnticipo()) {
+            <div class="section anticipo-section">
+              <h3>Anticipo / seña (fiscal)</h3>
+              <p class="hint-anticipo">
+                Registra el cobro del anticipo (seña), emite la factura de anticipo y, al finalizar el trabajo, la factura final con descuento del anticipo ya facturado.
+              </p>
+              @if (!estadoPermiteRegistrarAnticipoApi()) {
+                <p class="hint-estado">
+                  Para <strong>registrar por primera vez</strong> un anticipo, el estado del presupuesto debe ser <strong>Aceptado</strong>
+                  (puedes cambiarlo arriba). Si ya tenías anticipo registrado, el resumen y las facturas siguen disponibles.
+                </p>
+              }
+              @if (!auth.canMutate()) {
+                <p class="hint-estado">Tu cuenta no tiene permiso de edición (solo lectura); no se pueden registrar anticipos ni generar facturas desde aquí.</p>
+              }
+              @if (resumenAnticipo) {
+                <div class="anticipo-resumen-block">
+                  @if (!resumenAnticipo.tieneAnticipoRegistrado) {
+                    @if (estadoPermiteRegistrarAnticipoApi()) {
+                    <div class="discount-fields">
+                      <mat-form-field appearance="outline">
+                        <mat-label>Importe anticipo (€, IVA incl.)</mat-label>
+                        <input matInput type="number" [(ngModel)]="anticipoRegImporte" [ngModelOptions]="{standalone: true}" min="0.01" step="0.01" placeholder="0">
+                      </mat-form-field>
+                      <mat-form-field appearance="outline">
+                        <mat-label>Fecha del anticipo</mat-label>
+                        <input matInput type="date" [(ngModel)]="anticipoRegFecha" [ngModelOptions]="{standalone: true}">
+                      </mat-form-field>
+                      <button type="button" mat-raised-button color="primary" (click)="registrarAnticipoClick()" [disabled]="anticipoCargando || !auth.canMutate()">
+                        Registrar anticipo
+                      </button>
+                    </div>
+                    } @else {
+                    <p class="text-muted">Cambia el estado a <strong>Aceptado</strong> para indicar importe y fecha del anticipo.</p>
+                    }
+                  } @else {
+                    <div class="resumen-grid">
+                      <span>Total presupuesto</span><span>{{ resumenAnticipo.totalPresupuesto | number:'1.2-2' }} €</span>
+                      <span>Anticipo (IVA incl.)</span><span>{{ resumenAnticipo.importeAnticipo | number:'1.2-2' }} €</span>
+                      <span>Base / IVA anticipo</span><span>{{ resumenAnticipo.baseAnticipo | number:'1.2-2' }} € / {{ resumenAnticipo.ivaAnticipo | number:'1.2-2' }} €</span>
+                      <span>Pendiente (neto a facturar en final)</span><span>{{ resumenAnticipo.importePendiente | number:'1.2-2' }} €</span>
+                    </div>
+                    @if (!resumenAnticipo.anticipoYaFacturado) {
+                      <button type="button" mat-raised-button color="primary" (click)="generarFacturaAnticipoClick()" [disabled]="anticipoCargando || !auth.canMutate()" class="anticipo-btn">
+                        Generar factura de anticipo
+                      </button>
+                    } @else if (!facturaPrincipalId) {
+                      <button type="button" mat-raised-button color="accent" (click)="confirmarFacturaFinal()" [disabled]="anticipoCargando || !auth.canMutate()" class="anticipo-btn">
+                        Generar factura final (restante)
+                      </button>
+                    } @else {
+                      <p class="hint-ok">Ya existe factura de venta principal (n.º enlazado en el listado).</p>
+                    }
+                  }
+                </div>
+              } @else if (anticipoResumenLoading) {
+                <p class="text-muted">Cargando resumen…</p>
+              } @else {
+                <p class="text-muted">No se pudo cargar el resumen de anticipo.</p>
+              }
             </div>
+            } @else {
+            <div class="section anticipo-section anticipo-cartel-solo">
+              <h3>Anticipo / seña</h3>
+              <p class="hint-anticipo">
+                Cuando el presupuesto pase a <strong>Aceptado</strong> o <strong>En ejecución</strong>, aquí podrás registrar el anticipo cobrado,
+                generar la factura de anticipo y la factura final con el descuento correspondiente.
+              </p>
+            </div>
+            }
+            }
 
             <!-- 4. Descuentos -->
             <div class="section discount-section">
@@ -321,8 +394,22 @@ const IVA_RATE = 0.21;
     .discount-section { background: #f5f5f5; border-color: #e0e0e0; }
     .cost-summary { background: #e8f5e9; border: 1px solid #c8e6c9; }
     .condiciones-compact { background: #f8fafc; border-color: #e2e8f0; padding-top: 16px; padding-bottom: 16px; }
-    .senal-section { background: #fff8e6; border-color: #ffe0a3; }
-    .hint-senal { font-size: 12px; color: #6d4c00; margin: 0 0 12px 0; }
+    .anticipo-section { background: #fff8e6; border-color: #ffe0a3; }
+    .hint-anticipo { font-size: 12px; color: #6d4c00; margin: 0 0 12px 0; }
+    .anticipo-resumen-block { margin-top: 8px; }
+    .resumen-grid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px 16px;
+      font-size: 14px;
+      margin-bottom: 16px;
+      max-width: 520px;
+    }
+    .anticipo-btn { margin-top: 8px; }
+    .hint-ok { font-size: 13px; color: #2e7d32; margin: 8px 0 0 0; }
+    .hint-estado { font-size: 13px; color: #5d4037; background: #fff; padding: 10px 12px; border-radius: 8px; border: 1px solid #ffe0a3; margin-bottom: 12px; }
+    .anticipo-cartel-solo { background: #fff8e6; border-color: #ffe0a3; }
+    .text-muted { color: rgba(0,0,0,0.45); }
 
     .top-materiales { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
     .top-label { font-size: 12px; color: #666; }
@@ -353,6 +440,8 @@ const IVA_RATE = 0.21;
   `]
 })
 export class PresupuestoFormComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
+
   form: FormGroup;
   /** Catálogo de condiciones (solo claves + textos desde API). */
   condicionesCatalogo: PresupuestoCondicionDisponible[] = [];
@@ -365,6 +454,15 @@ export class PresupuestoFormComponent implements OnInit {
   /** existente: desplegable; nuevo: solo nombre y alta rápida. */
   clienteModo: 'existente' | 'nuevo' = 'existente';
   nombreClienteNuevo = '';
+
+  /** Resumen API del flujo de anticipo (solo presupuesto Aceptado en edición). */
+  resumenAnticipo: AnticipoResumen | null = null;
+  anticipoResumenLoading = false;
+  anticipoCargando = false;
+  /** Factura de venta principal (NORMAL o FINAL_CON_ANTICIPO), si existe. */
+  facturaPrincipalId: number | null = null;
+  anticipoRegImporte: number | '' = '';
+  anticipoRegFecha = '';
 
   get materialItems(): FormArray {
     return this.form.get('materialItems') as FormArray;
@@ -383,6 +481,26 @@ export class PresupuestoFormComponent implements OnInit {
     return !this.auth.canMutate() || this.form.pending;
   }
 
+  /**
+   * Muestra el bloque de anticipo en edición.
+   * No usar `auth.canMutate()` aquí: los signals del servicio inyectado no siempre disparan
+   * el mismo ciclo de detección de cambios que el componente; además `roleMutateGuard` ya exige escritura en esta ruta.
+   */
+  mostrarSeccionAnticipo(): boolean {
+    return this.isEdit === true && this.id != null && this.id > 0 && !Number.isNaN(this.id);
+  }
+
+  /** Muestra el bloque con resumen y acciones (no el cartel corto de Pendiente/Rechazado). */
+  estadoMuestraFlujoAnticipo(): boolean {
+    const e = (this.form.get('estado')?.value ?? '').toString().trim();
+    return e === 'Aceptado' || e === 'En ejecución';
+  }
+
+  /** La API solo permite registrar anticipo con presupuesto en Aceptado. */
+  estadoPermiteRegistrarAnticipoApi(): boolean {
+    return (this.form.get('estado')?.value ?? '').toString().trim() === 'Aceptado';
+  }
+
   constructor(
     private fb: FormBuilder,
     private route: ActivatedRoute,
@@ -391,7 +509,8 @@ export class PresupuestoFormComponent implements OnInit {
     private presupuestoService: PresupuestoService,
     private clienteService: ClienteService,
     private materialService: MaterialService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private dialog: MatDialog
   ) {
     this.form = this.fb.group({
       clienteId: [null, Validators.required],
@@ -404,8 +523,6 @@ export class PresupuestoFormComponent implements OnInit {
         condicionesActivas: [],
         notaAdicional: '',
       }),
-      senalImporte: [null as number | null],
-      senalPagada: [false],
       materialItems: this.fb.array([]),
       manualItems: this.fb.array([]),
     });
@@ -446,9 +563,12 @@ export class PresupuestoFormComponent implements OnInit {
               condicionesActivas: p.condicionesActivas ?? [],
               notaAdicional: p.notaAdicional ?? '',
             },
-            senalImporte: p.senalImporte ?? null,
-            senalPagada: p.senalPagada ?? false,
           });
+          this.facturaPrincipalId = p.facturaId ?? null;
+          if (this.estadoStrFlujoAnticipo(p.estado)) {
+            this.anticipoRegFecha = new Date().toISOString().slice(0, 10);
+            this.loadResumenAnticipo();
+          }
           this.materialItems.clear();
           this.manualItems.clear();
           p.items.forEach((it) => {
@@ -498,6 +618,124 @@ export class PresupuestoFormComponent implements OnInit {
       }
       this.addMaterialItem();
     }
+
+    this.form
+      .get('estado')
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((est) => {
+        if (!this.isEdit || !this.id) return;
+        if (this.estadoStrFlujoAnticipo(est)) {
+          if (!this.anticipoRegFecha) {
+            this.anticipoRegFecha = new Date().toISOString().slice(0, 10);
+          }
+          this.loadResumenAnticipo();
+        } else {
+          this.resumenAnticipo = null;
+        }
+      });
+  }
+
+  private estadoStrFlujoAnticipo(estado: string | null | undefined): boolean {
+    const e = (estado ?? '').toString().trim();
+    return e === 'Aceptado' || e === 'En ejecución';
+  }
+
+  private loadResumenAnticipo(): void {
+    if (!this.id || !this.estadoMuestraFlujoAnticipo()) return;
+    this.anticipoResumenLoading = true;
+    this.resumenAnticipo = null;
+    this.presupuestoService.getResumenAnticipo(this.id).subscribe({
+      next: (r) => {
+        this.resumenAnticipo = r;
+        this.anticipoResumenLoading = false;
+      },
+      error: () => {
+        this.resumenAnticipo = null;
+        this.anticipoResumenLoading = false;
+        this.snackBar.open('No se pudo cargar el resumen de anticipo.', 'Cerrar', { duration: 4000 });
+      },
+    });
+  }
+
+  registrarAnticipoClick(): void {
+    if (!this.id) return;
+    const imp = this.anticipoRegImporte === '' ? NaN : +this.anticipoRegImporte;
+    if (!this.anticipoRegFecha || isNaN(imp) || imp <= 0) {
+      this.snackBar.open('Indica importe y fecha de anticipo válidos.', 'Cerrar', { duration: 4000 });
+      return;
+    }
+    this.anticipoCargando = true;
+    this.presupuestoService
+      .registrarAnticipo(this.id, { importeAnticipo: imp, fechaAnticipo: this.anticipoRegFecha })
+      .subscribe({
+        next: (p) => {
+          this.facturaPrincipalId = p.facturaId ?? null;
+          this.anticipoCargando = false;
+          this.snackBar.open('Anticipo registrado', 'Cerrar', { duration: 3000 });
+          this.loadResumenAnticipo();
+        },
+        error: (err) => {
+          this.anticipoCargando = false;
+          const msg = err.error?.message || err.error?.detail || 'Error al registrar anticipo';
+          this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+        },
+      });
+  }
+
+  generarFacturaAnticipoClick(): void {
+    if (!this.id) return;
+    this.anticipoCargando = true;
+    this.presupuestoService.generarFacturaAnticipo(this.id).subscribe({
+      next: () => {
+        this.anticipoCargando = false;
+        this.snackBar.open('Factura de anticipo creada', 'Cerrar', { duration: 3500 });
+        this.loadResumenAnticipo();
+      },
+      error: (err) => {
+        this.anticipoCargando = false;
+        const msg = err.error?.message || err.error?.detail || 'Error al generar la factura de anticipo';
+        this.snackBar.open(msg, 'Cerrar', { duration: 6000 });
+      },
+    });
+  }
+
+  confirmarFacturaFinal(): void {
+    const r = this.resumenAnticipo;
+    if (!this.id || !r) return;
+    const msg = [
+      `Total presupuesto: ${r.totalPresupuesto.toFixed(2)} €`,
+      `Importe pendiente (a cobrar en la final): ${r.importePendiente.toFixed(2)} €`,
+      '',
+      '¿Emitir la factura final con descuento del anticipo ya facturado?',
+    ].join('\n');
+    this.dialog
+      .open(ConfirmDialogComponent, {
+        width: '440px',
+        data: {
+          title: 'Factura final con anticipo',
+          message: msg,
+          confirmLabel: 'Generar factura final',
+          confirmColor: 'primary',
+        },
+      })
+      .afterClosed()
+      .subscribe((ok) => {
+        if (!ok || !this.id) return;
+        this.anticipoCargando = true;
+        this.presupuestoService.createFacturaFinalFromPresupuesto(this.id).subscribe({
+          next: (f) => {
+            this.anticipoCargando = false;
+            this.facturaPrincipalId = f.id;
+            this.snackBar.open('Factura final creada', 'Cerrar', { duration: 3000 });
+            this.router.navigate(['/facturas', f.id]);
+          },
+          error: (err) => {
+            this.anticipoCargando = false;
+            const msg = err.error?.message || err.error?.detail || 'Error al generar la factura final';
+            this.snackBar.open(msg, 'Cerrar', { duration: 6000 });
+          },
+        });
+      });
   }
 
   /** Texto del campo cerrado: solo nombre (el badge solo se muestra en la lista). */
@@ -623,15 +861,44 @@ export class PresupuestoFormComponent implements OnInit {
     this.onMaterialSelect(idx, material.id);
   }
 
+  /**
+   * Al elegir un material en el desplegable, si ya existe otra línea con el mismo material,
+   * se unen en una sola fila sumando cantidades (mismo criterio que «Más usados»).
+   */
   onMaterialSelect(index: number, materialId: number | null): void {
     if (materialId == null) return;
     const material = this.materiales.find((m) => m.id === materialId);
-    if (material) {
-      const item = this.materialItems.at(index);
-      item.patchValue({
+    if (!material) return;
+
+    const indices: number[] = [];
+    for (let i = 0; i < this.materialItems.length; i++) {
+      if (this.materialItems.at(i).get('materialId')?.value === materialId) {
+        indices.push(i);
+      }
+    }
+    if (indices.length <= 1) {
+      this.materialItems.at(index).patchValue({
         tareaManual: material.nombre,
         precioUnitario: material.precioUnitario,
       });
+      return;
+    }
+
+    const keep = Math.min(...indices);
+    let totalCantidad = 0;
+    for (const i of indices) {
+      totalCantidad += +(this.materialItems.at(i).get('cantidad')?.value ?? 0);
+    }
+    (this.materialItems.at(keep) as FormGroup).patchValue({
+      materialId,
+      tareaManual: material.nombre,
+      precioUnitario: material.precioUnitario,
+      cantidad: totalCantidad,
+    });
+    for (const i of indices
+      .filter((idx) => idx !== keep)
+      .sort((a, b) => b - a)) {
+      this.materialItems.removeAt(i);
     }
   }
 
@@ -740,8 +1007,6 @@ export class PresupuestoFormComponent implements OnInit {
       descuentoAntesIva: value.descuentoAntesIva !== false,
       condicionesActivas: cond?.condicionesActivas ?? [],
       notaAdicional: cond?.notaAdicional?.trim() ? cond.notaAdicional.trim() : undefined,
-      senalImporte: value.senalImporte != null && value.senalImporte !== '' ? +value.senalImporte : undefined,
-      senalPagada: !!value.senalPagada,
     };
     const req = this.isEdit && this.id
       ? this.presupuestoService.update(this.id, payload)

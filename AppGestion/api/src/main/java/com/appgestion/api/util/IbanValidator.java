@@ -9,11 +9,19 @@ public final class IbanValidator {
 
     private IbanValidator() {}
 
+    /** Espacios, NBSP, puntos y guiones (mismo criterio que el cliente). */
+    public static String normalize(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "";
+        }
+        return raw.replaceAll("[\\s\\u00A0.\\-]+", "").toUpperCase();
+    }
+
     public static boolean isValid(String raw) {
         if (raw == null || raw.isBlank()) {
             return true;
         }
-        String iban = raw.replaceAll("\\s+", "").toUpperCase();
+        String iban = normalize(raw);
         if (iban.length() < 15 || iban.length() > 34) {
             return false;
         }

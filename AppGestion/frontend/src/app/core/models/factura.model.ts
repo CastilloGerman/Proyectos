@@ -57,6 +57,11 @@ export interface Factura {
   items: FacturaItem[];
   /** URL de pago (Stripe Checkout) si se generó. */
   paymentLinkUrl?: string | null;
+  /** NORMAL | ANTICIPO | FINAL_CON_ANTICIPO */
+  tipoFactura?: string;
+  facturaAnticipoId?: number | null;
+  numeroFacturaAnticipo?: string | null;
+  importeAnticipoDescontado?: number | null;
   cobros?: FacturaCobro[];
 }
 

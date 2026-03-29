@@ -1,6 +1,7 @@
 package com.appgestion.api.repository;
 
 import com.appgestion.api.domain.entity.Factura;
+import com.appgestion.api.domain.enums.TipoFactura;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -33,6 +34,23 @@ public interface FacturaRepository extends JpaRepository<Factura, Long> {
     Optional<Factura> findByNumeroFacturaAndUsuarioId(String numeroFactura, Long usuarioId);
 
     Optional<Factura> findFirstByPresupuesto_IdAndUsuario_Id(Long presupuestoId, Long usuarioId);
+
+    Optional<Factura> findByPresupuesto_IdAndUsuario_IdAndTipoFactura(
+            Long presupuestoId, Long usuarioId, TipoFactura tipoFactura);
+
+    /**
+     * Facturas de venta principal (excluye {@link TipoFactura#ANTICIPO}).
+     * Usar enums como parámetros: en JPQL los literales 'NORMAL' no siempre excluyen bien ANTICIPO y
+     * el presupuesto podía mostrar facturaId = factura de anticipo → la UI ocultaba «Facturar» el resto.
+     */
+    @Query("SELECT f FROM Factura f WHERE f.presupuesto.id = :pid AND f.usuario.id = :uid "
+            + "AND (f.tipoFactura IS NULL OR f.tipoFactura = :normal OR f.tipoFactura = :finalConAnticipo) "
+            + "ORDER BY f.id DESC")
+    List<Factura> findVentasPrincipalesPorPresupuesto(
+            @Param("pid") Long presupuestoId,
+            @Param("uid") Long usuarioId,
+            @Param("normal") TipoFactura normal,
+            @Param("finalConAnticipo") TipoFactura finalConAnticipo);
 
     long countByUsuarioId(Long usuarioId);
 

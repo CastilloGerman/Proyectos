@@ -2,6 +2,7 @@ package com.appgestion.api.service;
 
 import com.appgestion.api.constant.TaxConstants;
 import com.appgestion.api.domain.entity.*;
+import com.appgestion.api.domain.enums.TipoFactura;
 import com.appgestion.api.dto.request.FacturaCobroRequest;
 import com.appgestion.api.dto.request.FacturaItemRequest;
 import com.appgestion.api.dto.request.FacturaRequest;
@@ -124,6 +125,7 @@ public class FacturaService {
         factura.setNumeroFactura(numeroFactura);
         factura.setCliente(cliente);
         factura.setPresupuesto(presupuesto);
+        factura.setTipoFactura(TipoFactura.NORMAL);
         factura.setFechaVencimiento(request.fechaVencimiento());
         factura.setMetodoPago(request.metodoPago());
         factura.setEstadoPago(request.estadoPago());
@@ -186,7 +188,12 @@ public class FacturaService {
         Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(presupuestoId, usuario.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
 
-        if (facturaRepository.findFirstByPresupuesto_IdAndUsuario_Id(presupuestoId, usuario.getId()).isPresent()) {
+        if (Boolean.TRUE.equals(presupuesto.getTieneAnticipo())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Este presupuesto usa anticipo fiscal. Genera la factura final con POST /presupuestos/{id}/factura-final.");
+        }
+        if (!facturaRepository.findVentasPrincipalesPorPresupuesto(
+                presupuestoId, usuario.getId(), TipoFactura.NORMAL, TipoFactura.FINAL_CON_ANTICIPO).isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Este presupuesto ya tiene una factura asociada");
         }
 
@@ -209,6 +216,7 @@ public class FacturaService {
         factura.setNumeroFactura(numeroFactura);
         factura.setCliente(presupuesto.getCliente());
         factura.setPresupuesto(presupuesto);
+        factura.setTipoFactura(TipoFactura.NORMAL);
         factura.setFechaExpedicion(LocalDate.now());
         factura.setRegimenFiscal("Régimen general del IVA");
         factura.setMoneda("EUR");
@@ -351,7 +359,12 @@ public class FacturaService {
                 ? baseIva.multiply(TaxConstants.IVA_RATE).setScale(SCALE, ROUNDING)
                 : BigDecimal.ZERO;
         factura.setIva(cuotaIvaTotal.doubleValue());
-        factura.setTotal(subtotal.add(cuotaIvaTotal).setScale(SCALE, ROUNDING).doubleValue());
+        BigDecimal bruto = subtotal.add(cuotaIvaTotal).setScale(SCALE, ROUNDING);
+        if (factura.getTipoFactura() == TipoFactura.FINAL_CON_ANTICIPO && factura.getImporteAnticipoDescontado() != null) {
+            factura.setTotal(bruto.subtract(factura.getImporteAnticipoDescontado()).setScale(SCALE, ROUNDING).doubleValue());
+        } else {
+            factura.setTotal(bruto.doubleValue());
+        }
 
         if (Boolean.TRUE.equals(factura.getIvaHabilitado()) && baseIva.compareTo(BigDecimal.ZERO) > 0) {
             for (FacturaItem item : factura.getItems()) {
@@ -362,5 +375,15 @@ public class FacturaService {
                 }
             }
         }
+    }
+
+    /** Recalcula subtotal, IVA y total (incluye factura final con anticipo descontado). Expuesto para {@link AnticipoService}. */
+    public void recalcularTotales(Factura factura) {
+        calcularTotales(factura);
+    }
+
+    /** Validación de datos fiscales mínimos para emitir factura (reutilizado por anticipos). */
+    public void validarEmisionFactura(Long usuarioId, Cliente cliente) {
+        validarDatosFactura(usuarioId, cliente);
     }
 }

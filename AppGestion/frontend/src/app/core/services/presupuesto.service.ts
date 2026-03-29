@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { PresupuestoCondicionDisponible } from '../models/presupuesto-condiciones.model';
-import { Presupuesto, PresupuestoRequest } from '../models/presupuesto.model';
+import { AnticipoRegistroRequest, AnticipoResumen, Presupuesto, PresupuestoRequest } from '../models/presupuesto.model';
 import { Factura } from '../models/factura.model';
 import { environment } from '../../../environments/environment';
 
@@ -14,6 +14,23 @@ export class PresupuestoService {
 
   createFacturaFromPresupuesto(presupuestoId: number): Observable<Factura> {
     return this.http.post<Factura>(`${this.apiUrl}/${presupuestoId}/factura`, {});
+  }
+
+  /** Factura de venta principal cuando el presupuesto tiene anticipo ya facturado. */
+  createFacturaFinalFromPresupuesto(presupuestoId: number): Observable<Factura> {
+    return this.http.post<Factura>(`${this.apiUrl}/${presupuestoId}/factura-final`, {});
+  }
+
+  registrarAnticipo(presupuestoId: number, body: AnticipoRegistroRequest): Observable<Presupuesto> {
+    return this.http.post<Presupuesto>(`${this.apiUrl}/${presupuestoId}/anticipo`, body);
+  }
+
+  generarFacturaAnticipo(presupuestoId: number): Observable<Factura> {
+    return this.http.post<Factura>(`${this.apiUrl}/${presupuestoId}/factura-anticipo`, {});
+  }
+
+  getResumenAnticipo(presupuestoId: number): Observable<AnticipoResumen> {
+    return this.http.get<AnticipoResumen>(`${this.apiUrl}/${presupuestoId}/resumen-anticipo`);
   }
 
   getAll(q?: string): Observable<Presupuesto[]> {

@@ -1,11 +1,13 @@
 package com.appgestion.api.service;
 
 import com.appgestion.api.domain.entity.*;
+import com.appgestion.api.domain.enums.TipoFactura;
 import com.appgestion.api.dto.request.PlantillaPdfEscenario;
 import com.appgestion.api.dto.request.PlantillaPdfTipo;
 import com.appgestion.api.dto.request.PlantillasPdfPreviewRequest;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -65,6 +67,7 @@ public class PlantillasPdfPreviewService {
         f.setIvaHabilitado(true);
         f.setMetodoPago("Transferencia");
         f.setEstadoPago("No Pagada");
+        f.setTipoFactura(TipoFactura.NORMAL);
         f.setRegimenFiscal("Régimen general del IVA");
         f.setCondicionesPago("Transferencia a 30 días");
 
@@ -142,6 +145,10 @@ public class PlantillasPdfPreviewService {
                 p.setSubtotal(770.0);
                 p.setIva(161.7);
                 p.setTotal(931.7);
+                p.setTieneAnticipo(true);
+                p.setImporteAnticipo(new BigDecimal("150.00"));
+                p.setAnticipoFacturado(true);
+                p.setFechaAnticipo(LocalDate.of(2025, 3, 22));
                 items.add(manualPresuLine(p, "Servicio de consultoría", 10.0, 65.0, 650.0));
                 items.add(manualPresuLine(p, "Mantenimiento mensual", 1.0, 120.0, 120.0));
             }

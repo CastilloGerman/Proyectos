@@ -1,6 +1,8 @@
 package com.appgestion.api.domain.entity;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -56,11 +58,17 @@ public class Presupuesto {
     @Column(name = "nota_adicional", columnDefinition = "TEXT")
     private String notaAdicional;
 
-    @Column(name = "senal_importe")
-    private Double senalImporte;
+    @Column(name = "tiene_anticipo")
+    private Boolean tieneAnticipo = false;
 
-    @Column(name = "senal_pagada")
-    private Boolean senalPagada = false;
+    @Column(name = "importe_anticipo", precision = 10, scale = 2)
+    private BigDecimal importeAnticipo;
+
+    @Column(name = "anticipo_facturado")
+    private Boolean anticipoFacturado = false;
+
+    @Column(name = "fecha_anticipo")
+    private LocalDate fechaAnticipo;
 
     @OneToMany(mappedBy = "presupuesto", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PresupuestoItem> items = new ArrayList<>();
@@ -112,11 +120,17 @@ public class Presupuesto {
     public String getNotaAdicional() { return notaAdicional; }
     public void setNotaAdicional(String notaAdicional) { this.notaAdicional = notaAdicional; }
 
-    public Double getSenalImporte() { return senalImporte; }
-    public void setSenalImporte(Double senalImporte) { this.senalImporte = senalImporte; }
+    public Boolean getTieneAnticipo() { return tieneAnticipo; }
+    public void setTieneAnticipo(Boolean tieneAnticipo) { this.tieneAnticipo = tieneAnticipo; }
 
-    public Boolean getSenalPagada() { return senalPagada; }
-    public void setSenalPagada(Boolean senalPagada) { this.senalPagada = senalPagada; }
+    public BigDecimal getImporteAnticipo() { return importeAnticipo; }
+    public void setImporteAnticipo(BigDecimal importeAnticipo) { this.importeAnticipo = importeAnticipo; }
+
+    public Boolean getAnticipoFacturado() { return anticipoFacturado; }
+    public void setAnticipoFacturado(Boolean anticipoFacturado) { this.anticipoFacturado = anticipoFacturado; }
+
+    public LocalDate getFechaAnticipo() { return fechaAnticipo; }
+    public void setFechaAnticipo(LocalDate fechaAnticipo) { this.fechaAnticipo = fechaAnticipo; }
 
     public List<PresupuestoItem> getItems() { return items; }
     public void setItems(List<PresupuestoItem> items) { this.items = items; }

@@ -2,6 +2,7 @@ package com.appgestion.api.service;
 
 import com.appgestion.api.domain.entity.Factura;
 import com.appgestion.api.domain.entity.Presupuesto;
+import com.appgestion.api.domain.enums.TipoFactura;
 import com.appgestion.api.dto.response.ClienteFacturaResumen;
 import com.appgestion.api.dto.response.ClienteHistorialItem;
 import com.appgestion.api.dto.response.ClientePanelResponse;
@@ -57,15 +58,10 @@ public class ClientePanelService {
         List<Presupuesto> presupuestos = presupuestoRepository.findByUsuarioIdAndClienteIdOrderByFechaCreacionDesc(usuarioId, clienteId);
 
         Map<Long, Long> presupuestoToFactura = new HashMap<>();
-        for (Object[] row : facturaRepository.findPresupuestoFacturaIdPairsByCliente(usuarioId, clienteId)) {
-            if (row == null || row.length < 2) {
-                continue;
-            }
-            Long pid = (Long) row[0];
-            Long fid = (Long) row[1];
-            if (pid != null && fid != null) {
-                presupuestoToFactura.putIfAbsent(pid, fid);
-            }
+        for (Presupuesto pr : presupuestos) {
+            List<Factura> ventasPrincipales = facturaRepository.findVentasPrincipalesPorPresupuesto(
+                    pr.getId(), usuarioId, TipoFactura.NORMAL, TipoFactura.FINAL_CON_ANTICIPO);
+            ventasPrincipales.stream().findFirst().ifPresent(f -> presupuestoToFactura.put(pr.getId(), f.getId()));
         }
 
         List<ClienteFacturaResumen> facturasRes = facturas.stream()

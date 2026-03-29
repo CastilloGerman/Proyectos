@@ -1,5 +1,6 @@
 package com.appgestion.api.dto.response;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -22,8 +23,10 @@ public record PresupuestoResponse(
         List<PresupuestoItemResponse> items,
         List<String> condicionesActivas,
         String notaAdicional,
-        Double senalImporte,
-        Boolean senalPagada,
-        /** Id de factura generada desde este presupuesto, si existe. */
+        Boolean tieneAnticipo,
+        java.math.BigDecimal importeAnticipo,
+        Boolean anticipoFacturado,
+        LocalDate fechaAnticipo,
+        /** Id de factura de venta principal (NORMAL o FINAL_CON_ANTICIPO), si existe. */
         Long facturaId
 ) {}

@@ -459,14 +459,41 @@ export class PresupuestoRapidoComponent implements OnInit {
     this.manualItems.removeAt(index);
   }
 
+  /** Si el material ya está en otra línea, una sola fila con la suma de cantidades. */
   onMaterial(index: number, id: number | null): void {
     if (id == null) return;
     const mat = this.materiales.find((x) => x.id === id);
-    if (mat) {
+    if (!mat) return;
+
+    const indices: number[] = [];
+    for (let i = 0; i < this.materialItems.length; i++) {
+      if (this.materialItems.at(i).get('materialId')?.value === id) {
+        indices.push(i);
+      }
+    }
+    if (indices.length <= 1) {
       this.materialItems.at(index).patchValue({
         descripcion: mat.nombre,
         precioUnitario: mat.precioUnitario,
       });
+      return;
+    }
+
+    const keep = Math.min(...indices);
+    let totalCantidad = 0;
+    for (const i of indices) {
+      totalCantidad += +(this.materialItems.at(i).get('cantidad')?.value ?? 0);
+    }
+    (this.materialItems.at(keep) as FormGroup).patchValue({
+      materialId: id,
+      descripcion: mat.nombre,
+      precioUnitario: mat.precioUnitario,
+      cantidad: totalCantidad,
+    });
+    for (const i of indices
+      .filter((idx) => idx !== keep)
+      .sort((a, b) => b - a)) {
+      this.materialItems.removeAt(i);
     }
   }
 

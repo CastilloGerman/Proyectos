@@ -1,9 +1,16 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 
-/** Comprueba IBAN (mod 97). Vacío = válido (opcional). */
+/** Quita espacios, puntos y guiones; deja solo letras y números para validar/guardar. */
+export function normalizarIbanParaValidar(raw: string | null | undefined): string {
+  return String(raw ?? '')
+    .replace(/[\s.\u00A0\-]/g, '')
+    .toUpperCase();
+}
+
+/** Comprueba IBAN (mod 97, ISO 13616). Vacío = válido (opcional). Acepta espacios en la entrada. */
 export function esIbanValido(raw: string | null | undefined): boolean {
   if (raw == null || String(raw).trim() === '') return true;
-  const iban = String(raw).replace(/\s/g, '').toUpperCase();
+  const iban = normalizarIbanParaValidar(raw);
   if (iban.length < 15 || iban.length > 34 || !/^[A-Z0-9]+$/.test(iban)) return false;
   const rearranged = iban.slice(4) + iban.slice(0, 4);
   let expanded = '';
@@ -27,9 +34,17 @@ export function ibanValidator(): ValidatorFn {
   };
 }
 
-/** Formato legible ES12 3456 7890 … */
+/**
+ * Formato legible para mostrar en pantalla/PDF.
+ * España (24 caracteres ES + 22 dígitos): ESkk BBBB GGGG CC CCCCCCCCCC (como en cartillas bancarias).
+ * Resto de países: grupos de 4.
+ */
 export function formatIbanDisplay(raw: string | null | undefined): string {
   if (!raw) return '';
-  const s = String(raw).replace(/\s/g, '').toUpperCase();
+  const s = normalizarIbanParaValidar(raw);
+  if (s.length === 0) return '';
+  if (s.startsWith('ES') && s.length === 24 && /^ES\d{22}$/.test(s)) {
+    return [s.slice(0, 4), s.slice(4, 8), s.slice(8, 12), s.slice(12, 14), s.slice(14, 24)].join(' ');
+  }
   return s.replace(/(.{4})/g, '$1 ').trim();
 }

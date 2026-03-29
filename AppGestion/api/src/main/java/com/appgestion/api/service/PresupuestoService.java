@@ -2,6 +2,7 @@ package com.appgestion.api.service;
 
 import com.appgestion.api.constant.TaxConstants;
 import com.appgestion.api.domain.entity.*;
+import com.appgestion.api.domain.enums.TipoFactura;
 import com.appgestion.api.dto.request.PresupuestoItemRequest;
 import com.appgestion.api.dto.request.PresupuestoRequest;
 import com.appgestion.api.dto.request.EnviarEmailRequest;
@@ -132,8 +133,6 @@ public class PresupuestoService {
         presupuesto.setDescuentoGlobalFijo(request.descuentoGlobalFijo());
         presupuesto.setDescuentoAntesIva(request.descuentoAntesIva());
         aplicarCondicionesYNotaCrear(presupuesto, request, usuario.getId());
-        presupuesto.setSenalImporte(request.senalImporte());
-        presupuesto.setSenalPagada(request.senalPagada());
 
         mapItems(request.items(), presupuesto);
         calcularTotales(presupuesto);
@@ -156,8 +155,6 @@ public class PresupuestoService {
         presupuesto.setDescuentoGlobalFijo(request.descuentoGlobalFijo());
         presupuesto.setDescuentoAntesIva(request.descuentoAntesIva());
         aplicarCondicionesYNotaActualizar(presupuesto, request);
-        presupuesto.setSenalImporte(request.senalImporte());
-        presupuesto.setSenalPagada(request.senalPagada());
 
         presupuesto.getItems().clear();
         mapItems(request.items(), presupuesto);
@@ -280,8 +277,10 @@ public class PresupuestoService {
                 .toList();
 
         Long usuarioId = Objects.requireNonNull(presupuesto.getUsuario()).getId();
-        Long facturaId = facturaRepository
-                .findFirstByPresupuesto_IdAndUsuario_Id(presupuesto.getId(), usuarioId)
+        Long facturaId = facturaRepository.findVentasPrincipalesPorPresupuesto(
+                        presupuesto.getId(), usuarioId, TipoFactura.NORMAL, TipoFactura.FINAL_CON_ANTICIPO)
+                .stream()
+                .findFirst()
                 .map(f -> f.getId())
                 .orElse(null);
 
@@ -307,8 +306,10 @@ public class PresupuestoService {
                 items,
                 presupuestoCondicionesService.desdeJson(presupuesto.getCondicionesActivasJson()),
                 presupuesto.getNotaAdicional(),
-                presupuesto.getSenalImporte(),
-                Optional.ofNullable(presupuesto.getSenalPagada()).orElse(false),
+                Boolean.TRUE.equals(presupuesto.getTieneAnticipo()),
+                presupuesto.getImporteAnticipo(),
+                Boolean.TRUE.equals(presupuesto.getAnticipoFacturado()),
+                presupuesto.getFechaAnticipo(),
                 facturaId
         );
     }

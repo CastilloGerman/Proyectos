@@ -142,6 +142,18 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Nº Factura</th>
             <td mat-cell *matCellDef="let row">{{ row.numeroFactura }}</td>
           </ng-container>
+          <ng-container matColumnDef="tipoFactura">
+            <th mat-header-cell *matHeaderCellDef>Tipo</th>
+            <td mat-cell *matCellDef="let row">
+              @if (row.tipoFactura && row.tipoFactura !== 'NORMAL') {
+                <mat-chip class="tipo-chip" [class.tipo-anticipo]="row.tipoFactura === 'ANTICIPO'" [class.tipo-final]="row.tipoFactura === 'FINAL_CON_ANTICIPO'">
+                  {{ tipoFacturaLabel(row.tipoFactura) }}
+                </mat-chip>
+              } @else {
+                <span class="text-muted">—</span>
+              }
+            </td>
+          </ng-container>
           <ng-container matColumnDef="clienteNombre">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Cliente</th>
             <td mat-cell *matCellDef="let row">{{ row.clienteNombre }}</td>
@@ -210,7 +222,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
           <tr class="mat-row" *matNoDataRow>
-            <td class="mat-cell" colspan="7">No hay facturas que coincidan con el filtro</td>
+            <td class="mat-cell" colspan="8">No hay facturas que coincidan con el filtro</td>
           </tr>
         </table>
         <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons></mat-paginator>
@@ -342,11 +354,15 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
     .venc-ok { color: rgba(0,0,0,0.6); }
     .venc-warn { color: #e65100; font-weight: 500; }
     .venc-overdue { color: #c62828; font-weight: 500; }
+
+    .tipo-chip { font-size: 0.75rem; min-height: 26px; padding: 0 10px; }
+    .tipo-chip.tipo-anticipo { background: #e3f2fd; color: #1565c0; }
+    .tipo-chip.tipo-final { background: #f3e5f5; color: #6a1b9a; }
   `]
 })
 export class FacturaListComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
-  displayedColumns = ['numeroFactura', 'clienteNombre', 'fechaCreacion', 'fechaVencimiento', 'estadoPago', 'total', 'actions'];
+  displayedColumns = ['numeroFactura', 'tipoFactura', 'clienteNombre', 'fechaCreacion', 'fechaVencimiento', 'estadoPago', 'total', 'actions'];
   dataSource = new MatTableDataSource<Factura>([]);
   isLoading = false;
   loadingRecordatorioId: number | null = null;
@@ -395,6 +411,12 @@ export class FacturaListComponent implements OnInit {
     { value: '11', label: 'Noviembre' },
     { value: '12', label: 'Diciembre' },
   ];
+
+  tipoFacturaLabel(t: string): string {
+    if (t === 'ANTICIPO') return 'Anticipo';
+    if (t === 'FINAL_CON_ANTICIPO') return 'Final';
+    return t;
+  }
 
   get emisionYearOptions(): number[] {
     const cy = new Date().getFullYear();
@@ -726,7 +748,10 @@ export class FacturaListComponent implements OnInit {
         });
         ref.afterClosed().subscribe((selected: Presupuesto | undefined) => {
           if (selected) {
-            this.presupuestoService.createFacturaFromPresupuesto(selected.id).subscribe({
+            const req = selected.tieneAnticipo
+              ? this.presupuestoService.createFacturaFinalFromPresupuesto(selected.id)
+              : this.presupuestoService.createFacturaFromPresupuesto(selected.id);
+            req.subscribe({
               next: (factura) => {
                 this.snackBar.open('Factura creada desde presupuesto', 'Cerrar', { duration: 3000 });
                 this.facturaService.getAll().subscribe((data) => {
