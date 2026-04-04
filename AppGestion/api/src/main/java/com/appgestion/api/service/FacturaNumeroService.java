@@ -1,5 +1,6 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.dto.FacturaNumeroGenerado;
 import com.appgestion.api.domain.entity.FacturaSecuencia;
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.repository.FacturaRepository;
@@ -10,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Objects;
-import java.time.Year;
 
 @Service
 public class FacturaNumeroService {
@@ -33,40 +33,49 @@ public class FacturaNumeroService {
     }
 
     /**
-     * Genera el siguiente número de factura correlativo para el usuario.
-     * Formato: FAC-YYYY-NNNN (ej. FAC-2026-0008)
-     * Usa bloqueo pesimista para garantizar correlatividad en concurrencia.
+     * Genera el siguiente número correlativo para el año indicado (bloqueo pesimista en {@code factura_secuencia}).
+     * Formato: FAC-YYYY-NNNN.
      */
     @Transactional
-    public String generarSiguienteNumero(Long usuarioId) {
+    public FacturaNumeroGenerado generarSiguienteNumeroFactura(Long usuarioId, int anio) {
         Long id = Objects.requireNonNull(usuarioId, "usuarioId no puede ser null");
-        int anio = Year.now().getValue();
 
         FacturaSecuencia sec = facturaSecuenciaRepository.findByUsuarioIdForUpdate(id)
                 .orElseGet(() -> crearSecuencia(id, anio));
 
-        if (sec.getAnio() != anio) {
+        if (!Objects.equals(sec.getAnio(), anio)) {
             sec.setAnio(anio);
-            sec.setUltimoNumero(0);
+            int maxFromDb = facturaRepository.maxNumeroSecuencialByUsuarioAndAnio(id, anio);
+            sec.setUltimoNumero(maxFromDb);
+        }
+
+        int maxDb = facturaRepository.maxNumeroSecuencialByUsuarioAndAnio(id, anio);
+        if (sec.getUltimoNumero() < maxDb) {
+            sec.setUltimoNumero(maxDb);
         }
 
         int siguiente = sec.getUltimoNumero() + 1;
         sec.setUltimoNumero(siguiente);
         facturaSecuenciaRepository.save(sec);
 
-        return String.format("%s-%d-%04d", sec.getSerie(), anio, siguiente);
+        String numero = String.format("%s-%d-%04d", sec.getSerie(), anio, siguiente);
+        return new FacturaNumeroGenerado(numero, anio, siguiente);
     }
 
     /**
-     * Crea una nueva secuencia para el usuario. Usa persist() explícitamente
-     * porque con @MapsId la entidad tiene ID asignado y save() intentaría merge(),
-     * causando "unsaved-value mapping was incorrect" si la fila no existe.
+     * Compatibilidad: año actual del calendario.
      */
+    @Transactional
+    public String generarSiguienteNumero(Long usuarioId) {
+        int anio = java.time.Year.now().getValue();
+        return generarSiguienteNumeroFactura(usuarioId, anio).numeroFactura();
+    }
+
     private FacturaSecuencia crearSecuencia(Long usuarioId, int anio) {
         Long id = Objects.requireNonNull(usuarioId, "usuarioId no puede ser null");
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado: " + id));
-        int ultimoExistente = facturaRepository.findMaxNumeroInYear(id, SERIE_DEFAULT + "-" + anio + "-%");
+        int ultimoExistente = facturaRepository.maxNumeroSecuencialByUsuarioAndAnio(id, anio);
         FacturaSecuencia sec = new FacturaSecuencia();
         sec.setUsuario(usuario);
         sec.setSerie(SERIE_DEFAULT);

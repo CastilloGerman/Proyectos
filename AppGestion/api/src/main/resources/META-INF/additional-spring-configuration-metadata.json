@@ -86,6 +86,22 @@
       "defaultValue": "http://localhost:4200"
     },
     {
+      "name": "app.api.expose-internal-error-message",
+      "type": "java.lang.Boolean",
+      "description": "Si true, las respuestas 500 del GlobalExceptionHandler incluyen el mensaje de la excepción (solo depuración). Variable APP_API_EXPOSE_INTERNAL_ERRORS.",
+      "defaultValue": false
+    },
+    {
+      "name": "app.email.worker-delay-ms",
+      "type": "java.lang.Long",
+      "description": "Intervalo entre ejecuciones del worker de cola de email (EmailJobWorker)."
+    },
+    {
+      "name": "app.email.oauth-pending-cleanup-ms",
+      "type": "java.lang.Long",
+      "description": "Intervalo del job que limpia filas oauth_pending caducadas (OauthPendingCleanup)."
+    },
+    {
       "name": "app.support.inbox-email",
       "type": "java.lang.String",
       "description": "Correo destino del formulario Contactar soporte (no expuesto al cliente)."

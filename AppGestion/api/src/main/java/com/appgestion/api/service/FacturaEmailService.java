@@ -33,6 +33,9 @@ public class FacturaEmailService {
     public void enviarPorEmail(Long id, Long usuarioId, EnviarEmailRequest request) {
         Factura factura = facturaRepository.findByIdAndUsuarioId(id, usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
+        if (Boolean.TRUE.equals(factura.getAnulada())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede enviar por email una factura anulada");
+        }
         String email = request != null && request.email() != null && !request.email().isBlank()
                 ? request.email().trim()
                 : (factura.getCliente() != null ? factura.getCliente().getEmail() : null);

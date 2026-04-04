@@ -47,11 +47,14 @@ spring:
         '[default_schema]': public
     open-in-view: false
 
+  web:
+    error:
+      # Spring Boot 4: usar spring.web.error en lugar de server.error (deprecado).
+      # En prod (perfil prod) se sobrescribe a never.
+      include-message: on_param
+
 server:
   port: 8081
-  error:
-    # En prod se sobrescribe: menos filtrado de detalles al cliente
-    include-message: on_param
 
 # Stripe: en prod deben venir de variables de entorno (validado en StripeConfig)
 stripe:
@@ -63,6 +66,9 @@ stripe:
   portal-return-url: ${STRIPE_PORTAL_RETURN_URL:http://localhost:4200/dashboard}
 
 app:
+  api:
+    # Si es false, las respuestas 500 genéricas no incluyen el mensaje interno de la excepción.
+    expose-internal-error-message: ${APP_API_EXPOSE_INTERNAL_ERRORS:false}
   support:
     # Buzón de soporte (solo servidor). Los usuarios envían vía POST; no exponer este valor en el front.
     inbox-email: ${SUPPORT_INBOX_EMAIL:castillogerman98@hotmail.com}
@@ -163,9 +169,9 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-server:
-  error:
-    include-message: never
+  web:
+    error:
+      include-message: never
 app:
   subscription:
     skip-check: false

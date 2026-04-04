@@ -1,7 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -10,7 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { environment } from '../../../../environments/environment';
+import { SupportApiService } from '../../../core/services/support-api.service';
 
 @Component({
     selector: 'app-contactar-soporte',
@@ -31,7 +30,7 @@ import { environment } from '../../../../environments/environment';
 })
 export class ContactarSoporteComponent {
   private readonly fb = inject(FormBuilder);
-  private readonly http = inject(HttpClient);
+  private readonly supportApi = inject(SupportApiService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly route = inject(ActivatedRoute);
 
@@ -75,9 +74,7 @@ export class ContactarSoporteComponent {
     }
 
     this.sending.set(true);
-    this.http
-      .post<{ message: string }>(`${environment.apiUrl}/auth/support/contact`, fd)
-      .subscribe({
+    this.supportApi.contact(fd).subscribe({
         next: (res) => {
           this.sending.set(false);
           this.snackBar.open(res.message ?? 'Mensaje enviado', 'Cerrar', { duration: 6000 });

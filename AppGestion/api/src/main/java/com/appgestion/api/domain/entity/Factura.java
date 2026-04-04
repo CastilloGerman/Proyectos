@@ -1,5 +1,6 @@
 package com.appgestion.api.domain.entity;
 
+import com.appgestion.api.constant.FacturaEstadoPago;
 import com.appgestion.api.domain.enums.TipoFactura;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -9,7 +10,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "facturas", uniqueConstraints = @UniqueConstraint(columnNames = {"numero_factura", "usuario_id"}))
+@Table(name = "facturas", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"numero_factura", "usuario_id"}),
+        @UniqueConstraint(columnNames = {"usuario_id", "anio_factura", "numero_secuencial"})
+})
 public class Factura {
 
     @Id
@@ -23,6 +27,23 @@ public class Factura {
     @Column(name = "numero_factura", nullable = false, length = 50)
     private String numeroFactura;
 
+    /** Año fiscal de la serie correlativa (alineado con fecha de expedición al emitir). */
+    @Column(name = "anio_factura", nullable = false)
+    private Integer anioFactura;
+
+    /** Orden dentro de la serie por usuario y año (sin reutilizar al anular). */
+    @Column(name = "numero_secuencial", nullable = false)
+    private Integer numeroSecuencial;
+
+    @Column(name = "anulada", nullable = false)
+    private Boolean anulada = false;
+
+    @Column(name = "fecha_anulacion")
+    private LocalDate fechaAnulacion;
+
+    @Column(name = "motivo_anulacion", length = 255)
+    private String motivoAnulacion;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cliente_id", nullable = false)
     private Cliente cliente;
@@ -34,7 +55,7 @@ public class Factura {
     @Column(name = "fecha_creacion", updatable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
 
-    @Column(name = "fecha_expedicion")
+    @Column(name = "fecha_expedicion", nullable = false)
     private LocalDate fechaExpedicion;
 
     @Column(name = "fecha_operacion")
@@ -68,7 +89,7 @@ public class Factura {
     private String metodoPago = "Transferencia";
 
     @Column(name = "estado_pago", length = 50)
-    private String estadoPago = "No Pagada";
+    private String estadoPago = FacturaEstadoPago.NO_PAGADA;
 
     @Column(name = "monto_cobrado")
     private Double montoCobrado;
@@ -116,6 +137,21 @@ public class Factura {
 
     public String getNumeroFactura() { return numeroFactura; }
     public void setNumeroFactura(String numeroFactura) { this.numeroFactura = numeroFactura; }
+
+    public Integer getAnioFactura() { return anioFactura; }
+    public void setAnioFactura(Integer anioFactura) { this.anioFactura = anioFactura; }
+
+    public Integer getNumeroSecuencial() { return numeroSecuencial; }
+    public void setNumeroSecuencial(Integer numeroSecuencial) { this.numeroSecuencial = numeroSecuencial; }
+
+    public Boolean getAnulada() { return anulada; }
+    public void setAnulada(Boolean anulada) { this.anulada = anulada != null ? anulada : false; }
+
+    public LocalDate getFechaAnulacion() { return fechaAnulacion; }
+    public void setFechaAnulacion(LocalDate fechaAnulacion) { this.fechaAnulacion = fechaAnulacion; }
+
+    public String getMotivoAnulacion() { return motivoAnulacion; }
+    public void setMotivoAnulacion(String motivoAnulacion) { this.motivoAnulacion = motivoAnulacion; }
 
     public Cliente getCliente() { return cliente; }
     public void setCliente(Cliente cliente) { this.cliente = cliente; }

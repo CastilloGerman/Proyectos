@@ -62,6 +62,11 @@ export interface Factura {
   facturaAnticipoId?: number | null;
   numeroFacturaAnticipo?: string | null;
   importeAnticipoDescontado?: number | null;
+  anioFactura?: number;
+  numeroSecuencial?: number;
+  anulada?: boolean;
+  fechaAnulacion?: string | null;
+  motivoAnulacion?: string | null;
   cobros?: FacturaCobro[];
 }
 
@@ -70,7 +75,8 @@ export interface FacturaRequest {
   presupuestoId?: number;
   items: FacturaItemRequest[];
   numeroFactura?: string;
-  fechaExpedicion?: string;
+  /** Obligatoria en la API (ISO 8601 fecha). */
+  fechaExpedicion: string;
   fechaOperacion?: string;
   fechaVencimiento?: string;
   regimenFiscal?: string;

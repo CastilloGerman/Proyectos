@@ -25,6 +25,8 @@ public record EmpresaResponse(
         String defaultMetodoPago,
         String defaultCondicionesPago,
         String ibanCuenta,
+        String nombreBanco,
+        String titularCuenta,
         String bizumTelefono,
         String regimenIvaPrincipal,
         String descripcionActividadFiscal,

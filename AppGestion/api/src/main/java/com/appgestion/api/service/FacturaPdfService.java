@@ -3,6 +3,7 @@ package com.appgestion.api.service;
 import com.appgestion.api.constant.TaxConstants;
 import com.appgestion.api.domain.entity.*;
 import com.appgestion.api.domain.enums.TipoFactura;
+import com.appgestion.api.util.IbanValidator;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 import org.springframework.stereotype.Service;
@@ -47,13 +48,40 @@ public class FacturaPdfService {
     private byte[] generarPdfInterno(Factura factura, Long usuarioId, String notasPieFacturaOverride) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              Document document = new Document(PageSize.A4, 40, 40, 50, 50)) {
-            PdfWriter.getInstance(document, baos);
+            PdfWriter writer = PdfWriter.getInstance(document, baos);
+            if (Boolean.TRUE.equals(factura.getAnulada())) {
+                writer.setPageEvent(new MarcaAnuladaPdfPageEvent());
+            }
             document.open();
             agregarContenido(document, factura, usuarioId, notasPieFacturaOverride);
             document.close();
             return baos.toByteArray();
         } catch (DocumentException | IOException e) {
             throw new RuntimeException("Error al generar PDF de factura", e);
+        }
+    }
+
+    private static final class MarcaAnuladaPdfPageEvent extends PdfPageEventHelper {
+        @Override
+        public void onEndPage(PdfWriter writer, Document document) {
+            try {
+                PdfContentByte cb = writer.getDirectContentUnder();
+                cb.saveState();
+                PdfGState gs = new PdfGState();
+                gs.setFillOpacity(0.28f);
+                cb.setGState(gs);
+                BaseFont bf = BaseFont.createFont(BaseFont.HELVETICA, BaseFont.WINANSI, BaseFont.NOT_EMBEDDED);
+                float w = document.getPageSize().getWidth();
+                float h = document.getPageSize().getHeight();
+                cb.beginText();
+                cb.setFontAndSize(bf, 48);
+                cb.setColorFill(new Color(180, 180, 180));
+                cb.showTextAligned(Element.ALIGN_CENTER, "ANULADA", w / 2, h / 2, 45);
+                cb.endText();
+                cb.restoreState();
+            } catch (DocumentException | IOException e) {
+                throw new RuntimeException("Error al dibujar marca de agua ANULADA", e);
+            }
         }
     }
 
@@ -145,7 +173,6 @@ public class FacturaPdfService {
         String condicionesPago = factura.getCondicionesPago() != null ? factura.getCondicionesPago() : "";
         if (!condicionesPago.isBlank()) addInfoRow(infoTable, "Condiciones de pago:", condicionesPago, labelFont, smallFont);
         addInfoRow(infoTable, "Moneda:", factura.getMoneda() != null ? factura.getMoneda() : "EUR", labelFont, smallFont);
-        addInfoRow(infoTable, "Estado:", factura.getEstadoPago() != null ? factura.getEstadoPago() : "", labelFont, smallFont);
         document.add(infoTable);
 
         // Tabla de líneas (descripción, cantidad, precio unitario, IVA, subtotal)
@@ -181,6 +208,10 @@ public class FacturaPdfService {
             document.add(pieAnt);
         }
 
+        if (empresa != null && !IbanValidator.normalize(empresa.getIbanCuenta()).isEmpty()) {
+            agregarDatosBancarios(document, empresa, smallFont, labelFont);
+        }
+
         // Notas al pie (configurables). null = usar las guardadas en empresa; no null = texto explícito (vista previa).
         String pieFactura;
         if (notasPieFacturaOverride != null) {
@@ -200,6 +231,63 @@ public class FacturaPdfService {
             notasFactura.setSpacingBefore(8);
             document.add(notasFactura);
         }
+    }
+
+    private void agregarDatosBancarios(Document document, Empresa empresa, Font smallFont, Font labelFont)
+            throws DocumentException {
+        Font sectionFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, Color.DARK_GRAY);
+        String ibanFormatted = IbanValidator.formatForPdfDisplay(empresa.getIbanCuenta());
+        List<String> ibanLines = IbanValidator.wrapFormattedIbanForPdf(ibanFormatted, 38);
+
+        Paragraph tituloBanco = new Paragraph("DATOS BANCARIOS", sectionFont);
+        tituloBanco.setSpacingBefore(20);
+        document.add(tituloBanco);
+
+        PdfPTable tablaBanco = new PdfPTable(2);
+        tablaBanco.setWidthPercentage(100);
+        tablaBanco.setWidths(new float[]{0.22f, 0.78f});
+        tablaBanco.setSpacingBefore(6);
+
+        String titular = empresa.getTitularCuenta() != null && !empresa.getTitularCuenta().isBlank()
+                ? empresa.getTitularCuenta().trim()
+                : (empresa.getNombre() != null ? empresa.getNombre() : "");
+        addDatosBancariosRow(tablaBanco, "Titular:", titular, labelFont, smallFont);
+
+        if (empresa.getNombreBanco() != null && !empresa.getNombreBanco().isBlank()) {
+            addDatosBancariosRow(tablaBanco, "Banco:", empresa.getNombreBanco().trim(), labelFont, smallFont);
+        }
+
+        PdfPCell ibanLabel = new PdfPCell(new Phrase("IBAN:", labelFont));
+        aplicarBordeCeldaBanco(ibanLabel);
+        Phrase ibanPhrase = new Phrase();
+        for (int i = 0; i < ibanLines.size(); i++) {
+            if (i > 0) {
+                ibanPhrase.add(Chunk.NEWLINE);
+            }
+            ibanPhrase.add(new Chunk(ibanLines.get(i), smallFont));
+        }
+        PdfPCell ibanValor = new PdfPCell(ibanPhrase);
+        aplicarBordeCeldaBanco(ibanValor);
+        tablaBanco.addCell(ibanLabel);
+        tablaBanco.addCell(ibanValor);
+
+        document.add(tablaBanco);
+    }
+
+    private static void aplicarBordeCeldaBanco(PdfPCell cell) {
+        cell.setBorder(Rectangle.BOX);
+        cell.setBorderColor(BORDER);
+        cell.setBorderWidth(0.5f);
+        cell.setPadding(6);
+    }
+
+    private void addDatosBancariosRow(PdfPTable table, String label, String value, Font labelFont, Font valueFont) {
+        PdfPCell c1 = new PdfPCell(new Phrase(label, labelFont));
+        aplicarBordeCeldaBanco(c1);
+        PdfPCell c2 = new PdfPCell(new Phrase(value != null ? value : "", valueFont));
+        aplicarBordeCeldaBanco(c2);
+        table.addCell(c1);
+        table.addCell(c2);
     }
 
     private void addInfoRow(PdfPTable table, String label, String value, Font labelFont, Font valueFont) {

@@ -1,0 +1,164 @@
+<mat-sidenav-container class="saas-layout">
+  <mat-sidenav
+    #drawer
+    class="saas-sidebar"
+    [mode]="isMobileLayout() ? 'over' : 'side'"
+    [opened]="isMobileLayout() ? isSidebarOpen : !sidebarCollapsed"
+    [fixedInViewport]="isMobileLayout()"
+    (openedChange)="onSidenavOpenedChange($event)"
+  >
+    <div class="sidebar-header">
+      <span class="brand-logo">
+        <img src="assets/noemi-logo.png" alt="Noemí" class="brand-logo-img" />
+      </span>
+    </div>
+    <mat-nav-list class="sidebar-nav">
+      <a mat-list-item routerLink="/dashboard" routerLinkActive="active">
+        <mat-icon matListItemIcon>dashboard</mat-icon>
+        <span matListItemTitle>Dashboard</span>
+      </a>
+      <a mat-list-item routerLink="/materiales" routerLinkActive="active">
+        <mat-icon matListItemIcon>inventory_2</mat-icon>
+        <span matListItemTitle>Materiales</span>
+      </a>
+      <a
+        mat-list-item
+        routerLink="/clientes"
+        routerLinkActive="active"
+        matTooltip="En la lista: Ver estado"
+        matTooltipPosition="right"
+      >
+        <mat-icon matListItemIcon>people</mat-icon>
+        <span matListItemTitle>Clientes</span>
+      </a>
+      <a mat-list-item routerLink="/presupuestos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        <mat-icon matListItemIcon>description</mat-icon>
+        <span matListItemTitle>Presupuestos</span>
+      </a>
+      @if (auth.canMutate()) {
+        <a mat-list-item routerLink="/presupuestos/rapido" routerLinkActive="active">
+          <mat-icon matListItemIcon>bolt</mat-icon>
+          <span matListItemTitle>Presup. rápido</span>
+        </a>
+      }
+      <a mat-list-item routerLink="/facturas" routerLinkActive="active">
+        <mat-icon matListItemIcon>receipt</mat-icon>
+        <span matListItemTitle>Facturas</span>
+      </a>
+      <a mat-list-item routerLink="/declaraciones-hacienda" routerLinkActive="active">
+        <mat-icon matListItemIcon>account_balance</mat-icon>
+        <span matListItemTitle>Hacienda</span>
+      </a>
+    </mat-nav-list>
+  </mat-sidenav>
+  <mat-sidenav-content class="saas-main">
+    <header class="saas-topbar">
+      <button
+        mat-icon-button
+        type="button"
+        (click)="toggleSidenavMenu()"
+        [matTooltip]="sidenavMenuTooltip()"
+        aria-label="Abrir o cerrar menú lateral"
+      >
+        <mat-icon>menu</mat-icon>
+      </button>
+      <app-search-bar></app-search-bar>
+      <span class="spacer"></span>
+      @if (auth.canMutate()) {
+        <button mat-stroked-button (click)="openInvitar()" matTooltip="Enviar enlace de referido por correo">
+          Referir
+        </button>
+      }
+      <button
+        type="button"
+        mat-icon-button
+        #notifMenuTrigger="matMenuTrigger"
+        [matMenuTriggerFor]="notifMenu"
+        (menuOpened)="onNotifMenuOpened()"
+        matTooltip="Notificaciones"
+        [matBadge]="notifBadge()"
+        [matBadgeHidden]="notificaciones.unreadCount() === 0"
+        matBadgeColor="warn"
+        matBadgeSize="small"
+        aria-label="Abrir notificaciones"
+        aria-haspopup="menu"
+      >
+        <mat-icon>notifications</mat-icon>
+      </button>
+      <mat-menu #notifMenu="matMenu" class="notif-bell-menu" xPosition="before">
+        <div class="notif-bell-panel" (click)="$event.stopPropagation()">
+          <div class="notif-bell-head">Notificaciones</div>
+          @if (notifPreviewLoading()) {
+            <div class="notif-bell-center">
+              <mat-progress-spinner diameter="32" mode="indeterminate" />
+            </div>
+          } @else if (notifPreviewError()) {
+            <div class="notif-bell-empty notif-bell-empty--error">
+              <mat-icon>error_outline</mat-icon>
+              <p>No se pudieron cargar las notificaciones.</p>
+            </div>
+          } @else if (notifPreviewItems().length === 0) {
+            <div class="notif-bell-empty">
+              <mat-icon>notifications_off</mat-icon>
+              <p><strong>No hay notificaciones nuevas</strong></p>
+              <p class="notif-bell-empty-hint">Cuando tengas avisos sin leer, aparecerán aquí.</p>
+            </div>
+          } @else {
+            <div class="notif-bell-list">
+              @for (n of notifPreviewItems(); track n.id) {
+                <button type="button" class="notif-bell-item" (click)="abrirNotificacionPreview(n, notifMenuTrigger)">
+                  <mat-icon [class.notif-bell-item__icon--warn]="n.severidad === 'WARNING' || n.severidad === 'ERROR'">
+                    {{ iconoNotificacion(n) }}
+                  </mat-icon>
+                  <div class="notif-bell-item__text">
+                    <span class="notif-bell-item__title">{{ n.titulo }}</span>
+                    @if (n.resumen) {
+                      <span class="notif-bell-item__sum">{{ n.resumen }}</span>
+                    }
+                  </div>
+                </button>
+              }
+            </div>
+          }
+        </div>
+        <mat-divider />
+        <button mat-menu-item type="button" routerLink="/cuenta/notificaciones" (click)="notifMenuTrigger.closeMenu()">
+          <mat-icon>list</mat-icon>
+          <span>Ver todas las notificaciones</span>
+        </button>
+      </mat-menu>
+      <app-user-dropdown />
+    </header>
+    @if (!auth.canWrite()) {
+      <div class="banner-readonly">
+        <mat-icon>lock</mat-icon>
+        <span>Modo solo lectura. Activa tu suscripción para crear o editar.</span>
+        <button mat-stroked-button color="warn" (click)="activarSuscripcion()">Activar suscripción</button>
+        @if (!environment.production) {
+          <button
+            mat-stroked-button
+            (click)="grantPremiumDev()"
+            matTooltip="Solo desarrollo: marcar usuario como premium sin Stripe"
+          >
+            Activar premium (dev)
+          </button>
+        }
+      </div>
+    }
+    @if (
+      auth.canWrite() &&
+      auth.user()?.subscriptionStatus === 'TRIAL_ACTIVE' &&
+      daysLeftInTrial() <= trialBannerWarningDays &&
+      daysLeftInTrial() >= 0
+    ) {
+      <div class="banner-trial">
+        <mat-icon>schedule</mat-icon>
+        <span>Tu prueba termina en {{ daysLeftInTrial() }} días.</span>
+        <button mat-stroked-button (click)="activarSuscripcion()">Activar suscripción</button>
+      </div>
+    }
+    <main class="saas-content">
+      <router-outlet></router-outlet>
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

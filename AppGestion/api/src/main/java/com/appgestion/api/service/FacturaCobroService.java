@@ -1,5 +1,6 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.constant.FacturaEstadoPago;
 import com.appgestion.api.domain.entity.Factura;
 import com.appgestion.api.domain.entity.FacturaCobro;
 import com.appgestion.api.dto.request.FacturaCobroRequest;
@@ -32,6 +33,9 @@ public class FacturaCobroService {
     public FacturaResponse registrarCobro(Long facturaId, Long usuarioId, FacturaCobroRequest request) {
         Factura factura = facturaRepository.findByIdAndUsuarioId(facturaId, usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
+        if (Boolean.TRUE.equals(factura.getAnulada())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede registrar cobro en una factura anulada");
+        }
         FacturaCobro cobro = new FacturaCobro();
         cobro.setFactura(factura);
         cobro.setImporte(request.importe());
@@ -44,9 +48,9 @@ public class FacturaCobroService {
         factura.setMontoCobrado(prev + request.importe());
         double total = Optional.ofNullable(factura.getTotal()).orElse(0.0);
         if (factura.getMontoCobrado() + 0.001 >= total) {
-            factura.setEstadoPago("Pagada");
+            factura.setEstadoPago(FacturaEstadoPago.PAGADA);
         } else if (factura.getMontoCobrado() > 0) {
-            factura.setEstadoPago("Parcial");
+            factura.setEstadoPago(FacturaEstadoPago.PARCIAL);
         }
         facturaRepository.save(factura);
         return facturaResponseMapper.toResponse(factura,

@@ -1,5 +1,6 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.constant.FacturaEstadoPago;
 import com.appgestion.api.domain.entity.*;
 import com.appgestion.api.domain.enums.TipoFactura;
 import com.appgestion.api.dto.request.PlantillaPdfEscenario;
@@ -58,7 +59,9 @@ public class PlantillasPdfPreviewService {
     private Factura buildFactura(PlantillaPdfEscenario escenario) {
         Factura f = new Factura();
         f.setId(-1L);
-        f.setNumeroFactura("FAC-PREV-2025-0001");
+        f.setNumeroFactura("FAC-2025-0001");
+        f.setAnioFactura(2025);
+        f.setNumeroSecuencial(1);
         f.setCliente(clienteEjemplo());
         f.setFechaExpedicion(LocalDate.of(2025, 3, 22));
         f.setFechaOperacion(LocalDate.of(2025, 3, 20));
@@ -66,7 +69,7 @@ public class PlantillasPdfPreviewService {
         f.setMoneda("EUR");
         f.setIvaHabilitado(true);
         f.setMetodoPago("Transferencia");
-        f.setEstadoPago("No Pagada");
+        f.setEstadoPago(FacturaEstadoPago.NO_PAGADA);
         f.setTipoFactura(TipoFactura.NORMAL);
         f.setRegimenFiscal("Régimen general del IVA");
         f.setCondicionesPago("Transferencia a 30 días");

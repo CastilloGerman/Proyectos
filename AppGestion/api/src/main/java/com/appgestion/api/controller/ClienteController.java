@@ -63,6 +63,7 @@ public class ClienteController {
     }
 
     @PutMapping("/{id}/completar")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public ClienteResponse completar(@PathVariable Long id, @Valid @RequestBody ClienteCompletoRequest request) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
         return clienteService.completarCliente(id, request, usuarioId);
@@ -77,6 +78,7 @@ public class ClienteController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public ClienteResponse actualizar(@PathVariable Long id, @Valid @RequestBody ClienteRequest request) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
         return clienteService.actualizar(id, request, usuarioId);

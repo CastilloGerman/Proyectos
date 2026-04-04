@@ -17,17 +17,12 @@ import com.appgestion.api.dto.request.UpdatePreferenciasRequest;
 import com.appgestion.api.dto.response.AuthResponse;
 import com.appgestion.api.dto.response.TotpSetupStartResponse;
 import com.appgestion.api.dto.response.UsuarioResponse;
-import com.appgestion.api.repository.EmpresaRepository;
 import com.appgestion.api.repository.UsuarioRepository;
-import com.appgestion.api.util.EmailCopy;
 import com.appgestion.api.security.JwtService;
 import com.appgestion.api.security.SecurityUtils;
 import com.appgestion.api.security.TotpService;
 import com.appgestion.api.validation.UserPreferencesValidator;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -55,55 +50,45 @@ public class AuthService {
     private static final Set<String> GENEROS_PERMITIDOS = Set.of(
             "MALE", "FEMALE", "NON_BINARY", "OTHER", "UNSPECIFIED");
     private static final int TRIAL_DAYS = 14;
-    private static final int PASSWORD_RESET_EXPIRY_HOURS = 1;
     private static final int TOTP_PENDING_MINUTES = 10;
 
     private final UsuarioRepository usuarioRepository;
-    private final EmpresaRepository empresaRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final SubscriptionService subscriptionService;
-    private final EmailService emailService;
     private final GoogleTokenVerifier googleTokenVerifier;
     private final OrganizationService organizationService;
     private final TotpService totpService;
     private final NotificacionService notificacionService;
     private final SessionService sessionService;
     private final AuditAccessService auditAccessService;
-    private final Environment environment;
     private final PresupuestoCondicionesService presupuestoCondicionesService;
-
-    @Value("${app.frontend-url:http://localhost:4200}")
-    private String frontendUrl;
+    private final PasswordResetService passwordResetService;
 
     public AuthService(UsuarioRepository usuarioRepository,
-                       EmpresaRepository empresaRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
                        SubscriptionService subscriptionService,
-                       EmailService emailService,
                        GoogleTokenVerifier googleTokenVerifier,
                        OrganizationService organizationService,
                        TotpService totpService,
                        NotificacionService notificacionService,
                        SessionService sessionService,
                        AuditAccessService auditAccessService,
-                       Environment environment,
-                       PresupuestoCondicionesService presupuestoCondicionesService) {
+                       PresupuestoCondicionesService presupuestoCondicionesService,
+                       PasswordResetService passwordResetService) {
         this.usuarioRepository = usuarioRepository;
-        this.empresaRepository = empresaRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.subscriptionService = subscriptionService;
-        this.emailService = emailService;
         this.googleTokenVerifier = googleTokenVerifier;
         this.organizationService = organizationService;
         this.totpService = totpService;
         this.notificacionService = notificacionService;
         this.sessionService = sessionService;
         this.auditAccessService = auditAccessService;
-        this.environment = environment;
         this.presupuestoCondicionesService = presupuestoCondicionesService;
+        this.passwordResetService = passwordResetService;
     }
 
     @Transactional
@@ -447,68 +432,12 @@ public class AuthService {
         return s;
     }
 
-    /**
-     * Solicitud de recuperación de contraseña: genera token, guarda en usuario y envía email con enlace.
-     * Siempre responde éxito para no revelar si el email existe.
-     */
-    @Transactional
     public void requestPasswordReset(ForgotPasswordRequest request, HttpServletRequest httpRequest) {
-        Optional<Usuario> opt = usuarioRepository.findByEmail(request.email().trim());
-        if (opt.isEmpty()) {
-            return;
-        }
-        Usuario usuario = opt.get();
-        if (!Boolean.TRUE.equals(usuario.getActivo())) {
-            return;
-        }
-        String token = UUID.randomUUID().toString().replace("-", "");
-        usuario.setPasswordResetToken(token);
-        usuario.setPasswordResetExpiresAt(LocalDateTime.now().plusHours(PASSWORD_RESET_EXPIRY_HOURS));
-        usuarioRepository.save(usuario);
-        auditAccessService.recordForUsuario(usuario, AuditAccessEventType.PASSWORD_RESET_REQUESTED, true, null, true,
-                httpRequest, null, "/auth/forgot-password", null);
-
-        String resetLink = frontendUrl + "/reset-password?token=" + token;
-        if (environment.acceptsProfiles(Profiles.of("local"))) {
-            log.info("Perfil local: enlace de recuperación de contraseña (útil si Resend sandbox no entrega el correo): {}", resetLink);
-        }
-        String asunto = "Recuperación de contraseña - " + EmailCopy.PRODUCT_NAME;
-        String nombreEmpresa = empresaRepository.findByUsuarioId(usuario.getId()).map(e -> e.getNombre()).orElse(null);
-        String cuerpo = EmailCopy.prefijoDestinatarioEmpresa(usuario.getNombre(), nombreEmpresa)
-                + "<p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace (válido " + PASSWORD_RESET_EXPIRY_HOURS + " hora(s)):</p>"
-                + "<p><a href=\"" + resetLink + "\">Restablecer contraseña</a></p>"
-                + "<p>Si no solicitaste este cambio, ignora este correo.</p>";
-
-        try {
-            emailService.enviarPdf(usuario.getId(), usuario.getEmail(), asunto, cuerpo, null, null);
-            log.info("Email de recuperación enviado a {}", usuario.getEmail());
-        } catch (Exception e) {
-            log.warn("No se pudo enviar email de recuperación a {}: {}", usuario.getEmail(), e.getMessage());
-        }
+        passwordResetService.requestPasswordReset(request, httpRequest);
     }
 
-    /**
-     * Restablece la contraseña con el token recibido por email. Lanza si el token es inválido o ha expirado.
-     */
-    @Transactional
     public void resetPassword(ResetPasswordRequest request, HttpServletRequest httpRequest) {
-        Usuario usuario = usuarioRepository.findByPasswordResetToken(request.token())
-                .orElseThrow(() -> new IllegalArgumentException("Enlace inválido o expirado"));
-
-        if (usuario.getPasswordResetExpiresAt() == null || usuario.getPasswordResetExpiresAt().isBefore(LocalDateTime.now())) {
-            usuario.setPasswordResetToken(null);
-            usuario.setPasswordResetExpiresAt(null);
-            usuarioRepository.save(usuario);
-            throw new IllegalArgumentException("Enlace inválido o expirado");
-        }
-
-        usuario.setPasswordHash(passwordEncoder.encode(request.newPassword()));
-        usuario.setPasswordResetToken(null);
-        usuario.setPasswordResetExpiresAt(null);
-        usuarioRepository.save(usuario);
-        auditAccessService.recordForUsuario(usuario, AuditAccessEventType.PASSWORD_RESET_COMPLETED, true, null, true,
-                httpRequest, null, "/auth/reset-password", null);
-        log.info("Contraseña restablecida para {}", usuario.getEmail());
+        passwordResetService.resetPassword(request, httpRequest);
     }
 
     /**

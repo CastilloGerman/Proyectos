@@ -94,6 +94,18 @@
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
+            <mat-label>Titular de la cuenta (opcional)</mat-label>
+            <input matInput formControlName="titularCuenta" maxlength="150" placeholder="Nombre del titular" autocomplete="name" />
+            <mat-hint align="end">{{ form.controls.titularCuenta.value.length }}/150</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
+            <mat-label>Banco (opcional)</mat-label>
+            <input matInput formControlName="nombreBanco" maxlength="100" placeholder="Ej. Banco Santander" autocomplete="organization" />
+            <mat-hint align="end">{{ form.controls.nombreBanco.value.length }}/100</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
             <mat-label>Teléfono Bizum (opcional)</mat-label>
             <input matInput formControlName="bizumTelefono" placeholder="600 000 000" autocomplete="tel" />
             @if (form.controls.bizumTelefono.hasError('bizumInvalido') && form.controls.bizumTelefono.touched) {

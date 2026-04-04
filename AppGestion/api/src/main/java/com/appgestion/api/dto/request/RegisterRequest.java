@@ -1,5 +1,6 @@
 package com.appgestion.api.dto.request;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -19,7 +20,7 @@ public record RegisterRequest(
 
         String rol,
 
-        DeviceClientInfoRequest clientInfo
+        @Valid DeviceClientInfoRequest clientInfo
 ) {
     public String getRol() {
         return rol != null && !rol.isBlank() ? rol : "USER";

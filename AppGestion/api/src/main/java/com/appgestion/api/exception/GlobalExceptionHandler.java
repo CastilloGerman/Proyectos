@@ -1,7 +1,10 @@
 package com.appgestion.api.exception;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -19,6 +22,16 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    private static final String GENERIC_INTERNAL =
+            "Se produjo un error interno. Inténtalo más tarde o contacta con soporte si persiste.";
+
+    private final boolean exposeInternalErrorMessage;
+
+    public GlobalExceptionHandler(
+            @Value("${app.api.expose-internal-error-message:false}") boolean exposeInternalErrorMessage) {
+        this.exposeInternalErrorMessage = exposeInternalErrorMessage;
+    }
 
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNoResourceFound(NoResourceFoundException ex) {
@@ -67,17 +80,34 @@ public class GlobalExceptionHandler {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("message", message);
         body.put("detail", message);
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException ex) {
+        String message = ex.getConstraintViolations().stream()
+                .map(ConstraintViolation::getMessage)
+                .collect(Collectors.joining(". "));
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("message", message);
+        body.put("detail", message);
+        body.put("status", HttpStatus.BAD_REQUEST.value());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleException(Exception ex) {
         log.warn("Error no controlado: {}", ex.getMessage(), ex);
-        String message = ex.getMessage() != null ? ex.getMessage() : "Error interno del servidor";
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("message", message);
-        body.put("detail", message);
-        body.put("status", 500);
+        body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        if (exposeInternalErrorMessage && ex.getMessage() != null && !ex.getMessage().isBlank()) {
+            body.put("message", ex.getMessage());
+            body.put("detail", ex.getMessage());
+        } else {
+            body.put("message", GENERIC_INTERNAL);
+            body.put("detail", GENERIC_INTERNAL);
+        }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 }

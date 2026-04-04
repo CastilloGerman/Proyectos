@@ -34,6 +34,9 @@ public class FacturaPaymentLinkService {
     public FacturaResponse generarPaymentLink(Long facturaId, Long usuarioId) {
         Factura factura = facturaRepository.findByIdAndUsuarioId(facturaId, usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
+        if (Boolean.TRUE.equals(factura.getAnulada())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede generar enlace de pago para una factura anulada");
+        }
         if (factura.getPaymentLinkUrl() != null && !factura.getPaymentLinkUrl().isBlank()) {
             return facturaResponseMapper.toResponse(factura,
                     facturaCobroRepository.findByFacturaIdOrderByFechaDescCreatedAtDesc(factura.getId()));

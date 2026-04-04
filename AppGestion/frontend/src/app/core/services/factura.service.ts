@@ -10,9 +10,12 @@ export class FacturaService {
 
   constructor(private http: HttpClient) {}
 
-  getAll(q?: string): Observable<Factura[]> {
-    const params = q ? { params: { q } } : {};
-    return this.http.get<Factura[]>(this.apiUrl, params);
+  getAll(q?: string, incluirAnuladas?: boolean): Observable<Factura[]> {
+    const p: Record<string, string> = {};
+    if (q) p['q'] = q;
+    if (incluirAnuladas) p['incluirAnuladas'] = 'true';
+    const hasParams = Object.keys(p).length > 0;
+    return this.http.get<Factura[]>(this.apiUrl, hasParams ? { params: p } : {});
   }
 
   getById(id: number): Observable<Factura> {
@@ -27,8 +30,8 @@ export class FacturaService {
     return this.http.put<Factura>(`${this.apiUrl}/${id}`, data);
   }
 
-  delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  anular(id: number, motivo?: string | null): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${id}/anular`, { motivo: motivo ?? null });
   }
 
   downloadPdf(id: number): Observable<Blob> {

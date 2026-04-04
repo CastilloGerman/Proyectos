@@ -80,6 +80,8 @@ export class MetodosPagoComponent implements OnInit {
     defaultMetodoPago: ['Transferencia', [Validators.required]],
     defaultCondicionesPago: ['', [Validators.maxLength(200)]],
     ibanCuenta: ['', [ibanValidator()]],
+    nombreBanco: ['', [Validators.maxLength(100)]],
+    titularCuenta: ['', [Validators.maxLength(150)]],
     bizumTelefono: ['', [Validators.maxLength(20), bizumOpcionalValidator()]],
   });
 
@@ -95,7 +97,14 @@ export class MetodosPagoComponent implements OnInit {
     const metodo = v.defaultMetodoPago || 'Transferencia';
     const ibanFmt = formatIbanDisplay(v.ibanCuenta || '');
     const parts: string[] = [metodo];
-    if (metodo === 'Transferencia' && ibanFmt) parts.push(`IBAN ${ibanFmt}`);
+    if (metodo === 'Transferencia') {
+      if (ibanFmt) parts.push(`IBAN ${ibanFmt}`);
+      if (v.titularCuenta?.trim()) parts.push(`Titular ${v.titularCuenta.trim()}`);
+      if (v.nombreBanco?.trim()) parts.push(v.nombreBanco.trim());
+      if (!ibanFmt && !v.titularCuenta?.trim() && !v.nombreBanco?.trim()) {
+        parts.push('sin datos bancarios');
+      }
+    }
     if (metodo === 'Bizum' && v.bizumTelefono?.trim()) parts.push(`Bizum ${v.bizumTelefono.trim()}`);
     return parts.join(' · ');
   });
@@ -113,6 +122,8 @@ export class MetodosPagoComponent implements OnInit {
           defaultMetodoPago: e.defaultMetodoPago || 'Transferencia',
           defaultCondicionesPago: e.defaultCondicionesPago || '',
           ibanCuenta: e.ibanCuenta ? formatIbanDisplay(e.ibanCuenta) : '',
+          nombreBanco: e.nombreBanco || '',
+          titularCuenta: e.titularCuenta || '',
           bizumTelefono: e.bizumTelefono || '',
         });
         this.form.markAsPristine();
@@ -140,6 +151,8 @@ export class MetodosPagoComponent implements OnInit {
         defaultMetodoPago: v.defaultMetodoPago.trim(),
         defaultCondicionesPago: v.defaultCondicionesPago.trim(),
         ibanCuenta: normalizarIbanParaValidar(v.ibanCuenta),
+        nombreBanco: v.nombreBanco.trim(),
+        titularCuenta: v.titularCuenta.trim(),
         bizumTelefono: biz ? normalizarDigitosBizum(biz) : '',
       })
       .subscribe({
@@ -148,6 +161,8 @@ export class MetodosPagoComponent implements OnInit {
             defaultMetodoPago: e.defaultMetodoPago || 'Transferencia',
             defaultCondicionesPago: e.defaultCondicionesPago || '',
             ibanCuenta: e.ibanCuenta ? formatIbanDisplay(e.ibanCuenta) : '',
+            nombreBanco: e.nombreBanco || '',
+            titularCuenta: e.titularCuenta || '',
             bizumTelefono: e.bizumTelefono || '',
           });
           this.form.markAsPristine();

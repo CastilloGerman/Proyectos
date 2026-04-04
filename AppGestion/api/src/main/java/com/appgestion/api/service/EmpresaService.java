@@ -153,6 +153,12 @@ public class EmpresaService {
         emp.setDefaultMetodoPago(metodo.isEmpty() ? null : metodo);
         emp.setDefaultCondicionesPago(cond.isEmpty() ? null : cond);
         emp.setIbanCuenta(ibanRaw.isEmpty() ? null : ibanRaw.toUpperCase());
+        if (request.nombreBanco() != null) {
+            emp.setNombreBanco(blankToNull(request.nombreBanco()));
+        }
+        if (request.titularCuenta() != null) {
+            emp.setTitularCuenta(blankToNull(request.titularCuenta()));
+        }
         emp.setBizumTelefono(bizumRaw.isEmpty() ? null : normalizeBizumDigits(bizumRaw));
         emp = empresaRepository.save(emp);
         return toResponse(emp);
@@ -296,6 +302,8 @@ public class EmpresaService {
                     null,
                     null,
                     null,
+                    null,
+                    null,
                     false,
                     List.of(7, 15, 30),
                     EmailProviderMode.system.name(),
@@ -331,6 +339,8 @@ public class EmpresaService {
                 emp.getDefaultMetodoPago(),
                 emp.getDefaultCondicionesPago(),
                 emp.getIbanCuenta(),
+                emp.getNombreBanco(),
+                emp.getTitularCuenta(),
                 emp.getBizumTelefono(),
                 emp.getRegimenIvaPrincipal(),
                 emp.getDescripcionActividadFiscal(),

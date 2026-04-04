@@ -1,7 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,6 +10,8 @@ import { MatDividerModule } from '@angular/material/divider';
 import { AuthService, UsuarioResponse } from '../../../core/auth/auth.service';
 import { SubscriptionService } from '../../../core/services/subscription.service';
 import { environment } from '../../../../environments/environment';
+import { DevApiService } from '../../../core/services/dev-api.service';
+import { daysFromTodayToDateEnd } from '../../../shared/utils/trial-days.util';
 
 /** Nombre comercial del plan (un solo precio Stripe en esta fase). */
 const DEFAULT_PLAN_LABEL = 'Plan profesional';
@@ -34,7 +35,7 @@ export class SuscripcionPlanComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly subscriptionApi = inject(SubscriptionService);
   private readonly snackBar = inject(MatSnackBar);
-  private readonly http = inject(HttpClient);
+  private readonly devApi = inject(DevApiService);
 
   readonly loading = signal(true);
   readonly loadError = signal(false);
@@ -167,7 +168,7 @@ export class SuscripcionPlanComponent implements OnInit {
 
   /** Solo desarrollo: alinear con banner del layout. */
   grantPremiumDev(): void {
-    this.http.post<{ ok: boolean }>(`${environment.apiUrl}/dev/grant-premium`, {}).subscribe({
+    this.devApi.grantPremium().subscribe({
       next: () => {
         this.auth.refreshUser().subscribe((data) => {
           if (data) this.me.set(data);
@@ -182,12 +183,7 @@ export class SuscripcionPlanComponent implements OnInit {
 
   private diasRestantesPrueba(): number | null {
     const end = this.me()?.trialEndDate ?? this.auth.user()?.trialEndDate;
-    if (!end) return null;
-    const endDate = new Date(end);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    endDate.setHours(0, 0, 0, 0);
-    return Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    return daysFromTodayToDateEnd(end);
   }
 
   private formatDateOnly(raw: string | undefined): string {

@@ -1,6 +1,9 @@
 package com.appgestion.api.util;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Validación de IBAN (ISO 13616, comprobación mod 97).
@@ -45,5 +48,39 @@ public final class IbanValidator {
         } catch (NumberFormatException e) {
             return false;
         }
+    }
+
+    /**
+     * IBAN con un espacio cada 4 caracteres (sin espacio final), para mostrar en PDF.
+     */
+    public static String formatForPdfDisplay(String raw) {
+        String n = normalize(raw);
+        if (n.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < n.length(); i += 4) {
+            if (i > 0) {
+                sb.append(' ');
+            }
+            sb.append(n, i, Math.min(i + 4, n.length()));
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Parte el IBAN ya formateado en líneas de como mucho {@code maxLineLength} caracteres (saltos visuales en PDF).
+     */
+    public static List<String> wrapFormattedIbanForPdf(String formatted, int maxLineLength) {
+        if (formatted == null || formatted.isEmpty()) {
+            return Collections.emptyList();
+        }
+        int max = Math.max(8, maxLineLength);
+        List<String> lines = new ArrayList<>();
+        for (int start = 0; start < formatted.length(); start += max) {
+            int end = Math.min(start + max, formatted.length());
+            lines.add(formatted.substring(start, end));
+        }
+        return lines;
     }
 }

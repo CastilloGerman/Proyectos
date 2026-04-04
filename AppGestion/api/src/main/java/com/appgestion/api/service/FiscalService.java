@@ -1,5 +1,6 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.constant.FacturaEstadoPago;
 import com.appgestion.api.domain.enums.FiscalCriterioImputacion;
 import com.appgestion.api.dto.response.Modelo303ResumenResponse;
 import com.appgestion.api.dto.response.Modelo347ClienteResponse;
@@ -60,7 +61,8 @@ public class FiscalService {
 
         boolean soloPagadasEnRespuesta = false;
         if (criterio == FiscalCriterioImputacion.CAJA) {
-            row = fiscalQueryRepository.aggregateVentasModelo303Caja(usuarioId, desde, hasta);
+            row = fiscalQueryRepository.aggregateVentasModelo303Caja(
+                    usuarioId, desde, hasta, FacturaEstadoPago.PAGADA);
             advertencias.add(
                     "Criterio caja: solo entran facturas marcadas como Pagada con al menos un cobro registrado; " +
                             "la fecha usada es la del último cobro (MAX) por factura."
@@ -71,7 +73,8 @@ public class FiscalService {
             );
         } else {
             soloPagadasEnRespuesta = soloFacturasPagadas;
-            row = fiscalQueryRepository.aggregateVentasModelo303Devengo(usuarioId, desde, hasta, soloFacturasPagadas);
+            row = fiscalQueryRepository.aggregateVentasModelo303Devengo(
+                    usuarioId, desde, hasta, soloFacturasPagadas, FacturaEstadoPago.PAGADA);
             if (soloFacturasPagadas) {
                 advertencias.add("Filtro activo: solo facturas con estado Pagada (criterio devengo por fecha de expedición).");
             }

@@ -1,5 +1,6 @@
 package com.appgestion.api.dto.request;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
@@ -14,5 +15,5 @@ public record LoginRequest(
         /** Opcional: código TOTP de 6 dígitos si el usuario tiene 2FA activo. */
         String totpCode,
 
-        DeviceClientInfoRequest clientInfo
+        @Valid DeviceClientInfoRequest clientInfo
 ) {}

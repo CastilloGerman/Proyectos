@@ -14,7 +14,6 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { FacturaService } from '../../../core/services/factura.service';
 import { ConfigService } from '../../../core/services/config.service';
-import { formatIbanDisplay } from '../../../shared/validators/iban.validator';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ClienteService } from '../../../core/services/cliente.service';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
@@ -23,6 +22,7 @@ import { Cliente } from '../../../core/models/cliente.model';
 import { Presupuesto } from '../../../core/models/presupuesto.model';
 import { Material } from '../../../core/models/material.model';
 import { Factura, FacturaCobro, FacturaItemRequest, FacturaRequest } from '../../../core/models/factura.model';
+import { startWith } from 'rxjs';
 
 @Component({
     selector: 'app-factura-form',
@@ -55,7 +55,14 @@ import { Factura, FacturaCobro, FacturaItemRequest, FacturaRequest } from '../..
                   <mat-option [value]="c.id">{{ c.nombre }}</mat-option>
                 }
               </mat-select>
-              <mat-error>Selecciona un cliente</mat-error>
+              @if (form.get('clienteId')?.hasError('required') && form.get('clienteId')?.touched) {
+                <mat-error>Selecciona un cliente</mat-error>
+              }
+              @if (form.get('clienteId')?.hasError('nifIgual')) {
+                <mat-error>
+                  El cliente seleccionado tiene el mismo NIF que tu perfil. Por favor selecciona otro cliente.
+                </mat-error>
+              }
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Presupuesto (opcional)</mat-label>
@@ -393,6 +400,9 @@ export class FacturaFormComponent implements OnInit {
   cobroSaving = false;
   paymentLinkLoading = false;
 
+  /** NIF de la empresa (emisor), para no facturar a uno mismo como cliente. */
+  empresaNif: string | null = null;
+
   get facturaTotal(): number {
     return this.facturaTotalSnapshot;
   }
@@ -443,9 +453,21 @@ export class FacturaFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.clienteService.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data) => (this.clientes = data));
+    this.configService.getEmpresa().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((e) => {
+      this.empresaNif = e.nif?.trim() || null;
+      this.validateClienteNifVsEmpresa();
+    });
+    this.clienteService.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data) => {
+      this.clientes = data;
+      this.validateClienteNifVsEmpresa();
+    });
     this.presupuestoService.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data) => (this.presupuestos = data));
     this.materialService.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data) => (this.materiales = data));
+    this.form
+      .get('clienteId')!
+      .valueChanges.pipe(startWith(this.form.get('clienteId')!.value), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.validateClienteNifVsEmpresa());
+
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const id = params.get('id');
       if (id && id !== 'nuevo') {
@@ -473,6 +495,26 @@ export class FacturaFormComponent implements OnInit {
   }
 
   /** Rellena método, condiciones y notas sugeridas desde /config/empresa (pantalla Métodos de cobro). */
+  /** Marca error `nifIgual` en cliente si el DNI coincide con el NIF de la empresa. */
+  private validateClienteNifVsEmpresa(): void {
+    const ctrl = this.form.get('clienteId');
+    if (!ctrl) return;
+    const prev = ctrl.errors;
+    const rest: Record<string, unknown> = prev ? { ...prev } : {};
+    delete rest['nifIgual'];
+    const hasRest = Object.keys(rest).length > 0;
+    const emp = this.empresaNif?.trim();
+    const id = ctrl.value as number | null;
+    const c = id != null ? this.clientes.find((x) => x.id === id) : undefined;
+    const cliDni = c?.dni?.trim();
+    const mismo = !!(emp && cliDni && emp.toUpperCase() === cliDni.toUpperCase());
+    if (mismo) {
+      ctrl.setErrors({ ...rest, nifIgual: true });
+    } else {
+      ctrl.setErrors(hasRest ? rest : null);
+    }
+  }
+
   private applyPaymentDefaultsFromEmpresa(): void {
     this.configService.getEmpresa().subscribe({
       next: (e) => {
@@ -482,9 +524,6 @@ export class FacturaFormComponent implements OnInit {
         if (e.regimenIvaPrincipal?.trim()) patch['regimenFiscal'] = e.regimenIvaPrincipal.trim();
         const notasBits: string[] = [];
         const metodo = e.defaultMetodoPago || '';
-        if (e.ibanCuenta?.trim() && (metodo === 'Transferencia' || !metodo)) {
-          notasBits.push(`Cobro por transferencia. IBAN: ${formatIbanDisplay(e.ibanCuenta)}`);
-        }
         if (e.bizumTelefono?.trim() && metodo === 'Bizum') {
           notasBits.push(`Pago con Bizum al ${e.bizumTelefono}`);
         }
@@ -500,6 +539,11 @@ export class FacturaFormComponent implements OnInit {
     this.id = id;
     this.facturaService.getById(id).subscribe({
       next: (f) => {
+        if (f.anulada) {
+          this.snackBar.open('Esta factura está anulada y no se puede editar.', 'Cerrar', { duration: 5000 });
+          void this.router.navigate(['/facturas']);
+          return;
+        }
         this.form.patchValue({
           clienteId: f.clienteId,
           presupuestoId: f.presupuestoId ?? null,
@@ -532,6 +576,7 @@ export class FacturaFormComponent implements OnInit {
           this.addItem();
         }
         this.applyFacturaCobrosSnapshot(f);
+        this.validateClienteNifVsEmpresa();
       },
       error: (err) => {
         const msg = err.error?.detail ?? err.error?.message ?? 'No se pudo cargar la factura';
@@ -669,10 +714,10 @@ export class FacturaFormComponent implements OnInit {
       montoCobrado: value.estadoPago === 'Parcial' && value.montoCobrado != null ? +value.montoCobrado : undefined,
       notas: value.notas || undefined,
       ivaHabilitado: value.ivaHabilitado,
+      fechaExpedicion: value.fechaExpedicion || new Date().toISOString().split('T')[0],
     };
     if (value.presupuestoId) payload.presupuestoId = value.presupuestoId;
     if (value.numeroFactura?.trim()) payload.numeroFactura = value.numeroFactura.trim();
-    if (value.fechaExpedicion) payload.fechaExpedicion = value.fechaExpedicion;
     if (value.fechaOperacion) payload.fechaOperacion = value.fechaOperacion || undefined;
     if (value.fechaVencimiento) payload.fechaVencimiento = value.fechaVencimiento;
     if (value.regimenFiscal) payload.regimenFiscal = value.regimenFiscal;
@@ -686,7 +731,11 @@ export class FacturaFormComponent implements OnInit {
         this.router.navigate(['/facturas']);
       },
       error: (err) => {
-        this.snackBar.open(err.error?.message || 'Error al guardar', 'Cerrar', { duration: 4000 });
+        const msg =
+          err.status === 400
+            ? err.error?.message || err.error?.detail || 'Error al guardar'
+            : err.error?.message || 'Error al guardar';
+        this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
       },
     });
   }

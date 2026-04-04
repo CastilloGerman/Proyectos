@@ -107,6 +107,12 @@ public class Empresa {
     @Column(name = "iban_cuenta", length = 34)
     private String ibanCuenta;
 
+    @Column(name = "nombre_banco", length = 100)
+    private String nombreBanco;
+
+    @Column(name = "titular_cuenta", length = 150)
+    private String titularCuenta;
+
     @Column(name = "bizum_telefono", length = 20)
     private String bizumTelefono;
 
@@ -225,6 +231,12 @@ public class Empresa {
 
     public String getIbanCuenta() { return ibanCuenta; }
     public void setIbanCuenta(String ibanCuenta) { this.ibanCuenta = ibanCuenta; }
+
+    public String getNombreBanco() { return nombreBanco; }
+    public void setNombreBanco(String nombreBanco) { this.nombreBanco = nombreBanco; }
+
+    public String getTitularCuenta() { return titularCuenta; }
+    public void setTitularCuenta(String titularCuenta) { this.titularCuenta = titularCuenta; }
 
     public String getBizumTelefono() { return bizumTelefono; }
     public void setBizumTelefono(String bizumTelefono) { this.bizumTelefono = bizumTelefono; }

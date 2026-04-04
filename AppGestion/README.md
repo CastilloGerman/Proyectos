@@ -286,6 +286,9 @@ Prefijos **tal como los expone el backend** (sin `/api`; el front añade `/api` 
 | GET | `/subscription/invoices` | Facturas Stripe |
 | POST | `/subscription/portal` | Portal cliente Stripe |
 | POST | `/webhook/stripe` | Webhook Stripe |
+| POST | `/webhook/resend` | Webhook Resend (bounces, etc.). Con `RESEND_WEBHOOK_SECRET` se valida la firma Svix (`svix-*`). |
+
+En producción, configura **`RESEND_WEBHOOK_SECRET`** con el signing secret del webhook en el dashboard de Resend. Si está vacío, el endpoint no verifica firma (útil solo en desarrollo aislado).
 
 ### Desarrollo local (`/dev`, perfil `local`)
 

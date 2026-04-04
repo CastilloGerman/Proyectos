@@ -64,10 +64,10 @@ public class PresupuestoController {
 
     @PutMapping("/mis-condiciones-predeterminadas")
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
-    public void guardarMisCondicionesPredeterminadas(@RequestBody PresupuestoCondicionesPredeterminadasRequest body) {
+    public void guardarMisCondicionesPredeterminadas(@Valid @RequestBody(required = false) PresupuestoCondicionesPredeterminadasRequest body) {
         Long uid = currentUserService.getCurrentUsuario().getId();
-        presupuestoService.guardarMisCondicionesPredeterminadas(uid,
-                body != null && body.claves() != null ? body.claves() : List.of());
+        List<String> claves = body != null && body.claves() != null ? body.claves() : List.of();
+        presupuestoService.guardarMisCondicionesPredeterminadas(uid, claves);
     }
 
     @GetMapping
@@ -97,7 +97,7 @@ public class PresupuestoController {
     @PostMapping("/{id}/enviar-email")
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void enviarPorEmail(@PathVariable Long id, @RequestBody(required = false) EnviarEmailRequest request) {
+    public void enviarPorEmail(@PathVariable Long id, @Valid @RequestBody(required = false) EnviarEmailRequest request) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
         try {
             presupuestoService.enviarPorEmail(id, usuarioId, request);
@@ -109,7 +109,7 @@ public class PresupuestoController {
             log.warn("Error al enviar email presupuesto {}: {}", id, e.getMessage(), e);
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error al encolar el envío: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
+                    "Error al encolar el envío. Inténtalo más tarde.");
         }
     }
 

@@ -29,7 +29,8 @@ Secuencia orientativa para el **primer go-live**. Los detalles de cada variable 
 3. **Correo transaccional (Resend)**  
    En [Resend](https://resend.com), **verifica un dominio** que controlas y añade en DNS los registros que indiquen (SPF, DKIM, etc.). Genera `RESEND_API_KEY` y configúrala en secretos del servidor.  
    - Configura **`APP_EMAIL_SYSTEM_FROM`** con un remitente de ese dominio (p. ej. `Noemí <noreply@tudominio.com>`). El remitente por defecto `onboarding@resend.dev` no sirve para entregar a clientes reales de forma fiable.  
-   - **Importante:** sin dominio verificado, Resend en modo de prueba solo permite enviar al correo asociado a la cuenta; recuperación de contraseña, facturas y demás correos a usuarios finales requieren dominio verificado en producción.
+   - **Importante:** sin dominio verificado, Resend en modo de prueba solo permite enviar al correo asociado a la cuenta; recuperación de contraseña, facturas y demás correos a usuarios finales requieren dominio verificado en producción.  
+   - **Webhook Resend (recomendado en producción si registras el webhook):** en el dashboard de Resend, apunta el webhook a `https://tu-api-publica/webhook/resend` y define **`RESEND_WEBHOOK_SECRET`** con el *signing secret* del webhook (esquema **Svix**; la API exige cabeceras `svix-id`, `svix-timestamp` y `svix-signature` cuando el secret está configurado). Detalle en **§7.2**. Si el secret está vacío, el endpoint no valida firma (solo razonable en desarrollo aislado).
 
 4. **Stripe**  
    Cuando pases a cobros reales, usa claves **live** en el dashboard: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY` y URLs de éxito, cancelación y portal del cliente apuntando a `https://tu-dominio-front/...` (ver `application.yml` / variables `STRIPE_*_URL`).
@@ -53,7 +54,10 @@ Secuencia orientativa para el **primer go-live**. Los detalles de cada variable 
 10. **Webhook de Stripe**  
     En el dashboard de Stripe, registra `https://tu-api-publica/webhook/stripe` y el **signing secret** que coincida con `STRIPE_WEBHOOK_SECRET`.
 
-11. **Comprobaciones finales**  
+11. **Webhook de Resend (opcional)**  
+    Si configuras webhooks en Resend para bounces, quejas u otros eventos de entregabilidad, usa la URL `https://tu-api-publica/webhook/resend` y fija **`RESEND_WEBHOOK_SECRET`** en el entorno (ver **§7.2**).
+
+12. **Comprobaciones finales**  
     Sigue el **checklist de §8**, las pruebas de **§9** y, si aplica, revisa en base de datos la tabla `email_jobs` (estado `SENT` vs `DEAD` y `last_error`) si algún correo no llega.
 
 ---
@@ -98,7 +102,10 @@ La API encola el correo en base de datos y un worker envía según la configurac
 - **`APP_EMAIL_TOKEN_SECRET`** — obligatoria si las organizaciones **conectan Gmail u Outlook (OAuth)**; cifra tokens en reposo. Cadena larga y aleatoria (≥ 32 caracteres recomendado).  
   - Equivalente: `app.email.token-encryption-key`.
 - **OAuth (solo si usas “Conectar Gmail / Microsoft” en datos de empresa):** `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI`, y/o análogas de Microsoft (`MICROSOFT_OAUTH_*`), alineadas con las URLs públicas de tu API. Guía paso a paso en [EMAIL-OAUTH-SETUP.md](EMAIL-OAUTH-SETUP.md).
-- **Webhook Resend (opcional, deliverability):** `RESEND_WEBHOOK_SECRET` si validas firmas en el backend; el endpoint `POST /webhook/resend` persiste eventos para análisis.
+- **`RESEND_WEBHOOK_SECRET`** — si está definido, el endpoint **`POST /webhook/resend`** **valida la firma Svix** (cabeceras `svix-id`, `svix-timestamp`, `svix-signature`) antes de persistir el payload; sin firma válida responde **400**. El secret suele tener prefijo `whsec_` (el tramo posterior es Base64 de la clave HMAC, según el esquema estándar de Svix/Resend).  
+  - Si **`RESEND_WEBHOOK_SECRET`** está **vacío**, la API **no** verifica la firma: útil solo en entornos de desarrollo muy controlados; en **producción**, configúralo siempre que el webhook esté expuesto en Resend.  
+  - Equivalente en YAML: `app.email.resend.webhook-secret`.  
+  - Cuerpos demasiado grandes pueden recibir **413**; detalles operativos en **§7.2**.
 
 **DNS (operación):** en el dominio de envío configura **SPF**, **DKIM** y **DMARC** según la documentación de Resend; no son variables de la app pero son necesarios para buena entregabilidad.
 
@@ -182,14 +189,29 @@ Revisión orientativa antes del go-live (complementa §1–2). No sustituye un p
 - **Rate limiting** en rutas de autenticación (login, registro, recuperación, etc.) vía API Gateway, reverse proxy o la propia API.
 - Logs centralizados y alertas básicas (errores 5xx, fallos de pago/webhook).
 - Tras proxy: **IP del cliente** correcta para `usuario_sesion` (ver sección de variables “Sesiones por dispositivo”).
-- Con perfil **prod**, la API limita el detalle de errores HTTP al cliente (`server.error`); tras desplegar, verifica que las respuestas de error no expongan datos internos (coherente con §9).
+- Con perfil **prod**, la API limita el detalle de errores HTTP al cliente (`spring.web.error.include-message`, antes `server.error`); tras desplegar, verifica que las respuestas de error no expongan datos internos (coherente con §9).
 
 ---
 
-## 7. Webhooks Stripe
+## 7. Webhooks
+
+### 7.1 Stripe
 
 - En el dashboard Stripe, apunta el webhook a tu URL pública (ej. `https://api.tudominio.com/webhook/stripe`).
 - Usa el **signing secret** (`whsec_...`) que coincida con ese endpoint en `STRIPE_WEBHOOK_SECRET`.
+
+### 7.2 Resend (firma Svix)
+
+- **Ruta de la API:** `POST /webhook/resend` (pública; sin JWT). Spring Security permite `/webhook/**` sin autenticación.
+- **URL en Resend:** registra en el dashboard de Resend la URL pública de tu API, por ejemplo `https://api.tudominio.com/webhook/resend`.
+- **Variable de entorno:** `RESEND_WEBHOOK_SECRET` — copia el **signing secret** del webhook en Resend (suele empezar por `whsec_`). Debe ser el mismo valor que recibe la app (también mapeable como `app.email.resend.webhook-secret` en YAML del servidor, nunca en el repo).
+- **Comportamiento de la API:**
+  - Con **`RESEND_WEBHOOK_SECRET` no vacío:** se exigen las cabeceras **`svix-id`**, **`svix-timestamp`** y **`svix-signature`**. La firma se comprueba con el algoritmo HMAC-SHA256 estándar Svix sobre el cuerpo **en bruto**; si falla, respuesta **400** y no se persiste el evento.
+  - Con secret **vacío:** no hay verificación (comportamiento heredado para desarrollo); **no recomendado** si la URL es alcanzable desde Internet sin otra capa de protección.
+- **Errores de cliente:** además del 400 por firma inválida, un cuerpo que supere el límite configurado en la API puede devolver **413 Content Too Large** (nombre RFC 9110; antes *Payload Too Large*).
+- **Operativa:** los eventos se guardan para análisis de entregabilidad (p. ej. bounces, complaints). Revisa logs si Resend rechaza entregas.
+
+**Variable adicional (errores genéricos al cliente):** opcionalmente `APP_API_EXPOSE_INTERNAL_ERRORS` / `app.api.expose-internal-error-message` — por defecto **false** en producción para no devolver mensajes internos de excepciones en respuestas 500.
 
 ---
 
@@ -207,6 +229,7 @@ Complemento de la sección **Lanzamiento a producción (pasos ordenados)**; úsa
 - [ ] BD migrada con Flyway y backup realizado (incluye tabla `usuario_sesion` si tu versión la incorpora)
 - [ ] (Opcional) `SESSIONS_CLEANUP_ENABLED` / `SESSIONS_CLEANUP_RETENTION_DAYS` revisados
 - [ ] **Resend:** `RESEND_API_KEY` en secretos del entorno; remitente `APP_EMAIL_SYSTEM_FROM` alineado con dominio verificado en Resend
+- [ ] (Si usas webhook Resend en producción) `RESEND_WEBHOOK_SECRET` definido y URL `https://tu-api/.../webhook/resend` registrada en Resend (firma Svix activa — ver **§7.2**)
 - [ ] (Si OAuth de correo) `APP_EMAIL_TOKEN_SECRET` y credenciales OAuth de Google/Microsoft con redirect URIs a `https://tu-api/.../auth/email/oauth/.../callback`
 - [ ] (Opcional) DNS del dominio de envío: SPF / DKIM / DMARC (Resend)
 - [ ] (Solo si alguna org sigue en SMTP legacy) `MAIL_*` o credenciales SMTP en servidor

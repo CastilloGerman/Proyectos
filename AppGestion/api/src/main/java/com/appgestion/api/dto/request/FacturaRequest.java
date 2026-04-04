@@ -1,5 +1,6 @@
 package com.appgestion.api.dto.request;
 
+import com.appgestion.api.constant.FacturaEstadoPago;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.NotEmpty;
@@ -18,6 +19,8 @@ public record FacturaRequest(
         List<FacturaItemRequest> items,
 
         String numeroFactura,
+
+        @NotNull(message = "La fecha de expedición es obligatoria")
         LocalDate fechaExpedicion,
         LocalDate fechaOperacion,
         LocalDate fechaVencimiento,
@@ -31,7 +34,7 @@ public record FacturaRequest(
 ) {
     public FacturaRequest {
         if (metodoPago == null || metodoPago.isBlank()) metodoPago = "Transferencia";
-        if (estadoPago == null || estadoPago.isBlank()) estadoPago = "No Pagada";
+        if (estadoPago == null || estadoPago.isBlank()) estadoPago = FacturaEstadoPago.NO_PAGADA;
         if (ivaHabilitado == null) ivaHabilitado = true;
     }
 }

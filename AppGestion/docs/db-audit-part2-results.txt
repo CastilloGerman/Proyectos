@@ -1,0 +1,447 @@
+﻿Auditoría Parte 2 — PostgreSQL
+==============================
+Ejecutado: 2026-04-04 (Parte 4 — auditoría completa + sección 6 nullables candidatos)
+Conexión: localhost:5433, base: appgestion, usuario: postgres
+Script: scripts/db-audit-part2.sql
+
+Parte 4 — comprobaciones:
+- Sección 2 (FK sin índice): debe ser 0 filas con Flyway V33+ aplicada.
+- Sección 5 (huérfanos): todos los conteos 0 en esta ejecución.
+- Sección 6: columnas nullable fuera de la política intencional (117 filas); no incluye
+  dni/direccion/codigo_postal/telefono/email/pais/provincia ni fecha_creacion de clientes.
+  Siguiente paso operativo: contar NULL por columna antes de cualquier NOT NULL (Parte 4b).
+
+---
+
+=== 1. TABLAS Y COLUMNAS (public) ===
+
+       table_name        |               column_name               |          data_type          | is_nullable 
+-------------------------+-----------------------------------------+-----------------------------+-------------
+ audit_access_event      | id                                      | bigint                      | NO
+ audit_access_event      | organization_id                         | bigint                      | NO
+ audit_access_event      | usuario_id                              | bigint                      | YES
+ audit_access_event      | actor_email                             | character varying           | YES
+ audit_access_event      | occurred_at                             | timestamp with time zone    | NO
+ audit_access_event      | event_type                              | character varying           | NO
+ audit_access_event      | success                                 | boolean                     | NO
+ audit_access_event      | failure_reason                          | character varying           | YES
+ audit_access_event      | ip_address                              | character varying           | YES
+ audit_access_event      | ip_anonymized                           | boolean                     | NO
+ audit_access_event      | user_agent                              | text                        | YES
+ audit_access_event      | country_code                            | character varying           | YES
+ audit_access_event      | session_id                              | character varying           | YES
+ audit_access_event      | resource_path                           | character varying           | YES
+ audit_access_event      | trace_id                                | character varying           | YES
+ audit_access_event      | sensitive                               | boolean                     | NO
+ audit_access_event      | metadata_json                           | text                        | YES
+ clientes                | id                                      | bigint                      | NO
+ clientes                | usuario_id                              | bigint                      | NO
+ clientes                | nombre                                  | character varying           | NO
+ clientes                | telefono                                | character varying           | YES
+ clientes                | email                                   | character varying           | YES
+ clientes                | direccion                               | character varying           | YES
+ clientes                | dni                                     | character varying           | YES
+ clientes                | fecha_creacion                          | timestamp without time zone | YES
+ clientes                | codigo_postal                           | character varying           | YES
+ clientes                | pais                                    | character varying           | YES
+ clientes                | provincia                               | character varying           | YES
+ clientes                | estado_cliente                          | character varying           | NO
+ email_jobs              | id                                      | bigint                      | NO
+ email_jobs              | idempotency_key                         | character varying           | NO
+ email_jobs              | usuario_id                              | bigint                      | NO
+ email_jobs              | payload_json                            | text                        | NO
+ email_jobs              | status                                  | character varying           | NO
+ email_jobs              | attempts                                | integer                     | NO
+ email_jobs              | max_attempts                            | integer                     | NO
+ email_jobs              | next_retry_at                           | timestamp with time zone    | YES
+ email_jobs              | last_error                              | text                        | YES
+ email_jobs              | created_at                              | timestamp with time zone    | NO
+ email_jobs              | processed_at                            | timestamp with time zone    | YES
+ email_webhook_events    | id                                      | bigint                      | NO
+ email_webhook_events    | provider                                | character varying           | NO
+ email_webhook_events    | event_type                              | character varying           | YES
+ email_webhook_events    | external_id                             | character varying           | YES
+ email_webhook_events    | payload_json                            | text                        | YES
+ email_webhook_events    | received_at                             | timestamp with time zone    | NO
+ empresas                | id                                      | bigint                      | NO
+ empresas                | direccion                               | character varying           | YES
+ empresas                | email                                   | character varying           | YES
+ empresas                | nif                                     | character varying           | YES
+ empresas                | nombre                                  | character varying           | NO
+ empresas                | notas_pie_factura                       | character varying           | YES
+ empresas                | notas_pie_presupuesto                   | character varying           | YES
+ empresas                | telefono                                | character varying           | YES
+ empresas                | usuario_id                              | bigint                      | NO
+ empresas                | mail_host                               | character varying           | YES
+ empresas                | mail_password                           | character varying           | YES
+ empresas                | mail_port                               | integer                     | YES
+ empresas                | mail_username                           | character varying           | YES
+ empresas                | codigo_postal                           | character varying           | YES
+ empresas                | pais                                    | character varying           | YES
+ empresas                | provincia                               | character varying           | YES
+ empresas                | firma_imagen                            | bytea                       | YES
+ empresas                | logo_imagen                             | bytea                       | YES
+ empresas                | default_metodo_pago                     | character varying           | YES
+ empresas                | default_condiciones_pago                | character varying           | YES
+ empresas                | iban_cuenta                             | character varying           | YES
+ empresas                | bizum_telefono                          | character varying           | YES
+ empresas                | regimen_iva_principal                   | character varying           | YES
+ empresas                | descripcion_actividad_fiscal            | character varying           | YES
+ empresas                | nif_intracomunitario                    | character varying           | YES
+ empresas                | epigrafe_iae                            | character varying           | YES
+ empresas                | rubro_autonomo_codigo                   | character varying           | YES
+ empresas                | recordatorio_cliente_activo             | boolean                     | NO
+ empresas                | recordatorio_cliente_dias               | character varying           | NO
+ empresas                | email_provider                          | character varying           | NO
+ empresas                | oauth_provider                          | character varying           | YES
+ empresas                | oauth_access_token_enc                  | text                        | YES
+ empresas                | oauth_refresh_token_enc                 | text                        | YES
+ empresas                | oauth_token_expires_at                  | timestamp with time zone    | YES
+ empresas                | oauth_connected_at                      | timestamp with time zone    | YES
+ empresas                | oauth_on_failure                        | character varying           | NO
+ empresas                | system_from_override                    | character varying           | YES
+ empresas                | nombre_banco                            | character varying           | YES
+ empresas                | titular_cuenta                          | character varying           | YES
+ factura_cobros          | id                                      | bigint                      | NO
+ factura_cobros          | factura_id                              | bigint                      | NO
+ factura_cobros          | importe                                 | double precision            | NO
+ factura_cobros          | fecha                                   | date                        | NO
+ factura_cobros          | metodo                                  | character varying           | YES
+ factura_cobros          | notas                                   | character varying           | YES
+ factura_cobros          | created_at                              | timestamp without time zone | NO
+ factura_items           | id                                      | bigint                      | NO
+ factura_items           | factura_id                              | bigint                      | NO
+ factura_items           | material_id                             | bigint                      | YES
+ factura_items           | tarea_manual                            | character varying           | YES
+ factura_items           | cantidad                                | double precision            | NO
+ factura_items           | precio_unitario                         | double precision            | NO
+ factura_items           | subtotal                                | double precision            | NO
+ factura_items           | cuota_iva                               | double precision            | YES
+ factura_items           | es_tarea_manual                         | boolean                     | YES
+ factura_items           | aplica_iva                              | boolean                     | YES
+ factura_secuencia       | usuario_id                              | bigint                      | NO
+ factura_secuencia       | anio                                    | integer                     | NO
+ factura_secuencia       | serie                                   | character varying           | NO
+ factura_secuencia       | ultimo_numero                           | integer                     | NO
+ facturas                | id                                      | bigint                      | NO
+ facturas                | usuario_id                              | bigint                      | NO
+ facturas                | numero_factura                          | character varying           | NO
+ facturas                | cliente_id                              | bigint                      | NO
+ facturas                | presupuesto_id                          | bigint                      | YES
+ facturas                | fecha_creacion                          | timestamp without time zone | YES
+ facturas                | fecha_vencimiento                       | date                        | YES
+ facturas                | subtotal                                | double precision            | NO
+ facturas                | iva                                     | double precision            | NO
+ facturas                | total                                   | double precision            | NO
+ facturas                | iva_habilitado                          | boolean                     | NO
+ facturas                | metodo_pago                             | character varying           | YES
+ facturas                | estado_pago                             | character varying           | YES
+ facturas                | notas                                   | character varying           | YES
+ facturas                | condiciones_pago                        | character varying           | YES
+ facturas                | fecha_expedicion                        | date                        | NO
+ facturas                | fecha_operacion                         | date                        | YES
+ facturas                | moneda                                  | character varying           | YES
+ facturas                | regimen_fiscal                          | character varying           | YES
+ facturas                | monto_cobrado                           | double precision            | YES
+ facturas                | recordatorio_enviado                    | boolean                     | NO
+ facturas                | payment_link_url                        | text                        | YES
+ facturas                | payment_link_id                         | character varying           | YES
+ facturas                | recordatorio_cliente_marcas             | character varying           | YES
+ facturas                | tipo_factura                            | character varying           | YES
+ facturas                | factura_anticipo_id                     | bigint                      | YES
+ facturas                | importe_anticipo_descontado             | numeric                     | YES
+ facturas                | anio_factura                            | integer                     | NO
+ facturas                | numero_secuencial                       | integer                     | NO
+ facturas                | anulada                                 | boolean                     | NO
+ facturas                | fecha_anulacion                         | date                        | YES
+ facturas                | motivo_anulacion                        | character varying           | YES
+ flyway_schema_history   | installed_rank                          | integer                     | NO
+ flyway_schema_history   | version                                 | character varying           | YES
+ flyway_schema_history   | description                             | character varying           | NO
+ flyway_schema_history   | type                                    | character varying           | NO
+ flyway_schema_history   | script                                  | character varying           | NO
+ flyway_schema_history   | checksum                                | integer                     | YES
+ flyway_schema_history   | installed_by                            | character varying           | NO
+ flyway_schema_history   | installed_on                            | timestamp without time zone | NO
+ flyway_schema_history   | execution_time                          | integer                     | NO
+ flyway_schema_history   | success                                 | boolean                     | NO
+ invitaciones            | id                                      | bigint                      | NO
+ invitaciones            | email                                   | character varying           | NO
+ invitaciones            | token_hash                              | character varying           | NO
+ invitaciones            | rol                                     | character varying           | NO
+ invitaciones            | inviter_usuario_id                      | bigint                      | NO
+ invitaciones            | expires_at                              | timestamp without time zone | NO
+ invitaciones            | used_at                                 | timestamp without time zone | YES
+ invitaciones            | created_at                              | timestamp without time zone | NO
+ materiales              | id                                      | bigint                      | NO
+ materiales              | nombre                                  | character varying           | NO
+ materiales              | unidad_medida                           | character varying           | NO
+ materiales              | precio_unitario                         | double precision            | NO
+ materiales              | fecha_creacion                          | timestamp without time zone | YES
+ materiales              | usuario_id                              | bigint                      | NO
+ notificaciones          | id                                      | bigint                      | NO
+ notificaciones          | usuario_id                              | bigint                      | NO
+ notificaciones          | tipo                                    | character varying           | NO
+ notificaciones          | severidad                               | character varying           | NO
+ notificaciones          | titulo                                  | character varying           | NO
+ notificaciones          | resumen                                 | character varying           | YES
+ notificaciones          | leida                                   | boolean                     | NO
+ notificaciones          | action_path                             | character varying           | YES
+ notificaciones          | created_at                              | timestamp with time zone    | NO
+ oauth_pending           | id                                      | bigint                      | NO
+ oauth_pending           | state_token                             | character varying           | NO
+ oauth_pending           | usuario_id                              | bigint                      | NO
+ oauth_pending           | provider                                | character varying           | NO
+ oauth_pending           | code_verifier                           | character varying           | YES
+ oauth_pending           | created_at                              | timestamp with time zone    | NO
+ oauth_pending           | expires_at                              | timestamp with time zone    | NO
+ organization_members    | id                                      | bigint                      | NO
+ organization_members    | organization_id                         | bigint                      | NO
+ organization_members    | user_id                                 | bigint                      | NO
+ organization_members    | role                                    | character varying           | NO
+ organizations           | id                                      | bigint                      | NO
+ organizations           | name                                    | character varying           | NO
+ organizations           | created_at                              | timestamp without time zone | NO
+ presupuesto_items       | id                                      | bigint                      | NO
+ presupuesto_items       | presupuesto_id                          | bigint                      | NO
+ presupuesto_items       | material_id                             | bigint                      | YES
+ presupuesto_items       | tarea_manual                            | character varying           | YES
+ presupuesto_items       | cantidad                                | double precision            | NO
+ presupuesto_items       | precio_unitario                         | double precision            | NO
+ presupuesto_items       | subtotal                                | double precision            | NO
+ presupuesto_items       | visible_pdf                             | boolean                     | YES
+ presupuesto_items       | es_tarea_manual                         | boolean                     | YES
+ presupuesto_items       | aplica_iva                              | boolean                     | YES
+ presupuesto_items       | descuento_porcentaje                    | double precision            | YES
+ presupuesto_items       | descuento_fijo                          | double precision            | YES
+ presupuestos            | id                                      | bigint                      | NO
+ presupuestos            | usuario_id                              | bigint                      | NO
+ presupuestos            | cliente_id                              | bigint                      | NO
+ presupuestos            | fecha_creacion                          | timestamp without time zone | YES
+ presupuestos            | subtotal                                | double precision            | NO
+ presupuestos            | iva                                     | double precision            | NO
+ presupuestos            | total                                   | double precision            | NO
+ presupuestos            | iva_habilitado                          | boolean                     | NO
+ presupuestos            | estado                                  | character varying           | YES
+ presupuestos            | descuento_global_porcentaje             | double precision            | YES
+ presupuestos            | descuento_global_fijo                   | double precision            | YES
+ presupuestos            | descuento_antes_iva                     | boolean                     | YES
+ presupuestos            | condiciones_activas                     | text                        | YES
+ presupuestos            | nota_adicional                          | text                        | YES
+ presupuestos            | tiene_anticipo                          | boolean                     | YES
+ presupuestos            | importe_anticipo                        | numeric                     | YES
+ presupuestos            | anticipo_facturado                      | boolean                     | YES
+ presupuestos            | fecha_anticipo                          | date                        | YES
+ processed_stripe_events | id                                      | bigint                      | NO
+ processed_stripe_events | event_id                                | character varying           | NO
+ processed_stripe_events | processed_at                            | timestamp without time zone | NO
+ usuario_sesion          | id                                      | character varying           | NO
+ usuario_sesion          | usuario_id                              | bigint                      | NO
+ usuario_sesion          | created_at                              | timestamp with time zone    | NO
+ usuario_sesion          | last_activity_at                        | timestamp with time zone    | NO
+ usuario_sesion          | expires_at                              | timestamp with time zone    | NO
+ usuario_sesion          | revoked_at                              | timestamp with time zone    | YES
+ usuario_sesion          | ip_address                              | character varying           | YES
+ usuario_sesion          | user_agent                              | character varying           | YES
+ usuario_sesion          | browser                                 | character varying           | YES
+ usuario_sesion          | os_name                                 | character varying           | YES
+ usuario_sesion          | device_type                             | character varying           | NO
+ usuario_sesion          | client_label                            | character varying           | YES
+ usuarios                | id                                      | bigint                      | NO
+ usuarios                | nombre                                  | character varying           | NO
+ usuarios                | email                                   | character varying           | NO
+ usuarios                | password_hash                           | character varying           | NO
+ usuarios                | rol                                     | character varying           | YES
+ usuarios                | activo                                  | boolean                     | NO
+ usuarios                | fecha_creacion                          | timestamp without time zone | NO
+ usuarios                | stripe_customer_id                      | character varying           | YES
+ usuarios                | stripe_subscription_id                  | character varying           | YES
+ usuarios                | subscription_status                     | character varying           | YES
+ usuarios                | subscription_current_period_end         | timestamp without time zone | YES
+ usuarios                | trial_end_date                          | date                        | YES
+ usuarios                | trial_start_date                        | date                        | YES
+ usuarios                | password_reset_token                    | character varying           | YES
+ usuarios                | password_reset_expires_at               | timestamp without time zone | YES
+ usuarios                | organization_id                         | bigint                      | NO
+ usuarios                | referred_by_usuario_id                  | bigint                      | YES
+ usuarios                | telefono                                | character varying           | YES
+ usuarios                | email_notify_billing                    | boolean                     | NO
+ usuarios                | email_notify_documents                  | boolean                     | NO
+ usuarios                | email_notify_marketing                  | boolean                     | NO
+ usuarios                | ui_locale                               | character varying           | NO
+ usuarios                | time_zone                               | character varying           | NO
+ usuarios                | currency_code                           | character varying           | NO
+ usuarios                | totp_secret                             | character varying           | YES
+ usuarios                | totp_enabled                            | boolean                     | NO
+ usuarios                | totp_pending_secret                     | character varying           | YES
+ usuarios                | totp_pending_expires_at                 | timestamp without time zone | YES
+ usuarios                | fecha_nacimiento                        | date                        | YES
+ usuarios                | genero                                  | character varying           | YES
+ usuarios                | nacionalidad_iso                        | character varying           | YES
+ usuarios                | pais_residencia_iso                     | character varying           | YES
+ usuarios                | condiciones_presupuesto_predeterminadas | text                        | YES
+(263 filas)
+
+ tabla | constraint | columna 
+-------+------------+---------
+(0 filas)
+
+ table_name 
+------------
+(0 filas)
+
+     table_name     |  column_name   |          data_type          |            auditoria_nota             
+--------------------+----------------+-----------------------------+---------------------------------------
+ audit_access_event | usuario_id     | bigint                      | [NULLABLE INTENCIONAL - no modificar]
+ clientes           | codigo_postal  | character varying           | [NULLABLE INTENCIONAL - no modificar]
+ clientes           | direccion      | character varying           | [NULLABLE INTENCIONAL - no modificar]
+ clientes           | dni            | character varying           | [NULLABLE INTENCIONAL - no modificar]
+ clientes           | email          | character varying           | [NULLABLE INTENCIONAL - no modificar]
+ clientes           | fecha_creacion | timestamp without time zone | [NULLABLE INTENCIONAL - no modificar]
+ clientes           | pais           | character varying           | [NULLABLE INTENCIONAL - no modificar]
+ clientes           | provincia      | character varying           | [NULLABLE INTENCIONAL - no modificar]
+ clientes           | telefono       | character varying           | [NULLABLE INTENCIONAL - no modificar]
+ facturas           | fecha_creacion | timestamp without time zone | [NULLABLE INTENCIONAL - no modificar]
+ materiales         | fecha_creacion | timestamp without time zone | [NULLABLE INTENCIONAL - no modificar]
+ presupuestos       | estado         | character varying           | [NULLABLE INTENCIONAL - no modificar]
+ presupuestos       | fecha_creacion | timestamp without time zone | [NULLABLE INTENCIONAL - no modificar]
+(13 filas)
+
+              chequeo              | huerfanos 
+-----------------------------------+-----------
+ clientes sin usuario              |         0
+ email_jobs sin usuario            |         0
+ empresas sin usuario              |         0
+ factura_cobros sin factura        |         0
+ factura_items sin factura         |         0
+ facturas sin usuario              |         0
+ materiales sin usuario            |         0
+ oauth_pending sin usuario         |         0
+ organization_members sin org      |         0
+ organization_members sin usuario  |         0
+ presupuesto_items sin presupuesto |         0
+ presupuestos sin cliente          |         0
+ presupuestos sin usuario          |         0
+(13 filas)
+
+      table_name      |               column_name               |          data_type          
+----------------------+-----------------------------------------+-----------------------------
+ audit_access_event   | actor_email                             | character varying
+ audit_access_event   | country_code                            | character varying
+ audit_access_event   | failure_reason                          | character varying
+ audit_access_event   | ip_address                              | character varying
+ audit_access_event   | metadata_json                           | text
+ audit_access_event   | resource_path                           | character varying
+ audit_access_event   | session_id                              | character varying
+ audit_access_event   | trace_id                                | character varying
+ audit_access_event   | user_agent                              | text
+ email_jobs           | last_error                              | text
+ email_jobs           | next_retry_at                           | timestamp with time zone
+ email_jobs           | processed_at                            | timestamp with time zone
+ email_webhook_events | event_type                              | character varying
+ email_webhook_events | external_id                             | character varying
+ email_webhook_events | payload_json                            | text
+ empresas             | bizum_telefono                          | character varying
+ empresas             | codigo_postal                           | character varying
+ empresas             | default_condiciones_pago                | character varying
+ empresas             | default_metodo_pago                     | character varying
+ empresas             | descripcion_actividad_fiscal            | character varying
+ empresas             | direccion                               | character varying
+ empresas             | email                                   | character varying
+ empresas             | epigrafe_iae                            | character varying
+ empresas             | firma_imagen                            | bytea
+ empresas             | iban_cuenta                             | character varying
+ empresas             | logo_imagen                             | bytea
+ empresas             | mail_host                               | character varying
+ empresas             | mail_password                           | character varying
+ empresas             | mail_port                               | integer
+ empresas             | mail_username                           | character varying
+ empresas             | nif                                     | character varying
+ empresas             | nif_intracomunitario                    | character varying
+ empresas             | nombre_banco                            | character varying
+ empresas             | notas_pie_factura                       | character varying
+ empresas             | notas_pie_presupuesto                   | character varying
+ empresas             | oauth_access_token_enc                  | text
+ empresas             | oauth_connected_at                      | timestamp with time zone
+ empresas             | oauth_provider                          | character varying
+ empresas             | oauth_refresh_token_enc                 | text
+ empresas             | oauth_token_expires_at                  | timestamp with time zone
+ empresas             | pais                                    | character varying
+ empresas             | provincia                               | character varying
+ empresas             | regimen_iva_principal                   | character varying
+ empresas             | rubro_autonomo_codigo                   | character varying
+ empresas             | system_from_override                    | character varying
+ empresas             | telefono                                | character varying
+ empresas             | titular_cuenta                          | character varying
+ factura_cobros       | metodo                                  | character varying
+ factura_cobros       | notas                                   | character varying
+ factura_items        | aplica_iva                              | boolean
+ factura_items        | cuota_iva                               | double precision
+ factura_items        | es_tarea_manual                         | boolean
+ factura_items        | material_id                             | bigint
+ factura_items        | tarea_manual                            | character varying
+ facturas             | condiciones_pago                        | character varying
+ facturas             | estado_pago                             | character varying
+ facturas             | factura_anticipo_id                     | bigint
+ facturas             | fecha_anulacion                         | date
+ facturas             | fecha_operacion                         | date
+ facturas             | fecha_vencimiento                       | date
+ facturas             | importe_anticipo_descontado             | numeric
+ facturas             | metodo_pago                             | character varying
+ facturas             | moneda                                  | character varying
+ facturas             | monto_cobrado                           | double precision
+ facturas             | motivo_anulacion                        | character varying
+ facturas             | notas                                   | character varying
+ facturas             | payment_link_id                         | character varying
+ facturas             | payment_link_url                        | text
+ facturas             | presupuesto_id                          | bigint
+ facturas             | recordatorio_cliente_marcas             | character varying
+ facturas             | regimen_fiscal                          | character varying
+ facturas             | tipo_factura                            | character varying
+ invitaciones         | used_at                                 | timestamp without time zone
+ notificaciones       | action_path                             | character varying
+ notificaciones       | resumen                                 | character varying
+ oauth_pending        | code_verifier                           | character varying
+ presupuesto_items    | aplica_iva                              | boolean
+ presupuesto_items    | descuento_fijo                          | double precision
+ presupuesto_items    | descuento_porcentaje                    | double precision
+ presupuesto_items    | es_tarea_manual                         | boolean
+ presupuesto_items    | material_id                             | bigint
+ presupuesto_items    | tarea_manual                            | character varying
+ presupuesto_items    | visible_pdf                             | boolean
+ presupuestos         | anticipo_facturado                      | boolean
+ presupuestos         | condiciones_activas                     | text
+ presupuestos         | descuento_antes_iva                     | boolean
+ presupuestos         | descuento_global_fijo                   | double precision
+ presupuestos         | descuento_global_porcentaje             | double precision
+ presupuestos         | fecha_anticipo                          | date
+ presupuestos         | importe_anticipo                        | numeric
+ presupuestos         | nota_adicional                          | text
+ presupuestos         | tiene_anticipo                          | boolean
+ usuario_sesion       | browser                                 | character varying
+ usuario_sesion       | client_label                            | character varying
+ usuario_sesion       | ip_address                              | character varying
+ usuario_sesion       | os_name                                 | character varying
+ usuario_sesion       | revoked_at                              | timestamp with time zone
+ usuario_sesion       | user_agent                              | character varying
+ usuarios             | condiciones_presupuesto_predeterminadas | text
+ usuarios             | fecha_nacimiento                        | date
+ usuarios             | genero                                  | character varying
+ usuarios             | nacionalidad_iso                        | character varying
+ usuarios             | pais_residencia_iso                     | character varying
+ usuarios             | password_reset_expires_at               | timestamp without time zone
+ usuarios             | password_reset_token                    | character varying
+ usuarios             | referred_by_usuario_id                  | bigint
+ usuarios             | rol                                     | character varying
+ usuarios             | stripe_customer_id                      | character varying
+ usuarios             | stripe_subscription_id                  | character varying
+ usuarios             | subscription_current_period_end         | timestamp without time zone
+ usuarios             | subscription_status                     | character varying
+ usuarios             | telefono                                | character varying
+ usuarios             | totp_pending_expires_at                 | timestamp without time zone
+ usuarios             | totp_pending_secret                     | character varying
+ usuarios             | totp_secret                             | character varying
+ usuarios             | trial_end_date                          | date
+ usuarios             | trial_start_date                        | date
+(117 filas)
+

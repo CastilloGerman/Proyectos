@@ -21,6 +21,8 @@ export interface Empresa {
   defaultMetodoPago?: string | null;
   defaultCondicionesPago?: string | null;
   ibanCuenta?: string | null;
+  nombreBanco?: string | null;
+  titularCuenta?: string | null;
   bizumTelefono?: string | null;
   /** Facturación / régimen (también usado como defecto en nuevas facturas). */
   regimenIvaPrincipal?: string | null;

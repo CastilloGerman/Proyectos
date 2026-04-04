@@ -1,0 +1,214 @@
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs/operators';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs/operators';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatButtonModule } from '@angular/material/button';
+import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatListModule } from '@angular/material/list';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatBadgeModule } from '@angular/material/badge';
+import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
+import { AuthService } from '../core/auth/auth.service';
+import { SubscriptionService } from '../core/services/subscription.service';
+import { InvitarUsuarioDialogComponent } from '../shared/invitar-usuario-dialog/invitar-usuario-dialog.component';
+import { SearchBarComponent } from '../shared/search-bar/search-bar.component';
+import { UserDropdownComponent } from '../shared/user-dropdown/user-dropdown.component';
+import { NotificacionesService, NotificacionDto } from '../core/services/notificaciones.service';
+import { environment } from '../../environments/environment';
+import { ThemeService } from '../core/theme/theme.service';
+import { DevApiService } from '../core/services/dev-api.service';
+import { daysFromTodayToDateEnd } from '../shared/utils/trial-days.util';
+import { TRIAL_BANNER_WARNING_DAYS, TRIAL_DAYS_LEFT_FALLBACK } from '../app-layout.constants';
+
+@Component({
+  selector: 'app-authenticated-shell',
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    MatToolbarModule,
+    MatButtonModule,
+    MatSidenavModule,
+    MatListModule,
+    MatIconModule,
+    MatTooltipModule,
+    MatBadgeModule,
+    MatMenuModule,
+    MatDividerModule,
+    MatProgressSpinnerModule,
+    SearchBarComponent,
+    UserDropdownComponent,
+  ],
+  templateUrl: './app-authenticated-shell.component.html',
+  styleUrl: './app-authenticated-shell.component.scss',
+})
+export class AppAuthenticatedShellComponent implements OnInit {
+  /** Fuerza la creación de ThemeService al montar el layout autenticado. */
+  private readonly _theme = inject(ThemeService);
+
+  sidebarCollapsed = false;
+  isSidebarOpen = false;
+
+  private readonly breakpointObserver = inject(BreakpointObserver);
+  readonly isMobileLayout = toSignal(
+    this.breakpointObserver.observe('(max-width: 768px)').pipe(map((r) => r.matches)),
+    { initialValue: false },
+  );
+
+  readonly auth = inject(AuthService);
+  readonly notificaciones = inject(NotificacionesService);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly subscriptionService = inject(SubscriptionService);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly devApi = inject(DevApiService);
+  private readonly dialog = inject(MatDialog);
+
+  readonly trialBannerWarningDays = TRIAL_BANNER_WARNING_DAYS;
+  protected readonly environment = environment;
+
+  ngOnInit(): void {
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        if (this.isMobileLayout()) {
+          this.isSidebarOpen = false;
+        }
+      });
+  }
+
+  readonly notifBadge = computed(() => {
+    const n = this.notificaciones.unreadCount();
+    if (n <= 0) {
+      return '';
+    }
+    return n > 99 ? '99+' : String(n);
+  });
+
+  readonly notifPreviewItems = signal<NotificacionDto[]>([]);
+  readonly notifPreviewLoading = signal(false);
+  readonly notifPreviewError = signal(false);
+
+  onNotifMenuOpened(): void {
+    this.notifPreviewError.set(false);
+    this.notifPreviewLoading.set(true);
+    this.notificaciones.refreshUnreadCount();
+    this.notificaciones.list(0, 10, 'no_leidas').subscribe({
+      next: (p) => {
+        this.notifPreviewItems.set(p.content ?? []);
+        this.notifPreviewLoading.set(false);
+      },
+      error: () => {
+        this.notifPreviewItems.set([]);
+        this.notifPreviewError.set(true);
+        this.notifPreviewLoading.set(false);
+      },
+    });
+  }
+
+  iconoNotificacion(n: NotificacionDto): string {
+    switch (n.severidad) {
+      case 'ERROR':
+        return 'error';
+      case 'WARNING':
+        return 'warning';
+      default:
+        return 'info';
+    }
+  }
+
+  abrirNotificacionPreview(n: NotificacionDto, trigger: MatMenuTrigger): void {
+    trigger.closeMenu();
+    if (!n.leida) {
+      this.notificaciones.markRead(n.id).subscribe({ error: () => {} });
+      this.notifPreviewItems.update((list) => list.map((x) => (x.id === n.id ? { ...x, leida: true } : x)));
+    }
+    const path = n.actionPath?.trim();
+    if (path && path.startsWith('/') && !path.startsWith('//')) {
+      void this.router.navigateByUrl(path);
+    }
+  }
+
+  toggleSidenavMenu(): void {
+    if (this.isMobileLayout()) {
+      this.isSidebarOpen = !this.isSidebarOpen;
+    } else {
+      this.sidebarCollapsed = !this.sidebarCollapsed;
+    }
+  }
+
+  onSidenavOpenedChange(opened: boolean): void {
+    if (this.isMobileLayout()) {
+      this.isSidebarOpen = opened;
+    } else {
+      this.sidebarCollapsed = !opened;
+    }
+  }
+
+  sidenavMenuTooltip(): string {
+    if (this.isMobileLayout()) {
+      return this.isSidebarOpen ? 'Cerrar menú' : 'Abrir menú';
+    }
+    return this.sidebarCollapsed ? 'Abrir menú' : 'Cerrar menú';
+  }
+
+  daysLeftInTrial(): number {
+    const end = this.auth.user()?.trialEndDate;
+    if (!end) return TRIAL_DAYS_LEFT_FALLBACK;
+    const d = daysFromTodayToDateEnd(end);
+    return d ?? TRIAL_DAYS_LEFT_FALLBACK;
+  }
+
+  openInvitar(): void {
+    const ref = this.dialog.open(InvitarUsuarioDialogComponent, { width: 'min(480px, 96vw)', maxWidth: '96vw' });
+    ref.afterClosed().subscribe((ok) => {
+      if (ok) {
+        this.snackBar.open('Enlace de referido enviado. Revisa el correo (o los logs del servidor si no hay SMTP).', 'Cerrar', {
+          duration: 5000,
+        });
+      }
+    });
+  }
+
+  activarSuscripcion(): void {
+    this.subscriptionService.createCheckoutSession().subscribe({
+      next: (res) => {
+        if (res.checkoutUrl) {
+          window.location.href = res.checkoutUrl;
+        }
+      },
+      error: (err) => {
+        this.snackBar.open(err.error?.error || 'Error al crear sesión de pago', 'Cerrar', { duration: 4000 });
+      },
+    });
+  }
+
+  grantPremiumDev(): void {
+    this.devApi.grantPremium().subscribe({
+      next: () => {
+        this.auth.refreshUser().subscribe(() => {
+          this.snackBar.open('Premium activado. La app ya tiene permisos de escritura.', 'Cerrar', { duration: 4000 });
+        });
+      },
+      error: (err) => {
+        this.snackBar.open(
+          err.error?.message || err.message || 'Error al activar premium (¿API con perfil local?)',
+          'Cerrar',
+          { duration: 5000 },
+        );
+      },
+    });
+  }
+}

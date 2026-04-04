@@ -1,5 +1,6 @@
 package com.appgestion.api.repository;
 
+import com.appgestion.api.constant.FacturaEstadoPago;
 import com.appgestion.api.domain.entity.Factura;
 import com.appgestion.api.domain.enums.TipoFactura;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,6 +18,12 @@ public interface FacturaRepository extends JpaRepository<Factura, Long> {
 
     List<Factura> findByUsuarioIdOrderByFechaCreacionDesc(Long usuarioId);
 
+    @Query("SELECT f FROM Factura f WHERE f.usuario.id = :uid AND (:incluirAnuladas = true OR f.anulada = false) ORDER BY f.fechaCreacion DESC")
+    List<Factura> findByUsuarioIdForList(@Param("uid") Long uid, @Param("incluirAnuladas") boolean incluirAnuladas);
+
+    @Query("SELECT COALESCE(MAX(f.numeroSecuencial), 0) FROM Factura f WHERE f.usuario.id = :uid AND f.anioFactura = :anio")
+    int maxNumeroSecuencialByUsuarioAndAnio(@Param("uid") Long uid, @Param("anio") int anio);
+
     List<Factura> findByUsuarioIdAndClienteIdOrderByFechaCreacionDesc(Long usuarioId, Long clienteId);
 
     /** Pares (presupuesto_id, factura_id) para clientes con facturas ligadas a presupuesto. */
@@ -30,6 +37,11 @@ public interface FacturaRepository extends JpaRepository<Factura, Long> {
     Optional<Factura> findByIdAndUsuarioIdWithRelaciones(@Param("id") Long id, @Param("usuarioId") Long usuarioId);
 
     boolean existsByIdAndUsuarioId(Long id, Long usuarioId);
+
+    boolean existsByUsuario_IdAndAnioFacturaAndNumeroSecuencial(Long usuarioId, int anioFactura, int numeroSecuencial);
+
+    boolean existsByUsuario_IdAndAnioFacturaAndNumeroSecuencialAndIdNot(
+            Long usuarioId, int anioFactura, int numeroSecuencial, Long id);
 
     Optional<Factura> findByNumeroFacturaAndUsuarioId(String numeroFactura, Long usuarioId);
 
@@ -55,7 +67,8 @@ public interface FacturaRepository extends JpaRepository<Factura, Long> {
     long countByUsuarioId(Long usuarioId);
 
     @Query("SELECT f FROM Factura f JOIN FETCH f.usuario JOIN FETCH f.cliente " +
-           "WHERE f.estadoPago NOT IN ('Pagada') " +
+           "WHERE f.estadoPago NOT IN ('" + FacturaEstadoPago.PAGADA + "') " +
+           "AND f.anulada = false " +
            "AND f.fechaVencimiento IS NOT NULL " +
            "AND f.fechaVencimiento <= :hasta " +
            "AND (f.recordatorioEnviado IS NULL OR f.recordatorioEnviado = false)")
@@ -63,11 +76,10 @@ public interface FacturaRepository extends JpaRepository<Factura, Long> {
 
     /** Facturas impagadas cuya fecha de vencimiento coincide con alguna de las dadas (p. ej. hoy−7, hoy−15). */
     @Query("SELECT f FROM Factura f JOIN FETCH f.usuario u JOIN FETCH f.cliente c "
-            + "WHERE f.estadoPago <> 'Pagada' "
+            + "WHERE f.estadoPago <> '" + FacturaEstadoPago.PAGADA + "' "
+            + "AND f.anulada = false "
             + "AND f.fechaVencimiento IS NOT NULL "
             + "AND f.fechaVencimiento IN :fechas")
     List<Factura> findImpagadasConFechaVencimientoEn(@Param("fechas") Collection<LocalDate> fechas);
 
-    @Query(value = "SELECT COALESCE(MAX(CAST(SUBSTRING(numero_factura FROM '[0-9]+$') AS INTEGER)), 0) FROM facturas WHERE usuario_id = :usuarioId AND numero_factura LIKE :pattern", nativeQuery = true)
-    int findMaxNumeroInYear(@Param("usuarioId") Long usuarioId, @Param("pattern") String pattern);
 }

@@ -1,5 +1,6 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.constant.FacturaEstadoPago;
 import com.appgestion.api.domain.entity.Empresa;
 import com.appgestion.api.domain.entity.Factura;
 import com.appgestion.api.domain.entity.Usuario;
@@ -112,6 +113,9 @@ public class FacturaRecordatorioClienteService {
     public void enviarRecordatorioClienteManual(Long usuarioId, Long facturaId) throws Exception {
         Factura f = facturaRepository.findByIdAndUsuarioIdWithRelaciones(facturaId, usuarioId)
                 .orElseThrow(() -> new IllegalArgumentException("Factura no encontrada."));
+        if (Boolean.TRUE.equals(f.getAnulada())) {
+            throw new IllegalStateException("No se puede enviar recordatorio para una factura anulada.");
+        }
         double pendiente = importePendiente(f);
         if (pendiente <= 0.009) {
             throw new IllegalStateException("No hay importe pendiente en esta factura.");
@@ -137,11 +141,11 @@ public class FacturaRecordatorioClienteService {
 
     private static double importePendiente(Factura f) {
         String estado = f.getEstadoPago() != null ? f.getEstadoPago() : "";
-        if ("Pagada".equalsIgnoreCase(estado)) {
+        if (FacturaEstadoPago.PAGADA.equalsIgnoreCase(estado)) {
             return 0;
         }
         double total = Optional.ofNullable(f.getTotal()).orElse(0.0);
-        if ("Parcial".equalsIgnoreCase(estado)) {
+        if (FacturaEstadoPago.PARCIAL.equalsIgnoreCase(estado)) {
             double cobrado = Optional.ofNullable(f.getMontoCobrado()).orElse(0.0);
             return Math.max(0, total - cobrado);
         }

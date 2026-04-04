@@ -1,8 +1,10 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.constant.FacturaEstadoPago;
 import com.appgestion.api.constant.TaxConstants;
 import com.appgestion.api.domain.entity.*;
 import com.appgestion.api.domain.enums.TipoFactura;
+import com.appgestion.api.dto.FacturaNumeroGenerado;
 import com.appgestion.api.dto.response.AnticipoResumenDTO;
 import com.appgestion.api.dto.response.FacturaResponse;
 import com.appgestion.api.repository.FacturaCobroRepository;
@@ -95,9 +97,12 @@ public class AnticipoService {
         BigDecimal divisor = BigDecimal.ONE.add(TaxConstants.IVA_RATE);
         BigDecimal baseAnticipo = importe.divide(divisor, SCALE, ROUNDING);
 
+        FacturaNumeroGenerado genAnt = facturaNumeroService.generarSiguienteNumeroFactura(usuario.getId(), fecha.getYear());
         Factura f = new Factura();
         f.setUsuario(usuario);
-        f.setNumeroFactura(facturaNumeroService.generarSiguienteNumero(usuario.getId()));
+        f.setNumeroFactura(genAnt.numeroFactura());
+        f.setAnioFactura(genAnt.anioFactura());
+        f.setNumeroSecuencial(genAnt.numeroSecuencial());
         f.setCliente(cliente);
         f.setPresupuesto(p);
         f.setTipoFactura(TipoFactura.ANTICIPO);
@@ -107,7 +112,7 @@ public class AnticipoService {
         f.setMoneda("EUR");
         f.setIvaHabilitado(true);
         f.setMetodoPago("Transferencia");
-        f.setEstadoPago("Pagada");
+        f.setEstadoPago(FacturaEstadoPago.PAGADA);
         f.setImporteAnticipoDescontado(null);
 
         FacturaItem linea = new FacturaItem();
@@ -176,20 +181,24 @@ public class AnticipoService {
 
         BigDecimal baseRest = baseTotal.subtract(baseAnt).max(BigDecimal.ZERO).setScale(SCALE, ROUNDING);
 
+        LocalDate fechaExpFinal = LocalDate.now();
+        FacturaNumeroGenerado genFin = facturaNumeroService.generarSiguienteNumeroFactura(usuario.getId(), fechaExpFinal.getYear());
         Factura f = new Factura();
         f.setUsuario(usuario);
-        f.setNumeroFactura(facturaNumeroService.generarSiguienteNumero(usuario.getId()));
+        f.setNumeroFactura(genFin.numeroFactura());
+        f.setAnioFactura(genFin.anioFactura());
+        f.setNumeroSecuencial(genFin.numeroSecuencial());
         f.setCliente(cliente);
         f.setPresupuesto(p);
         f.setTipoFactura(TipoFactura.FINAL_CON_ANTICIPO);
         f.setFacturaAnticipoReferencia(fa);
         f.setImporteAnticipoDescontado(importeAnt);
-        f.setFechaExpedicion(LocalDate.now());
+        f.setFechaExpedicion(fechaExpFinal);
         f.setRegimenFiscal("Régimen general del IVA");
         f.setMoneda("EUR");
         f.setIvaHabilitado(true);
         f.setMetodoPago("Transferencia");
-        f.setEstadoPago("No Pagada");
+        f.setEstadoPago(FacturaEstadoPago.NO_PAGADA);
 
         construirLineasFacturaFinalProporcionales(p, f, baseRest.doubleValue());
 

@@ -1,8 +1,13 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.constant.FacturaEstadoPago;
+import com.appgestion.api.constant.PresupuestoEstado;
 import com.appgestion.api.constant.TaxConstants;
+import com.appgestion.api.dto.FacturaNumeroGenerado;
 import com.appgestion.api.domain.entity.*;
 import com.appgestion.api.domain.enums.TipoFactura;
+import com.appgestion.api.service.factura.FacturaNumeroManualParser;
+import com.appgestion.api.service.factura.FacturaNumeroResuelto;
 import com.appgestion.api.dto.request.FacturaCobroRequest;
 import com.appgestion.api.dto.request.FacturaItemRequest;
 import com.appgestion.api.dto.request.FacturaRequest;
@@ -76,8 +81,8 @@ public class FacturaService {
     }
 
     @Transactional(readOnly = true)
-    public List<FacturaResponse> listar(Long usuarioId, String q) {
-        var stream = facturaRepository.findByUsuarioIdOrderByFechaCreacionDesc(usuarioId).stream()
+    public List<FacturaResponse> listar(Long usuarioId, String q, boolean incluirAnuladas) {
+        var stream = facturaRepository.findByUsuarioIdForList(usuarioId, incluirAnuladas).stream()
                 .map(f -> facturaResponseMapper.toResponse(f, List.of()));
         if (q != null && !q.isBlank()) {
             String lower = q.strip().toLowerCase();
@@ -106,26 +111,23 @@ public class FacturaService {
         if (request.presupuestoId() != null) {
             presupuesto = presupuestoRepository.findByIdAndUsuarioId(request.presupuestoId(), usuario.getId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
-            presupuesto.setEstado("Aceptado");
+            presupuesto.setEstado(PresupuestoEstado.ACEPTADO);
         }
 
         validarDatosFactura(usuario.getId(), cliente);
 
-        String numeroFactura = request.numeroFactura();
-        if (numeroFactura == null || numeroFactura.isBlank()) {
-            numeroFactura = facturaNumeroService.generarSiguienteNumero(usuario.getId());
-        } else {
-            if (facturaRepository.findByNumeroFacturaAndUsuarioId(numeroFactura, usuario.getId()).isPresent()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ya existe una factura con ese número");
-            }
-        }
+        LocalDate fechaExp = request.fechaExpedicion();
+        FacturaNumeroResuelto numero = resolverNumeroParaCreacion(request, usuario.getId(), fechaExp);
 
         Factura factura = new Factura();
         factura.setUsuario(usuario);
-        factura.setNumeroFactura(numeroFactura);
+        factura.setNumeroFactura(numero.numeroFactura());
+        factura.setAnioFactura(numero.anioFactura());
+        factura.setNumeroSecuencial(numero.numeroSecuencial());
         factura.setCliente(cliente);
         factura.setPresupuesto(presupuesto);
         factura.setTipoFactura(TipoFactura.NORMAL);
+        factura.setFechaExpedicion(request.fechaExpedicion());
         factura.setFechaVencimiento(request.fechaVencimiento());
         factura.setMetodoPago(request.metodoPago());
         factura.setEstadoPago(request.estadoPago());
@@ -144,6 +146,10 @@ public class FacturaService {
         Factura factura = facturaRepository.findByIdAndUsuarioId(id, usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
 
+        if (Boolean.TRUE.equals(factura.getAnulada())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede editar una factura anulada");
+        }
+
         Cliente cliente = clienteRepository.findByIdAndUsuarioId(request.clienteId(), usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente no encontrado"));
 
@@ -151,21 +157,16 @@ public class FacturaService {
         if (request.presupuestoId() != null) {
             presupuesto = presupuestoRepository.findByIdAndUsuarioId(request.presupuestoId(), usuarioId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
-            presupuesto.setEstado("Aceptado");
+            presupuesto.setEstado(PresupuestoEstado.ACEPTADO);
         }
 
         validarDatosFactura(usuarioId, cliente);
 
-        if (request.numeroFactura() != null && !request.numeroFactura().isBlank() && !request.numeroFactura().equals(factura.getNumeroFactura())) {
-            if (facturaRepository.findByNumeroFacturaAndUsuarioId(request.numeroFactura(), usuarioId).isPresent()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ya existe una factura con ese número");
-            }
-            factura.setNumeroFactura(request.numeroFactura());
-        }
+        aplicarCambioNumeroEnActualizacion(factura, request, usuarioId);
 
         factura.setCliente(cliente);
         factura.setPresupuesto(presupuesto);
-        factura.setFechaExpedicion(request.fechaExpedicion() != null ? request.fechaExpedicion() : (factura.getFechaExpedicion() != null ? factura.getFechaExpedicion() : LocalDate.now()));
+        factura.setFechaExpedicion(request.fechaExpedicion());
         factura.setFechaOperacion(request.fechaOperacion());
         factura.setRegimenFiscal(request.regimenFiscal());
         factura.setCondicionesPago(request.condicionesPago());
@@ -188,60 +189,31 @@ public class FacturaService {
         Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(presupuestoId, usuario.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
 
-        if (Boolean.TRUE.equals(presupuesto.getTieneAnticipo())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Este presupuesto usa anticipo fiscal. Genera la factura final con POST /presupuestos/{id}/factura-final.");
-        }
-        if (!facturaRepository.findVentasPrincipalesPorPresupuesto(
-                presupuestoId, usuario.getId(), TipoFactura.NORMAL, TipoFactura.FINAL_CON_ANTICIPO).isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Este presupuesto ya tiene una factura asociada");
-        }
-
-        String estado = presupuesto.getEstado() != null ? presupuesto.getEstado().trim() : "";
-        if ("Rechazado".equalsIgnoreCase(estado)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede facturar un presupuesto rechazado");
-        }
-        if (!"Pendiente".equalsIgnoreCase(estado) && !"Aceptado".equalsIgnoreCase(estado)
-                && !"En ejecución".equalsIgnoreCase(estado) && !"En ejecucion".equalsIgnoreCase(estado)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Solo se puede facturar un presupuesto pendiente, aceptado o en ejecución");
-        }
+        validarReglasNegocioPresupuestoParaFacturaNormal(presupuesto, presupuestoId, usuario.getId());
 
         validarDatosFactura(usuario.getId(), presupuesto.getCliente());
 
-        String numeroFactura = facturaNumeroService.generarSiguienteNumero(usuario.getId());
+        LocalDate fechaExp = LocalDate.now();
+        FacturaNumeroGenerado gen = facturaNumeroService.generarSiguienteNumeroFactura(usuario.getId(), fechaExp.getYear());
 
         Factura factura = new Factura();
         factura.setUsuario(usuario);
-        factura.setNumeroFactura(numeroFactura);
+        factura.setNumeroFactura(gen.numeroFactura());
+        factura.setAnioFactura(gen.anioFactura());
+        factura.setNumeroSecuencial(gen.numeroSecuencial());
         factura.setCliente(presupuesto.getCliente());
         factura.setPresupuesto(presupuesto);
         factura.setTipoFactura(TipoFactura.NORMAL);
-        factura.setFechaExpedicion(LocalDate.now());
+        factura.setFechaExpedicion(fechaExp);
         factura.setRegimenFiscal("Régimen general del IVA");
         factura.setMoneda("EUR");
         factura.setIvaHabilitado(presupuesto.getIvaHabilitado());
         factura.setMetodoPago("Transferencia");
-        factura.setEstadoPago("No Pagada");
+        factura.setEstadoPago(FacturaEstadoPago.NO_PAGADA);
 
-        for (PresupuestoItem pi : presupuesto.getItems()) {
-            FacturaItem item = new FacturaItem();
-            item.setFactura(factura);
-            item.setMaterial(pi.getMaterial());
-            item.setTareaManual(pi.getTareaManual());
-            item.setEsTareaManual(Optional.ofNullable(pi.getEsTareaManual()).orElse(false));
-            BigDecimal cant = BigDecimal.valueOf(Optional.ofNullable(pi.getCantidad()).orElse(0.0));
-            BigDecimal precio = BigDecimal.valueOf(Optional.ofNullable(pi.getPrecioUnitario()).orElse(0.0));
-            item.setCantidad(cant.doubleValue());
-            item.setPrecioUnitario(precio.doubleValue());
-            BigDecimal st = cant.multiply(precio).setScale(SCALE, ROUNDING);
-            item.setSubtotal(st.doubleValue());
-            item.setCuotaIva(0.0);
-            item.setAplicaIva(Optional.ofNullable(pi.getAplicaIva()).orElse(true));
-            factura.getItems().add(item);
-        }
+        copiarItemsDesdePresupuesto(presupuesto, factura);
 
-        presupuesto.setEstado("Aceptado");
+        presupuesto.setEstado(PresupuestoEstado.ACEPTADO);
         calcularTotales(factura);
         factura = facturaRepository.save(factura);
         return facturaResponseMapper.toResponse(factura, facturaCobroRepository.findByFacturaIdOrderByFechaDescCreatedAtDesc(factura.getId()));
@@ -260,11 +232,16 @@ public class FacturaService {
     }
 
     @Transactional
-    public void eliminar(Long id, Long usuarioId) {
-        if (!facturaRepository.existsByIdAndUsuarioId(Objects.requireNonNull(id), Objects.requireNonNull(usuarioId))) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada");
+    public void anular(Long id, Long usuarioId, String motivo) {
+        Factura factura = facturaRepository.findByIdAndUsuarioId(Objects.requireNonNull(id), Objects.requireNonNull(usuarioId))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
+        if (Boolean.TRUE.equals(factura.getAnulada())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La factura ya está anulada");
         }
-        facturaRepository.deleteById(Objects.requireNonNull(id));
+        factura.setAnulada(true);
+        factura.setFechaAnulacion(LocalDate.now());
+        factura.setMotivoAnulacion(motivo != null && !motivo.isBlank() ? motivo.trim() : null);
+        facturaRepository.save(factura);
     }
 
     @Transactional
@@ -275,6 +252,100 @@ public class FacturaService {
     @Transactional
     public FacturaResponse generarPaymentLink(Long facturaId, Long usuarioId) {
         return facturaPaymentLinkService.generarPaymentLink(facturaId, usuarioId);
+    }
+
+    private FacturaNumeroResuelto resolverNumeroParaCreacion(FacturaRequest request, Long usuarioId, LocalDate fechaExpedicion) {
+        int anioExp = fechaExpedicion.getYear();
+        if (request.numeroFactura() == null || request.numeroFactura().isBlank()) {
+            FacturaNumeroGenerado gen = facturaNumeroService.generarSiguienteNumeroFactura(usuarioId, anioExp);
+            return new FacturaNumeroResuelto(gen.numeroFactura(), gen.anioFactura(), gen.numeroSecuencial());
+        }
+        String numeroFactura = request.numeroFactura().trim();
+        if (facturaRepository.findByNumeroFacturaAndUsuarioId(numeroFactura, usuarioId).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ya existe una factura con ese número");
+        }
+        FacturaNumeroManualParser.ParsedFac p = FacturaNumeroManualParser.parseFacManual(numeroFactura);
+        if (p == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "El número manual debe seguir el formato FAC-AAAA-NNNN (o deje el número vacío para asignación automática).");
+        }
+        if (p.anio() != anioExp) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "El año del número de factura debe coincidir con el año de la fecha de expedición.");
+        }
+        if (facturaRepository.existsByUsuario_IdAndAnioFacturaAndNumeroSecuencial(usuarioId, p.anio(), p.secuencial())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ya existe una factura con ese número en la serie.");
+        }
+        return new FacturaNumeroResuelto(numeroFactura, p.anio(), p.secuencial());
+    }
+
+    private void aplicarCambioNumeroEnActualizacion(Factura factura, FacturaRequest request, Long usuarioId) {
+        if (request.numeroFactura() == null || request.numeroFactura().isBlank()
+                || request.numeroFactura().equals(factura.getNumeroFactura())) {
+            return;
+        }
+        if (facturaRepository.findByNumeroFacturaAndUsuarioId(request.numeroFactura(), usuarioId).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ya existe una factura con ese número");
+        }
+        String nuevo = request.numeroFactura().trim();
+        FacturaNumeroManualParser.ParsedFac p = FacturaNumeroManualParser.parseFacManual(nuevo);
+        if (p == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "El número manual debe seguir el formato FAC-AAAA-NNNN.");
+        }
+        int anioExp = request.fechaExpedicion().getYear();
+        if (p.anio() != anioExp) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "El año del número de factura debe coincidir con el año de la fecha de expedición.");
+        }
+        if (facturaRepository.existsByUsuario_IdAndAnioFacturaAndNumeroSecuencialAndIdNot(
+                usuarioId, p.anio(), p.secuencial(), factura.getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ya existe una factura con ese número en la serie.");
+        }
+        factura.setNumeroFactura(nuevo);
+        factura.setAnioFactura(p.anio());
+        factura.setNumeroSecuencial(p.secuencial());
+    }
+
+    private void validarReglasNegocioPresupuestoParaFacturaNormal(Presupuesto presupuesto, Long presupuestoId, Long usuarioId) {
+        if (Boolean.TRUE.equals(presupuesto.getTieneAnticipo())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Este presupuesto usa anticipo fiscal. Genera la factura final con POST /presupuestos/{id}/factura-final.");
+        }
+        if (!facturaRepository.findVentasPrincipalesPorPresupuesto(
+                presupuestoId, usuarioId, TipoFactura.NORMAL, TipoFactura.FINAL_CON_ANTICIPO).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Este presupuesto ya tiene una factura asociada");
+        }
+        String estado = presupuesto.getEstado() != null ? presupuesto.getEstado().trim() : "";
+        if (PresupuestoEstado.RECHAZADO.equalsIgnoreCase(estado)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede facturar un presupuesto rechazado");
+        }
+        if (!PresupuestoEstado.PENDIENTE.equalsIgnoreCase(estado)
+                && !PresupuestoEstado.ACEPTADO.equalsIgnoreCase(estado)
+                && !PresupuestoEstado.EN_EJECUCION.equalsIgnoreCase(estado)
+                && !PresupuestoEstado.EN_EJECUCION_SIN_TILDE.equalsIgnoreCase(estado)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Solo se puede facturar un presupuesto pendiente, aceptado o en ejecución");
+        }
+    }
+
+    private void copiarItemsDesdePresupuesto(Presupuesto presupuesto, Factura factura) {
+        for (PresupuestoItem pi : presupuesto.getItems()) {
+            FacturaItem item = new FacturaItem();
+            item.setFactura(factura);
+            item.setMaterial(pi.getMaterial());
+            item.setTareaManual(pi.getTareaManual());
+            item.setEsTareaManual(Optional.ofNullable(pi.getEsTareaManual()).orElse(false));
+            BigDecimal cant = BigDecimal.valueOf(Optional.ofNullable(pi.getCantidad()).orElse(0.0));
+            BigDecimal precio = BigDecimal.valueOf(Optional.ofNullable(pi.getPrecioUnitario()).orElse(0.0));
+            item.setCantidad(cant.doubleValue());
+            item.setPrecioUnitario(precio.doubleValue());
+            BigDecimal st = cant.multiply(precio).setScale(SCALE, ROUNDING);
+            item.setSubtotal(st.doubleValue());
+            item.setCuotaIva(0.0);
+            item.setAplicaIva(Optional.ofNullable(pi.getAplicaIva()).orElse(true));
+            factura.getItems().add(item);
+        }
     }
 
     private void validarDatosFactura(Long usuarioId, Cliente cliente) {
@@ -307,6 +378,11 @@ public class FacturaService {
         }
         if (!NifValidator.esValido(nifCliente)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El NIF del cliente no es válido");
+        }
+        String nifEmisor = empresa.getNif();
+        if (nifEmisor != null && !nifEmisor.isBlank()
+                && nifEmisor.trim().equalsIgnoreCase(nifCliente.trim())) {
+            throw new IllegalArgumentException("El NIF del emisor y del destinatario no pueden ser el mismo.");
         }
         if (cliente.getDireccion() == null || cliente.getDireccion().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La dirección del cliente es obligatoria para facturación");

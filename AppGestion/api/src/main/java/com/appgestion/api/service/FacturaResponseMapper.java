@@ -66,6 +66,11 @@ public class FacturaResponseMapper {
                 facturaAnticipoId,
                 numeroFacturaAnticipo,
                 importeAnticipoDescontado,
+                factura.getAnioFactura(),
+                factura.getNumeroSecuencial(),
+                factura.getAnulada(),
+                factura.getFechaAnulacion(),
+                factura.getMotivoAnulacion(),
                 cobros
         );
     }

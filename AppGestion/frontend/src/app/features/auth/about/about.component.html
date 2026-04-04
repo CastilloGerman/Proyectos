@@ -165,19 +165,33 @@
           oficio y quiero que, cuando termines tu trabajo, tu tiempo sea realmente tuyo.
         </p>
         <p>Gracias por confiar en un proyecto que nace del esfuerzo y del respeto al trabajo bien hecho.</p>
-        <p class="about-letter-signoff">
-          Un abrazo,<br />
-          <span class="about-letter-name">German Castillo</span><br />
-          <span>Tu compañero y desarrollador de Noemí.</span>
-        </p>
-        <img
-          class="about-letter-signature"
-          src="assets/about/firma.svg"
-          alt=""
-          width="200"
-          height="80"
-          (error)="onImgError($event)"
-        />
+        <div class="about-letter-footer">
+          <img
+            class="about-letter-portrait"
+            src="assets/about/german-castillo-firma.png"
+            alt=""
+            width="96"
+            height="96"
+            loading="lazy"
+            decoding="async"
+            (error)="onImgError($event)"
+          />
+          <div class="about-letter-footer-text">
+            <p class="about-letter-signoff">
+              Un abrazo,<br />
+              <span class="about-letter-name">German Castillo</span><br />
+              <span>Tu compañero y desarrollador de Noemí.</span>
+            </p>
+            <img
+              class="about-letter-signature"
+              src="assets/about/firma.svg"
+              alt=""
+              width="200"
+              height="80"
+              (error)="onImgError($event)"
+            />
+          </div>
+        </div>
       </div>
     </article>
 

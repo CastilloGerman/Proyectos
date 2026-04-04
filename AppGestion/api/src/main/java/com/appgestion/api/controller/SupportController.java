@@ -2,7 +2,10 @@ package com.appgestion.api.controller;
 
 import com.appgestion.api.service.CurrentUserService;
 import com.appgestion.api.service.SupportService;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -15,6 +18,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/auth/support")
+@Validated
 public class SupportController {
 
     private final CurrentUserService currentUserService;
@@ -27,8 +31,8 @@ public class SupportController {
 
     @PostMapping(value = "/contact", consumes = "multipart/form-data")
     public ResponseEntity<Map<String, String>> contact(
-            @RequestParam("asunto") String asunto,
-            @RequestParam("mensaje") String mensaje,
+            @RequestParam("asunto") @NotBlank(message = "El asunto es obligatorio") @Size(max = 200) String asunto,
+            @RequestParam("mensaje") @NotBlank(message = "El mensaje es obligatorio") @Size(max = 20_000) String mensaje,
             @RequestParam(value = "archivos", required = false) List<MultipartFile> archivos
     ) throws IOException {
         var usuario = currentUserService.getCurrentUsuario();

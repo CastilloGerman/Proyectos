@@ -31,5 +31,10 @@ public record FacturaResponse(
         Long facturaAnticipoId,
         String numeroFacturaAnticipo,
         Double importeAnticipoDescontado,
+        Integer anioFactura,
+        Integer numeroSecuencial,
+        Boolean anulada,
+        LocalDate fechaAnulacion,
+        String motivoAnulacion,
         List<FacturaCobroResponse> cobros
 ) {}

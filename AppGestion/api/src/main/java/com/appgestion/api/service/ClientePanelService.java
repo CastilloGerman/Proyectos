@@ -1,5 +1,6 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.constant.FacturaEstadoPago;
 import com.appgestion.api.domain.entity.Factura;
 import com.appgestion.api.domain.entity.Presupuesto;
 import com.appgestion.api.domain.enums.TipoFactura;
@@ -155,12 +156,12 @@ public class ClientePanelService {
 
     private static double pendienteFactura(Factura f) {
         String ep = f.getEstadoPago();
-        if (ep != null && ep.equalsIgnoreCase("Pagada")) {
+        if (ep != null && ep.equalsIgnoreCase(FacturaEstadoPago.PAGADA)) {
             return 0.0;
         }
         double total = Optional.ofNullable(f.getTotal()).orElse(0.0);
         double cobrado = Optional.ofNullable(f.getMontoCobrado()).orElse(0.0);
-        if (ep != null && ep.equalsIgnoreCase("Parcial")) {
+        if (ep != null && ep.equalsIgnoreCase(FacturaEstadoPago.PARCIAL)) {
             return Math.max(0.0, total - cobrado);
         }
         return total;

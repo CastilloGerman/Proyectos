@@ -1,5 +1,6 @@
 package com.appgestion.api.dto.request;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 
 public record GoogleLoginRequest(
@@ -9,5 +10,5 @@ public record GoogleLoginRequest(
         /** Opcional: TOTP si la cuenta tiene 2FA activo. */
         String totpCode,
 
-        DeviceClientInfoRequest clientInfo
+        @Valid DeviceClientInfoRequest clientInfo
 ) {}

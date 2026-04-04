@@ -20,13 +20,14 @@ public interface FiscalQueryRepository extends Repository<Factura, Long> {
             FROM facturas f
             WHERE f.usuario_id = :usuarioId
               AND COALESCE(f.fecha_expedicion, f.fecha_operacion, CAST(f.fecha_creacion AS date)) BETWEEN :desde AND :hasta
-              AND (NOT :soloPagadas OR TRIM(f.estado_pago) = 'Pagada')
+              AND (NOT :soloPagadas OR TRIM(f.estado_pago) = :estadoPagada)
             """, nativeQuery = true)
     Object[] aggregateVentasModelo303Devengo(
             @Param("usuarioId") Long usuarioId,
             @Param("desde") LocalDate desde,
             @Param("hasta") LocalDate hasta,
-            @Param("soloPagadas") boolean soloPagadas
+            @Param("soloPagadas") boolean soloPagadas,
+            @Param("estadoPagada") String estadoPagada
     );
 
     @Query(value = """
@@ -40,13 +41,14 @@ public interface FiscalQueryRepository extends Repository<Factura, Long> {
                 GROUP BY factura_id
             ) cob ON cob.factura_id = f.id
             WHERE f.usuario_id = :usuarioId
-              AND TRIM(f.estado_pago) = 'Pagada'
+              AND TRIM(f.estado_pago) = :estadoPagada
               AND cob.ultima_fecha BETWEEN :desde AND :hasta
             """, nativeQuery = true)
     Object[] aggregateVentasModelo303Caja(
             @Param("usuarioId") Long usuarioId,
             @Param("desde") LocalDate desde,
-            @Param("hasta") LocalDate hasta
+            @Param("hasta") LocalDate hasta,
+            @Param("estadoPagada") String estadoPagada
     );
 
     @Query(value = """

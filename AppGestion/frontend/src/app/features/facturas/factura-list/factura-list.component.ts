@@ -24,10 +24,10 @@ import { FacturaService } from '../../../core/services/factura.service';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
 import { Factura } from '../../../core/models/factura.model';
 import { Presupuesto } from '../../../core/models/presupuesto.model';
-import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { ImportarPresupuestoDialogComponent } from '../../../shared/importar-presupuesto-dialog/importar-presupuesto-dialog.component';
 import { ConfigEmpresaDialogComponent } from '../../../shared/config-empresa-dialog/config-empresa-dialog.component';
 import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/enviar-email-dialog.component';
+import { AnularFacturaDialogComponent } from '../../../shared/anular-factura-dialog/anular-factura-dialog.component';
 
 @Component({
     selector: 'app-factura-list',
@@ -130,6 +130,13 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
         >
           Solo pendientes de cobro
         </mat-checkbox>
+        <mat-checkbox
+          class="filter-anuladas"
+          [checked]="incluirAnuladas"
+          (change)="applyIncluirAnuladas($event.checked)"
+        >
+          Mostrar anuladas
+        </mat-checkbox>
       </div>
 
       @if (isLoading) {
@@ -140,7 +147,12 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
         <table mat-table [dataSource]="dataSource" matSort class="full-width">
           <ng-container matColumnDef="numeroFactura">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Nº Factura</th>
-            <td mat-cell *matCellDef="let row">{{ row.numeroFactura }}</td>
+            <td mat-cell *matCellDef="let row">
+              @if (row.anulada) {
+                <mat-chip class="anulada-chip">Anulada</mat-chip>
+              }
+              {{ row.numeroFactura }}
+            </td>
           </ng-container>
           <ng-container matColumnDef="tipoFactura">
             <th mat-header-cell *matHeaderCellDef>Tipo</th>
@@ -185,7 +197,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef>Acciones</th>
             <td mat-cell *matCellDef="let row" class="actions-cell">
-              @if (auth.canMutate()) {
+              @if (auth.canMutate() && !row.anulada) {
               <a mat-stroked-button [routerLink]="['/facturas', row.id]" matTooltip="Editar factura y estado de pago (pendiente, parcial, pagada)" class="action-edit">
                 <mat-icon>edit</mat-icon>
                 Editar
@@ -206,15 +218,17 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
                   }
                 </button>
               }
+              @if (!row.anulada) {
               <button mat-icon-button (click)="enviarEmail(row)" matTooltip="Enviar por email">
                 <mat-icon>email</mat-icon>
               </button>
+              }
               <button mat-icon-button (click)="downloadPdf(row)" matTooltip="Descargar PDF">
                 <mat-icon>picture_as_pdf</mat-icon>
               </button>
-              @if (auth.canMutate()) {
-              <button mat-icon-button color="warn" (click)="delete(row)" matTooltip="Eliminar">
-                <mat-icon>delete</mat-icon>
+              @if (auth.canMutate() && !row.anulada) {
+              <button mat-icon-button color="warn" (click)="anular(row)" matTooltip="Anular factura">
+                <mat-icon>cancel</mat-icon>
               </button>
               }
             </td>
@@ -358,6 +372,15 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
     .tipo-chip { font-size: 0.75rem; min-height: 26px; padding: 0 10px; }
     .tipo-chip.tipo-anticipo { background: #e3f2fd; color: #1565c0; }
     .tipo-chip.tipo-final { background: #f3e5f5; color: #6a1b9a; }
+
+    .anulada-chip {
+      font-size: 0.72rem;
+      min-height: 22px;
+      margin-right: 6px;
+      vertical-align: middle;
+      background: #fce4ec;
+      color: #ad1457;
+    }
   `]
 })
 export class FacturaListComponent implements OnInit {
@@ -393,6 +416,7 @@ export class FacturaListComponent implements OnInit {
   estadoFilter = '';
   vencimientoFilter = '';
   pendienteCobroOnly = false;
+  incluirAnuladas = false;
   /** Filtro por fecha de emisión: año (YYYY) y opcionalmente mes (01–12). */
   emisionYear = '';
   emisionMonth = '';
@@ -555,9 +579,14 @@ export class FacturaListComponent implements OnInit {
     return true;
   }
 
+  applyIncluirAnuladas(checked: boolean): void {
+    this.incluirAnuladas = checked;
+    this.load();
+  }
+
   load(): void {
     this.isLoading = true;
-    this.facturaService.getAll().subscribe({
+    this.facturaService.getAll(undefined, this.incluirAnuladas).subscribe({
       next: (data) => {
         this.dataSource.data = data;
         this.isLoading = false;
@@ -669,6 +698,7 @@ export class FacturaListComponent implements OnInit {
 
   /** Vencimiento en ≤15 días (o ya vencida), con importe pendiente y email de cliente. */
   mostrarRecordatorioManual(f: Factura): boolean {
+    if (f.anulada) return false;
     if (f.estadoPago === 'Pagada') return false;
     if (!f.fechaVencimiento) return false;
     if (!this.tieneImportePendiente(f)) return false;
@@ -716,25 +746,23 @@ export class FacturaListComponent implements OnInit {
     });
   }
 
-  delete(factura: Factura): void {
-    const ref = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: 'Eliminar factura',
-        message: `¿Eliminar factura ${factura.numeroFactura}?`,
-      },
-    });
-    ref.afterClosed().subscribe((ok) => {
-      if (ok) {
-        this.facturaService.delete(factura.id).subscribe({
-          next: () => {
-            this.snackBar.open('Factura eliminada', 'Cerrar', { duration: 3000 });
-            this.load();
-          },
-          error: () => {
-            this.snackBar.open('Error al eliminar', 'Cerrar', { duration: 3000 });
-          },
-        });
+  anular(factura: Factura): void {
+    if (factura.anulada) return;
+    const ref = this.dialog.open(AnularFacturaDialogComponent, { width: '480px' });
+    ref.afterClosed().subscribe((motivo: string | null | undefined) => {
+      if (motivo === undefined) {
+        return;
       }
+      this.facturaService.anular(factura.id, motivo).subscribe({
+        next: () => {
+          this.snackBar.open('Factura anulada', 'Cerrar', { duration: 3000 });
+          this.load();
+        },
+        error: (err) => {
+          const msg = err.error?.message || err.error?.detail || err.error?.error || 'Error al anular';
+          this.snackBar.open(typeof msg === 'string' ? msg : 'Error al anular', 'Cerrar', { duration: 5000 });
+        },
+      });
     });
   }
 

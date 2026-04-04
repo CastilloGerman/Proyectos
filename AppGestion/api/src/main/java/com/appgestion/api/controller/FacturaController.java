@@ -3,6 +3,7 @@ package com.appgestion.api.controller;
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.request.EnviarEmailRequest;
 import com.appgestion.api.dto.request.FacturaCobroRequest;
+import com.appgestion.api.dto.request.FacturaAnularRequest;
 import com.appgestion.api.dto.request.FacturaRequest;
 import com.appgestion.api.dto.response.FacturaResponse;
 import com.appgestion.api.service.FacturaRecordatorioClienteService;
@@ -36,9 +37,11 @@ public class FacturaController {
     }
 
     @GetMapping
-    public List<FacturaResponse> listar(@RequestParam(required = false) String q) {
+    public List<FacturaResponse> listar(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false, defaultValue = "false") boolean incluirAnuladas) {
         Usuario usuario = currentUserService.getCurrentUsuario();
-        return facturaService.listar(usuario.getId(), q);
+        return facturaService.listar(usuario.getId(), q, incluirAnuladas);
     }
 
     @GetMapping("/{id}")
@@ -80,14 +83,14 @@ public class FacturaController {
                     "Error recordatorio cliente factura {}: {}", id, e.getMessage(), e);
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error al enviar el recordatorio: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
+                    "Error al enviar el recordatorio. Inténtalo más tarde.");
         }
     }
 
     @PostMapping("/{id}/enviar-email")
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void enviarPorEmail(@PathVariable Long id, @RequestBody(required = false) EnviarEmailRequest request) {
+    public void enviarPorEmail(@PathVariable Long id, @Valid @RequestBody(required = false) EnviarEmailRequest request) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
         try {
             facturaService.enviarPorEmail(id, usuarioId, request);
@@ -99,7 +102,7 @@ public class FacturaController {
             org.slf4j.LoggerFactory.getLogger(FacturaController.class).warn("Error al enviar email factura {}: {}", id, e.getMessage(), e);
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error al encolar el envío: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
+                    "Error al encolar el envío. Inténtalo más tarde.");
         }
     }
 
@@ -118,6 +121,7 @@ public class FacturaController {
     }
 
     @PostMapping("/{id}/cobros")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public FacturaResponse registrarCobro(@PathVariable Long id, @Valid @RequestBody FacturaCobroRequest request) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
         return facturaService.registrarCobro(id, usuarioId, request);
@@ -130,11 +134,12 @@ public class FacturaController {
         return facturaService.generarPaymentLink(id, usuarioId);
     }
 
-    @DeleteMapping("/{id}")
+    @PostMapping("/{id}/anular")
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void eliminar(@PathVariable Long id) {
+    public void anular(@PathVariable Long id, @Valid @RequestBody(required = false) FacturaAnularRequest request) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
-        facturaService.eliminar(id, usuarioId);
+        String motivo = request != null ? request.motivo() : null;
+        facturaService.anular(id, usuarioId, motivo);
     }
 }

@@ -372,8 +372,33 @@
   color: var(--app-text-primary, #0f172a) !important;
 }
 
+.about-letter-footer {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.about-letter-portrait {
+  flex-shrink: 0;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center top;
+  border: 2px solid var(--app-border, rgba(15, 23, 42, 0.1));
+  box-shadow: var(--app-shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.08));
+  background: #fff;
+}
+
+.about-letter-footer-text {
+  flex: 1;
+  min-width: 0;
+}
+
 .about-letter-signoff {
-  margin-top: 1.25rem !important;
+  margin-top: 0 !important;
   color: var(--app-text-primary, #0f172a) !important;
 }
 
@@ -395,6 +420,25 @@
   margin-top: 1rem;
   max-width: 200px;
   height: auto;
+}
+
+@media (max-width: 520px) {
+  .about-letter-footer {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .about-letter-footer-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .about-letter-signature {
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 .about-cta {
@@ -535,6 +579,12 @@
 
 :host-context(html.app-dark-theme) .about-letter-name {
   color: var(--app-text-primary, #f8fafc) !important;
+}
+
+:host-context(html.app-dark-theme) .about-letter-portrait {
+  border-color: var(--app-border, rgba(255, 255, 255, 0.12));
+  background: var(--app-bg-card, #1a222c);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
 }
 
 :host-context(html.app-dark-theme) .about-carousel-viewport {

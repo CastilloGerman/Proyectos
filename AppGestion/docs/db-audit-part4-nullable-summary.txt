@@ -1,0 +1,15 @@
+Parte 4 — Resumen sección 6 (nullables candidatos)
+==================================================
+Fecha: 2026-04-04
+Fuente: scripts/db-audit-part2.sql sección 6 (también al final de docs/db-audit-part2-results.txt)
+
+Exclusiones explícitas (no aparecen en la lista de candidatos):
+- clientes: dni, direccion, codigo_postal, telefono, email, pais, provincia, fecha_creacion
+- audit_access_event.usuario_id
+- facturas.fecha_creacion, materiales.fecha_creacion, presupuestos.fecha_creacion, presupuestos.estado
+
+Resultado en BD de desarrollo: 117 columnas nullable listadas como candidatas a revisión manual.
+
+Siguiente paso (no automatizado en esta parte):
+- Por cada columna relevante para negocio, ejecutar SELECT count(*) WHERE col IS NULL antes de plantear NOT NULL o backfill.
+- No aplicar restricciones en BD a los campos de clientes excluidos por diseño (ver docs/DB-AUDIT-INTENTIONAL-NULLABLES.md).

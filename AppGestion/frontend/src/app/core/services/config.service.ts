@@ -75,6 +75,8 @@ export interface MetodosCobroPayload {
   defaultMetodoPago: string;
   defaultCondicionesPago: string;
   ibanCuenta: string;
+  nombreBanco: string;
+  titularCuenta: string;
   bizumTelefono: string;
 }
 
