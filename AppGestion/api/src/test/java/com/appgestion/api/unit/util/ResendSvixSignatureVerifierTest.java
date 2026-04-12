@@ -1,5 +1,6 @@
-package com.appgestion.api.util;
+package com.appgestion.api.unit.util;
 
+import com.appgestion.api.util.ResendSvixSignatureVerifier;
 import org.junit.jupiter.api.Test;
 
 import javax.crypto.Mac;

@@ -1,9 +1,10 @@
-package com.appgestion.api.service;
+package com.appgestion.api.unit.service;
 
 import com.appgestion.api.domain.entity.Cliente;
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.domain.enums.EstadoCliente;
 import com.appgestion.api.repository.ClienteRepository;
+import com.appgestion.api.service.ClienteService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

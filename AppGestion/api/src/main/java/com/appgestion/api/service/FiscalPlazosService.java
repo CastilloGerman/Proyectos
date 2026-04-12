@@ -37,7 +37,8 @@ public class FiscalPlazosService {
         return calcularParaFecha(today);
     }
 
-    FiscalPlazoActualResponse calcularParaFecha(LocalDate today) {
+    /** Expuesto para tests y reutilización con fecha fija. */
+    public FiscalPlazoActualResponse calcularParaFecha(LocalDate today) {
         List<Plazo> plazos = construirPlazosParaRango(today.getYear());
         plazos.sort(Comparator.comparing(Plazo::fecha));
 

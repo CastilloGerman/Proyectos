@@ -1,4 +1,4 @@
-package com.appgestion.api.architecture;
+package com.appgestion.api.unit.architecture;
 
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.junit.AnalyzeClasses;

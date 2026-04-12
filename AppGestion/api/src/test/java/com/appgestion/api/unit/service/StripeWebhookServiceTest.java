@@ -1,6 +1,9 @@
-package com.appgestion.api.service;
+package com.appgestion.api.unit.service;
 
 import com.appgestion.api.repository.ProcessedStripeEventRepository;
+import com.appgestion.api.service.DefaultStripeWebhookService;
+import com.appgestion.api.service.StripeWebhookService;
+import com.appgestion.api.service.SubscriptionService;
 import com.appgestion.api.service.stripe.StripeSubscriptionFetcher;
 import com.appgestion.api.service.stripe.StripeWebhookEventParser;
 import com.appgestion.api.service.stripe.StripeWebhookProcessingResult;

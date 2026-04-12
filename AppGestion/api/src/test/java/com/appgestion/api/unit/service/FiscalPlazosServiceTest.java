@@ -1,7 +1,8 @@
-package com.appgestion.api.service;
+package com.appgestion.api.unit.service;
 
 import com.appgestion.api.domain.enums.FiscalPlazoEstado;
 import com.appgestion.api.dto.response.FiscalPlazoActualResponse;
+import com.appgestion.api.service.FiscalPlazosService;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
