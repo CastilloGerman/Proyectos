@@ -79,7 +79,7 @@ public class ClienteService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente no encontrado"));
 
         List<String> errores = new ArrayList<>();
-        String dni = request.dni() != null ? request.dni().strip() : "";
+        String dni = normalizarDni(request.dni());
         String dir = request.direccion() != null ? request.direccion().strip() : "";
         String cp = request.codigoPostal() != null ? request.codigoPostal().strip() : "";
         if (dni.isEmpty()) {
@@ -94,6 +94,7 @@ public class ClienteService {
         if (!errores.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, String.join(" ", errores));
         }
+        validarDniUnico(usuarioId, cliente.getId(), dni);
 
         if (request.nombre() != null && !request.nombre().isBlank()) {
             cliente.setNombre(request.nombre().strip());
@@ -127,6 +128,7 @@ public class ClienteService {
         Cliente cliente = new Cliente();
         cliente.setUsuario(usuario);
         mapRequestToEntity(request, cliente);
+        validarDniUnico(usuario.getId(), null, cliente.getDni());
         aplicarEstadoSegunDatosFiscales(cliente);
         cliente = clienteRepository.save(cliente);
         return toResponse(cliente);
@@ -138,6 +140,7 @@ public class ClienteService {
                 Objects.requireNonNull(id), Objects.requireNonNull(usuarioId))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente no encontrado"));
         mapRequestToEntity(request, Objects.requireNonNull(cliente));
+        validarDniUnico(usuarioId, cliente.getId(), cliente.getDni());
         aplicarEstadoSegunDatosFiscales(cliente);
         cliente = clienteRepository.save(cliente);
         return toResponse(cliente);
@@ -181,7 +184,31 @@ public class ClienteService {
         cliente.setCodigoPostal(request.codigoPostal());
         cliente.setProvincia(request.provincia());
         cliente.setPais(request.pais() != null ? request.pais() : "España");
-        cliente.setDni(request.dni() != null ? request.dni() : "");
+        cliente.setDni(normalizarDni(request.dni()));
+    }
+
+    private void validarDniUnico(Long usuarioId, Long clienteId, String dniNormalizado) {
+        if (dniNormalizado == null || dniNormalizado.isBlank()) {
+            return;
+        }
+        boolean duplicado = clienteId == null
+                ? clienteRepository.existsDniDuplicado(usuarioId, dniNormalizado.toLowerCase())
+                : clienteRepository.existsDniDuplicadoExcluyendoCliente(
+                        usuarioId, clienteId, dniNormalizado.toLowerCase());
+        if (duplicado) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ya existe un cliente con ese DNI/NIF.");
+        }
+    }
+
+    private static String normalizarDni(String dniRaw) {
+        if (dniRaw == null) {
+            return "";
+        }
+        String dni = dniRaw.strip().toUpperCase()
+                .replace(" ", "")
+                .replace("-", "")
+                .replace(".", "");
+        return dni;
     }
 
     private ClienteResponse toResponse(Cliente cliente) {

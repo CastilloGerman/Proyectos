@@ -237,6 +237,21 @@ Complemento de la sección **Lanzamiento a producción (pasos ordenados)**; úsa
 - [ ] Ningún perfil `local` ni endpoints de desarrollo expuestos en el servidor
 - [ ] (Opcional) Nivel de log en prod sin `DEBUG` en paquetes que impriman datos sensibles
 
+### 8.1 Checklist específico — migración `V35` (DNI duplicado por usuario)
+
+Úsalo cuando despliegues una versión que incluye `V35__clientes_dni_unico_por_usuario.sql`.
+
+- [ ] Confirmar ventana de mantenimiento (la migración actualiza `clientes`, `presupuestos` y `facturas`)
+- [ ] Ejecutar backup completo justo antes de aplicar Flyway
+- [ ] Revisar previamente cuántos duplicados existen por `(usuario_id, dni)` para estimar impacto
+- [ ] Aplicar despliegue con Flyway (`prod`) y verificar que `V35` queda en estado **Success**
+- [ ] Validar que se creó el índice `uq_clientes_usuario_dni`
+- [ ] Comprobar post-migración: no quedan duplicados de DNI por usuario con DNI informado
+- [ ] Validar en API: crear dos clientes con mismo DNI para el mismo usuario devuelve `400`
+- [ ] Validar que clientes provisionales (`dni` null/vacío) siguen funcionando en alta/completado
+- [ ] Revisar muestreo funcional: facturas y presupuestos históricos siguen apuntando a clientes válidos
+- [ ] Monitorear logs tras despliegue por errores `BAD_REQUEST` de DNI duplicado y resolver casos manuales excepcionales
+
 ---
 
 ## 9. Después del despliegue

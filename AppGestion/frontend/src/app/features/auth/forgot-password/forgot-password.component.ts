@@ -176,7 +176,11 @@ export class ForgotPasswordComponent {
       },
       error: () => {
         this.loading = false;
-        this.sent = true;
+        this.snackBar.open(
+          'No se pudo completar la solicitud. Comprueba la conexión y que la API esté disponible; inténtalo de nuevo.',
+          'Cerrar',
+          { duration: 7000 }
+        );
       },
     });
   }

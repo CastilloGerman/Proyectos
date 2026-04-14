@@ -117,6 +117,13 @@ public class FacturaService {
         validarDatosFactura(usuario.getId(), cliente);
 
         LocalDate fechaExp = request.fechaExpedicion();
+        LocalDate fechaVencimiento = request.fechaVencimiento();
+        if (fechaVencimiento != null && fechaExp != null && fechaVencimiento.isBefore(fechaExp)) {
+            throw new IllegalArgumentException(
+                    "La fecha de vencimiento no puede ser "
+                            + "anterior a la fecha de expedición.");
+        }
+
         FacturaNumeroResuelto numero = resolverNumeroParaCreacion(request, usuario.getId(), fechaExp);
 
         Factura factura = new Factura();

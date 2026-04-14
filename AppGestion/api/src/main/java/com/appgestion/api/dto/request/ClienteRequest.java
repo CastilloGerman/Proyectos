@@ -1,6 +1,8 @@
 package com.appgestion.api.dto.request;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record ClienteRequest(
@@ -11,6 +13,7 @@ public record ClienteRequest(
         @Size(max = 50)
         String telefono,
 
+        @Email(message = "El email no tiene formato válido")
         @Size(max = 150)
         String email,
 
@@ -18,6 +21,9 @@ public record ClienteRequest(
         String direccion,
 
         @Size(max = 10)
+        @Pattern(
+                regexp = "^[0-9]{5}$",
+                message = "El código postal debe tener 5 dígitos")
         String codigoPostal,
 
         @Size(max = 100)
