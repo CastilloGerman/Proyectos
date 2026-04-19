@@ -1,12 +1,12 @@
 export const environment = {
   production: true,
   /**
-   * - `/api` si nginx (u otro proxy) reenvía `/api/*` al backend (recomendado).
-   * - `''` (vacío) si el front y la API comparten origen y las rutas son `/auth`, `/facturas`, etc.
+   * - URL absoluta del API si el SPA y el backend están en subdominios distintos (p. ej. Railway + Cloudflare).
+   * - `/api` si un proxy del mismo origen reenvía `/api/*` al backend.
    */
-  apiUrl: '/api',
-  /** Ej.: 'https://tu-dominio.com'. Vacío = se usa el origen actual (recomendado si sirves el SPA en ese dominio). */
-  appPublicUrl: '' as string,
+  apiUrl: 'https://api.noemiweb.com',
+  /** Base pública del SPA (enlaces en invitaciones, etc.). Vacío = `window.location.origin` en runtime. */
+  appPublicUrl: 'https://app.noemiweb.com' as string,
   /** Mismo Client ID que en development; añade el origen de producción en Google Cloud Console */
   googleClientId: '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.apps.googleusercontent.com',
   helpCenterUrl: '' as string,

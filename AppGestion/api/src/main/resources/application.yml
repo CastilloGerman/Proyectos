@@ -22,9 +22,10 @@ spring:
             enable: true
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/appgestion
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    # Local: sin PGHOST → localhost:5433/appgestion. Railway u otros PaaS: PG* del plugin Postgres o SPRING_DATASOURCE_URL.
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5433}/${PGDATABASE:appgestion}}
+    username: ${PGUSER:${DB_USERNAME:postgres}}
+    password: ${PGPASSWORD:${DB_PASSWORD:postgres}}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -54,7 +55,8 @@ spring:
       include-message: on_param
 
 server:
-  port: 8081
+  # Railway (y similares) inyectan PORT; local sigue usando 8081 por defecto.
+  port: ${PORT:8081}
 
 # Stripe: en prod deben venir de variables de entorno (validado en StripeConfig)
 stripe:

@@ -1,0 +1,8 @@
+# Railway: usar "Root Directory" = AppGestion (carpeta que contiene este archivo y el pom padre).
+# Si en Railway el root del servicio es solo `AppGestion/api`, cambia la ruta del JAR en startCommand a `target/appgestion-api.jar`.
+
+[build]
+buildCommand = "mvn -B -DskipTests package"
+
+[deploy]
+startCommand = "java -jar api/target/appgestion-api.jar"

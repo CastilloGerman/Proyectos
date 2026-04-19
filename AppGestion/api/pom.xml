@@ -200,6 +200,8 @@
     </dependencies>
 
     <build>
+        <!-- Nombre estable del JAR para PaaS (evita depender de * o de -SNAPSHOT en el start command). -->
+        <finalName>appgestion-api</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
