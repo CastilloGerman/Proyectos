@@ -1,8 +1,9 @@
-# Railway: usar "Root Directory" = AppGestion (carpeta que contiene este archivo y el pom padre).
-# Si en Railway el root del servicio es solo `AppGestion/api`, cambia la ruta del JAR en startCommand a `target/appgestion-api.jar`.
+# Railway: Root Directory = AppGestion (este archivo + pom padre).
+# El packager de Railway hace COPY sobre /app/target; en monorepo el JAR queda en api/target/, así que lo copiamos a target/.
+# Si el root del repo en Railway es la raíz "Proyectos", usa: mkdir -p target && cp AppGestion/api/target/appgestion-api.jar target/
 
 [build]
-buildCommand = "mvn -B -DskipTests package"
+buildCommand = "mvn -B -DskipTests package && mkdir -p target && cp api/target/appgestion-api.jar target/appgestion-api.jar"
 
 [deploy]
-startCommand = "java -jar api/target/appgestion-api.jar"
+startCommand = "java -jar target/appgestion-api.jar"
