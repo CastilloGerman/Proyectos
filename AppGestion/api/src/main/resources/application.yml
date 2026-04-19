@@ -22,7 +22,7 @@ spring:
             enable: true
 
   datasource:
-    # Local: sin PGHOST → localhost:5433/appgestion. Railway u otros PaaS: PG* del plugin Postgres o SPRING_DATASOURCE_URL.
+    # Local: sin PGHOST → localhost:5433/appgestion. Railway: PG* o DATABASE_URL postgresql://… (se convierte a JDBC al arranque).
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5433}/${PGDATABASE:appgestion}}
     username: ${PGUSER:${DB_USERNAME:postgres}}
     password: ${PGPASSWORD:${DB_PASSWORD:postgres}}
