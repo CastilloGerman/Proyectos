@@ -1,0 +1,8 @@
+# Root Directory del servicio frontend en Railway: carpeta "frontend" (o AppGestion/frontend según el repo).
+# Sirve el build estatico en el puerto que Railway inyecta ($PORT).
+
+[build]
+buildCommand = "npm ci && npm run build"
+
+[deploy]
+startCommand = "npx --yes serve@14 dist/appgestion-frontend/browser -s -l $PORT"
