@@ -85,7 +85,7 @@ app:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://127.0.0.1:4200}
   jwt:
     # Obligatorio si no usas perfil local (ver bloque --- local abajo)
-    secret: ${JWT_SECRET}
+    secret: ${ojbdr4h8ry96q4qsp9kdkcymapy9bo2g}
     expiration-ms: 86400000
     issuer: appgestion-api
   security:
@@ -107,7 +107,7 @@ app:
     oauth-pending-cleanup-ms: 600000
     system-from: ${APP_EMAIL_SYSTEM_FROM:Noemi <onboarding@resend.dev>}
     resend:
-      api-key: ${RESEND_API_KEY:}
+      api-key: ${re_PUFx9mBm_8iFgSXxJJQUEgoJ9CcoLu4r6}
       webhook-secret: ${RESEND_WEBHOOK_SECRET:}
     google:
       client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
@@ -147,16 +147,16 @@ app:
   cors:
     allowed-origin-patterns: "http://*:4200,http://127.0.0.1:4200"
   jwt:
-    secret: ${JWT_SECRET:local-dev-only-minimum-thirty-two-characters-long-for-hs256}
+    secret: ${d0ct56mdwlc60kj096cgjnqgoayxyalm}
   email:
     token-encryption-key: ${APP_EMAIL_TOKEN_SECRET:local-dev-email-token-key-min-32-chars-for-aes-256}
   security:
     auth-rate-limit:
       enabled: true
 stripe:
-  secret-key: ${STRIPE_SECRET_KEY:sk_test_local_placeholder_replace_with_real_key}
-  webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_local_placeholder_replace_with_real_secret}
-  price-id-monthly: ${STRIPE_PRICE_MONTHLY:price_xxx}
+  secret-key: ${sk\_test\_51T7IZGK84lwp81PMDpVQYvpmxuw8yF0Fo9XrKikEvLqZwQxwqKC0bZ23yhxcwfsynCY7SqmYwkHjtkC9HyRPyzRg00qj96pul0}
+  webhook-secret: ${whsec_Hr1lSRj3eccKfAybtyq4huyOQO31006v}
+  price-id-monthly: ${price\_1T7IgaK84lwp81PMxrVbpdXU}
 logging:
   level:
     '[com.appgestion]': DEBUG
