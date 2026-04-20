@@ -168,9 +168,16 @@ spring:
   config:
     activate:
       on-profile: prod
+  # Menor pico de RAM al arrancar (útil en contenedores ~1 GB; primer request puede ser algo más lento).
+  main:
+    lazy-initialization: true
   jpa:
     hibernate:
       ddl-auto: validate
+  datasource:
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
   web:
     error:
       include-message: never
