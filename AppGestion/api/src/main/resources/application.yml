@@ -56,7 +56,7 @@ spring:
 
 server:
   # Railway (y similares) inyectan PORT; local sigue usando 8081 por defecto.
-  port: ${PORT:8081}
+  port: ${PORT:8080}
 
 # Stripe: en prod deben venir de variables de entorno (validado en StripeConfig)
 stripe:
