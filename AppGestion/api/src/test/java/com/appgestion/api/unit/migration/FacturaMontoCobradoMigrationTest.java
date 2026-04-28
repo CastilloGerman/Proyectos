@@ -41,7 +41,7 @@ class FacturaMontoCobradoMigrationTest {
 
             assertDoesNotThrow(() -> statement.execute(migration));
 
-            assertTrue(columnExists(connection, "FACTURAS", "MONTO_COBRADO"));
+            assertTrue(columnExists(connection, "facturas", "monto_cobrado"));
         }
     }
 
@@ -56,7 +56,7 @@ class FacturaMontoCobradoMigrationTest {
     }
 
     private static boolean columnExists(Connection connection, String table, String column) throws Exception {
-        try (var columns = connection.getMetaData().getColumns(null, "PUBLIC", table, column)) {
+        try (var columns = connection.getMetaData().getColumns(null, "public", table, column)) {
             return columns.next();
         }
     }
