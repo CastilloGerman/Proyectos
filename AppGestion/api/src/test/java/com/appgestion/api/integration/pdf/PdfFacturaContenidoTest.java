@@ -124,7 +124,7 @@ class PdfFacturaContenidoTest {
     }
 
     @Test
-    void pdfFacturaFinalConAnticipo_contieneLineaDescuentoAnticipo() throws Exception {
+    void pdfFacturaFinalConAnticipo_contieneReferenciaAnticipo() throws Exception {
         String presBody = PresupuestoIntegrationTestSupport.presupuestoJson(
                 presScenario.clienteCompletoId(), PresupuestoEstado.ACEPTADO, 1000.0, 1.0);
         String presJson = mockMvc.perform(post("/presupuestos")
@@ -163,9 +163,8 @@ class PdfFacturaContenidoTest {
 
         String text = descargarTextoFacturaPdfConAuthPresupuestos(facturaFinalId);
 
-        assertThat(text).contains("(-) Anticipo facturado");
+        assertThat(text).contains("Anticipo ya facturado");
         assertThat(text).contains(referenciaAnticipo);
-        assertThat(text).contains("-");
     }
 
     private long crearFacturaBasica(long clienteId, LocalDate fechaExpedicion) throws Exception {
