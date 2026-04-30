@@ -131,8 +131,8 @@ class AnticipoFlujoCompletoTest {
         double totalFinal = root.get("total").asDouble();
         double ivaFinal = root.get("iva").asDouble();
 
-        // Remanente bruto = total presupuesto − anticipo; total de la factura final = remanente − anticipo ya cobrado (pendiente de pago).
-        assertThat(totalFinal + 300.0).isCloseTo(totalPres - 300.0, Offset.offset(0.02));
+        // Remanente bruto: la factura final ya contiene solo la base e IVA pendientes tras el anticipo.
+        assertThat(totalFinal).isCloseTo(totalPres - 300.0, Offset.offset(0.02));
 
         LocalDate hoy = LocalDate.now();
         int year = hoy.getYear();
