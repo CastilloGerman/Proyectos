@@ -16,9 +16,9 @@ import org.springframework.core.env.MutablePropertySources;
  * Convierte {@code DATABASE_URL} / {@code SPRING_DATASOURCE_URL} estilo Railway
  * ({@code postgresql://…}) a propiedades JDBC antes de que arranquen Flyway y el DataSource.
  * <p>
- * Se registra desde {@link com.appgestion.api.AppGestionApiApplication#main} porque en el JAR
- * ejecutable {@code META-INF/spring.factories} del módulo puede quedar fuera del classpath de
- * la aplicación y entonces {@code EnvironmentPostProcessor} no se carga.
+ * Se registra desde {@link com.appgestion.api.AppGestionApiApplication#main} como respaldo;
+ * el camino preferido es {@link RailwayDatasourceEnvironmentPostProcessor} en
+ * {@code META-INF/spring.factories} ({@code org.springframework.boot.EnvironmentPostProcessor}).
  */
 public class RailwayJdbcUrlEnvironmentListener
         implements ApplicationListener<ApplicationEnvironmentPreparedEvent> {

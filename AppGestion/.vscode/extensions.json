@@ -3,5 +3,8 @@
     "vscjava.vscode-java-pack",
     "vscjava.vscode-maven",
     "Angular.ng-template"
+  ],
+  "unwantedRecommendations": [
+    "oracle.oracle-java"
   ]
 }

@@ -1,1 +1,2 @@
+org.springframework.boot.EnvironmentPostProcessor=\
 com.appgestion.api.config.RailwayDatasourceEnvironmentPostProcessor
