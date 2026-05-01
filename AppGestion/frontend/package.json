@@ -4,6 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve --host 0.0.0.0 --port 4200",
+    "serve:railway": "node server.mjs",
     "build": "ng build",
     "test": "ng test",
     "watch": "ng build --watch --configuration development"
