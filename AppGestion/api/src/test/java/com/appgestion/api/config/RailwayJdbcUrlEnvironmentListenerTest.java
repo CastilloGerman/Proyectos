@@ -51,4 +51,34 @@ class RailwayJdbcUrlEnvironmentListenerTest {
         assertThat(environment.getProperty("spring.datasource.username")).isNull();
         assertThat(environment.getProperty("spring.datasource.password")).isNull();
     }
+
+    @Test
+    void cleansMalformedDatabaseNameFromUrlPath() {
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty(
+                        "SPRING_DATASOURCE_URL",
+                        "jdbc:postgresql://mainline.proxy.rlwy.net:12345/railway??");
+
+        RailwayJdbcUrlEnvironmentListener.applyRailwayPostgresUrl(environment);
+
+        assertThat(environment.getProperty("spring.datasource.url"))
+                .isEqualTo("jdbc:postgresql://mainline.proxy.rlwy.net:12345/railway");
+    }
+
+    @Test
+    void buildsJdbcUrlFromRailwayPgVariablesAndCleansDatabaseName() {
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("PGHOST", "mainline.proxy.rlwy.net")
+                .withProperty("PGPORT", "12345")
+                .withProperty("PGDATABASE", "railway??")
+                .withProperty("PGUSER", "postgres")
+                .withProperty("PGPASSWORD", "secret");
+
+        RailwayJdbcUrlEnvironmentListener.applyRailwayPostgresUrl(environment);
+
+        assertThat(environment.getProperty("spring.datasource.url"))
+                .isEqualTo("jdbc:postgresql://mainline.proxy.rlwy.net:12345/railway");
+        assertThat(environment.getProperty("spring.datasource.username")).isEqualTo("postgres");
+        assertThat(environment.getProperty("spring.datasource.password")).isEqualTo("secret");
+    }
 }

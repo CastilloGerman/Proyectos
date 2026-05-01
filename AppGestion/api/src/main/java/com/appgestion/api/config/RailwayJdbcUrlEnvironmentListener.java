@@ -42,6 +42,7 @@ public class RailwayJdbcUrlEnvironmentListener
             }
         }
         if (raw == null) {
+            applyRailwayPgVariables(environment);
             return;
         }
         raw = raw.trim();
@@ -100,7 +101,7 @@ public class RailwayJdbcUrlEnvironmentListener
         if (path == null || path.isBlank() || "/".equals(path)) {
             throw new IllegalArgumentException("nombre de base de datos vacío en URL de Postgres");
         }
-        String database = path.startsWith("/") ? path.substring(1) : path;
+        String database = cleanDatabaseName(path.startsWith("/") ? path.substring(1) : path);
 
         String username = "";
         String password = "";
@@ -119,8 +120,8 @@ public class RailwayJdbcUrlEnvironmentListener
 
         StringBuilder jdbc = new StringBuilder();
         jdbc.append("jdbc:postgresql://").append(host).append(":").append(port).append("/").append(database);
-        String query = uri.getRawQuery();
-        if (query != null && !query.isEmpty()) {
+        String query = cleanQuery(uri.getRawQuery());
+        if (query != null) {
             jdbc.append("?").append(query);
         }
 
@@ -129,6 +130,60 @@ public class RailwayJdbcUrlEnvironmentListener
 
     private static String decode(String s) {
         return URLDecoder.decode(s, StandardCharsets.UTF_8);
+    }
+
+    private static void applyRailwayPgVariables(ConfigurableEnvironment environment) {
+        String host = firstNonBlank(environment.getProperty("PGHOST"), environment.getProperty("POSTGRES_HOST"));
+        String database = firstNonBlank(
+                environment.getProperty("PGDATABASE"),
+                environment.getProperty("POSTGRES_DB"));
+        if (host == null || database == null) {
+            return;
+        }
+
+        String port = firstNonBlank(environment.getProperty("PGPORT"), environment.getProperty("POSTGRES_PORT"));
+        if (port == null) {
+            port = "5432";
+        }
+
+        Map<String, Object> map = new HashMap<>();
+        map.put("spring.datasource.url", "jdbc:postgresql://" + host.trim() + ":" + port.trim()
+                + "/" + cleanDatabaseName(database));
+
+        String username = firstNonBlank(environment.getProperty("PGUSER"), environment.getProperty("POSTGRES_USER"));
+        String password = firstNonBlank(
+                environment.getProperty("PGPASSWORD"),
+                environment.getProperty("POSTGRES_PASSWORD"));
+        if (username != null) {
+            map.put("spring.datasource.username", username);
+        }
+        if (password != null) {
+            map.put("spring.datasource.password", password);
+        }
+
+        MutablePropertySources sources = environment.getPropertySources();
+        sources.remove(PROPERTY_SOURCE_NAME);
+        sources.addFirst(new MapPropertySource(PROPERTY_SOURCE_NAME, map));
+    }
+
+    private static String cleanDatabaseName(String database) {
+        String cleaned = decode(database).trim();
+        int queryStart = cleaned.indexOf('?');
+        if (queryStart >= 0) {
+            cleaned = cleaned.substring(0, queryStart);
+        }
+        return cleaned.replace("\uFFFD", "").replaceAll("\\?+$", "");
+    }
+
+    private static String cleanQuery(String query) {
+        if (query == null) {
+            return null;
+        }
+        String cleaned = query.trim().replaceFirst("^\\?+", "");
+        if (cleaned.isBlank() || cleaned.chars().allMatch(ch -> ch == '?')) {
+            return null;
+        }
+        return cleaned;
     }
 
     private record JdbcParts(String url, String username, String password) {}
