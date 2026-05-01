@@ -45,7 +45,9 @@ public class RailwayJdbcUrlEnvironmentListener
             return;
         }
         raw = raw.trim();
-        if (!raw.startsWith("postgres://") && !raw.startsWith("postgresql://")) {
+        if (!raw.startsWith("postgres://")
+                && !raw.startsWith("postgresql://")
+                && !raw.startsWith("jdbc:postgresql://")) {
             return;
         }
 
@@ -80,7 +82,10 @@ public class RailwayJdbcUrlEnvironmentListener
     }
 
     private static JdbcParts toJdbcParts(String rawUrl) {
-        String forUri = rawUrl.replaceFirst("^postgres(ql)?://", "http://");
+        String postgresUrl = rawUrl.startsWith("jdbc:postgresql://")
+                ? rawUrl.substring("jdbc:".length())
+                : rawUrl;
+        String forUri = postgresUrl.replaceFirst("^postgres(ql)?://", "http://");
         URI uri = URI.create(forUri);
 
         String host = uri.getHost();
