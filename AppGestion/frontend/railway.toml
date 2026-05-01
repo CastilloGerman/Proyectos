@@ -5,4 +5,5 @@
 buildCommand = "npm ci && npm run build"
 
 [deploy]
-startCommand = "npx --yes serve@14 dist/appgestion-frontend/browser -s -l $PORT"
+# Escuchar en todas las interfaces; si solo escucha en 127.0.0.1 Railway muestra "Application failed to respond".
+startCommand = "npx --yes serve@14 dist/appgestion-frontend/browser -s -l tcp://0.0.0.0:${PORT}"
