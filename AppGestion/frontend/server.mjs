@@ -8,6 +8,11 @@ const publicDir = resolve(__dirname, 'dist/appgestion-frontend/browser');
 const indexFile = join(publicDir, 'index.html');
 const port = Number.parseInt(process.env.PORT ?? '8080', 10);
 const host = '0.0.0.0';
+const fallbackPorts = (process.env.FALLBACK_PORTS ?? '4200,3000')
+  .split(',')
+  .map((value) => Number.parseInt(value.trim(), 10))
+  .filter(Number.isInteger);
+const ports = [...new Set([port, ...fallbackPorts])];
 
 const contentTypes = {
   '.css': 'text/css; charset=utf-8',
@@ -39,7 +44,7 @@ function resolveRequestPath(url) {
   return indexFile;
 }
 
-const server = createServer((req, res) => {
+function handleRequest(req, res) {
   const filePath = resolveRequestPath(req.url ?? '/');
   const stream = createReadStream(filePath);
 
@@ -55,8 +60,18 @@ const server = createServer((req, res) => {
     res.end('Internal server error');
   });
   stream.pipe(res);
-});
+}
 
-server.listen(port, host, () => {
-  console.log(`AppGestion frontend listening on http://${host}:${port}`);
-});
+for (const listenPort of ports) {
+  const server = createServer(handleRequest);
+  server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+      console.warn(`Port ${listenPort} is already in use; skipping fallback listener`);
+      return;
+    }
+    throw error;
+  });
+  server.listen(listenPort, host, () => {
+    console.log(`AppGestion frontend listening on http://${host}:${listenPort}`);
+  });
+}
