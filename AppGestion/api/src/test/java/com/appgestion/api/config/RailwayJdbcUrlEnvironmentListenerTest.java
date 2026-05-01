@@ -36,4 +36,19 @@ class RailwayJdbcUrlEnvironmentListenerTest {
         assertThat(environment.getProperty("spring.datasource.username")).isEqualTo("railway_user");
         assertThat(environment.getProperty("spring.datasource.password")).isEqualTo("secret");
     }
+
+    @Test
+    void doesNotTreatSingleUserInfoValueAsUsername() {
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty(
+                        "SPRING_DATASOURCE_URL",
+                        "jdbc:postgresql://secret@mainline.proxy.rlwy.net:12345/railway");
+
+        RailwayJdbcUrlEnvironmentListener.applyRailwayPostgresUrl(environment);
+
+        assertThat(environment.getProperty("spring.datasource.url"))
+                .isEqualTo("jdbc:postgresql://mainline.proxy.rlwy.net:12345/railway");
+        assertThat(environment.getProperty("spring.datasource.username")).isNull();
+        assertThat(environment.getProperty("spring.datasource.password")).isNull();
+    }
 }

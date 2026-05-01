@@ -108,7 +108,9 @@ public class RailwayJdbcUrlEnvironmentListener
         if (userInfo != null && !userInfo.isBlank()) {
             int colon = userInfo.indexOf(':');
             if (colon < 0) {
-                username = decode(userInfo);
+                // Railway often provides PGUSER/PGPASSWORD separately. A single value before '@'
+                // is usually a malformed URL fragment, so avoid treating it as the DB user.
+                username = "";
             } else {
                 username = decode(userInfo.substring(0, colon));
                 password = decode(userInfo.substring(colon + 1));
