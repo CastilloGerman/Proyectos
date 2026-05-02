@@ -30,7 +30,13 @@ const contentTypes = {
 };
 
 function resolveRequestPath(url) {
-  const pathname = decodeURIComponent(new URL(url, 'http://localhost').pathname);
+  let pathname;
+  try {
+    pathname = decodeURIComponent(new URL(url, 'http://localhost').pathname);
+  } catch {
+    return null;
+  }
+
   const requested = normalize(join(publicDir, pathname));
 
   if (!requested.startsWith(publicDir + sep) && requested !== publicDir) {
@@ -46,6 +52,15 @@ function resolveRequestPath(url) {
 
 function handleRequest(req, res) {
   const filePath = resolveRequestPath(req.url ?? '/');
+  if (filePath === null) {
+    res.writeHead(400, {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-cache',
+    });
+    res.end('Bad request');
+    return;
+  }
+
   const stream = createReadStream(filePath);
 
   res.setHeader('Content-Type', contentTypes[extname(filePath)] ?? 'application/octet-stream');
