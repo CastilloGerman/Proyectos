@@ -8,12 +8,13 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { AuthService, UsuarioResponse } from '../../../core/auth/auth.service';
-import { SubscriptionService } from '../../../core/services/subscription.service';
+import { SubscriptionService, CheckoutBillingPeriod } from '../../../core/services/subscription.service';
 import { environment } from '../../../../environments/environment';
 import { DevApiService } from '../../../core/services/dev-api.service';
 import { daysFromTodayToDateEnd } from '../../../shared/utils/trial-days.util';
 import { finalize } from 'rxjs/operators';
 import { messageFromHttpError } from '../../../shared/utils/http-error-message.util';
+import { MatButtonToggleChange, MatButtonToggleModule } from '@angular/material/button-toggle';
 
 /** Nombre comercial del plan (un solo precio Stripe en esta fase). */
 const DEFAULT_PLAN_LABEL = 'Plan profesional';
@@ -29,6 +30,7 @@ const DEFAULT_PLAN_LABEL = 'Plan profesional';
         MatProgressSpinnerModule,
         MatSnackBarModule,
         MatDividerModule,
+        MatButtonToggleModule,
     ],
     templateUrl: './suscripcion-plan.component.html',
     styleUrl: './suscripcion-plan.component.scss'
@@ -44,6 +46,7 @@ export class SuscripcionPlanComponent implements OnInit {
   readonly me = signal<UsuarioResponse | null>(null);
   readonly openingCheckout = signal(false);
   readonly openingPortal = signal(false);
+  readonly checkoutBillingPeriod = signal<CheckoutBillingPeriod>('MONTHLY');
 
   readonly planLabel = environment.subscriptionPlanDisplayName?.trim() || DEFAULT_PLAN_LABEL;
 
@@ -113,6 +116,13 @@ export class SuscripcionPlanComponent implements OnInit {
     this.refrescar();
   }
 
+  onBillingChange(event: MatButtonToggleChange): void {
+    const v = event.value;
+    if (v === 'MONTHLY' || v === 'YEARLY') {
+      this.checkoutBillingPeriod.set(v);
+    }
+  }
+
   refrescar(): void {
     this.loadError.set(false);
     this.loading.set(true);
@@ -135,7 +145,7 @@ export class SuscripcionPlanComponent implements OnInit {
   abrirCheckout(): void {
     this.openingCheckout.set(true);
     this.subscriptionApi
-      .createCheckoutSession()
+      .createCheckoutSession(this.checkoutBillingPeriod())
       .pipe(finalize(() => this.openingCheckout.set(false)))
       .subscribe({
         next: (res) => {

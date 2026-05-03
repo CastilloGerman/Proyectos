@@ -16,6 +16,11 @@
       "description": "Stripe price ID for monthly subscription."
     },
     {
+      "name": "stripe.price-id-yearly",
+      "type": "java.lang.String",
+      "description": "Stripe recurring price ID for yearly subscription (STRIPE_PRICE_YEARLY)."
+    },
+    {
       "name": "stripe.success-url",
       "type": "java.lang.String",
       "description": "URL to redirect after successful subscription."

@@ -33,7 +33,7 @@ Secuencia orientativa para el **primer go-live**. Los detalles de cada variable 
    - **Webhook Resend (recomendado en producción si registras el webhook):** en el dashboard de Resend, apunta el webhook a `https://tu-api-publica/webhook/resend` y define **`RESEND_WEBHOOK_SECRET`** con el *signing secret* del webhook (esquema **Svix**; la API exige cabeceras `svix-id`, `svix-timestamp` y `svix-signature` cuando el secret está configurado). Detalle en **§7.2**. Si el secret está vacío, el endpoint no valida firma (solo razonable en desarrollo aislado).
 
 4. **Stripe**  
-   Cuando pases a cobros reales, usa claves **live** en el dashboard: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY` y URLs de éxito, cancelación y portal del cliente apuntando a `https://tu-dominio-front/...` (ver `application.yml` / variables `STRIPE_*_URL`).
+   Cuando pases a cobros reales, usa claves **live** en el dashboard: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, **`STRIPE_PRICE_MONTHLY`**, **`STRIPE_PRICE_YEARLY`** y URLs de éxito, cancelación y portal del cliente apuntando a `https://tu-dominio-front/...` (ver `application.yml` / variables `STRIPE_*_URL`).
 
 5. **Variables de entorno de la API**  
    Fija al menos: `SPRING_PROFILES_ACTIVE=prod`, `JWT_SECRET` (≥ 32 caracteres, aleatorio), `CORS_ALLOWED_ORIGINS` (orígenes exactos del SPA, separados por coma), `FRONTEND_URL` (base del SPA para enlaces en correos y OAuth de correo), base de datos, Resend y Stripe. Lista completa en **§2**.  
@@ -91,7 +91,7 @@ Secuencia orientativa para el **primer go-live**. Los detalles de cada variable 
   - `STRIPE_SECRET_KEY`
   - `STRIPE_WEBHOOK_SECRET`
   - En `prod` la aplicación valida que no sean placeholders; usa claves reales del dashboard Stripe.
-- **`STRIPE_PRICE_MONTHLY`** (y URLs de éxito/cancelación del checkout si las usas) según tu integración.
+- **`STRIPE_PRICE_MONTHLY`** y **`STRIPE_PRICE_YEARLY`** (mensual vs anual en checkout; además URLs de éxito/cancelación del checkout si las usas) según tu integración.
 
 ### Base de datos
 

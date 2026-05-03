@@ -155,7 +155,7 @@ La SPA queda en **`http://localhost:4200`**. Las peticiones a **`/api/...`** las
 | `JWT_SECRET` | Obligatorio fuera de `local` (`app.jwt.secret`) |
 | `CORS_ALLOWED_ORIGINS` | Orígenes permitidos (coma) |
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` | SMTP (`spring.mail.*`) |
-| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY` | Stripe (`stripe.*` + validación en prod) |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY` | Stripe (`stripe.*` + validación en prod) |
 | `STRIPE_SUCCESS_URL`, `STRIPE_CANCEL_URL`, `STRIPE_PORTAL_RETURN_URL` | URLs de retorno Stripe |
 | `FRONTEND_URL` | URL del front (`app.frontend-url`) |
 | `SUPPORT_INBOX_EMAIL` | Buzón para formulario de soporte (`app.support.inbox-email`) |
@@ -282,7 +282,7 @@ Prefijos **tal como los expone el backend** (sin `/api`; el front añade `/api` 
 
 | Método | Ruta | Descripción breve |
 |--------|------|-------------------|
-| POST | `/subscription/checkout` | Checkout Stripe |
+| POST | `/subscription/checkout` | Checkout Stripe — cuerpo opcional `{ "billingPeriod": "YEARLY" }` para anual; sin cuerpo u omisión = mensual |
 | GET | `/subscription/invoices` | Facturas Stripe |
 | POST | `/subscription/portal` | Portal cliente Stripe |
 | POST | `/webhook/stripe` | Webhook Stripe |

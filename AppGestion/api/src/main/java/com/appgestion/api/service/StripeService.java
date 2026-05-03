@@ -1,6 +1,7 @@
 package com.appgestion.api.service;
 
 import com.appgestion.api.domain.entity.Usuario;
+import com.appgestion.api.dto.SubscriptionBillingPeriod;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Customer;
@@ -34,6 +35,9 @@ public class StripeService {
     @Value("${stripe.price-id-monthly}")
     private String priceIdMonthly;
 
+    @Value("${stripe.price-id-yearly:}")
+    private String priceIdYearly;
+
     @Value("${stripe.success-url}")
     private String successUrl;
 
@@ -43,10 +47,20 @@ public class StripeService {
     @Value("${stripe.portal-return-url}")
     private String portalReturnUrl;
 
-    public String createCheckoutSession(Usuario usuario) throws StripeException {
-        if (priceIdMonthly == null || priceIdMonthly.isBlank()) {
+    public String createCheckoutSession(Usuario usuario, SubscriptionBillingPeriod billingPeriod)
+            throws StripeException {
+        SubscriptionBillingPeriod period =
+                billingPeriod != null ? billingPeriod : SubscriptionBillingPeriod.MONTHLY;
+        String priceId =
+                switch (period) {
+                    case YEARLY -> priceIdYearly;
+                    case MONTHLY -> priceIdMonthly;
+                };
+        if (priceId == null || priceId.isBlank()) {
             throw new IllegalStateException(
-                    "Falta STRIPE_PRICE_MONTHLY en la configuración del servidor (precio recurrente Stripe).");
+                    period == SubscriptionBillingPeriod.YEARLY
+                            ? "Falta STRIPE_PRICE_YEARLY en la configuración del servidor (precio anual Stripe)."
+                            : "Falta STRIPE_PRICE_MONTHLY en la configuración del servidor (precio recurrente Stripe).");
         }
         if (successUrl == null || successUrl.isBlank() || cancelUrl == null || cancelUrl.isBlank()) {
             throw new IllegalStateException(
@@ -67,7 +81,7 @@ public class StripeService {
                 .setCustomer(customerId)
                 .addLineItem(
                         LineItem.builder()
-                                .setPrice(priceIdMonthly)
+                                .setPrice(priceId)
                                 .setQuantity(1L)
                                 .build()
                 )
@@ -95,14 +109,21 @@ public class StripeService {
         InvoiceCollection collection = Invoice.list(params);
         List<SubscriptionInvoiceDto> out = new ArrayList<>();
         for (Invoice inv : collection.getData()) {
+            Long amountDue = inv.getAmountDue();
+            Long amountPaid = inv.getAmountPaid();
+            String currency = inv.getCurrency();
+            Long created = inv.getCreated();
+            long dueCents = amountDue == null ? 0L : amountDue.longValue();
+            long paidCents = amountPaid == null ? 0L : amountPaid.longValue();
+            long createdUnix = created == null ? 0L : created.longValue();
             out.add(new SubscriptionInvoiceDto(
                     inv.getId(),
                     inv.getNumber(),
                     inv.getStatus() != null ? inv.getStatus() : "",
-                    inv.getAmountDue() != null ? inv.getAmountDue() : 0L,
-                    inv.getAmountPaid() != null ? inv.getAmountPaid() : 0L,
-                    inv.getCurrency() != null ? inv.getCurrency() : "eur",
-                    inv.getCreated() != null ? inv.getCreated() : 0L,
+                    dueCents,
+                    paidCents,
+                    currency != null ? currency : "eur",
+                    createdUnix,
                     inv.getInvoicePdf(),
                     inv.getHostedInvoiceUrl()
             ));

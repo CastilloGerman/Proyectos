@@ -154,6 +154,29 @@
   margin: 24px 0 20px !important;
 }
 
+.sub-billing {
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.sub-billing__heading {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--app-text-secondary, #64748b);
+  margin-bottom: 10px;
+}
+
+.sub-billing__hint {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--app-text-secondary, #64748b);
+}
+
+.sub-billing mat-button-toggle-group {
+  flex-wrap: wrap;
+}
+
 .sub-actions {
   display: flex;
   flex-wrap: wrap;

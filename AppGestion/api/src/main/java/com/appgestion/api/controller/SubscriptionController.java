@@ -1,6 +1,8 @@
 package com.appgestion.api.controller;
 
 import com.appgestion.api.domain.entity.Usuario;
+import com.appgestion.api.dto.SubscriptionBillingPeriod;
+import com.appgestion.api.dto.request.CheckoutRequest;
 import com.appgestion.api.dto.response.SubscriptionInvoiceDto;
 import com.appgestion.api.service.CurrentUserService;
 import com.appgestion.api.service.StripeService;
@@ -34,10 +36,11 @@ public class SubscriptionController {
     }
 
     @PostMapping("/checkout")
-    public ResponseEntity<?> createCheckoutSession() {
+    public ResponseEntity<?> createCheckoutSession(@RequestBody(required = false) CheckoutRequest body) {
         try {
             Usuario usuario = currentUserService.getCurrentUsuario();
-            String checkoutUrl = stripeService.createCheckoutSession(usuario);
+            SubscriptionBillingPeriod period = CheckoutRequest.effectivePeriod(body);
+            String checkoutUrl = stripeService.createCheckoutSession(usuario, period);
             return ResponseEntity.ok(Map.of("checkoutUrl", checkoutUrl));
         } catch (InvalidRequestException e) {
             String code = e.getCode();
@@ -46,7 +49,7 @@ public class SubscriptionController {
             if ("resource_missing".equals(code) && msg != null && msg.contains("price")) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "El ID de precio de Stripe no es válido o no existe en esta cuenta "
-                                + "(revisa STRIPE_PRICE_MONTHLY y que coincida modo test/live)."));
+                                + "(revisa STRIPE_PRICE_MONTHLY / STRIPE_PRICE_YEARLY y que coincidan modo test/live)."));
             }
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Stripe rechazó la solicitud de pago. Si persiste, contacta soporte."));

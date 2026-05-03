@@ -79,6 +79,20 @@
 
         <div class="sub-actions">
           @if (mostrarCheckout()) {
+            <div class="sub-billing" role="group" aria-labelledby="sub-billing-label">
+              <div class="sub-billing__heading" id="sub-billing-label">Facturación</div>
+              <mat-button-toggle-group
+                [value]="checkoutBillingPeriod()"
+                (change)="onBillingChange($event)"
+                hideSingleSelectionIndicator
+              >
+                <mat-button-toggle value="MONTHLY">Mensual</mat-button-toggle>
+                <mat-button-toggle value="YEARLY">Anual</mat-button-toggle>
+              </mat-button-toggle-group>
+              <p class="sub-billing__hint">
+                El cobro será mensual o anual según lo que eligas antes de entrar en el pago seguro.
+              </p>
+            </div>
             <button
               mat-raised-button
               color="primary"

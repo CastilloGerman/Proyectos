@@ -20,6 +20,9 @@ public class StripeConfig {
     @Value("${stripe.price-id-monthly:}")
     private String priceIdMonthly;
 
+    @Value("${stripe.price-id-yearly:}")
+    private String priceIdYearly;
+
     @Value("${stripe.success-url:}")
     private String successUrl;
 
@@ -46,6 +49,10 @@ public class StripeConfig {
             if (priceIdMonthly == null || priceIdMonthly.isBlank()) {
                 throw new IllegalStateException(
                         "Stripe: STRIPE_PRICE_MONTHLY debe estar definida en producción (ID price_… del producto/plan).");
+            }
+            if (priceIdYearly == null || priceIdYearly.isBlank()) {
+                throw new IllegalStateException(
+                        "Stripe: STRIPE_PRICE_YEARLY debe estar definida en producción (ID price_… anual recurrente).");
             }
             if (successUrl == null || successUrl.isBlank()) {
                 throw new IllegalStateException(

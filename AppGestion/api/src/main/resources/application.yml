@@ -63,6 +63,7 @@ stripe:
   secret-key: ${STRIPE_SECRET_KEY:}
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
   price-id-monthly: ${STRIPE_PRICE_MONTHLY:}
+  price-id-yearly: ${STRIPE_PRICE_YEARLY:}
   success-url: ${STRIPE_SUCCESS_URL:http://localhost:4200/subscription/success}
   cancel-url: ${STRIPE_CANCEL_URL:http://localhost:4200/subscription/cancel}
   portal-return-url: ${STRIPE_PORTAL_RETURN_URL:http://localhost:4200/dashboard}
@@ -158,6 +159,7 @@ stripe:
   secret-key: ${STRIPE_SECRET_KEY:}
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
   price-id-monthly: ${STRIPE_PRICE_MONTHLY:}
+  price-id-yearly: ${STRIPE_PRICE_YEARLY:}
 logging:
   level:
     '[com.appgestion]': DEBUG
