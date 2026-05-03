@@ -2,29 +2,32 @@ package com.appgestion.api.service;
 
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.SubscriptionBillingPeriod;
+import com.appgestion.api.dto.response.SubscriptionInvoiceDto;
 import com.appgestion.api.repository.UsuarioRepository;
+import com.stripe.exception.InvalidRequestException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Customer;
 import com.stripe.model.Invoice;
 import com.stripe.model.InvoiceCollection;
 import com.stripe.model.checkout.Session;
-import com.stripe.param.InvoiceListParams;
 import com.stripe.param.CustomerCreateParams;
+import com.stripe.param.InvoiceListParams;
 import com.stripe.param.checkout.SessionCreateParams;
 import com.stripe.param.checkout.SessionCreateParams.LineItem;
 import com.stripe.param.checkout.SessionCreateParams.Mode;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import com.appgestion.api.dto.response.SubscriptionInvoiceDto;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 @Service
 public class StripeService {
+
+    private static final Logger log = LoggerFactory.getLogger(StripeService.class);
 
     private final UsuarioRepository usuarioRepository;
 
@@ -49,13 +52,24 @@ public class StripeService {
 
     public String createCheckoutSession(Usuario usuario, SubscriptionBillingPeriod billingPeriod)
             throws StripeException {
+        return createCheckoutSession(usuario, billingPeriod, false);
+    }
+
+    /**
+     * Si {@code staleRecoveryAttempt} es {@code false} y Stripe indica que el {@code customer} guardado no existe
+     * (p. ej. cambio de cuenta Stripe o modo test/live), se borra el ID huérfano y se reintenta una vez con un cliente nuevo.
+     */
+    private String createCheckoutSession(
+            Usuario usuario, SubscriptionBillingPeriod billingPeriod, boolean staleRecoveryAttempt)
+            throws StripeException {
         SubscriptionBillingPeriod period =
                 billingPeriod != null ? billingPeriod : SubscriptionBillingPeriod.MONTHLY;
-        String priceId =
-                switch (period) {
-                    case YEARLY -> priceIdYearly;
-                    case MONTHLY -> priceIdMonthly;
-                };
+        final String priceId;
+        if (period == SubscriptionBillingPeriod.YEARLY) {
+            priceId = priceIdYearly;
+        } else {
+            priceId = priceIdMonthly;
+        }
         if (priceId == null || priceId.isBlank()) {
             throw new IllegalStateException(
                     period == SubscriptionBillingPeriod.YEARLY
@@ -83,21 +97,36 @@ public class StripeService {
                         LineItem.builder()
                                 .setPrice(priceId)
                                 .setQuantity(1L)
-                                .build()
-                )
+                                .build())
                 .setSuccessUrl(successUrl + "?session_id={CHECKOUT_SESSION_ID}")
                 .setCancelUrl(cancelUrl)
                 .putAllMetadata(metadata)
                 .build();
 
-        Session session = Session.create(params);
-        return session.getUrl();
+        try {
+            Session checkoutSession = Session.create(params);
+            return checkoutSession.getUrl();
+        } catch (InvalidRequestException e) {
+            if (!staleRecoveryAttempt
+                    && "resource_missing".equals(e.getCode())
+                    && "customer".equals(e.getParam())) {
+                log.warn(
+                        "Stripe customer huérfano ({}), recreando cliente para usuario {}",
+                        e.getMessage(),
+                        usuario.getId());
+                usuario.setStripeCustomerId(null);
+                usuarioRepository.save(usuario);
+                return createCheckoutSession(usuario, billingPeriod, true);
+            }
+            throw e;
+        }
     }
 
     /**
      * Facturas de suscripción asociadas al cliente Stripe (más recientes primero).
      */
-    public List<SubscriptionInvoiceDto> listCustomerInvoices(String stripeCustomerId, int limit) throws StripeException {
+    public List<SubscriptionInvoiceDto> listCustomerInvoices(String stripeCustomerId, int limit)
+            throws StripeException {
         if (stripeCustomerId == null || stripeCustomerId.isBlank()) {
             return List.of();
         }
@@ -125,8 +154,7 @@ public class StripeService {
                     currency != null ? currency : "eur",
                     createdUnix,
                     inv.getInvoicePdf(),
-                    inv.getHostedInvoiceUrl()
-            ));
+                    inv.getHostedInvoiceUrl()));
         }
         return out;
     }
@@ -134,9 +162,9 @@ public class StripeService {
     public String createBillingPortalSession(String stripeCustomerId) throws StripeException {
         com.stripe.param.billingportal.SessionCreateParams params =
                 com.stripe.param.billingportal.SessionCreateParams.builder()
-                .setCustomer(stripeCustomerId)
-                .setReturnUrl(portalReturnUrl)
-                .build();
+                        .setCustomer(stripeCustomerId)
+                        .setReturnUrl(portalReturnUrl)
+                        .build();
 
         com.stripe.model.billingportal.Session portalSession =
                 com.stripe.model.billingportal.Session.create(params);
@@ -146,7 +174,8 @@ public class StripeService {
     /**
      * Sesión de pago única (Checkout) para cobrar una factura; devuelve URL pública.
      */
-    public PaymentLinkResult createFacturaCheckoutUrl(String numeroFactura, long amountCents, String facturaIdMeta) throws StripeException {
+    public PaymentLinkResult createFacturaCheckoutUrl(
+            String numeroFactura, long amountCents, String facturaIdMeta) throws StripeException {
         if (amountCents < 50) {
             throw new IllegalArgumentException("Importe demasiado bajo para el checkout");
         }
@@ -170,8 +199,8 @@ public class StripeService {
                 .putMetadata("factura_id", facturaIdMeta)
                 .build();
 
-        Session session = Session.create(params);
-        return new PaymentLinkResult(session.getId(), session.getUrl());
+        Session facturaCheckoutSession = Session.create(params);
+        return new PaymentLinkResult(facturaCheckoutSession.getId(), facturaCheckoutSession.getUrl());
     }
 
     private String createStripeCustomer(Usuario usuario) throws StripeException {
