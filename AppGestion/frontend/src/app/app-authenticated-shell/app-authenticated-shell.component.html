@@ -69,6 +69,14 @@
           Referir
         </button>
       }
+      <a
+        mat-stroked-button
+        routerLink="/cuenta/suscripcion"
+        matTooltip="Tu plan de Noemí y facturas del servicio"
+      >
+        <mat-icon class="saas-topbar__inline-icon">subscriptions</mat-icon>
+        Suscripción
+      </a>
       <button
         type="button"
         mat-icon-button
@@ -87,7 +95,24 @@
       </button>
       <mat-menu #notifMenu="matMenu" class="notif-bell-menu" xPosition="before">
         <div class="notif-bell-panel" (click)="$event.stopPropagation()">
-          <div class="notif-bell-head">Notificaciones</div>
+          <div class="notif-bell-head">
+            <span class="notif-bell-head__title">Notificaciones</span>
+            @if (notificaciones.unreadCount() > 0) {
+              <button
+                mat-button
+                type="button"
+                class="notif-bell-mark-read"
+                (click)="marcarTodasLeidasBell($event)"
+                [disabled]="notifMarcarTodasLoading()"
+              >
+                @if (notifMarcarTodasLoading()) {
+                  <mat-progress-spinner class="notif-bell-mark-read__spin" diameter="18" mode="indeterminate" />
+                } @else {
+                  Marcar como leídas
+                }
+              </button>
+            }
+          </div>
           @if (notifPreviewLoading()) {
             <div class="notif-bell-center">
               <mat-progress-spinner diameter="32" mode="indeterminate" />

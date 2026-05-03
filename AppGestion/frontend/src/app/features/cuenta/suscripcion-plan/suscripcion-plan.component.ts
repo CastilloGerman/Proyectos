@@ -12,6 +12,8 @@ import { SubscriptionService } from '../../../core/services/subscription.service
 import { environment } from '../../../../environments/environment';
 import { DevApiService } from '../../../core/services/dev-api.service';
 import { daysFromTodayToDateEnd } from '../../../shared/utils/trial-days.util';
+import { finalize } from 'rxjs/operators';
+import { messageFromHttpError } from '../../../shared/utils/http-error-message.util';
 
 /** Nombre comercial del plan (un solo precio Stripe en esta fase). */
 const DEFAULT_PLAN_LABEL = 'Plan profesional';
@@ -132,38 +134,44 @@ export class SuscripcionPlanComponent implements OnInit {
 
   abrirCheckout(): void {
     this.openingCheckout.set(true);
-    this.subscriptionApi.createCheckoutSession().subscribe({
-      next: (res) => {
-        if (res.checkoutUrl) {
-          window.location.href = res.checkoutUrl;
-        } else {
-          this.openingCheckout.set(false);
-          this.snackBar.open('No se recibió la URL de pago', 'Cerrar', { duration: 4000 });
-        }
-      },
-      error: (err) => {
-        this.openingCheckout.set(false);
-        this.snackBar.open(err.error?.error || 'No se pudo iniciar el pago', 'Cerrar', { duration: 5000 });
-      },
-    });
+    this.subscriptionApi
+      .createCheckoutSession()
+      .pipe(finalize(() => this.openingCheckout.set(false)))
+      .subscribe({
+        next: (res) => {
+          const url = res.checkoutUrl?.trim();
+          if (url) {
+            window.location.href = url;
+          } else {
+            this.snackBar.open('No se recibió la URL de pago', 'Cerrar', { duration: 4000 });
+          }
+        },
+        error: (err: unknown) => {
+          const msg = messageFromHttpError(err, 'No se pudo iniciar el pago');
+          this.snackBar.open(msg, 'Cerrar', { duration: 6500 });
+        },
+      });
   }
 
   abrirPortal(): void {
     this.openingPortal.set(true);
-    this.subscriptionApi.createPortalSession().subscribe({
-      next: (res) => {
-        if (res.portalUrl) {
-          window.location.href = res.portalUrl;
-        } else {
-          this.openingPortal.set(false);
-          this.snackBar.open('No se recibió el enlace del portal', 'Cerrar', { duration: 4000 });
-        }
-      },
-      error: (err) => {
-        this.openingPortal.set(false);
-        this.snackBar.open(err.error?.error || 'No se pudo abrir el portal de facturación', 'Cerrar', { duration: 5000 });
-      },
-    });
+    this.subscriptionApi
+      .createPortalSession()
+      .pipe(finalize(() => this.openingPortal.set(false)))
+      .subscribe({
+        next: (res) => {
+          const url = res.portalUrl?.trim();
+          if (url) {
+            window.location.href = url;
+          } else {
+            this.snackBar.open('No se recibió el enlace del portal', 'Cerrar', { duration: 4000 });
+          }
+        },
+        error: (err: unknown) => {
+          const msg = messageFromHttpError(err, 'No se pudo abrir el portal de facturación');
+          this.snackBar.open(msg, 'Cerrar', { duration: 6500 });
+        },
+      });
   }
 
   /** Solo desarrollo: alinear con banner del layout. */

@@ -16,6 +16,7 @@ import { SubscriptionService } from '../../core/services/subscription.service';
 import { environment } from '../../../environments/environment';
 import { USER_MENU_SECTIONS, UserMenuItem } from './user-menu.config';
 import { LogoutConfirmDialogComponent } from './logout-confirm-dialog.component';
+import { messageFromHttpError } from '../utils/http-error-message.util';
 
 @Component({
     selector: 'app-user-dropdown',
@@ -136,12 +137,16 @@ export class UserDropdownComponent {
   private openSubscriptionCheckout(): void {
     this.subscriptionService.createCheckoutSession().subscribe({
       next: (res) => {
-        if (res.checkoutUrl) {
-          window.location.href = res.checkoutUrl;
+        const url = res.checkoutUrl?.trim();
+        if (url) {
+          window.location.href = url;
+        } else {
+          this.snackBar.open('No se recibió la URL de pago', 'Cerrar', { duration: 4000 });
         }
       },
-      error: (err) => {
-        this.snackBar.open(err.error?.error || 'Error al abrir el pago', 'Cerrar', { duration: 4000 });
+      error: (err: unknown) => {
+        const msg = messageFromHttpError(err, 'No se pudo iniciar el pago');
+        this.snackBar.open(msg, 'Cerrar', { duration: 6500 });
       },
     });
   }

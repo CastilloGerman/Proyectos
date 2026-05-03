@@ -28,6 +28,7 @@ import { ThemeService } from '../core/theme/theme.service';
 import { DevApiService } from '../core/services/dev-api.service';
 import { daysFromTodayToDateEnd } from '../shared/utils/trial-days.util';
 import { TRIAL_BANNER_WARNING_DAYS, TRIAL_DAYS_LEFT_FALLBACK } from '../app-layout.constants';
+import { messageFromHttpError } from '../shared/utils/http-error-message.util';
 
 @Component({
   selector: 'app-authenticated-shell',
@@ -100,6 +101,7 @@ export class AppAuthenticatedShellComponent implements OnInit {
   readonly notifPreviewItems = signal<NotificacionDto[]>([]);
   readonly notifPreviewLoading = signal(false);
   readonly notifPreviewError = signal(false);
+  readonly notifMarcarTodasLoading = signal(false);
 
   onNotifMenuOpened(): void {
     this.notifPreviewError.set(false);
@@ -139,6 +141,24 @@ export class AppAuthenticatedShellComponent implements OnInit {
     if (path && path.startsWith('/') && !path.startsWith('//')) {
       void this.router.navigateByUrl(path);
     }
+  }
+
+  /** Marcar todas las no leídas desde la campana: limpia contador y vista previa. */
+  marcarTodasLeidasBell(ev: MouseEvent): void {
+    ev.stopPropagation();
+    if (this.notificaciones.unreadCount() === 0 || this.notifMarcarTodasLoading()) return;
+    this.notifMarcarTodasLoading.set(true);
+    this.notificaciones.markAllRead().subscribe({
+      next: () => {
+        this.notifMarcarTodasLoading.set(false);
+        this.notifPreviewItems.set([]);
+        this.snackBar.open('Notificaciones marcadas como leídas', 'Cerrar', { duration: 2500 });
+      },
+      error: () => {
+        this.notifMarcarTodasLoading.set(false);
+        this.snackBar.open('No se pudieron marcar como leídas', 'Cerrar', { duration: 4000 });
+      },
+    });
   }
 
   toggleSidenavMenu(): void {
@@ -185,12 +205,16 @@ export class AppAuthenticatedShellComponent implements OnInit {
   activarSuscripcion(): void {
     this.subscriptionService.createCheckoutSession().subscribe({
       next: (res) => {
-        if (res.checkoutUrl) {
-          window.location.href = res.checkoutUrl;
+        const url = res.checkoutUrl?.trim();
+        if (url) {
+          window.location.href = url;
+        } else {
+          this.snackBar.open('No se recibió la URL de pago', 'Cerrar', { duration: 4000 });
         }
       },
-      error: (err) => {
-        this.snackBar.open(err.error?.error || 'Error al crear sesión de pago', 'Cerrar', { duration: 4000 });
+      error: (err: unknown) => {
+        const msg = messageFromHttpError(err, 'No se pudo iniciar el pago');
+        this.snackBar.open(msg, 'Cerrar', { duration: 6500 });
       },
     });
   }

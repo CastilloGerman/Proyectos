@@ -17,6 +17,15 @@ public class StripeConfig {
     @Value("${stripe.webhook-secret:}")
     private String stripeWebhookSecret;
 
+    @Value("${stripe.price-id-monthly:}")
+    private String priceIdMonthly;
+
+    @Value("${stripe.success-url:}")
+    private String successUrl;
+
+    @Value("${stripe.cancel-url:}")
+    private String cancelUrl;
+
     public StripeConfig(Environment environment) {
         this.environment = environment;
     }
@@ -33,6 +42,18 @@ public class StripeConfig {
                     || looksLikePlaceholder(stripeWebhookSecret)) {
                 throw new IllegalStateException(
                         "Stripe: STRIPE_WEBHOOK_SECRET debe estar definida en producción.");
+            }
+            if (priceIdMonthly == null || priceIdMonthly.isBlank()) {
+                throw new IllegalStateException(
+                        "Stripe: STRIPE_PRICE_MONTHLY debe estar definida en producción (ID price_… del producto/plan).");
+            }
+            if (successUrl == null || successUrl.isBlank()) {
+                throw new IllegalStateException(
+                        "Stripe: STRIPE_SUCCESS_URL debe estar definida en producción.");
+            }
+            if (cancelUrl == null || cancelUrl.isBlank()) {
+                throw new IllegalStateException(
+                        "Stripe: STRIPE_CANCEL_URL debe estar definida en producción.");
             }
         }
         Stripe.apiKey = stripeSecretKey != null ? stripeSecretKey : "";

@@ -4,6 +4,7 @@ import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.response.SubscriptionInvoiceDto;
 import com.appgestion.api.service.CurrentUserService;
 import com.appgestion.api.service.StripeService;
+import com.stripe.exception.InvalidRequestException;
 import com.stripe.exception.StripeException;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -38,9 +39,33 @@ public class SubscriptionController {
             Usuario usuario = currentUserService.getCurrentUsuario();
             String checkoutUrl = stripeService.createCheckoutSession(usuario);
             return ResponseEntity.ok(Map.of("checkoutUrl", checkoutUrl));
+        } catch (InvalidRequestException e) {
+            String code = e.getCode();
+            String msg = e.getMessage();
+            log.warn("Stripe checkout invalid request: code={} param={} msg={}", code, e.getParam(), msg);
+            if ("resource_missing".equals(code) && msg != null && msg.contains("price")) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "El ID de precio de Stripe no es válido o no existe en esta cuenta "
+                                + "(revisa STRIPE_PRICE_MONTHLY y que coincida modo test/live)."));
+            }
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Stripe rechazó la solicitud de pago. Si persiste, contacta soporte."));
         } catch (StripeException e) {
-            log.debug("Stripe checkout: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of("error", "No se pudo crear la sesión de pago. Inténtalo más tarde."));
+            log.warn("Stripe checkout: type={} code={} msg={}", e.getClass().getSimpleName(), e.getCode(), e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "No se pudo crear la sesión de pago. Inténtalo más tarde."));
+        } catch (IllegalStateException e) {
+            log.warn("Checkout configuración: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of(
+                            "error",
+                            e.getMessage() != null && !e.getMessage().isBlank()
+                                    ? e.getMessage()
+                                    : "Configuración de Stripe incompleta en el servidor."));
+        } catch (Exception e) {
+            log.error("Checkout inesperado", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error interno al iniciar el pago. Inténtalo más tarde."));
         }
     }
 

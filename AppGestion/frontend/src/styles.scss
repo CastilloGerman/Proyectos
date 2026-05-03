@@ -226,6 +226,10 @@ html.app-dark-theme .mat-mdc-menu-panel {
   --mat-dialog-container-color: var(--app-bg-card);
 }
 
+html.app-dark-theme .mat-mdc-menu-panel .notif-bell-mark-read:not(:disabled) {
+  color: #a5b4fc !important;
+}
+
 html.app-dark-theme .saas-sidebar .sidebar-nav a:hover {
   background: rgba(129, 140, 248, 0.12);
 }

@@ -44,6 +44,14 @@ public class StripeService {
     private String portalReturnUrl;
 
     public String createCheckoutSession(Usuario usuario) throws StripeException {
+        if (priceIdMonthly == null || priceIdMonthly.isBlank()) {
+            throw new IllegalStateException(
+                    "Falta STRIPE_PRICE_MONTHLY en la configuración del servidor (precio recurrente Stripe).");
+        }
+        if (successUrl == null || successUrl.isBlank() || cancelUrl == null || cancelUrl.isBlank()) {
+            throw new IllegalStateException(
+                    "Faltan STRIPE_SUCCESS_URL y/o STRIPE_CANCEL_URL en la configuración del servidor.");
+        }
         String customerId = usuario.getStripeCustomerId();
         if (customerId == null || customerId.isBlank()) {
             customerId = createStripeCustomer(usuario);

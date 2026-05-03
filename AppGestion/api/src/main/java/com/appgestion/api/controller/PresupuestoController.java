@@ -14,6 +14,7 @@ import com.appgestion.api.service.CurrentUserService;
 import com.appgestion.api.service.FacturaService;
 import com.appgestion.api.service.PresupuestoCondicionesService;
 import com.appgestion.api.service.PresupuestoService;
+import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -65,9 +66,10 @@ public class PresupuestoController {
 
     @PutMapping("/mis-condiciones-predeterminadas")
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
-    public void guardarMisCondicionesPredeterminadas(@Valid @RequestBody(required = false) PresupuestoCondicionesPredeterminadasRequest body) {
+    public void guardarMisCondicionesPredeterminadas(
+            @Valid @RequestBody(required = false) @Nullable PresupuestoCondicionesPredeterminadasRequest body) {
         Long uid = currentUserService.getCurrentUsuario().getId();
-        List<String> claves = body != null && body.claves() != null ? body.claves() : List.of();
+        List<String> claves = body != null ? body.claves() : List.of();
         presupuestoService.guardarMisCondicionesPredeterminadas(uid, claves);
     }
 

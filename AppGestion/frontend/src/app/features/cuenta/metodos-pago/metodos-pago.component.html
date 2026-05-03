@@ -7,7 +7,7 @@
     <div>
       <h1 class="mp-page__title">Métodos de cobro</h1>
       <p class="mp-page__subtitle">
-        Aquí defines <strong>cómo te pagan tus clientes</strong> (facturas) y tienes acceso a la <strong>tarjeta de tu suscripción</strong> a esta aplicación.
+        Define <strong>cómo te pagan tus clientes</strong> en las facturas: forma de pago por defecto, datos bancarios o Bizum, y recordatorios de cobro automáticos.
       </p>
     </div>
   </div>
@@ -25,34 +25,6 @@
       </mat-card-content>
     </mat-card>
   } @else {
-    <mat-card class="mp-card mp-card--saas">
-      <mat-card-header>
-        <mat-card-title>Suscripción a la aplicación</mat-card-title>
-        <mat-card-subtitle>Es el pago mensual o anual de tu plan (Stripe), no confundir con lo que cobras a tus clientes.</mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content>
-        <p class="mp-hint">
-          Para cambiar la tarjeta, ver facturas del servicio o cancelar el plan, usa el portal seguro de pago.
-        </p>
-        <div class="mp-actions-row">
-          <button mat-stroked-button type="button" color="primary" (click)="irSuscripcion()">
-            <mat-icon>info</mat-icon>
-            Ver estado del plan
-          </button>
-          @if (portalDisponible()) {
-            <button mat-raised-button type="button" color="primary" (click)="abrirPortalStripe()" [disabled]="openingPortal()">
-              @if (openingPortal()) {
-                <mat-progress-spinner diameter="20" mode="indeterminate" />
-              } @else {
-                <mat-icon>open_in_new</mat-icon>
-              }
-              Tarjeta y facturas (Stripe)
-            </button>
-          }
-        </div>
-      </mat-card-content>
-    </mat-card>
-
     <mat-card class="mp-card">
       <mat-card-header>
         <mat-card-title>Cobro en tus facturas a clientes</mat-card-title>
@@ -178,7 +150,7 @@
     </mat-card>
 
     <p class="mp-footnote">
-      Los datos de IBAN y Bizum se guardan cifrados en tránsito (HTTPS) y solo son accesibles para tu cuenta. No sustituyen al portal de Stripe para tu suscripción del software.
+      Los datos de IBAN y Bizum se guardan cifrados en tránsito (HTTPS) y solo son accesibles para tu cuenta.
     </p>
   }
 </div>
