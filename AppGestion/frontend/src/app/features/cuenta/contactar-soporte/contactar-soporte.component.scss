@@ -26,6 +26,10 @@
   opacity: 0.9;
 }
 
+:host-context(html.app-dark-theme) .head__icon {
+  color: #a5b4fc;
+}
+
 .title {
   margin: 12px 0 8px;
   font-size: 1.5rem;
@@ -51,8 +55,13 @@
   margin: 16px 0 24px;
   padding: 14px 16px;
   border-radius: 10px;
-  background: #f8fafc;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--app-border, rgba(0, 0, 0, 0.08));
+  background: rgba(248, 250, 252, 0.95);
+}
+
+:host-context(html.app-dark-theme) .files-block {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--app-border);
 }
 
 .files-label {
@@ -74,6 +83,40 @@
   display: block;
   width: 100%;
   font-size: 14px;
+  color: var(--app-text-secondary, #475569);
+}
+
+/** Texto "Ningún archivo seleccionado" y coherencia con tema (no solo el botón nativo). */
+.file-input::file-selector-button,
+.file-input::-webkit-file-upload-button {
+  margin-right: 12px;
+  padding: 8px 14px;
+  border-radius: var(--app-radius-sm, 8px);
+  border: 1px solid var(--app-border);
+  background: var(--app-bg-card, #fff);
+  color: var(--app-text-primary, #0f172a);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+:host-context(html.app-dark-theme) .file-input::file-selector-button,
+:host-context(html.app-dark-theme) .file-input::-webkit-file-upload-button {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(148, 163, 184, 0.35);
+  color: var(--app-text-primary);
+}
+
+.file-input::file-selector-button:hover,
+.file-input::-webkit-file-upload-button:hover {
+  border-color: rgba(30, 58, 138, 0.35);
+  background: rgba(30, 64, 175, 0.06);
+}
+
+:host-context(html.app-dark-theme) .file-input::file-selector-button:hover,
+:host-context(html.app-dark-theme) .file-input::-webkit-file-upload-button:hover {
+  border-color: rgba(165, 180, 252, 0.45);
+  background: rgba(99, 102, 241, 0.15);
 }
 
 .file-list {

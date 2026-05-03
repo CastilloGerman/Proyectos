@@ -15,6 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -74,6 +75,8 @@ public class FacturaController {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
         try {
             facturaRecordatorioClienteService.enviarRecordatorioClienteManual(usuarioId, id);
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (IllegalArgumentException | IllegalStateException e) {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.BAD_REQUEST,
@@ -94,6 +97,8 @@ public class FacturaController {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
         try {
             facturaService.enviarPorEmail(id, usuarioId, request);
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (IllegalStateException | IllegalArgumentException e) {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.BAD_REQUEST,

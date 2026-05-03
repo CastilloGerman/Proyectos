@@ -40,7 +40,19 @@ Secuencia orientativa para el **primer go-live**. Los detalles de cada variable 
    Si las organizaciones usarán **Gmail u Outlook** desde la app: `APP_EMAIL_TOKEN_SECRET` y credenciales OAuth con redirect URI `https://tu-api/.../auth/email/oauth/.../callback` — guía en [EMAIL-OAUTH-SETUP.md](EMAIL-OAUTH-SETUP.md).
 
 6. **Inicio de sesión con Google (botón en el login del SPA)**  
-   En Google Cloud Console → credenciales del cliente OAuth usado por el frontend, añade en **Orígenes de JavaScript autorizados** la URL exacta del SPA en producción (incluido esquema y puerto si aplica). Sin esto, el navegador mostrará errores de tipo *origin is not allowed*.
+   El frontend usa [**Google Identity Services**](https://developers.google.com/identity/gsi/web) (credencial JWT en el navegador). Es obligatorio registrar el **origen** donde se sirve el Angular, no la URL del API ni rutas tipo `/login`.
+
+   1. [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → **APIs y servicios** → **Credenciales** → el **ID de cliente de OAuth** de tipo **Aplicación web** cuyo `client_id` coincide con `googleClientId` en `frontend/src/environments/environment.prod.ts` (y `login.component.ts` si está alineado).
+   2. En **Orígenes de JavaScript autorizados**, añade **exactamente** (sin barra final, sin path):
+      - Producción **según donde abre el usuario la app**, p. ej. `https://app.noemiweb.com` si ese es tu SPA (véase también `appPublicUrl` / despliegue real).
+      - Si el mismo SPA responde en **apex y `www`**, registra ambos como orígenes distintos: `https://ejemplo.com` y `https://www.ejemplo.com`.
+      - Desarrollo local: `http://localhost:4200` y `http://127.0.0.1:4200` si usas cualquiera de los dos.
+   3. Ignora errores tipo *«registra redirect URI»* pensando solo en redirects: hasta que el **origen** coincidís, aparecerá **`Error 400: origin_mismatch`**.
+
+   **¿Qué falla si omites algo?**  
+   **`Error 400: origin_mismatch` / política OAuth 2.0** — Google rechaza porque el origen de la pestaña (`https://app.tudominio.com`) no está en la lista.
+
+   **`URI de redirección autorizada`** en el mismo cliente: solo interesa para otros flujos (p. ej. OAuth de Gmail en empresa). Para el botón de login GSI bastan bien los **orígenes JS** si usas únicamente el flujo por credencial.
 
 7. **Migraciones Flyway**  
    Asegura que el esquema esté al día antes o durante el primer arranque con perfil `prod` (`ddl-auto=validate`). Haz un **backup** de la BD antes de migrar en un entorno ya en uso.

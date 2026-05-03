@@ -50,6 +50,12 @@
   line-height: 1.45;
 }
 
+:host-context(html.app-dark-theme) .plant-readonly-banner {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
 .plant-readonly-banner mat-icon {
   flex-shrink: 0;
   font-size: 22px;
@@ -62,7 +68,11 @@
 }
 
 .plant-card--soft {
-  background: var(--app-surface-muted, #f8fafc);
+  background: var(--plant-soft-surface, #f8fafc);
+}
+
+:host-context(html.app-dark-theme) .plant-card--soft {
+  --plant-soft-surface: rgba(255, 255, 255, 0.05);
 }
 
 .plant-field-full {
@@ -182,8 +192,23 @@ button mat-icon {
   border-color: rgba(15, 23, 42, 0.2);
 }
 
+:host-context(html.app-dark-theme) .plant-ph-pill {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--app-border);
+}
+
+:host-context(html.app-dark-theme) .plant-ph-pill:hover {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(165, 180, 252, 0.35);
+}
+
 .plant-ph-pill:focus-visible {
   outline: 2px solid #1e3a8a;
+  outline-offset: 2px;
+}
+
+:host-context(html.app-dark-theme) .plant-ph-pill:focus-visible {
+  outline: 2px solid #93c5fd;
   outline-offset: 2px;
 }
 
@@ -202,8 +227,13 @@ button mat-icon {
   padding: 14px 14px 16px;
   margin-bottom: 12px;
   border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: rgba(248, 250, 252, 0.98);
+  border: 1px solid var(--app-border, #e2e8f0);
+}
+
+:host-context(html.app-dark-theme) .plant-preview__panel--controls {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--app-border);
 }
 
 .plant-preview__heading {
@@ -387,6 +417,90 @@ button mat-icon {
   color: #334155;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* Vista previa “hoja”: en oscuro deja de ser página blanca; misma carta que el resto de la UI. */
+:host-context(html.app-dark-theme) .plant-preview__sheet {
+  background: rgba(0, 0, 0, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+:host-context(html.app-dark-theme) .plant-preview__sheet-inner {
+  background: var(--app-bg-card);
+  color: var(--app-text-primary);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.35),
+    0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+:host-context(html.app-dark-theme) .plant-preview__doc-head {
+  border-bottom-color: var(--app-border);
+}
+
+:host-context(html.app-dark-theme) .plant-preview__logo-ph {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--app-text-muted);
+  color: var(--app-text-secondary);
+}
+
+:host-context(html.app-dark-theme) .plant-preview__logo-wrap {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--app-border);
+}
+
+:host-context(html.app-dark-theme) .plant-preview__empresa-ph {
+  color: var(--app-text-secondary);
+}
+
+:host-context(html.app-dark-theme) .plant-preview__empresa-ph strong {
+  color: var(--app-text-primary);
+}
+
+:host-context(html.app-dark-theme) .plant-preview__doc-title {
+  color: var(--app-text-primary);
+}
+
+:host-context(html.app-dark-theme) .plant-preview__doc-num {
+  color: var(--app-text-muted);
+}
+
+:host-context(html.app-dark-theme) .plant-preview__client {
+  color: var(--app-text-secondary);
+}
+
+:host-context(html.app-dark-theme) .plant-preview__table-ph th,
+:host-context(html.app-dark-theme) .plant-preview__table-ph td {
+  border-color: var(--app-border);
+}
+
+:host-context(html.app-dark-theme) .plant-preview__table-ph th {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--app-text-secondary);
+}
+
+:host-context(html.app-dark-theme) .plant-preview__totals {
+  color: var(--app-text-secondary);
+}
+
+:host-context(html.app-dark-theme) .plant-preview__totals strong {
+  color: var(--app-text-primary);
+}
+
+:host-context(html.app-dark-theme) .plant-preview__foot {
+  border-top-color: var(--app-border);
+}
+
+:host-context(html.app-dark-theme) .plant-preview__foot-label {
+  color: var(--app-text-muted);
+}
+
+:host-context(html.app-dark-theme) .plant-preview__foot-text {
+  color: var(--app-text-secondary);
+}
+
+:host-context(html.app-dark-theme) .plant-preview__mode-hint {
+  color: var(--app-text-secondary);
+  opacity: 1;
 }
 
 .plant-preview__mode-toggle {

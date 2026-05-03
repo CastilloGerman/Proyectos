@@ -20,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,6 +102,8 @@ public class PresupuestoController {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
         try {
             presupuestoService.enviarPorEmail(id, usuarioId, request);
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (IllegalStateException | IllegalArgumentException e) {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.BAD_REQUEST,

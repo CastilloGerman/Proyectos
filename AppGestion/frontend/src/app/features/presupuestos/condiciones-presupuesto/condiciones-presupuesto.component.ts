@@ -83,25 +83,25 @@ import {
       margin: 0 0 0.35rem 0;
       font-size: 1rem;
       font-weight: 600;
-      color: #1e293b;
+      color: var(--app-text-primary, #0f172a);
     }
     .cond-sub {
       margin: 0 0 0.75rem 0;
       font-size: 0.8125rem;
-      color: #64748b;
+      color: var(--app-text-secondary, #64748b);
       line-height: 1.4;
     }
     .cond-empty {
       margin: 0;
       font-size: 0.875rem;
-      color: #94a3b8;
+      color: var(--app-text-muted, #94a3b8);
     }
     .cond-row {
       display: flex;
       align-items: flex-start;
       gap: 0.75rem;
       padding: 0.5rem 0;
-      border-bottom: 1px solid #f1f5f9;
+      border-bottom: 1px solid var(--app-border, #f1f5f9);
     }
     .cond-row:last-child {
       border-bottom: none;
@@ -118,7 +118,7 @@ import {
       flex: 1;
       font-size: 0.9rem;
       line-height: 1.45;
-      color: #334155;
+      color: var(--app-text-primary, #334155);
     }
     .nota-field {
       width: 100%;

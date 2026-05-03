@@ -252,3 +252,9 @@ html.app-dark-theme .mat-mdc-card-title {
 html.app-dark-theme .mat-mdc-card-subtitle {
   color: var(--app-text-secondary);
 }
+
+/** Botón outlined (stroked) con color primary: texto demasiado oscuro sobre tarjetas en tema oscuro. */
+html.app-dark-theme .mat-mdc-outlined-button.mat-primary:not(:disabled):not(.mat-mdc-button-disabled) {
+  --mat-button-outlined-label-text-color: #e0e7ff;
+  --mat-button-outlined-outline-color: rgba(199, 210, 254, 0.45);
+}

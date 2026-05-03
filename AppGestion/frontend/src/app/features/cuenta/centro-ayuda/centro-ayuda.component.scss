@@ -88,15 +88,15 @@
   gap: 14px;
   padding: 14px 16px;
   border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: #fff;
+  border: 1px solid var(--app-border, rgba(0, 0, 0, 0.08));
+  background: var(--app-bg-card, #fff);
   text-decoration: none;
-  color: inherit;
+  color: var(--app-text-primary, #0f172a);
   transition: background 0.15s ease, border-color 0.15s ease;
 
   &:hover {
-    background: rgba(30, 64, 175, 0.04);
-    border-color: rgba(30, 64, 175, 0.2);
+    border-color: rgba(30, 58, 138, 0.22);
+    background: rgba(30, 64, 175, 0.05);
   }
 
   > mat-icon:first-child {
@@ -105,9 +105,20 @@
   }
 }
 
+:host-context(html.app-dark-theme) .help-step {
+  &:hover {
+    border-color: rgba(165, 180, 252, 0.35);
+    background: rgba(99, 102, 241, 0.1);
+  }
+
+  > mat-icon:first-child {
+    color: #a5b4fc;
+  }
+}
+
 .help-step__chevron {
   margin-left: auto;
-  color: #94a3b8;
+  color: var(--app-text-muted, #94a3b8);
   flex-shrink: 0;
 }
 
@@ -153,6 +164,10 @@
   }
 }
 
+:host-context(html.app-dark-theme) .help-videos a {
+  color: #a5b4fc;
+}
+
 .help-videos__meta {
   display: block;
   font-size: 13px;
@@ -169,9 +184,15 @@
   margin: 0;
   padding: 16px;
   border-radius: 10px;
-  background: #f8fafc;
+  border: 1px solid var(--app-border, transparent);
+  background: rgba(248, 250, 252, 0.85);
   color: var(--app-text-secondary, #64748b);
   font-size: 14px;
+}
+
+:host-context(html.app-dark-theme) .help-empty {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--app-border);
 }
 
 .help-faq {
@@ -193,6 +214,11 @@
   border-radius: var(--app-radius-md, 12px);
   background: rgba(30, 64, 175, 0.06);
   border: 1px solid rgba(30, 64, 175, 0.12);
+}
+
+:host-context(html.app-dark-theme) .help-cta {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(165, 180, 252, 0.2);
 }
 
 .help-cta__text {

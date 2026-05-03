@@ -10,7 +10,9 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -73,6 +75,23 @@ public class ResendEmailClient {
                     .body(json)
                     .retrieve()
                     .toBodilessEntity();
+        } catch (RestClientResponseException e) {
+            String snippet = "";
+            try {
+                String bodyStr = e.getResponseBodyAsString(StandardCharsets.UTF_8);
+                if (StringUtils.hasText(bodyStr)) {
+                    snippet = bodyStr.length() > 512 ? bodyStr.substring(0, 512) + "…" : bodyStr;
+                }
+            } catch (Exception ignored) {
+                snippet = "(sin cuerpo)";
+            }
+            log.warn(
+                    "email_dispatch_failed provider=resend http_status={} detail={}",
+                    e.getStatusCode().value(),
+                    snippet);
+            throw new IllegalStateException(
+                    "Resend rechazó el envío (%d): %s".formatted(e.getStatusCode().value(), snippet),
+                    e);
         } catch (Exception e) {
             log.warn("email_dispatch_failed provider=resend reason={}", e.getMessage());
             throw new IllegalStateException("Resend rechazó el envío: " + e.getMessage(), e);
