@@ -267,6 +267,15 @@ import { startWith } from 'rxjs';
 
     .items-section {
       margin: 24px 0;
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid var(--app-border, rgba(15, 23, 42, 0.08));
+      background: rgba(30, 58, 138, 0.05);
+    }
+
+    :host-context(html.app-dark-theme) .items-section {
+      background: rgba(96, 165, 250, 0.1);
+      border-color: rgba(96, 165, 250, 0.28);
     }
 
     .items-header {
@@ -276,6 +285,13 @@ import { startWith } from 'rxjs';
       margin-bottom: 16px;
     }
 
+    .items-header h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--app-text-primary, #0f172a);
+    }
+
     .item-row {
       display: flex;
       flex-wrap: wrap;
@@ -283,8 +299,14 @@ import { startWith } from 'rxjs';
       align-items: center;
       margin-bottom: 16px;
       padding: 16px;
-      background: #f5f5f5;
+      background: var(--app-bg-card, #fff);
       border-radius: 8px;
+      border: 1px solid var(--app-border, rgba(15, 23, 42, 0.12));
+    }
+
+    :host-context(html.app-dark-theme) .item-row {
+      background: rgba(15, 18, 24, 0.92);
+      border-color: rgba(255, 255, 255, 0.1);
     }
 
     .item-row mat-form-field {
@@ -321,13 +343,18 @@ import { startWith } from 'rxjs';
       margin: 28px 0 20px;
     }
 
+    .cobros-section h3,
+    .payment-link-section h3 {
+      color: var(--app-text-primary, #0f172a);
+    }
+
     .cobros-section, .payment-link-section {
       margin-bottom: 24px;
     }
 
     .hint-cobros {
       font-size: 13px;
-      color: rgba(0,0,0,0.6);
+      color: var(--app-text-secondary, rgba(0, 0, 0, 0.6));
       margin: 0 0 12px;
     }
 
@@ -339,14 +366,15 @@ import { startWith } from 'rxjs';
     }
 
     .cobros-table th, .cobros-table td {
-      border-bottom: 1px solid #e0e0e0;
+      border-bottom: 1px solid var(--app-border, #e0e0e0);
       padding: 8px 10px;
       text-align: left;
+      color: var(--app-text-primary, inherit);
     }
 
     .cobros-table th {
       font-weight: 600;
-      color: #555;
+      color: var(--app-text-secondary, #555);
     }
 
     .nuevo-cobro-row {
@@ -378,9 +406,15 @@ import { startWith } from 'rxjs';
       min-width: 200px;
       font-size: 11px;
       word-break: break-all;
-      background: #f5f5f5;
+      background: rgba(15, 23, 42, 0.06);
+      color: var(--app-text-primary, #0f172a);
       padding: 8px 10px;
       border-radius: 4px;
+      border: 1px solid var(--app-border, rgba(15, 23, 42, 0.08));
+    }
+
+    :host-context(html.app-dark-theme) .payment-url {
+      background: rgba(255, 255, 255, 0.06);
     }
   `]
 })

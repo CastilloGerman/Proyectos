@@ -29,9 +29,9 @@ import { AuthService } from '../../../core/auth/auth.service';
           <p class="forgot-subtitle">Indica tu email y te enviaremos un enlace para restablecer la contraseña.</p>
           @if (!sent) {
             <form [formGroup]="form" (ngSubmit)="onSubmit()" class="forgot-form">
-              <mat-form-field appearance="outline" class="full-width">
+              <mat-form-field appearance="outline" floatLabel="always" class="full-width">
                 <mat-label>Email</mat-label>
-                <input matInput formControlName="email" type="email" placeholder="tu@email.com">
+                <input matInput formControlName="email" type="email" placeholder="tu@email.com" autocomplete="email">
                 @if (form.get('email')?.hasError('required') && form.get('email')?.touched) {
                   <mat-error>El email es obligatorio</mat-error>
                 }
@@ -104,10 +104,100 @@ import { AuthService } from '../../../core/auth/auth.service';
       line-height: 1.4;
     }
 
+    .forgot-form {
+      display: block;
+    }
+
     .forgot-form .full-width {
       width: 100%;
       display: block;
       margin-bottom: 8px;
+    }
+
+    /*
+     * Sobre tarjeta clara: forzar tokens del outlined field. Si html tiene tema oscuro,
+     * Material define bordes/etiquetas claros (pensados para fondo oscuro) y el borde casi
+     * desaparece sobre blanco hasta el foco.
+     */
+    .forgot-card .forgot-form .mat-mdc-form-field {
+      --mdc-outlined-text-field-outline-color: rgba(51, 65, 85, 0.45);
+      --mdc-outlined-text-field-hover-outline-color: rgba(30, 58, 138, 0.55);
+      --mdc-outlined-text-field-focus-outline-color: #39488e;
+      --mdc-outlined-text-field-input-text-color: #0f172a;
+      --mdc-outlined-text-field-label-text-color: #64748b;
+      --mdc-outlined-text-field-hover-label-text-color: #475569;
+      --mdc-outlined-text-field-focus-label-text-color: #39488e;
+      --mat-form-field-outlined-label-text-color: #64748b;
+      --mat-form-field-outlined-label-text-populated-color: #64748b;
+      --mat-form-field-error-text-color: #b91c1c;
+    }
+
+    .forgot-form .full-width ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+      margin-bottom: 8px;
+    }
+
+    .forgot-form .full-width ::ng-deep .mat-mdc-text-field-wrapper {
+      border-radius: 14px;
+    }
+
+    .forgot-form .full-width ::ng-deep .mdc-notched-outline__notch {
+      min-width: 64px;
+    }
+
+    .forgot-form .full-width ::ng-deep .mdc-notched-outline__leading,
+    .forgot-form .full-width ::ng-deep .mdc-notched-outline__notch,
+    .forgot-form .full-width ::ng-deep .mdc-notched-outline__trailing {
+      transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .forgot-card .forgot-form input::placeholder {
+      color: #94a3b8;
+      opacity: 1;
+    }
+
+    :host-context(html.app-dark-theme) .forgot-wrapper {
+      background: linear-gradient(165deg, #0c1220 0%, #141b2d 45%, #0f1419 100%);
+    }
+
+    :host-context(html.app-dark-theme) .forgot-card {
+      background: var(--app-bg-card, #1a222c);
+      border: 1px solid var(--app-border, rgba(255, 255, 255, 0.1));
+      box-shadow: var(--app-shadow-lg, 0 12px 40px rgba(0, 0, 0, 0.5));
+      color: var(--app-text-primary, #f8fafc);
+    }
+
+    :host-context(html.app-dark-theme) .forgot-title {
+      color: var(--app-text-primary, #f8fafc);
+    }
+
+    :host-context(html.app-dark-theme) .forgot-subtitle {
+      color: var(--app-text-secondary, #cbd5e1);
+    }
+
+    :host-context(html.app-dark-theme) .forgot-card .forgot-form .mat-mdc-form-field {
+      --mdc-outlined-text-field-input-text-color: var(--app-text-primary, #f8fafc);
+      --mdc-outlined-text-field-label-text-color: var(--app-text-secondary, #cbd5e1);
+      --mdc-outlined-text-field-hover-label-text-color: var(--app-text-primary, #f8fafc);
+      --mdc-outlined-text-field-focus-label-text-color: var(--app-text-secondary, #cbd5e1);
+      --mdc-outlined-text-field-outline-color: var(--app-border, rgba(255, 255, 255, 0.22));
+      --mdc-outlined-text-field-hover-outline-color: rgba(148, 163, 184, 0.45);
+      --mdc-outlined-text-field-focus-outline-color: #818cf8;
+      --mat-form-field-outlined-label-text-color: var(--app-text-secondary, #cbd5e1);
+      --mat-form-field-outlined-label-text-populated-color: var(--app-text-secondary, #cbd5e1);
+      --mat-form-field-error-text-color: #fca5a5;
+    }
+
+    :host-context(html.app-dark-theme) .forgot-card .forgot-form input::placeholder {
+      color: var(--app-text-muted, #94a3b8);
+      opacity: 1;
+    }
+
+    :host-context(html.app-dark-theme) .back-link {
+      color: var(--app-text-secondary, #cbd5e1);
+    }
+
+    :host-context(html.app-dark-theme) .back-link:hover {
+      color: #a5b4fc;
     }
 
     .submit-btn {
@@ -139,6 +229,11 @@ import { AuthService } from '../../../core/auth/auth.service';
 
     .back-link:hover {
       color: #1e3a8a;
+    }
+
+    :host-context(html.app-dark-theme) .forgot-success {
+      background: rgba(34, 197, 94, 0.12);
+      color: #86efac;
     }
 
     mat-spinner {

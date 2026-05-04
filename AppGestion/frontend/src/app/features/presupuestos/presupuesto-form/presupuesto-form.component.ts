@@ -366,16 +366,19 @@ const IVA_RATE = 0.21;
     .form-row mat-form-field { flex: 1; min-width: 200px; }
     .cliente-block { flex-direction: column; align-items: stretch; }
     .cliente-modo { width: 100%; margin-bottom: 8px; }
-    .modo-label { display: block; font-size: 12px; color: #666; margin-bottom: 8px; }
+    .modo-label { display: block; font-size: 12px; color: var(--app-text-secondary, #64748b); margin-bottom: 8px; }
     .modo-radios { display: flex; flex-wrap: wrap; gap: 16px; }
     .opt-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .badge-fiscal {
       font-size: 11px;
       font-weight: 500;
-      color: #64748b;
-      background: #f1f5f9;
+      color: var(--app-text-secondary, #64748b);
+      background: rgba(15, 23, 42, 0.06);
       padding: 2px 8px;
       border-radius: 6px;
+    }
+    :host-context(html.app-dark-theme) .badge-fiscal {
+      background: rgba(148, 163, 184, 0.16);
     }
     .nuevo-rapido { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; width: 100%; }
     .nombre-nuevo { flex: 1; min-width: 200px; }
@@ -383,19 +386,52 @@ const IVA_RATE = 0.21;
     .section {
       margin: 24px 0;
       padding: 20px;
-      background: #fafafa;
+      background: var(--app-bg-card, #fff);
       border-radius: 8px;
-      border: 1px solid #eee;
+      border: 1px solid var(--app-border, rgba(15, 23, 42, 0.08));
     }
-    .section h3 { margin: 0 0 16px 0; font-size: 16px; }
+    .section h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--app-text-primary, #0f172a);
+    }
 
-    .materiales-section { background: #f0f7ff; border-color: #c5d9f0; }
-    .tareas-section { background: #fff8f0; border-color: #f0d9c5; }
-    .discount-section { background: #f5f5f5; border-color: #e0e0e0; }
-    .cost-summary { background: #e8f5e9; border: 1px solid #c8e6c9; }
-    .condiciones-compact { background: #f8fafc; border-color: #e2e8f0; padding-top: 16px; padding-bottom: 16px; }
-    .anticipo-section { background: #fff8e6; border-color: #ffe0a3; }
-    .hint-anticipo { font-size: 12px; color: #6d4c00; margin: 0 0 12px 0; }
+    /* Tintes suaves (rgba) en lugar de fondos claros fijos — compatibles con modo oscuro */
+    .materiales-section {
+      background: rgba(30, 58, 138, 0.05);
+      border-color: rgba(30, 58, 138, 0.18);
+    }
+    .tareas-section {
+      background: rgba(180, 83, 9, 0.07);
+      border-color: rgba(180, 83, 9, 0.22);
+    }
+    .discount-section {
+      background: rgba(15, 23, 42, 0.03);
+      border-color: var(--app-border, rgba(15, 23, 42, 0.08));
+    }
+    .cost-summary {
+      background: rgba(46, 125, 50, 0.09);
+      border: 1px solid rgba(46, 125, 50, 0.28);
+    }
+    .condiciones-compact {
+      background: rgba(15, 23, 42, 0.025);
+      border-color: var(--app-border, rgba(15, 23, 42, 0.08));
+      padding-top: 16px;
+      padding-bottom: 16px;
+    }
+    .anticipo-section {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+    .hint-anticipo {
+      font-size: 12px;
+      color: #92400e;
+      margin: 0 0 12px 0;
+    }
+    :host-context(html.app-dark-theme) .hint-anticipo {
+      color: #fcd34d;
+    }
     .anticipo-resumen-block { margin-top: 8px; }
     .resumen-grid {
       display: grid;
@@ -407,17 +443,64 @@ const IVA_RATE = 0.21;
     }
     .anticipo-btn { margin-top: 8px; }
     .hint-ok { font-size: 13px; color: #2e7d32; margin: 8px 0 0 0; }
-    .hint-estado { font-size: 13px; color: #5d4037; background: #fff; padding: 10px 12px; border-radius: 8px; border: 1px solid #ffe0a3; margin-bottom: 12px; }
-    .anticipo-cartel-solo { background: #fff8e6; border-color: #ffe0a3; }
-    .text-muted { color: rgba(0,0,0,0.45); }
+    :host-context(html.app-dark-theme) .hint-ok { color: #86efac; }
+    .hint-estado {
+      font-size: 13px;
+      color: var(--app-text-primary, #0f172a);
+      background: var(--app-bg-card, #fff);
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(245, 158, 11, 0.45);
+      margin-bottom: 12px;
+    }
+    :host-context(html.app-dark-theme) .hint-estado {
+      border-color: rgba(251, 191, 36, 0.35);
+    }
+    .anticipo-cartel-solo {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+    .text-muted { color: var(--app-text-muted, rgba(0, 0, 0, 0.45)); }
+
+    :host-context(html.app-dark-theme) .materiales-section {
+      background: rgba(96, 165, 250, 0.1);
+      border-color: rgba(96, 165, 250, 0.28);
+    }
+    :host-context(html.app-dark-theme) .tareas-section {
+      border-color: rgba(251, 191, 36, 0.28);
+      background: rgba(251, 191, 36, 0.1);
+    }
+    :host-context(html.app-dark-theme) .discount-section {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    :host-context(html.app-dark-theme) .cost-summary {
+      background: rgba(129, 199, 132, 0.14);
+      border-color: rgba(129, 199, 132, 0.35);
+    }
+    :host-context(html.app-dark-theme) .condiciones-compact {
+      background: rgba(255, 255, 255, 0.04);
+    }
+    :host-context(html.app-dark-theme) .anticipo-section,
+    :host-context(html.app-dark-theme) .anticipo-cartel-solo {
+      background: rgba(251, 191, 36, 0.12);
+      border-color: rgba(251, 191, 36, 0.35);
+    }
 
     .top-materiales { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
-    .top-label { font-size: 12px; color: #666; }
+    .top-label { font-size: 12px; color: var(--app-text-secondary, #64748b); }
     .chip-btn { font-size: 12px; }
 
     .item-row {
       display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
-      margin-bottom: 16px; padding: 16px; background: #fff; border-radius: 8px; border: 1px solid #e0e0e0;
+      margin-bottom: 16px;
+      padding: 16px;
+      background: var(--app-bg-card, #fff);
+      border-radius: 8px;
+      border: 1px solid var(--app-border, rgba(15, 23, 42, 0.12));
+    }
+    :host-context(html.app-dark-theme) .item-row {
+      background: rgba(15, 18, 24, 0.85);
+      border-color: rgba(255, 255, 255, 0.1);
     }
     .item-row mat-form-field { flex: 1; min-width: 120px; }
     .item-row .material-select { min-width: 200px; }
@@ -432,9 +515,24 @@ const IVA_RATE = 0.21;
     .discount-fields mat-form-field { max-width: 120px; }
 
     .summary-rows { display: flex; flex-direction: column; gap: 8px; }
-    .summary-row { display: flex; justify-content: space-between; font-size: 14px; }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      color: var(--app-text-primary, #0f172a);
+    }
     .summary-row.discount { color: #2e7d32; }
-    .summary-row.total { font-weight: 600; font-size: 18px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #a5d6a7; }
+    :host-context(html.app-dark-theme) .summary-row.discount { color: #86efac; }
+    .summary-row.total {
+      font-weight: 600;
+      font-size: 18px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(46, 125, 50, 0.35);
+    }
+    :host-context(html.app-dark-theme) .summary-row.total {
+      border-top-color: rgba(129, 199, 132, 0.4);
+    }
 
     .actions { display: flex; gap: 16px; margin-top: 24px; }
   `]

@@ -101,6 +101,8 @@ app:
       # Borra registros cuyo expiresAt es anterior a (ahora - N días). Mínimo efectivo: 1.
       retention-days: ${SESSIONS_CLEANUP_RETENTION_DAYS:30}
   # Email: outbox en BD + worker; modo system = Resend. En producción configura SPF/DKIM/DMARC del dominio de envío según el proveedor.
+  # Importante (Resend): si system-from usa onboarding@resend.dev, solo podrás entregar a la cuenta con la que te registraste en Resend.
+  # Para enviar a cualquier destinatario (p. ej. recuperación de contraseña), verifica tu dominio en Resend y usa APP_EMAIL_SYSTEM_FROM con remitente de ese dominio.
   email:
     # Clave para cifrar tokens OAuth (obligatoria si usas Gmail/Outlook; en local el perfil define un valor por defecto)
     token-encryption-key: ${APP_EMAIL_TOKEN_SECRET:}

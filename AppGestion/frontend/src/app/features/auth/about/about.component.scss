@@ -242,8 +242,13 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  min-width: 4.5rem;
+  /* Cuadrado fijo: si el grid alarga la celda (móvil), el anillo no debe llenar todo el ancho */
+  width: clamp(4rem, 22vw, 5.35rem);
+  max-width: min(5.35rem, 100%);
+  aspect-ratio: 1;
   padding: 0.5rem;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .about-stat-ring {
@@ -506,8 +511,8 @@
 
   .about-stat--timer {
     grid-column: 1 / -1;
-    flex-direction: row;
-    min-height: 4rem;
+    justify-self: center;
+    flex-direction: column;
   }
 }
 
