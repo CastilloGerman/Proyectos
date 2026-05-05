@@ -12,6 +12,8 @@ import com.stripe.model.Invoice;
 import com.stripe.model.StripeObject;
 import com.stripe.model.Subscription;
 import com.stripe.model.checkout.Session;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,8 @@ import java.time.Instant;
 
 @Service
 public class DefaultStripeWebhookService implements StripeWebhookService {
+
+    private static final Logger log = LoggerFactory.getLogger(DefaultStripeWebhookService.class);
 
     private static final String METADATA_USUARIO_ID = "usuario_id";
 
@@ -106,7 +110,8 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
         try {
             subscription = subscriptionFetcher.fetch(subscriptionId);
         } catch (StripeException e) {
-            return;
+            log.warn("No se pudo recuperar la suscripción Stripe {} para activar checkout {}", subscriptionId, session.getId(), e);
+            throw new IllegalStateException("No se pudo recuperar la suscripción Stripe para activar el checkout", e);
         }
 
         String status = subscription.getStatus();
