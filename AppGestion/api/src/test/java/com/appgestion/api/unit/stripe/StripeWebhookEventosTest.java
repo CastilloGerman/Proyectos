@@ -12,6 +12,7 @@ import com.stripe.model.EventDataObjectDeserializer;
 import com.stripe.model.Invoice;
 import com.stripe.model.StripeObject;
 import com.stripe.model.Subscription;
+import com.stripe.model.checkout.Session;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,12 +21,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -110,6 +114,28 @@ class StripeWebhookEventosTest {
         stripeWebhookService.processWebhook("{}", "sig");
 
         verify(subscriptionService).updateSubscription(eq("sub_inv"), eq("active"), isNull());
+    }
+
+    @Test
+    void checkoutCompleted_siStripeNoDevuelveSuscripcion_noMarcaEventoProcesado() throws Exception {
+        Session session = org.mockito.Mockito.mock(Session.class);
+        when(session.getId()).thenReturn("cs_retry");
+        when(session.getMetadata()).thenReturn(Map.of("usuario_id", "42"));
+        when(session.getCustomer()).thenReturn("cus_retry");
+        when(session.getSubscription()).thenReturn("sub_retry");
+
+        Event event = eventWith("evt_retry", "checkout.session.completed", session);
+
+        when(webhookEventParser.parse(any(), any(), eq(SECRET))).thenReturn(event);
+        when(processedEventRepository.existsByEventId("evt_retry")).thenReturn(false);
+        when(subscriptionFetcher.fetch("sub_retry")).thenThrow(mock(com.stripe.exception.StripeException.class));
+
+        assertThatThrownBy(() -> stripeWebhookService.processWebhook("{}", "sig"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("suscripción Stripe");
+
+        verify(subscriptionService, never()).activateSubscription(any(), any(), any(), any(), any());
+        verify(processedEventRepository, never()).save(any(ProcessedStripeEvent.class));
     }
 
     @Test
