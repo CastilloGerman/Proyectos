@@ -30,7 +30,6 @@ import { DevApiService } from '../core/services/dev-api.service';
 import { daysFromTodayToDateEnd } from '../shared/utils/trial-days.util';
 import { TRIAL_BANNER_WARNING_DAYS, TRIAL_DAYS_LEFT_FALLBACK } from '../app-layout.constants';
 import { messageFromHttpError } from '../shared/utils/http-error-message.util';
-import { LanguageSwitcherComponent } from '../shared/language-switcher/language-switcher.component';
 
 @Component({
   selector: 'app-authenticated-shell',
@@ -51,7 +50,6 @@ import { LanguageSwitcherComponent } from '../shared/language-switcher/language-
     SearchBarComponent,
     UserDropdownComponent,
     TranslateModule,
-    LanguageSwitcherComponent,
   ],
   templateUrl: './app-authenticated-shell.component.html',
   styleUrl: './app-authenticated-shell.component.scss',

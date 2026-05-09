@@ -41,6 +41,44 @@
   "common": {
     "close": "Închide"
   },
+  "pref": {
+    "uiLanguageTitle": "Limba aplicației",
+    "uiLanguageHint": "Meniuri și texte ale interfeței. Se salvează în acest browser, separat de setarea regională de mai jos (date și sume pe server).",
+    "localeLabel": "Setări regionale",
+    "localeHint": "Formatul datelor, numerelor și sumelor asociate contului tău pe server."
+  },
+  "auth": {
+    "login": {
+      "tagline": "Facturarea ta în 30 de secunde",
+      "subtitle": "Gestionează clienți, devize și facturi într-un singur loc.",
+      "title": "Conectare",
+      "email": "E-mail",
+      "emailHint": "ex. nume@email.com",
+      "emailRequired": "E-mailul este obligatoriu",
+      "emailInvalid": "E-mail invalid",
+      "password": "Parolă",
+      "passwordRequired": "Parola este obligatorie",
+      "totpLabel": "Cod de verificare (2FA)",
+      "sixDigitsHint": "6 cifre",
+      "totpRequired": "Introdu codul de 6 cifre din aplicație",
+      "totpPattern": "Trebuie să aibă 6 cifre",
+      "totpHint": "Deschide aplicația de autentificare și copiază codul curent.",
+      "submit": "Intră",
+      "dividerOr": "sau",
+      "googleContinue": "Continuă cu Google",
+      "googleTotpIntro": "Contul tău are 2FA activ. Introdu codul din aplicație.",
+      "googleTotpLabel": "Cod 2FA",
+      "googleTotpSubmit": "Confirmă și conectează-te",
+      "forgotPassword": "Ai uitat parola?",
+      "register": "Nu ai cont? Înregistrează-te",
+      "scrollAria": "Derulează la secțiunea despre Noemí",
+      "scrollLabel": "Povestea noastră",
+      "snackbarGoogleClient": "Configurează googleClientId în environment pentru Google.",
+      "snackbarTotpApp": "Introdu codul din aplicația de autentificare",
+      "invalidCredentials": "Date de autentificare incorecte",
+      "googleLoginError": "Nu s-a putut conecta cu Google"
+    }
+  },
   "lang": {
     "switcherAria": "Schimbă limba aplicației"
   }

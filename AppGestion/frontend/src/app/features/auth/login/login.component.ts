@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, OnInit, ViewChild, ElementRef, signal } from '@angular/core';
+import { AfterViewInit, Component, OnInit, ViewChild, ElementRef, signal, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AboutComponent } from '../about/about.component';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AuthService } from '../../../core/auth/auth.service';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 /** Client ID de Google para el botón "Iniciar con Google" (mismo que en environment). */
 const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.apps.googleusercontent.com';
@@ -24,6 +25,7 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
         MatProgressSpinnerModule,
         MatSnackBarModule,
         AboutComponent,
+        TranslateModule,
     ],
     template: `
     <div class="login-page" id="login-page-top">
@@ -33,31 +35,31 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
           <div class="login-logo">
             <img src="assets/noemi-logo.png" alt="Noemí" class="login-logo-img" />
           </div>
-          <p class="login-tagline">Tu facturación en 30 segundos</p>
-          <p class="login-subtitle">Gestiona clientes, presupuestos y facturas en un solo lugar.</p>
-          <h1 class="login-title">Iniciar sesión</h1>
+          <p class="login-tagline">{{ 'auth.login.tagline' | translate }}</p>
+          <p class="login-subtitle">{{ 'auth.login.subtitle' | translate }}</p>
+          <h1 class="login-title">{{ 'auth.login.title' | translate }}</h1>
           <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form">
             <mat-form-field appearance="outline" floatLabel="always" class="full-width">
-              <mat-label>Email</mat-label>
+              <mat-label>{{ 'auth.login.email' | translate }}</mat-label>
               <input matInput formControlName="email" type="email" autocomplete="email">
-              <mat-hint class="login-email-hint">ej. nombre&#64;correo.com</mat-hint>
+              <mat-hint class="login-email-hint">{{ 'auth.login.emailHint' | translate }}</mat-hint>
               @if (form.get('email')?.hasError('required') && form.get('email')?.touched) {
-                <mat-error>El email es obligatorio</mat-error>
+                <mat-error>{{ 'auth.login.emailRequired' | translate }}</mat-error>
               }
               @if (form.get('email')?.hasError('email')) {
-                <mat-error>Email inválido</mat-error>
+                <mat-error>{{ 'auth.login.emailInvalid' | translate }}</mat-error>
               }
             </mat-form-field>
             <mat-form-field appearance="outline" floatLabel="always" class="full-width">
-              <mat-label>Contraseña</mat-label>
+              <mat-label>{{ 'auth.login.password' | translate }}</mat-label>
               <input matInput formControlName="password" type="password" autocomplete="current-password">
               @if (form.get('password')?.hasError('required') && form.get('password')?.touched) {
-                <mat-error>La contraseña es obligatoria</mat-error>
+                <mat-error>{{ 'auth.login.passwordRequired' | translate }}</mat-error>
               }
             </mat-form-field>
             @if (totpStep()) {
               <mat-form-field appearance="outline" floatLabel="always" class="full-width">
-                <mat-label>Código de verificación (2FA)</mat-label>
+                <mat-label>{{ 'auth.login.totpLabel' | translate }}</mat-label>
                 <input
                   matInput
                   formControlName="totpCode"
@@ -65,41 +67,41 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
                   maxlength="6"
                   autocomplete="one-time-code"
                 />
-                <mat-hint>6 dígitos</mat-hint>
+                <mat-hint>{{ 'auth.login.sixDigitsHint' | translate }}</mat-hint>
                 @if (form.get('totpCode')?.hasError('required') && form.get('totpCode')?.touched) {
-                  <mat-error>Introduce el código de 6 dígitos de tu app</mat-error>
+                  <mat-error>{{ 'auth.login.totpRequired' | translate }}</mat-error>
                 }
                 @if (form.get('totpCode')?.hasError('pattern') && form.get('totpCode')?.touched) {
-                  <mat-error>Debe tener 6 dígitos</mat-error>
+                  <mat-error>{{ 'auth.login.totpPattern' | translate }}</mat-error>
                 }
               </mat-form-field>
-              <p class="login-totp-hint">Abre tu app de autenticación y copia el código actual.</p>
+              <p class="login-totp-hint">{{ 'auth.login.totpHint' | translate }}</p>
             }
             <button mat-raised-button color="primary" type="submit" [disabled]="loading" class="submit-btn">
               @if (loading) {
                 <mat-spinner diameter="24"></mat-spinner>
               } @else {
-                Entrar
+                {{ 'auth.login.submit' | translate }}
               }
             </button>
           </form>
           <div class="login-divider">
-            <span>o</span>
+            <span>{{ 'auth.login.dividerOr' | translate }}</span>
           </div>
           <div class="google-button-wrap">
             <div #googleButtonRef class="google-button-inner"></div>
             @if (!googleClientId) {
               <button type="button" class="google-fallback-btn" (click)="onGoogleFallback()">
                 <span class="google-g-letter">G</span>
-                Continuar con Google
+                {{ 'auth.login.googleContinue' | translate }}
               </button>
             }
           </div>
           @if (googleTotpStep()) {
             <div class="google-totp-box">
-              <p class="login-totp-hint">Tu cuenta tiene 2FA activo. Introduce el código de tu app.</p>
+              <p class="login-totp-hint">{{ 'auth.login.googleTotpIntro' | translate }}</p>
               <mat-form-field appearance="outline" floatLabel="always" class="full-width">
-                <mat-label>Código 2FA</mat-label>
+                <mat-label>{{ 'auth.login.googleTotpLabel' | translate }}</mat-label>
                 <input
                   matInput
                   [(ngModel)]="googleTotpCode"
@@ -108,7 +110,7 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
                   maxlength="6"
                   autocomplete="one-time-code"
                 />
-                <mat-hint>6 dígitos</mat-hint>
+                <mat-hint>{{ 'auth.login.sixDigitsHint' | translate }}</mat-hint>
               </mat-form-field>
               <button
                 mat-stroked-button
@@ -117,21 +119,21 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
                 [disabled]="loading || !isSixDigits(googleTotpCode)"
                 (click)="submitGoogleTotp()"
               >
-                Confirmar e iniciar sesión
+                {{ 'auth.login.googleTotpSubmit' | translate }}
               </button>
             </div>
           }
-          <a routerLink="/forgot-password" class="forgot-link">¿Olvidaste tu contraseña?</a>
-          <a routerLink="/register" class="register-link">¿No tienes cuenta? Regístrate</a>
+          <a routerLink="/forgot-password" class="forgot-link">{{ 'auth.login.forgotPassword' | translate }}</a>
+          <a routerLink="/register" class="register-link">{{ 'auth.login.register' | translate }}</a>
         </div>
       </div>
       <button
         type="button"
         class="scroll-down-btn"
-        aria-label="Desplazar a la sección sobre Noemí"
+        [attr.aria-label]="'auth.login.scrollAria' | translate"
         (click)="scrollToAbout()"
       >
-        <span class="scroll-down-btn-label">Nuestra historia</span>
+        <span class="scroll-down-btn-label">{{ 'auth.login.scrollLabel' | translate }}</span>
         <svg class="scroll-down-btn-icon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path fill="currentColor" d="M12 15.5l-6-6 1.4-1.4L12 12.7l4.6-4.6L18 9.5l-6 6z"/>
         </svg>
@@ -552,6 +554,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
   private static gsiInitializedForClientId: string | null = null;
   /** Valor fijo para evitar que el chunk lazy reciba un environment sin googleClientId; el botón real siempre se muestra. */
   readonly googleClientId = DEFAULT_GOOGLE_CLIENT_ID;
+  private readonly translate = inject(TranslateService);
 
   constructor(
     private fb: FormBuilder,
@@ -636,7 +639,11 @@ export class LoginComponent implements OnInit, AfterViewInit {
 
   onGoogleFallback(): void {
     console.warn('[Login] Botón de respaldo pulsado: googleClientId no está configurado en esta sesión.');
-    this.snackBar.open('Configura googleClientId en environment para habilitar inicio con Google.', 'Cerrar', { duration: 4000 });
+    this.snackBar.open(
+      this.translate.instant('auth.login.snackbarGoogleClient'),
+      this.translate.instant('common.close'),
+      { duration: 4000 },
+    );
   }
 
   onGoogleCredential(idToken: string): void {
@@ -664,8 +671,12 @@ export class LoginComponent implements OnInit, AfterViewInit {
           this.googleTotpStep.set(true);
           return;
         }
-        const msg = err?.error?.message ?? err?.error?.detail ?? err?.message ?? 'Error al iniciar sesión con Google';
-        this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+        const msg =
+          err?.error?.message ??
+          err?.error?.detail ??
+          err?.message ??
+          this.translate.instant('auth.login.googleLoginError');
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
       },
     });
   }
@@ -714,12 +725,20 @@ export class LoginComponent implements OnInit, AfterViewInit {
             this.totpStep.set(true);
             this.form.get('totpCode')?.setValidators([Validators.required, Validators.pattern(/^\d{6}$/)]);
             this.form.get('totpCode')?.updateValueAndValidity({ emitEvent: false });
-            this.snackBar.open('Introduce el código de tu app de autenticación', 'Cerrar', { duration: 4500 });
+            this.snackBar.open(
+              this.translate.instant('auth.login.snackbarTotpApp'),
+              this.translate.instant('common.close'),
+              { duration: 4500 },
+            );
             return;
           }
-          this.snackBar.open(err.error?.message || err.error?.detail || 'Credenciales inválidas', 'Cerrar', {
-            duration: 4000,
-          });
+          this.snackBar.open(
+            err.error?.message || err.error?.detail || this.translate.instant('auth.login.invalidCredentials'),
+            this.translate.instant('common.close'),
+            {
+              duration: 4000,
+            },
+          );
         },
       });
   }

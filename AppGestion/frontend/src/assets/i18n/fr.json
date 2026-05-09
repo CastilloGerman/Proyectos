@@ -41,6 +41,44 @@
   "common": {
     "close": "Fermer"
   },
+  "pref": {
+    "uiLanguageTitle": "Langue de l’application",
+    "uiLanguageHint": "Menus et textes de l’interface. Enregistrée dans ce navigateur, distincte du réglage régional ci-dessous (dates et montants côté serveur).",
+    "localeLabel": "Paramètres régionaux",
+    "localeHint": "Format des dates, nombres et montants liés à votre compte sur le serveur."
+  },
+  "auth": {
+    "login": {
+      "tagline": "Votre facturation en 30 secondes",
+      "subtitle": "Gérez clients, devis et factures au même endroit.",
+      "title": "Connexion",
+      "email": "E-mail",
+      "emailHint": "ex. nom@email.com",
+      "emailRequired": "L’e-mail est obligatoire",
+      "emailInvalid": "E-mail invalide",
+      "password": "Mot de passe",
+      "passwordRequired": "Le mot de passe est obligatoire",
+      "totpLabel": "Code de vérification (2FA)",
+      "sixDigitsHint": "6 chiffres",
+      "totpRequired": "Saisissez le code à 6 chiffres de votre app",
+      "totpPattern": "Doit comporter 6 chiffres",
+      "totpHint": "Ouvrez votre app d’authentification et copiez le code actuel.",
+      "submit": "Se connecter",
+      "dividerOr": "ou",
+      "googleContinue": "Continuer avec Google",
+      "googleTotpIntro": "Votre compte a la 2FA active. Saisissez le code de votre app.",
+      "googleTotpLabel": "Code 2FA",
+      "googleTotpSubmit": "Confirmer et se connecter",
+      "forgotPassword": "Mot de passe oublié ?",
+      "register": "Pas de compte ? Inscrivez-vous",
+      "scrollAria": "Faire défiler jusqu’à la section sur Noemí",
+      "scrollLabel": "Notre histoire",
+      "snackbarGoogleClient": "Configurez googleClientId dans l’environnement pour activer Google.",
+      "snackbarTotpApp": "Saisissez le code de votre app d’authentification",
+      "invalidCredentials": "Identifiants incorrects",
+      "googleLoginError": "Échec de la connexion avec Google"
+    }
+  },
   "lang": {
     "switcherAria": "Changer la langue de l’application"
   }

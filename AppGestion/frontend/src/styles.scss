@@ -262,3 +262,20 @@ html.app-dark-theme .mat-mdc-outlined-button.mat-primary:not(:disabled):not(.mat
   --mat-button-outlined-label-text-color: #e0e7ff;
   --mat-button-outlined-outline-color: rgba(199, 210, 254, 0.45);
 }
+
+/* Language switcher menu (CDK overlay; styles must be global). */
+.lang-switcher-menu .lang-switcher__item.mat-mdc-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+}
+
+.lang-switcher-menu .lang-flag {
+  width: 26px;
+  height: 18px;
+}
+
+.lang-switcher-menu--wide.mat-mdc-menu-panel {
+  min-width: 280px;
+}

@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, NgZone, inject } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 
@@ -13,6 +13,7 @@ export type SupportedUiLanguage = (typeof SUPPORTED_UI_LANGUAGES)[number];
 @Injectable({ providedIn: 'root' })
 export class LanguageService {
   private readonly translate = inject(TranslateService);
+  private readonly ngZone = inject(NgZone);
 
   /** Resolve language without DI — used by tests and `init`. */
   static resolveInitialLanguage(
@@ -53,7 +54,9 @@ export class LanguageService {
     );
     this.translate.addLangs([...SUPPORTED_UI_LANGUAGES]);
     this.translate.setFallbackLang('es');
-    return firstValueFrom(this.translate.use(initial)).then(() => undefined);
+    return firstValueFrom(this.translate.use(initial)).then(() => {
+      this.ngZone.run(() => undefined);
+    });
   }
 
   setLanguage(lang: string): void {
@@ -61,9 +64,12 @@ export class LanguageService {
     if (!LanguageService.isSupported(code)) {
       return;
     }
-    void firstValueFrom(this.translate.use(code));
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, code);
     }
+    this.translate.use(code).subscribe({
+      next: () => this.ngZone.run(() => undefined),
+      error: (err: unknown) => console.warn('[i18n] Failed to load translations for', code, err),
+    });
   }
 }

@@ -39,15 +39,21 @@
           </p>
         </section>
         <mat-divider class="pref-divider" />
+        <section class="pref-ui-lang" aria-labelledby="pref-ui-lang-title">
+          <h2 id="pref-ui-lang-title" class="pref-section-title">{{ 'pref.uiLanguageTitle' | translate }}</h2>
+          <p class="pref-appearance__hint">{{ 'pref.uiLanguageHint' | translate }}</p>
+          <app-language-switcher layout="settings" />
+        </section>
+        <mat-divider class="pref-divider" />
         <form [formGroup]="form" (ngSubmit)="guardar()" class="pref-form">
           <mat-form-field appearance="outline" class="pref-field">
-            <mat-label>Idioma de la interfaz</mat-label>
+            <mat-label>{{ 'pref.localeLabel' | translate }}</mat-label>
             <mat-select formControlName="locale" required>
               @for (opt of locales; track opt.value) {
                 <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
               }
             </mat-select>
-            <mat-hint>El inglés puede estar parcial al principio; iremos traduciendo pantallas.</mat-hint>
+            <mat-hint>{{ 'pref.localeHint' | translate }}</mat-hint>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="pref-field">

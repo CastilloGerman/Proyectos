@@ -20,6 +20,8 @@ import {
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
 import { CondicionesPresupuestoComponent } from '../../presupuestos/condiciones-presupuesto/condiciones-presupuesto.component';
 import { CURRENCY_OPTIONS, LOCALE_OPTIONS, TIMEZONE_OPTIONS } from './preferencias-options';
+import { TranslateModule } from '@ngx-translate/core';
+import { LanguageSwitcherComponent } from '../../../shared/language-switcher/language-switcher.component';
 
 @Component({
     selector: 'app-preferencias',
@@ -38,6 +40,8 @@ import { CURRENCY_OPTIONS, LOCALE_OPTIONS, TIMEZONE_OPTIONS } from './preferenci
         MatSnackBarModule,
         MatSlideToggleModule,
         MatDividerModule,
+        TranslateModule,
+        LanguageSwitcherComponent,
     ],
     templateUrl: './preferencias.component.html',
     styleUrl: './preferencias.component.scss'

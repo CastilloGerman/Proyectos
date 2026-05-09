@@ -41,6 +41,44 @@
   "common": {
     "close": "Закрити"
   },
+  "pref": {
+    "uiLanguageTitle": "Мова програми",
+    "uiLanguageHint": "Меню та текст інтерфейсу. Зберігається в цьому браузері окремо від регіональних налаштувань нижче (дати та суми на сервері).",
+    "localeLabel": "Регіональні налаштування",
+    "localeHint": "Формат дат, чисел і сум для вашого облікового запису на сервері."
+  },
+  "auth": {
+    "login": {
+      "tagline": "Ваші рахунки за 30 секунд",
+      "subtitle": "Керуйте клієнтами, кошторисами та рахунками в одному місці.",
+      "title": "Увійти",
+      "email": "Електронна пошта",
+      "emailHint": "напр. ім’я@пошта.com",
+      "emailRequired": "Обов’язкове поле email",
+      "emailInvalid": "Некоректний email",
+      "password": "Пароль",
+      "passwordRequired": "Обов’язковий пароль",
+      "totpLabel": "Код підтвердження (2FA)",
+      "sixDigitsHint": "6 цифр",
+      "totpRequired": "Введіть 6-значний код з програми",
+      "totpPattern": "Має бути 6 цифр",
+      "totpHint": "Відкрийте застосунок автентифікації та скопіюйте поточний код.",
+      "submit": "Увійти",
+      "dividerOr": "або",
+      "googleContinue": "Продовжити з Google",
+      "googleTotpIntro": "Увімкнено 2FA. Введіть код з вашої програми.",
+      "googleTotpLabel": "Код 2FA",
+      "googleTotpSubmit": "Підтвердити й увійти",
+      "forgotPassword": "Забули пароль?",
+      "register": "Немає облікового запису? Зареєструйтесь",
+      "scrollAria": "Прокрутити до розділу про Noemí",
+      "scrollLabel": "Наша історія",
+      "snackbarGoogleClient": "Налаштуйте googleClientId у environment для входу через Google.",
+      "snackbarTotpApp": "Введіть код з програми автентифікації",
+      "invalidCredentials": "Невірні облікові дані",
+      "googleLoginError": "Не вдалося увійти через Google"
+    }
+  },
   "lang": {
     "switcherAria": "Змінити мову програми"
   }

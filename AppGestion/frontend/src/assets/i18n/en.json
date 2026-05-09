@@ -41,6 +41,44 @@
   "common": {
     "close": "Close"
   },
+  "pref": {
+    "uiLanguageTitle": "Application language",
+    "uiLanguageHint": "Menus and interface copy. Stored in this browser, separate from the regional setting below (dates and amounts on the server).",
+    "localeLabel": "Regional settings",
+    "localeHint": "Date, number and amount formats stored with your account on the server."
+  },
+  "auth": {
+    "login": {
+      "tagline": "Your invoicing in 30 seconds",
+      "subtitle": "Manage customers, estimates and invoices in one place.",
+      "title": "Sign in",
+      "email": "Email",
+      "emailHint": "e.g. name@email.com",
+      "emailRequired": "Email is required",
+      "emailInvalid": "Invalid email",
+      "password": "Password",
+      "passwordRequired": "Password is required",
+      "totpLabel": "Verification code (2FA)",
+      "sixDigitsHint": "6 digits",
+      "totpRequired": "Enter the 6-digit code from your app",
+      "totpPattern": "Must be 6 digits",
+      "totpHint": "Open your authenticator app and copy the current code.",
+      "submit": "Sign in",
+      "dividerOr": "or",
+      "googleContinue": "Continue with Google",
+      "googleTotpIntro": "Your account has 2FA enabled. Enter the code from your app.",
+      "googleTotpLabel": "2FA code",
+      "googleTotpSubmit": "Confirm and sign in",
+      "forgotPassword": "Forgot your password?",
+      "register": "No account? Register",
+      "scrollAria": "Scroll to the About Noemí section",
+      "scrollLabel": "Our story",
+      "snackbarGoogleClient": "Set googleClientId in environment to enable Google sign-in.",
+      "snackbarTotpApp": "Enter the code from your authenticator app",
+      "invalidCredentials": "Invalid credentials",
+      "googleLoginError": "Could not sign in with Google"
+    }
+  },
   "lang": {
     "switcherAria": "Change application language"
   }

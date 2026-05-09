@@ -41,6 +41,44 @@
   "common": {
     "close": "Cerrar"
   },
+  "pref": {
+    "uiLanguageTitle": "Idioma de la aplicación",
+    "uiLanguageHint": "Menús y textos de la interfaz. Se guarda en este navegador, independiente de la configuración regional siguiente (fechas e importes en el servidor).",
+    "localeLabel": "Configuración regional",
+    "localeHint": "Formato de fechas, números e importes asociados a tu cuenta en el servidor."
+  },
+  "auth": {
+    "login": {
+      "tagline": "Tu facturación en 30 segundos",
+      "subtitle": "Gestiona clientes, presupuestos y facturas en un solo lugar.",
+      "title": "Iniciar sesión",
+      "email": "Email",
+      "emailHint": "ej. nombre@correo.com",
+      "emailRequired": "El email es obligatorio",
+      "emailInvalid": "Email inválido",
+      "password": "Contraseña",
+      "passwordRequired": "La contraseña es obligatoria",
+      "totpLabel": "Código de verificación (2FA)",
+      "sixDigitsHint": "6 dígitos",
+      "totpRequired": "Introduce el código de 6 dígitos de tu app",
+      "totpPattern": "Debe tener 6 dígitos",
+      "totpHint": "Abre tu app de autenticación y copia el código actual.",
+      "submit": "Entrar",
+      "dividerOr": "o",
+      "googleContinue": "Continuar con Google",
+      "googleTotpIntro": "Tu cuenta tiene 2FA activo. Introduce el código de tu app.",
+      "googleTotpLabel": "Código 2FA",
+      "googleTotpSubmit": "Confirmar e iniciar sesión",
+      "forgotPassword": "¿Olvidaste tu contraseña?",
+      "register": "¿No tienes cuenta? Regístrate",
+      "scrollAria": "Desplazar a la sección sobre Noemí",
+      "scrollLabel": "Nuestra historia",
+      "snackbarGoogleClient": "Configura googleClientId en environment para habilitar inicio con Google.",
+      "snackbarTotpApp": "Introduce el código de tu app de autenticación",
+      "invalidCredentials": "Credenciales inválidas",
+      "googleLoginError": "Error al iniciar sesión con Google"
+    }
+  },
   "lang": {
     "switcherAria": "Cambiar idioma de la aplicación"
   }
