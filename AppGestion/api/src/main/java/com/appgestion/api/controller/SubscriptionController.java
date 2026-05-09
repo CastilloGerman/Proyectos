@@ -3,9 +3,11 @@ package com.appgestion.api.controller;
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.SubscriptionBillingPeriod;
 import com.appgestion.api.dto.request.CheckoutRequest;
+import com.appgestion.api.dto.response.SubscriptionDetailsDto;
 import com.appgestion.api.dto.response.SubscriptionInvoiceDto;
 import com.appgestion.api.service.CurrentUserService;
 import com.appgestion.api.service.StripeService;
+import com.appgestion.api.service.SubscriptionService;
 import com.stripe.exception.InvalidRequestException;
 import com.stripe.exception.StripeException;
 import jakarta.validation.constraints.Max;
@@ -28,11 +30,25 @@ public class SubscriptionController {
     private static final Logger log = LoggerFactory.getLogger(SubscriptionController.class);
 
     private final StripeService stripeService;
+    private final SubscriptionService subscriptionService;
     private final CurrentUserService currentUserService;
 
-    public SubscriptionController(StripeService stripeService, CurrentUserService currentUserService) {
+    public SubscriptionController(
+            StripeService stripeService,
+            SubscriptionService subscriptionService,
+            CurrentUserService currentUserService) {
         this.stripeService = stripeService;
+        this.subscriptionService = subscriptionService;
         this.currentUserService = currentUserService;
+    }
+
+    /**
+     * Detalle enriquecido para la pantalla de plan (intervalo, ahorro anual, banderas Stripe).
+     */
+    @GetMapping("/details")
+    public ResponseEntity<SubscriptionDetailsDto> getSubscriptionDetails() {
+        Usuario usuario = currentUserService.getCurrentUsuario();
+        return ResponseEntity.ok(subscriptionService.getSubscriptionDetails(usuario));
     }
 
     @PostMapping("/checkout")

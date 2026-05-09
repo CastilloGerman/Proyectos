@@ -9,7 +9,6 @@ import com.appgestion.api.service.stripe.StripeWebhookEventParser;
 import com.appgestion.api.service.stripe.StripeWebhookProcessingResult;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Event;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -24,29 +23,25 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class StripeWebhookServiceTest {
 
-    @Mock
-    private StripeWebhookEventParser webhookEventParser;
+    private final StripeWebhookEventParser webhookEventParser;
+    private final SubscriptionService subscriptionService;
+    private final ProcessedStripeEventRepository processedEventRepository;
+    private final StripeWebhookService stripeWebhookService;
 
-    @Mock
-    private StripeSubscriptionFetcher subscriptionFetcher;
-
-    @Mock
-    private SubscriptionService subscriptionService;
-
-    @Mock
-    private ProcessedStripeEventRepository processedEventRepository;
-
-    private StripeWebhookService stripeWebhookService;
-
-    @BeforeEach
-    void setUp() {
-        stripeWebhookService = new DefaultStripeWebhookService(
+    public StripeWebhookServiceTest(
+            @Mock StripeWebhookEventParser webhookEventParser,
+            @Mock StripeSubscriptionFetcher subscriptionFetcher,
+            @Mock SubscriptionService subscriptionService,
+            @Mock ProcessedStripeEventRepository processedEventRepository) {
+        this.webhookEventParser = webhookEventParser;
+        this.subscriptionService = subscriptionService;
+        this.processedEventRepository = processedEventRepository;
+        this.stripeWebhookService = new DefaultStripeWebhookService(
                 webhookEventParser,
                 subscriptionFetcher,
                 subscriptionService,
                 processedEventRepository,
-                "whsec_test_secret"
-        );
+                "whsec_test_secret");
     }
 
     @Test
@@ -71,6 +66,7 @@ class StripeWebhookServiceTest {
 
         assertThat(r.signatureInvalid()).isFalse();
         verify(subscriptionService, never()).activateSubscription(any(), any(), any(), any(), any());
+        verify(subscriptionService, never()).syncFromStripeSubscription(any(), any(), any());
         verify(processedEventRepository, never()).save(any());
     }
 

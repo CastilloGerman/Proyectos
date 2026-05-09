@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { SubscriptionInvoice } from '../models/subscription-invoice.model';
+import { SubscriptionDetails } from '../models/subscription-details.model';
 
 /** Igual que en la API: MONTHLY o YEARLY (JSON en mayúsculas). */
 export type CheckoutBillingPeriod = 'MONTHLY' | 'YEARLY';
@@ -12,6 +13,11 @@ export class SubscriptionService {
   private readonly apiUrl = `${environment.apiUrl}/subscription`;
 
   constructor(private http: HttpClient) {}
+
+  /** Detalle enriquecido para pantalla de plan (precios públicos, ahorro anual, banderas Stripe). */
+  getSubscriptionDetails(): Observable<SubscriptionDetails> {
+    return this.http.get<SubscriptionDetails>(`${this.apiUrl}/details`);
+  }
 
   /** Facturas de la suscripción (Stripe) del usuario autenticado. */
   getSubscriptionInvoices(limit = 24): Observable<SubscriptionInvoice[]> {

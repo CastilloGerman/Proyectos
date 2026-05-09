@@ -22,6 +22,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     Optional<Usuario> findByStripeSubscriptionId(String stripeSubscriptionId);
 
+    Optional<Usuario> findByStripeCustomerId(String stripeCustomerId);
+
     @Query("SELECT u FROM Usuario u WHERE u.subscriptionStatus = :status AND u.trialEndDate < :today")
     List<Usuario> findExpiredTrials(@Param("status") SubscriptionStatus status, @Param("today") LocalDate today);
 

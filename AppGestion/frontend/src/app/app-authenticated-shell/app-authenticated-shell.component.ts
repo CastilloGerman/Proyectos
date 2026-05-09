@@ -17,6 +17,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../core/auth/auth.service';
 import { SubscriptionService } from '../core/services/subscription.service';
 import { InvitarUsuarioDialogComponent } from '../shared/invitar-usuario-dialog/invitar-usuario-dialog.component';
@@ -29,6 +30,7 @@ import { DevApiService } from '../core/services/dev-api.service';
 import { daysFromTodayToDateEnd } from '../shared/utils/trial-days.util';
 import { TRIAL_BANNER_WARNING_DAYS, TRIAL_DAYS_LEFT_FALLBACK } from '../app-layout.constants';
 import { messageFromHttpError } from '../shared/utils/http-error-message.util';
+import { LanguageSwitcherComponent } from '../shared/language-switcher/language-switcher.component';
 
 @Component({
   selector: 'app-authenticated-shell',
@@ -48,6 +50,8 @@ import { messageFromHttpError } from '../shared/utils/http-error-message.util';
     MatProgressSpinnerModule,
     SearchBarComponent,
     UserDropdownComponent,
+    TranslateModule,
+    LanguageSwitcherComponent,
   ],
   templateUrl: './app-authenticated-shell.component.html',
   styleUrl: './app-authenticated-shell.component.scss',
@@ -73,6 +77,7 @@ export class AppAuthenticatedShellComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
   private readonly devApi = inject(DevApiService);
   private readonly dialog = inject(MatDialog);
+  private readonly translate = inject(TranslateService);
 
   readonly trialBannerWarningDays = TRIAL_BANNER_WARNING_DAYS;
   protected readonly environment = environment;
@@ -152,11 +157,19 @@ export class AppAuthenticatedShellComponent implements OnInit {
       next: () => {
         this.notifMarcarTodasLoading.set(false);
         this.notifPreviewItems.set([]);
-        this.snackBar.open('Notificaciones marcadas como leídas', 'Cerrar', { duration: 2500 });
+        this.snackBar.open(
+          this.translate.instant('shell.snackbarNotifMarkedRead'),
+          this.translate.instant('common.close'),
+          { duration: 2500 },
+        );
       },
       error: () => {
         this.notifMarcarTodasLoading.set(false);
-        this.snackBar.open('No se pudieron marcar como leídas', 'Cerrar', { duration: 4000 });
+        this.snackBar.open(
+          this.translate.instant('shell.snackbarNotifMarkFailed'),
+          this.translate.instant('common.close'),
+          { duration: 4000 },
+        );
       },
     });
   }
@@ -177,11 +190,11 @@ export class AppAuthenticatedShellComponent implements OnInit {
     }
   }
 
-  sidenavMenuTooltip(): string {
+  sidenavMenuTooltipKey(): string {
     if (this.isMobileLayout()) {
-      return this.isSidebarOpen ? 'Cerrar menú' : 'Abrir menú';
+      return this.isSidebarOpen ? 'shell.closeMenu' : 'shell.openMenu';
     }
-    return this.sidebarCollapsed ? 'Abrir menú' : 'Cerrar menú';
+    return this.sidebarCollapsed ? 'shell.openMenu' : 'shell.closeMenu';
   }
 
   daysLeftInTrial(): number {
@@ -195,7 +208,7 @@ export class AppAuthenticatedShellComponent implements OnInit {
     const ref = this.dialog.open(InvitarUsuarioDialogComponent, { width: 'min(480px, 96vw)', maxWidth: '96vw' });
     ref.afterClosed().subscribe((ok) => {
       if (ok) {
-        this.snackBar.open('Enlace de referido enviado. Revisa el correo (o los logs del servidor si no hay SMTP).', 'Cerrar', {
+        this.snackBar.open(this.translate.instant('shell.snackbarReferSent'), this.translate.instant('common.close'), {
           duration: 5000,
         });
       }
@@ -209,12 +222,16 @@ export class AppAuthenticatedShellComponent implements OnInit {
         if (url) {
           window.location.href = url;
         } else {
-          this.snackBar.open('No se recibió la URL de pago', 'Cerrar', { duration: 4000 });
+          this.snackBar.open(
+            this.translate.instant('shell.snackbarNoCheckoutUrl'),
+            this.translate.instant('common.close'),
+            { duration: 4000 },
+          );
         }
       },
       error: (err: unknown) => {
-        const msg = messageFromHttpError(err, 'No se pudo iniciar el pago');
-        this.snackBar.open(msg, 'Cerrar', { duration: 6500 });
+        const msg = messageFromHttpError(err, this.translate.instant('shell.snackbarPaymentErrorFallback'));
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 6500 });
       },
     });
   }
@@ -223,13 +240,19 @@ export class AppAuthenticatedShellComponent implements OnInit {
     this.devApi.grantPremium().subscribe({
       next: () => {
         this.auth.refreshUser().subscribe(() => {
-          this.snackBar.open('Premium activado. La app ya tiene permisos de escritura.', 'Cerrar', { duration: 4000 });
+          this.snackBar.open(
+            this.translate.instant('shell.snackbarPremiumActivated'),
+            this.translate.instant('common.close'),
+            { duration: 4000 },
+          );
         });
       },
       error: (err) => {
         this.snackBar.open(
-          err.error?.message || err.message || 'Error al activar premium (¿API con perfil local?)',
-          'Cerrar',
+          err.error?.message ||
+            err.message ||
+            this.translate.instant('shell.snackbarGrantPremiumFallback'),
+          this.translate.instant('common.close'),
           { duration: 5000 },
         );
       },

@@ -1,0 +1,47 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "materials": "Materiales",
+    "clients": "Clientes",
+    "clientsTooltip": "En la lista: Ver estado",
+    "budgets": "Presupuestos",
+    "quickBudget": "Presup. rápido",
+    "invoices": "Facturas",
+    "tax": "Hacienda"
+  },
+  "shell": {
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú",
+    "sidenavButtonAria": "Abrir o cerrar menú lateral",
+    "refer": "Referir",
+    "referTooltip": "Enviar enlace de referido por correo",
+    "subscription": "Suscripción",
+    "subscriptionTooltip": "Tu plan de Noemí y facturas del servicio",
+    "notifications": "Notificaciones",
+    "notificationsAria": "Abrir notificaciones",
+    "notificationsTitle": "Notificaciones",
+    "markAllRead": "Marcar como leídas",
+    "notifLoadError": "No se pudieron cargar las notificaciones.",
+    "notifEmptyTitle": "No hay notificaciones nuevas",
+    "notifEmptyHint": "Cuando tengas avisos sin leer, aparecerán aquí.",
+    "notifViewAll": "Ver todas las notificaciones",
+    "readonlyBanner": "Modo solo lectura. Activa tu suscripción para crear o editar.",
+    "activateSubscription": "Activar suscripción",
+    "activatePremiumDev": "Activar premium (dev)",
+    "activatePremiumDevTooltip": "Solo desarrollo: marcar usuario como premium sin Stripe",
+    "trialEndsIn": "Tu prueba termina en {{days}} días.",
+    "snackbarNotifMarkedRead": "Notificaciones marcadas como leídas",
+    "snackbarNotifMarkFailed": "No se pudieron marcar como leídas",
+    "snackbarReferSent": "Enlace de referido enviado. Revisa el correo (o los logs del servidor si no hay SMTP).",
+    "snackbarNoCheckoutUrl": "No se recibió la URL de pago",
+    "snackbarPremiumActivated": "Premium activado. La app ya tiene permisos de escritura.",
+    "snackbarPaymentErrorFallback": "No se pudo iniciar el pago",
+    "snackbarGrantPremiumFallback": "Error al activar premium (¿API con perfil local?)"
+  },
+  "common": {
+    "close": "Cerrar"
+  },
+  "lang": {
+    "switcherAria": "Cambiar idioma de la aplicación"
+  }
+}

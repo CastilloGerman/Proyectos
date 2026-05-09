@@ -1,0 +1,47 @@
+{
+  "nav": {
+    "dashboard": "Tablou de bord",
+    "materials": "Materiale",
+    "clients": "Clienți",
+    "clientsTooltip": "În listă: Vezi starea",
+    "budgets": "Devize",
+    "quickBudget": "Deviz rapid",
+    "invoices": "Facturi",
+    "tax": "Fisc"
+  },
+  "shell": {
+    "openMenu": "Deschide meniul",
+    "closeMenu": "Închide meniul",
+    "sidenavButtonAria": "Deschide sau închide meniul lateral",
+    "refer": "Recomandă",
+    "referTooltip": "Trimite linkul de recomandare pe e-mail",
+    "subscription": "Abonament",
+    "subscriptionTooltip": "Planul tău Noemí și facturile serviciului",
+    "notifications": "Notificări",
+    "notificationsAria": "Deschide notificările",
+    "notificationsTitle": "Notificări",
+    "markAllRead": "Marchează ca citite",
+    "notifLoadError": "Nu s-au putut încărca notificările.",
+    "notifEmptyTitle": "Nu există notificări noi",
+    "notifEmptyHint": "Când ai alerte necitite, vor apărea aici.",
+    "notifViewAll": "Vezi toate notificările",
+    "readonlyBanner": "Mod numai citire. Activează abonamentul pentru a crea sau edita.",
+    "activateSubscription": "Activează abonamentul",
+    "activatePremiumDev": "Activează premium (dev)",
+    "activatePremiumDevTooltip": "Doar în dezvoltare: marchează utilizatorul premium fără Stripe",
+    "trialEndsIn": "Perioada de probă se încheie în {{days}} zile.",
+    "snackbarNotifMarkedRead": "Notificări marcate ca citite",
+    "snackbarNotifMarkFailed": "Nu s-au putut marca ca citite",
+    "snackbarReferSent": "Link de recomandare trimis. Verifică e-mailul (sau logurile serverului fără SMTP).",
+    "snackbarNoCheckoutUrl": "Nu s-a primit URL-ul de plată",
+    "snackbarPremiumActivated": "Premium activat. Aplicația are acum permisiuni de scriere.",
+    "snackbarPaymentErrorFallback": "Nu s-a putut porni plata",
+    "snackbarGrantPremiumFallback": "Eroare la activarea premium (profil API local?)"
+  },
+  "common": {
+    "close": "Închide"
+  },
+  "lang": {
+    "switcherAria": "Schimbă limba aplicației"
+  }
+}

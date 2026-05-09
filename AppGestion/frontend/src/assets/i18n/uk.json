@@ -1,0 +1,47 @@
+{
+  "nav": {
+    "dashboard": "Панель",
+    "materials": "Матеріали",
+    "clients": "Клієнти",
+    "clientsTooltip": "У списку: Переглянути статус",
+    "budgets": "Кошториси",
+    "quickBudget": "Швидкий кошторис",
+    "invoices": "Рахунки",
+    "tax": "Податкові декларації"
+  },
+  "shell": {
+    "openMenu": "Відкрити меню",
+    "closeMenu": "Закрити меню",
+    "sidenavButtonAria": "Відкрити або закрити бічне меню",
+    "refer": "Запросити",
+    "referTooltip": "Надіслати реферальне посилання електронною поштою",
+    "subscription": "Підписка",
+    "subscriptionTooltip": "Ваш план Noemí та рахунки за сервіс",
+    "notifications": "Сповіщення",
+    "notificationsAria": "Відкрити сповіщення",
+    "notificationsTitle": "Сповіщення",
+    "markAllRead": "Позначити всі як прочитані",
+    "notifLoadError": "Не вдалося завантажити сповіщення.",
+    "notifEmptyTitle": "Нових сповіщень немає",
+    "notifEmptyHint": "Коли з’являться непрочитані нагадування, вони будуть тут.",
+    "notifViewAll": "Усі сповіщення",
+    "readonlyBanner": "Лише перегляд. Активуйте підписку, щоб створювати або редагувати.",
+    "activateSubscription": "Активувати підписку",
+    "activatePremiumDev": "Активувати premium (dev)",
+    "activatePremiumDevTooltip": "Лише для розробки: позначити користувача premium без Stripe",
+    "trialEndsIn": "Пробний період закінчується за {{days}} дн.",
+    "snackbarNotifMarkedRead": "Сповіщення позначено як прочитані",
+    "snackbarNotifMarkFailed": "Не вдалося позначити як прочитані",
+    "snackbarReferSent": "Реферальне посилання надіслано. Перевірте пошту (або логи сервера без SMTP).",
+    "snackbarNoCheckoutUrl": "Не отримано URL для оплати",
+    "snackbarPremiumActivated": "Premium активовано. Додаток має права на запис.",
+    "snackbarPaymentErrorFallback": "Не вдалося розпочати оплату",
+    "snackbarGrantPremiumFallback": "Помилка активації premium (локальний API-профіль?)"
+  },
+  "common": {
+    "close": "Закрити"
+  },
+  "lang": {
+    "switcherAria": "Змінити мову програми"
+  }
+}

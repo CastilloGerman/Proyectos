@@ -1,0 +1,22 @@
+<button
+  mat-stroked-button
+  type="button"
+  class="lang-switcher__trigger"
+  [matMenuTriggerFor]="langMenu"
+  aria-haspopup="menu"
+  [attr.aria-label]="'lang.switcherAria' | translate"
+>
+  <span class="lang-switcher__emoji" aria-hidden="true">{{ triggerDisplay().flag }}</span>
+  <span class="lang-switcher__short">{{ triggerDisplay().short }}</span>
+  <mat-icon class="lang-switcher__caret">arrow_drop_down</mat-icon>
+</button>
+
+<mat-menu #langMenu="matMenu" class="lang-switcher__panel">
+  @for (code of supported; track code) {
+    <button mat-menu-item type="button" (click)="selectLang(code)">
+      <span class="lang-switcher__item-emoji" aria-hidden="true">{{ menuLabel(code).flag }}</span>
+      <span class="lang-switcher__item-native">{{ menuLabel(code).native }}</span>
+      <span class="lang-switcher__item-short">{{ menuLabel(code).short }}</span>
+    </button>
+  }
+</mat-menu>

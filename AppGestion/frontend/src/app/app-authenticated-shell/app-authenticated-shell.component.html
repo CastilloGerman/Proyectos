@@ -15,39 +15,39 @@
     <mat-nav-list class="sidebar-nav">
       <a mat-list-item routerLink="/dashboard" routerLinkActive="active">
         <mat-icon matListItemIcon>dashboard</mat-icon>
-        <span matListItemTitle>Dashboard</span>
+        <span matListItemTitle>{{ 'nav.dashboard' | translate }}</span>
       </a>
       <a mat-list-item routerLink="/materiales" routerLinkActive="active">
         <mat-icon matListItemIcon>inventory_2</mat-icon>
-        <span matListItemTitle>Materiales</span>
+        <span matListItemTitle>{{ 'nav.materials' | translate }}</span>
       </a>
       <a
         mat-list-item
         routerLink="/clientes"
         routerLinkActive="active"
-        matTooltip="En la lista: Ver estado"
+        [matTooltip]="'nav.clientsTooltip' | translate"
         matTooltipPosition="right"
       >
         <mat-icon matListItemIcon>people</mat-icon>
-        <span matListItemTitle>Clientes</span>
+        <span matListItemTitle>{{ 'nav.clients' | translate }}</span>
       </a>
       <a mat-list-item routerLink="/presupuestos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
         <mat-icon matListItemIcon>description</mat-icon>
-        <span matListItemTitle>Presupuestos</span>
+        <span matListItemTitle>{{ 'nav.budgets' | translate }}</span>
       </a>
       @if (auth.canMutate()) {
         <a mat-list-item routerLink="/presupuestos/rapido" routerLinkActive="active">
           <mat-icon matListItemIcon>bolt</mat-icon>
-          <span matListItemTitle>Presup. rápido</span>
+          <span matListItemTitle>{{ 'nav.quickBudget' | translate }}</span>
         </a>
       }
       <a mat-list-item routerLink="/facturas" routerLinkActive="active">
         <mat-icon matListItemIcon>receipt</mat-icon>
-        <span matListItemTitle>Facturas</span>
+        <span matListItemTitle>{{ 'nav.invoices' | translate }}</span>
       </a>
       <a mat-list-item routerLink="/declaraciones-hacienda" routerLinkActive="active">
         <mat-icon matListItemIcon>account_balance</mat-icon>
-        <span matListItemTitle>Hacienda</span>
+        <span matListItemTitle>{{ 'nav.tax' | translate }}</span>
       </a>
     </mat-nav-list>
   </mat-sidenav>
@@ -57,25 +57,25 @@
         mat-icon-button
         type="button"
         (click)="toggleSidenavMenu()"
-        [matTooltip]="sidenavMenuTooltip()"
-        aria-label="Abrir o cerrar menú lateral"
+        [matTooltip]="sidenavMenuTooltipKey() | translate"
+        [attr.aria-label]="'shell.sidenavButtonAria' | translate"
       >
         <mat-icon>menu</mat-icon>
       </button>
       <app-search-bar></app-search-bar>
       <span class="spacer"></span>
       @if (auth.canMutate()) {
-        <button mat-stroked-button (click)="openInvitar()" matTooltip="Enviar enlace de referido por correo">
-          Referir
+        <button mat-stroked-button (click)="openInvitar()" [matTooltip]="'shell.referTooltip' | translate">
+          {{ 'shell.refer' | translate }}
         </button>
       }
       <a
         mat-stroked-button
         routerLink="/cuenta/suscripcion"
-        matTooltip="Tu plan de Noemí y facturas del servicio"
+        [matTooltip]="'shell.subscriptionTooltip' | translate"
       >
         <mat-icon class="saas-topbar__inline-icon">subscriptions</mat-icon>
-        Suscripción
+        {{ 'shell.subscription' | translate }}
       </a>
       <button
         type="button"
@@ -83,12 +83,12 @@
         #notifMenuTrigger="matMenuTrigger"
         [matMenuTriggerFor]="notifMenu"
         (menuOpened)="onNotifMenuOpened()"
-        matTooltip="Notificaciones"
+        [matTooltip]="'shell.notifications' | translate"
         [matBadge]="notifBadge()"
         [matBadgeHidden]="notificaciones.unreadCount() === 0"
         matBadgeColor="warn"
         matBadgeSize="small"
-        aria-label="Abrir notificaciones"
+        [attr.aria-label]="'shell.notificationsAria' | translate"
         aria-haspopup="menu"
       >
         <mat-icon>notifications</mat-icon>
@@ -96,7 +96,7 @@
       <mat-menu #notifMenu="matMenu" class="notif-bell-menu" xPosition="before">
         <div class="notif-bell-panel" (click)="$event.stopPropagation()">
           <div class="notif-bell-head">
-            <span class="notif-bell-head__title">Notificaciones</span>
+            <span class="notif-bell-head__title">{{ 'shell.notificationsTitle' | translate }}</span>
             @if (notificaciones.unreadCount() > 0) {
               <button
                 mat-button
@@ -108,7 +108,7 @@
                 @if (notifMarcarTodasLoading()) {
                   <mat-progress-spinner class="notif-bell-mark-read__spin" diameter="18" mode="indeterminate" />
                 } @else {
-                  Marcar como leídas
+                  {{ 'shell.markAllRead' | translate }}
                 }
               </button>
             }
@@ -120,13 +120,13 @@
           } @else if (notifPreviewError()) {
             <div class="notif-bell-empty notif-bell-empty--error">
               <mat-icon>error_outline</mat-icon>
-              <p>No se pudieron cargar las notificaciones.</p>
+              <p>{{ 'shell.notifLoadError' | translate }}</p>
             </div>
           } @else if (notifPreviewItems().length === 0) {
             <div class="notif-bell-empty">
               <mat-icon>notifications_off</mat-icon>
-              <p><strong>No hay notificaciones nuevas</strong></p>
-              <p class="notif-bell-empty-hint">Cuando tengas avisos sin leer, aparecerán aquí.</p>
+              <p><strong>{{ 'shell.notifEmptyTitle' | translate }}</strong></p>
+              <p class="notif-bell-empty-hint">{{ 'shell.notifEmptyHint' | translate }}</p>
             </div>
           } @else {
             <div class="notif-bell-list">
@@ -149,23 +149,26 @@
         <mat-divider />
         <button mat-menu-item type="button" routerLink="/cuenta/notificaciones" (click)="notifMenuTrigger.closeMenu()">
           <mat-icon>list</mat-icon>
-          <span>Ver todas las notificaciones</span>
+          <span>{{ 'shell.notifViewAll' | translate }}</span>
         </button>
       </mat-menu>
+      <app-language-switcher />
       <app-user-dropdown />
     </header>
     @if (!auth.canWrite()) {
       <div class="banner-readonly">
         <mat-icon>lock</mat-icon>
-        <span>Modo solo lectura. Activa tu suscripción para crear o editar.</span>
-        <button mat-stroked-button color="warn" (click)="activarSuscripcion()">Activar suscripción</button>
+        <span>{{ 'shell.readonlyBanner' | translate }}</span>
+        <button mat-stroked-button color="warn" (click)="activarSuscripcion()">
+          {{ 'shell.activateSubscription' | translate }}
+        </button>
         @if (!environment.production) {
           <button
             mat-stroked-button
             (click)="grantPremiumDev()"
-            matTooltip="Solo desarrollo: marcar usuario como premium sin Stripe"
+            [matTooltip]="'shell.activatePremiumDevTooltip' | translate"
           >
-            Activar premium (dev)
+            {{ 'shell.activatePremiumDev' | translate }}
           </button>
         }
       </div>
@@ -178,8 +181,10 @@
     ) {
       <div class="banner-trial">
         <mat-icon>schedule</mat-icon>
-        <span>Tu prueba termina en {{ daysLeftInTrial() }} días.</span>
-        <button mat-stroked-button (click)="activarSuscripcion()">Activar suscripción</button>
+        <span>{{ 'shell.trialEndsIn' | translate: { days: daysLeftInTrial() } }}</span>
+        <button mat-stroked-button (click)="activarSuscripcion()">
+          {{ 'shell.activateSubscription' | translate }}
+        </button>
       </div>
     }
     <main class="saas-content">

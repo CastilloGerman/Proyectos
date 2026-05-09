@@ -1,0 +1,47 @@
+{
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "materials": "Matériaux",
+    "clients": "Clients",
+    "clientsTooltip": "Dans la liste : Voir le statut",
+    "budgets": "Devis",
+    "quickBudget": "Devis rapide",
+    "invoices": "Factures",
+    "tax": "Finances publiques"
+  },
+  "shell": {
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu",
+    "sidenavButtonAria": "Ouvrir ou fermer le menu latéral",
+    "refer": "Parrainer",
+    "referTooltip": "Envoyer le lien de parrainage par e-mail",
+    "subscription": "Abonnement",
+    "subscriptionTooltip": "Votre offre Noemí et les factures du service",
+    "notifications": "Notifications",
+    "notificationsAria": "Ouvrir les notifications",
+    "notificationsTitle": "Notifications",
+    "markAllRead": "Tout marquer comme lu",
+    "notifLoadError": "Impossible de charger les notifications.",
+    "notifEmptyTitle": "Aucune nouvelle notification",
+    "notifEmptyHint": "Lorsque vous aurez des alertes non lues, elles apparaîtront ici.",
+    "notifViewAll": "Voir toutes les notifications",
+    "readonlyBanner": "Mode lecture seule. Activez votre abonnement pour créer ou modifier.",
+    "activateSubscription": "Activer l’abonnement",
+    "activatePremiumDev": "Activer premium (dev)",
+    "activatePremiumDevTooltip": "Réservé au développement : marquer l’utilisateur premium sans Stripe",
+    "trialEndsIn": "Votre essai se termine dans {{days}} jours.",
+    "snackbarNotifMarkedRead": "Notifications marquées comme lues",
+    "snackbarNotifMarkFailed": "Impossible de marquer comme lues",
+    "snackbarReferSent": "Lien de parrainage envoyé. Vérifiez votre e-mail (ou les journaux du serveur sans SMTP).",
+    "snackbarNoCheckoutUrl": "URL de paiement non reçue",
+    "snackbarPremiumActivated": "Premium activé. L’application a désormais l’accès en écriture.",
+    "snackbarPaymentErrorFallback": "Impossible de démarrer le paiement",
+    "snackbarGrantPremiumFallback": "Erreur lors de l’activation du premium (API locale ?)"
+  },
+  "common": {
+    "close": "Fermer"
+  },
+  "lang": {
+    "switcherAria": "Changer la langue de l’application"
+  }
+}

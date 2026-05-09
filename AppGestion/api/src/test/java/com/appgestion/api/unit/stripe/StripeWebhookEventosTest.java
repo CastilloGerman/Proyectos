@@ -12,14 +12,14 @@ import com.stripe.model.EventDataObjectDeserializer;
 import com.stripe.model.Invoice;
 import com.stripe.model.StripeObject;
 import com.stripe.model.Subscription;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
-import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,39 +31,38 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class StripeWebhookEventosTest {
 
     private static final String SECRET = "whsec_test_secret";
 
-    @Mock
-    private StripeWebhookEventParser webhookEventParser;
-    @Mock
-    private StripeSubscriptionFetcher subscriptionFetcher;
-    @Mock
-    private SubscriptionService subscriptionService;
-    @Mock
-    private ProcessedStripeEventRepository processedEventRepository;
+    private final StripeWebhookEventParser webhookEventParser;
+    private final StripeSubscriptionFetcher subscriptionFetcher;
+    private final SubscriptionService subscriptionService;
+    private final ProcessedStripeEventRepository processedEventRepository;
+    private final DefaultStripeWebhookService stripeWebhookService;
 
-    private DefaultStripeWebhookService stripeWebhookService;
-
-    @BeforeEach
-    void setUp() {
-        stripeWebhookService = new DefaultStripeWebhookService(
+    public StripeWebhookEventosTest(
+            @Mock StripeWebhookEventParser webhookEventParser,
+            @Mock StripeSubscriptionFetcher subscriptionFetcher,
+            @Mock SubscriptionService subscriptionService,
+            @Mock ProcessedStripeEventRepository processedEventRepository) {
+        this.webhookEventParser = webhookEventParser;
+        this.subscriptionFetcher = subscriptionFetcher;
+        this.subscriptionService = subscriptionService;
+        this.processedEventRepository = processedEventRepository;
+        this.stripeWebhookService = new DefaultStripeWebhookService(
                 webhookEventParser,
                 subscriptionFetcher,
                 subscriptionService,
                 processedEventRepository,
-                SECRET
-        );
+                SECRET);
     }
 
     @Test
     void customerSubscriptionUpdated_actualizaPlan() throws Exception {
         Subscription subscription = org.mockito.Mockito.mock(Subscription.class);
         when(subscription.getId()).thenReturn("sub_upd");
-        when(subscription.getStatus()).thenReturn("past_due");
-        long end = 1_900_000_000L;
-        when(subscription.getCurrentPeriodEnd()).thenReturn(end);
 
         Event event = eventWith("evt_upd", "customer.subscription.updated", subscription);
 
@@ -73,8 +72,7 @@ class StripeWebhookEventosTest {
         StripeWebhookProcessingResult r = stripeWebhookService.processWebhook("{}", "sig");
         assertThat(r.signatureInvalid()).isFalse();
 
-        verify(subscriptionService).updateSubscription(
-                "sub_upd", "past_due", Instant.ofEpochSecond(end));
+        verify(subscriptionService).syncFromStripeSubscription(eq(subscription), isNull(), isNull());
         verify(subscriptionFetcher, never()).fetch(any());
     }
 
@@ -91,7 +89,7 @@ class StripeWebhookEventosTest {
         stripeWebhookService.processWebhook("{}", "sig");
 
         verify(subscriptionService).cancelSubscription("sub_del");
-        verify(subscriptionService, never()).updateSubscription(any(), any(), any());
+        verify(subscriptionService, never()).syncFromStripeSubscription(any(), any(), any());
     }
 
     /**
@@ -109,7 +107,7 @@ class StripeWebhookEventosTest {
 
         stripeWebhookService.processWebhook("{}", "sig");
 
-        verify(subscriptionService).updateSubscription(eq("sub_inv"), eq("active"), isNull());
+        verify(subscriptionService).recordInvoicePaid(any(Invoice.class));
     }
 
     @Test
@@ -124,6 +122,7 @@ class StripeWebhookEventosTest {
         assertThat(r.signatureInvalid()).isFalse();
 
         verify(subscriptionService, never()).activateSubscription(any(), any(), any(), any(), any());
+        verify(subscriptionService, never()).syncFromStripeSubscription(any(), any(), any());
         verify(subscriptionService, never()).updateSubscription(any(), any(), any());
         verify(subscriptionService, never()).cancelSubscription(any());
 

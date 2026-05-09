@@ -27,12 +27,14 @@ public class SubscriptionStatusConverter implements AttributeConverter<Subscript
             case "ACTIVE" -> SubscriptionStatus.ACTIVE;
             case "TRIAL_ACTIVE" -> SubscriptionStatus.TRIAL_ACTIVE;
             case "TRIAL_EXPIRED" -> SubscriptionStatus.TRIAL_EXPIRED;
+            case "TRIALING" -> SubscriptionStatus.TRIALING;
             case "PAST_DUE" -> SubscriptionStatus.PAST_DUE;
+            case "INCOMPLETE" -> SubscriptionStatus.INCOMPLETE;
+            case "UNPAID" -> SubscriptionStatus.UNPAID;
             case "CANCELED" -> SubscriptionStatus.CANCELED;
             case "CANCELLED" -> SubscriptionStatus.CANCELED;
-            case "TRIALING" -> SubscriptionStatus.TRIAL_ACTIVE;
             case "PASTDUE" -> SubscriptionStatus.PAST_DUE;
-            case "UNPAID", "INCOMPLETE_EXPIRED" -> SubscriptionStatus.CANCELED;
+            case "INCOMPLETE_EXPIRED" -> SubscriptionStatus.CANCELED;
             default -> SubscriptionStatus.TRIAL_EXPIRED;
         };
     }

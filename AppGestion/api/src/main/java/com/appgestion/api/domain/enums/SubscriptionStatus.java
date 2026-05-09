@@ -1,9 +1,9 @@
 package com.appgestion.api.domain.enums;
 
 /**
- * Estados de suscripción del usuario.
- * TRIAL_ACTIVE y ACTIVE permiten lectura y escritura.
- * TRIAL_EXPIRED, PAST_DUE y CANCELED solo permiten lectura.
+ * Estado de suscripción / acceso (app + Stripe Billing).
+ * TRIAL_ACTIVE viene del trial de onboarding de la app; TRIALING es trial nativo de Stripe en una suscripción de pago.
+ * INCOMPLETE / UNPAID bloquean escritura salvo política explícita.
  */
 public enum SubscriptionStatus {
     /** Trial de 14 días activo - acceso completo */
@@ -12,8 +12,14 @@ public enum SubscriptionStatus {
     TRIAL_EXPIRED,
     /** Suscripción pagada activa - acceso completo */
     ACTIVE,
+    /** Trial de Stripe (primer periodo) - acceso completo */
+    TRIALING,
     /** Pago fallido - solo lectura */
     PAST_DUE,
-    /** Suscripción cancelada - solo lectura */
+    /** Cobro no completado o SCA pendiente - solo lectura */
+    INCOMPLETE,
+    /** Tras varios fallos de cobro - solo lectura */
+    UNPAID,
+    /** Suscripción terminada - solo lectura */
     CANCELED
 }

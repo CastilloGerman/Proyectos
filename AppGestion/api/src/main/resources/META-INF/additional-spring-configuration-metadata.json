@@ -28,12 +28,23 @@
     {
       "name": "stripe.cancel-url",
       "type": "java.lang.String",
-      "description": "URL to redirect when subscription is cancelled."
+      "description": "URL to redirect when Checkout is abandoned (e.g. one-off invoice payment)."
+    },
+    {
+      "name": "stripe.subscription-cancel-url",
+      "type": "java.lang.String",
+      "description": "URL when user cancels or leaves subscription Checkout (STRIPE_SUBSCRIPTION_CANCEL_URL); typically the in-app plan page."
     },
     {
       "name": "stripe.portal-return-url",
       "type": "java.lang.String",
       "description": "URL to return to from Stripe customer portal."
+    },
+    {
+      "name": "stripe.checkout-automatic-tax-enabled",
+      "type": "java.lang.Boolean",
+      "description": "Si true, Checkout Session usa automatic_tax (Stripe Tax en Dashboard). Variable STRIPE_CHECKOUT_AUTOMATIC_TAX.",
+      "defaultValue": false
     },
     {
       "name": "app.jwt.secret",
@@ -55,6 +66,18 @@
       "type": "java.lang.Boolean",
       "description": "Si true, omite la comprobación de suscripción Stripe (solo para desarrollo local).",
       "defaultValue": false
+    },
+    {
+      "name": "app.subscription.display.monthly-eur",
+      "type": "java.math.BigDecimal",
+      "description": "Precio mensual mostrado en UI / GET suscripción (alinear con Stripe).",
+      "defaultValue": 9.99
+    },
+    {
+      "name": "app.subscription.display.yearly-eur",
+      "type": "java.math.BigDecimal",
+      "description": "Precio anual mostrado en UI / GET suscripción (alinear con Stripe).",
+      "defaultValue": 90.0
     },
     {
       "name": "app.cors.allowed-origins",

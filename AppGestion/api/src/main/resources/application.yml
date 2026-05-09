@@ -66,7 +66,13 @@ stripe:
   price-id-yearly: ${STRIPE_PRICE_YEARLY:}
   success-url: ${STRIPE_SUCCESS_URL:http://localhost:4200/subscription/success}
   cancel-url: ${STRIPE_CANCEL_URL:http://localhost:4200/subscription/cancel}
-  portal-return-url: ${STRIPE_PORTAL_RETURN_URL:http://localhost:4200/dashboard}
+  # Tras cancelar o volver desde el Checkout de suscripción, Stripe redirige aquí (pantalla del plan en la app).
+  subscription-cancel-url: ${STRIPE_SUBSCRIPTION_CANCEL_URL:${FRONTEND_URL:http://localhost:4200}/cuenta/suscripcion}
+  portal-return-url: ${STRIPE_PORTAL_RETURN_URL:${FRONTEND_URL:http://localhost:4200}/cuenta/suscripcion}
+  # Activa Stripe Tax en Checkout (modo subscription); requiere Tax configurado en el Dashboard Stripe.
+  checkout-automatic-tax-enabled: ${STRIPE_CHECKOUT_AUTOMATIC_TAX:false}
+  # Registrar en Stripe Dashboard (además de los que ya uses): customer.subscription.created,
+  # invoice.payment_action_required (SCA pendiente).
 
 app:
   api:
@@ -78,6 +84,10 @@ app:
   subscription:
     # Por defecto exige suscripción para escritura (seguro). Perfil local la desactiva.
     skip-check: false
+    # Precios mostrados en UI / GET detalles (deben alinear con Prices en Stripe).
+    display:
+      monthly-eur: ${SUBSCRIPTION_DISPLAY_MONTHLY_EUR:9.99}
+      yearly-eur: ${SUBSCRIPTION_DISPLAY_YEARLY_EUR:90.00}
   # Nombre que verá el usuario en la app de autenticación (QR TOTP).
   totp:
     issuer: ${TOTP_ISSUER:AppGestion}

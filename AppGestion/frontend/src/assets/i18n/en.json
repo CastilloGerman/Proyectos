@@ -1,0 +1,47 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "materials": "Materials",
+    "clients": "Clients",
+    "clientsTooltip": "In the list: View status",
+    "budgets": "Estimates",
+    "quickBudget": "Quick estimate",
+    "invoices": "Invoices",
+    "tax": "Tax agency"
+  },
+  "shell": {
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "sidenavButtonAria": "Open or close side menu",
+    "refer": "Refer",
+    "referTooltip": "Send referral link by email",
+    "subscription": "Subscription",
+    "subscriptionTooltip": "Your Noemí plan and service invoices",
+    "notifications": "Notifications",
+    "notificationsAria": "Open notifications",
+    "notificationsTitle": "Notifications",
+    "markAllRead": "Mark as read",
+    "notifLoadError": "Could not load notifications.",
+    "notifEmptyTitle": "No new notifications",
+    "notifEmptyHint": "When you have unread alerts, they will appear here.",
+    "notifViewAll": "View all notifications",
+    "readonlyBanner": "Read-only mode. Activate your subscription to create or edit.",
+    "activateSubscription": "Activate subscription",
+    "activatePremiumDev": "Activate premium (dev)",
+    "activatePremiumDevTooltip": "Development only: mark user as premium without Stripe",
+    "trialEndsIn": "Your trial ends in {{days}} days.",
+    "snackbarNotifMarkedRead": "Notifications marked as read",
+    "snackbarNotifMarkFailed": "Could not mark as read",
+    "snackbarReferSent": "Referral link sent. Check your email (or server logs if SMTP is not configured).",
+    "snackbarNoCheckoutUrl": "Payment URL was not received",
+    "snackbarPremiumActivated": "Premium activated. The app now has write access.",
+    "snackbarPaymentErrorFallback": "Could not start payment",
+    "snackbarGrantPremiumFallback": "Could not activate premium (local API profile?)"
+  },
+  "common": {
+    "close": "Close"
+  },
+  "lang": {
+    "switcherAria": "Change application language"
+  }
+}

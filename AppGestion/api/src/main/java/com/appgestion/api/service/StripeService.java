@@ -47,8 +47,14 @@ public class StripeService {
     @Value("${stripe.cancel-url}")
     private String cancelUrl;
 
+    @Value("${stripe.subscription-cancel-url}")
+    private String subscriptionCancelUrl;
+
     @Value("${stripe.portal-return-url}")
     private String portalReturnUrl;
+
+    @Value("${stripe.checkout-automatic-tax-enabled:false}")
+    private boolean checkoutAutomaticTaxEnabled;
 
     public String createCheckoutSession(Usuario usuario, SubscriptionBillingPeriod billingPeriod)
             throws StripeException {
@@ -76,9 +82,12 @@ public class StripeService {
                             ? "Falta STRIPE_PRICE_YEARLY en la configuración del servidor (precio anual Stripe)."
                             : "Falta STRIPE_PRICE_MONTHLY en la configuración del servidor (precio recurrente Stripe).");
         }
-        if (successUrl == null || successUrl.isBlank() || cancelUrl == null || cancelUrl.isBlank()) {
+        if (successUrl == null
+                || successUrl.isBlank()
+                || subscriptionCancelUrl == null
+                || subscriptionCancelUrl.isBlank()) {
             throw new IllegalStateException(
-                    "Faltan STRIPE_SUCCESS_URL y/o STRIPE_CANCEL_URL en la configuración del servidor.");
+                    "Faltan STRIPE_SUCCESS_URL y/o URL de cancelación de suscripción (STRIPE_SUBSCRIPTION_CANCEL_URL / stripe.subscription-cancel-url) en la configuración del servidor.");
         }
         String customerId = usuario.getStripeCustomerId();
         if (customerId == null || customerId.isBlank()) {
@@ -90,7 +99,7 @@ public class StripeService {
         Map<String, String> metadata = new HashMap<>();
         metadata.put("usuario_id", usuario.getId().toString());
 
-        SessionCreateParams params = SessionCreateParams.builder()
+        SessionCreateParams.Builder sessionBuilder = SessionCreateParams.builder()
                 .setMode(Mode.SUBSCRIPTION)
                 .setCustomer(customerId)
                 .addLineItem(
@@ -99,9 +108,24 @@ public class StripeService {
                                 .setQuantity(1L)
                                 .build())
                 .setSuccessUrl(successUrl + "?session_id={CHECKOUT_SESSION_ID}")
-                .setCancelUrl(cancelUrl)
+                .setCancelUrl(subscriptionCancelUrl)
                 .putAllMetadata(metadata)
-                .build();
+                .setSubscriptionData(
+                        SessionCreateParams.SubscriptionData.builder()
+                                .putMetadata("usuario_id", usuario.getId().toString())
+                                .build());
+
+        if (checkoutAutomaticTaxEnabled) {
+            sessionBuilder
+                    .setAutomaticTax(
+                            SessionCreateParams.AutomaticTax.builder().setEnabled(true).build())
+                    .setCustomerUpdate(
+                            SessionCreateParams.CustomerUpdate.builder()
+                                    .setAddress(SessionCreateParams.CustomerUpdate.Address.AUTO)
+                                    .build());
+        }
+
+        SessionCreateParams params = sessionBuilder.build();
 
         try {
             Session checkoutSession = Session.create(params);
@@ -142,9 +166,9 @@ public class StripeService {
             Long amountPaid = inv.getAmountPaid();
             String currency = inv.getCurrency();
             Long created = inv.getCreated();
-            long dueCents = amountDue == null ? 0L : amountDue.longValue();
-            long paidCents = amountPaid == null ? 0L : amountPaid.longValue();
-            long createdUnix = created == null ? 0L : created.longValue();
+            long dueCents = amountDue == null ? 0L : amountDue;
+            long paidCents = amountPaid == null ? 0L : amountPaid;
+            long createdUnix = created == null ? 0L : created;
             out.add(new SubscriptionInvoiceDto(
                     inv.getId(),
                     inv.getNumber(),
@@ -207,6 +231,7 @@ public class StripeService {
         CustomerCreateParams params = CustomerCreateParams.builder()
                 .setEmail(usuario.getEmail())
                 .setName(usuario.getNombre())
+                .putMetadata("usuario_id", usuario.getId().toString())
                 .build();
 
         Customer customer = Customer.create(params);

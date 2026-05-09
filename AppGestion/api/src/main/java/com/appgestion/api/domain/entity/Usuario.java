@@ -48,6 +48,18 @@ public class Usuario {
     @Column(name = "subscription_current_period_end")
     private LocalDateTime subscriptionCurrentPeriodEnd;
 
+    /** Price id activo de Stripe Billing (plan Noemi mensual/anual). */
+    @Column(name = "stripe_price_id", length = 100)
+    private String stripePriceId;
+
+    /** Según Stripe: la suscripción no renovará pero sigue activa hasta fin de periodo. */
+    @Column(name = "subscription_cancel_at_period_end", nullable = false)
+    private boolean subscriptionCancelAtPeriodEnd;
+
+    /** SCA u otro paso pendiente en el último intento de cobro (invoice.payment_action_required). */
+    @Column(name = "subscription_requires_payment_action", nullable = false)
+    private boolean subscriptionRequiresPaymentAction;
+
     @Column(name = "trial_start_date")
     private LocalDate trialStartDate;
 
@@ -167,6 +179,15 @@ public class Usuario {
 
     public LocalDateTime getSubscriptionCurrentPeriodEnd() { return subscriptionCurrentPeriodEnd; }
     public void setSubscriptionCurrentPeriodEnd(LocalDateTime subscriptionCurrentPeriodEnd) { this.subscriptionCurrentPeriodEnd = subscriptionCurrentPeriodEnd; }
+
+    public String getStripePriceId() { return stripePriceId; }
+    public void setStripePriceId(String stripePriceId) { this.stripePriceId = stripePriceId; }
+
+    public boolean isSubscriptionCancelAtPeriodEnd() { return subscriptionCancelAtPeriodEnd; }
+    public void setSubscriptionCancelAtPeriodEnd(boolean subscriptionCancelAtPeriodEnd) { this.subscriptionCancelAtPeriodEnd = subscriptionCancelAtPeriodEnd; }
+
+    public boolean isSubscriptionRequiresPaymentAction() { return subscriptionRequiresPaymentAction; }
+    public void setSubscriptionRequiresPaymentAction(boolean subscriptionRequiresPaymentAction) { this.subscriptionRequiresPaymentAction = subscriptionRequiresPaymentAction; }
 
     public LocalDate getTrialStartDate() { return trialStartDate; }
     public void setTrialStartDate(LocalDate trialStartDate) { this.trialStartDate = trialStartDate; }

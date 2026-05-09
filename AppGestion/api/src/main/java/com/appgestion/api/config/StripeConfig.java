@@ -29,6 +29,9 @@ public class StripeConfig {
     @Value("${stripe.cancel-url:}")
     private String cancelUrl;
 
+    @Value("${stripe.subscription-cancel-url:}")
+    private String subscriptionCancelUrl;
+
     public StripeConfig(Environment environment) {
         this.environment = environment;
     }
@@ -61,6 +64,10 @@ public class StripeConfig {
             if (cancelUrl == null || cancelUrl.isBlank()) {
                 throw new IllegalStateException(
                         "Stripe: STRIPE_CANCEL_URL debe estar definida en producción.");
+            }
+            if (subscriptionCancelUrl == null || subscriptionCancelUrl.isBlank()) {
+                throw new IllegalStateException(
+                        "Stripe: STRIPE_SUBSCRIPTION_CANCEL_URL (o stripe.subscription-cancel-url) debe estar definida en producción.");
             }
         }
         Stripe.apiKey = stripeSecretKey != null ? stripeSecretKey : "";

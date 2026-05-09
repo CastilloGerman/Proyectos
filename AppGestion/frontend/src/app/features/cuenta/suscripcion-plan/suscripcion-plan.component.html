@@ -47,6 +47,35 @@
             <dd>{{ planLabel }}</dd>
           </div>
           <div class="sub-dl__row">
+            <dt>Precios (Noemi)</dt>
+            <dd>
+              {{ precioMensualFmt() }} al mes · {{ precioAnualFmt() }} al año
+              @if (subscriptionDetails()?.billingInterval === 'MONTHLY') {
+                <span class="sub-dl__hint"> (intervalo actual: mensual)</span>
+              } @else if (subscriptionDetails()?.billingInterval === 'YEARLY') {
+                <span class="sub-dl__hint"> (intervalo actual: anual)</span>
+              }
+            </dd>
+          </div>
+          @if (ahorroAnualResumen()) {
+            <div class="sub-dl__row sub-dl__row--highlight">
+              <dt>Ahorro anual</dt>
+              <dd>{{ ahorroAnualResumen() }}</dd>
+            </div>
+          }
+          @if (cancelAlFinalDelPeriodo()) {
+            <div class="sub-dl__row">
+              <dt>Renovación</dt>
+              <dd>La suscripción <strong>no se renovará</strong> automáticamente al terminar el periodo en curso.</dd>
+            </div>
+          }
+          @if (requiereAccionPago()) {
+            <div class="sub-dl__row">
+              <dt>Pago</dt>
+              <dd>Hay un <strong>paso pendiente</strong> en Stripe para completar el cobro (p. ej. verificación del banco).</dd>
+            </div>
+          }
+          <div class="sub-dl__row">
             <dt>Estado</dt>
             <dd>
               <span [class]="estadoChipClass()">{{ estadoEtiqueta() }}</span>
@@ -64,7 +93,11 @@
             <dt>Fin del periodo de facturación actual</dt>
             <dd>
               {{ finPeriodoFmt() }}
-              @if (estadoSuscripcion() !== 'ACTIVE' && estadoSuscripcion() !== 'PAST_DUE') {
+              @if (
+                estadoSuscripcion() !== 'ACTIVE' &&
+                estadoSuscripcion() !== 'PAST_DUE' &&
+                estadoSuscripcion() !== 'TRIALING'
+              ) {
                 <span class="sub-dl__hint"> (aplica cuando hay suscripción de pago activa)</span>
               }
             </dd>
@@ -90,7 +123,7 @@
                 <mat-button-toggle value="YEARLY">Anual</mat-button-toggle>
               </mat-button-toggle-group>
               <p class="sub-billing__hint">
-                El cobro será mensual o anual según lo que eligas antes de entrar en el pago seguro.
+                Elige el ciclo de facturación; si en el servidor está activado Stripe Tax, el IVA u otros impuestos se calculan en el checkout.
               </p>
             </div>
             <button
