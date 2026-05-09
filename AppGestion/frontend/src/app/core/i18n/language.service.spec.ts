@@ -69,7 +69,7 @@ describe('LanguageService', () => {
       const svc = TestBed.inject(LanguageService);
       const done = svc.init();
       for (const code of SUPPORTED_UI_LANGUAGES) {
-        http.expectOne(`assets/i18n/${code}.json`).flush({ x: 1 });
+        http.expectOne((req) => req.urlWithParams.startsWith(`assets/i18n/${code}.json?v=`)).flush({ x: 1 });
       }
       await done;
       expect(setTranslation).toHaveBeenCalledTimes(SUPPORTED_UI_LANGUAGES.length);

@@ -47,9 +47,12 @@ function resolveRequestPath(url) {
 function handleRequest(req, res) {
   const filePath = resolveRequestPath(req.url ?? '/');
   const stream = createReadStream(filePath);
+  const pathname = decodeURIComponent(new URL(req.url ?? '/', 'http://localhost').pathname);
 
   res.setHeader('Content-Type', contentTypes[extname(filePath)] ?? 'application/octet-stream');
-  if (filePath !== indexFile) {
+  if (pathname.startsWith('/assets/i18n/') && extname(filePath) === '.json') {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  } else if (filePath !== indexFile) {
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
   } else {
     res.setHeader('Cache-Control', 'no-cache');
