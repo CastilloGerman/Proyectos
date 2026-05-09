@@ -22,7 +22,7 @@ export const appConfig: ApplicationConfig = {
     /* Async puede dejar chips/botones sin pintar hasta interacción; sync evita estados de animación colgados */
     provideAnimations(),
     importProvidersFrom(MatSnackBarModule),
-    { provide: TRANSLATE_HTTP_LOADER_CONFIG, useValue: { prefix: '/assets/i18n/', suffix: '.json' } },
+    { provide: TRANSLATE_HTTP_LOADER_CONFIG, useValue: { prefix: 'assets/i18n/', suffix: '.json' } },
     importProvidersFrom(
       TranslateModule.forRoot({
         fallbackLang: 'es',

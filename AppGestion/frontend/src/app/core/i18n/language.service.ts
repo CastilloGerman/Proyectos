@@ -1,5 +1,6 @@
+import { HttpClient } from '@angular/common/http';
 import { Injectable, NgZone, inject } from '@angular/core';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateService, TranslationObject } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 
 /** Next rollout: translate feature modules with prefixes (auth.*, dashboard.*, …); keep API or server strings untranslated. */
@@ -10,8 +11,12 @@ export const SUPPORTED_UI_LANGUAGES = ['es', 'en', 'fr', 'ro', 'uk'] as const;
 
 export type SupportedUiLanguage = (typeof SUPPORTED_UI_LANGUAGES)[number];
 
+/** Load JSON with a path relative to the app base (avoids /assets vs subpath deploy issues). */
+const i18nAsset = (code: string) => `assets/i18n/${code}.json`;
+
 @Injectable({ providedIn: 'root' })
 export class LanguageService {
+  private readonly http = inject(HttpClient);
   private readonly translate = inject(TranslateService);
   private readonly ngZone = inject(NgZone);
 
@@ -47,18 +52,36 @@ export class LanguageService {
     return (SUPPORTED_UI_LANGUAGES as readonly string[]).includes(code);
   }
 
+  /**
+   * Precarga todos los idiomas y registra traducciones antes de `use()`, evitando la condición de carrera
+   * de ngx-translate (changeLang con HTTP raw antes de setTranslations → claves sin traducir en pantalla).
+   */
   init(): Promise<void> {
     const initial = LanguageService.resolveInitialLanguage(
       typeof localStorage !== 'undefined' ? localStorage : null,
       typeof navigator !== 'undefined' ? navigator.languages : null,
     );
     this.translate.addLangs([...SUPPORTED_UI_LANGUAGES]);
-    this.translate.setFallbackLang('es');
-    return firstValueFrom(this.translate.use(initial)).then(() => {
-      this.ngZone.run(() => undefined);
-    });
+
+    return Promise.all(
+      SUPPORTED_UI_LANGUAGES.map((code) =>
+        firstValueFrom(this.http.get<TranslationObject>(i18nAsset(code))).then((data) => {
+          this.translate.setTranslation(code, data);
+        }),
+      ),
+    )
+      .then(() => {
+        this.translate.setFallbackLang('es');
+        return firstValueFrom(this.translate.use(initial));
+      })
+      .then(() => {
+        this.ngZone.run(() => undefined);
+      });
   }
 
+  /**
+   * Los JSON ya están en memoria tras `init`; `use` aplica el idioma de forma síncrona (sin carrera).
+   */
   setLanguage(lang: string): void {
     const code = LanguageService.normalizeLangCode(lang);
     if (!LanguageService.isSupported(code)) {
@@ -67,9 +90,8 @@ export class LanguageService {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, code);
     }
-    this.translate.use(code).subscribe({
-      next: () => this.ngZone.run(() => undefined),
-      error: (err: unknown) => console.warn('[i18n] Failed to load translations for', code, err),
-    });
+    void firstValueFrom(this.translate.use(code))
+      .then(() => this.ngZone.run(() => undefined))
+      .catch((err: unknown) => console.warn('[i18n] Failed to switch language', code, err));
   }
 }

@@ -10,10 +10,11 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-about',
-  imports: [RouterLink, MatButtonModule],
+  imports: [RouterLink, MatButtonModule, TranslateModule],
   templateUrl: './about.component.html',
   styleUrl: './about.component.scss',
 })
@@ -25,18 +26,18 @@ export class AboutComponent implements AfterViewInit, OnDestroy {
   readonly slideDurationSec = 6;
 
   readonly founderSlides = [
-    {
-      src: 'assets/about/founder.jpg',
-      alt: 'German Castillo: del trabajo en obra al código, creador de Noemí',
-    },
-    {
-      src: 'assets/about/obra-codigo-1.png',
-      alt: 'German Castillo en obra con el móvil: presupuesto profesional al instante',
-    },
-    {
-      src: 'assets/about/obra-codigo-2.png',
-      alt: 'German Castillo: de la obra al código, Valencia y Argentina',
-    },
+    { src: 'assets/about/founder.jpg', altKey: 'auth.about.slide0Alt' },
+    { src: 'assets/about/obra-codigo-1.png', altKey: 'auth.about.slide1Alt' },
+    { src: 'assets/about/obra-codigo-2.png', altKey: 'auth.about.slide2Alt' },
+  ] as const;
+
+  readonly pillarCards = [
+    { emoji: '⚡', titleKey: 'auth.about.pillar1Title', bodyKey: 'auth.about.pillar1Body' },
+    { emoji: '🔒', titleKey: 'auth.about.pillar2Title', bodyKey: 'auth.about.pillar2Body' },
+    { emoji: '🤝', titleKey: 'auth.about.pillar3Title', bodyKey: 'auth.about.pillar3Body' },
+    { emoji: '📱', titleKey: 'auth.about.pillar4Title', bodyKey: 'auth.about.pillar4Body' },
+    { emoji: '💡', titleKey: 'auth.about.pillar5Title', bodyKey: 'auth.about.pillar5Body' },
+    { emoji: '🔄', titleKey: 'auth.about.pillar6Title', bodyKey: 'auth.about.pillar6Body' },
   ] as const;
 
   readonly activeSlideIndex = signal(0);

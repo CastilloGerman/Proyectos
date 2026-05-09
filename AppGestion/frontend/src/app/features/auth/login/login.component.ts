@@ -1,4 +1,5 @@
-import { AfterViewInit, Component, OnInit, ViewChild, ElementRef, signal, inject } from '@angular/core';
+import { AfterViewInit, Component, OnInit, ViewChild, ElementRef, signal, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { AboutComponent } from '../about/about.component';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
@@ -555,6 +556,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
   /** Valor fijo para evitar que el chunk lazy reciba un environment sin googleClientId; el botón real siempre se muestra. */
   readonly googleClientId = DEFAULT_GOOGLE_CLIENT_ID;
   private readonly translate = inject(TranslateService);
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor(
     private fb: FormBuilder,
@@ -597,6 +599,19 @@ export class LoginComponent implements OnInit, AfterViewInit {
         console.warn('[Login] googleClientId vacío: no se cargará el botón de Google. Usa http://localhost:4200 y configura environment.googleClientId.');
       }
     }
+    this.translate.onLangChange.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      if (this.googleClientId && this.googleButtonRef?.nativeElement && document.getElementById('google-gsi')) {
+        this.googleButtonRef.nativeElement.innerHTML = '';
+        setTimeout(() => this.renderGoogleButton(), 0);
+      }
+    });
+  }
+
+  /** Locale del widget de Google (alineado al idioma de la app). */
+  private googleButtonLocale(): string {
+    const c = this.translate.currentLang;
+    const m: Record<string, string> = { es: 'es', en: 'en', fr: 'fr', ro: 'ro', uk: 'uk' };
+    return m[c] ?? 'es';
   }
 
   private initGoogleButton(): void {
@@ -634,6 +649,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
       size: 'large',
       text: 'continue_with',
       width: 320,
+      locale: this.googleButtonLocale(),
     });
   }
 

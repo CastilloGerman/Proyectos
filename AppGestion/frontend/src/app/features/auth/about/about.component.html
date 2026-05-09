@@ -1,15 +1,11 @@
 <section class="about" aria-labelledby="about-hero-title">
   <div class="about-inner">
     <header #revealEl class="about-hero reveal">
-      <span class="about-badge">Nuestra historia</span>
-      <h1 id="about-hero-title" class="about-hero-title">Creada en el taller, no en la oficina</h1>
-      <p class="about-hero-lead">
-        Noemí no nació en una sala de juntas, sino escuchando a quienes levantan persianas cada día. Hablando con
-        electricistas, mecánicos y reformistas, vimos el mismo problema: las herramientas de gestión están pensadas para
-        contables u oficinas, no para quien trabaja con las manos a pie de obra.
-      </p>
+      <span class="about-badge">{{ 'auth.about.badge' | translate }}</span>
+      <h1 id="about-hero-title" class="about-hero-title">{{ 'auth.about.heroTitle' | translate }}</h1>
+      <p class="about-hero-lead">{{ 'auth.about.heroLead' | translate }}</p>
       <div class="about-hero-line" aria-hidden="true"></div>
-      <p class="about-hero-byline">German Castillo — creador de Noemí</p>
+      <p class="about-hero-byline">{{ 'auth.about.heroByline' | translate }}</p>
     </header>
 
     <div #revealEl class="about-founder reveal">
@@ -29,7 +25,7 @@
                   >
                     <img
                       [src]="slide.src"
-                      [alt]="slide.alt"
+                      [alt]="slide.altKey | translate"
                       width="800"
                       height="1000"
                       loading="lazy"
@@ -39,7 +35,11 @@
                 }
               </div>
             </div>
-            <div class="about-carousel-dots" role="tablist" aria-label="Elegir foto de la historia">
+            <div
+              class="about-carousel-dots"
+              role="tablist"
+              [attr.aria-label]="'auth.about.carouselTablistAria' | translate"
+            >
               @for (slide of founderSlides; track slide.src; let i = $index) {
                 <button
                   type="button"
@@ -47,63 +47,52 @@
                   role="tab"
                   [class.is-active]="activeSlideIndex() === i"
                   [attr.aria-selected]="activeSlideIndex() === i"
-                  [attr.aria-label]="'Foto ' + (i + 1) + ' de ' + founderSlides.length"
+                  [attr.aria-label]="
+                    'auth.about.carouselDotAria'
+                      | translate: { current: i + 1, total: founderSlides.length }
+                  "
                   (click)="goToSlide(i)"
                 ></button>
               }
             </div>
           </div>
           <blockquote class="about-founder-quote">
-            <p>
-              «Entiendo tu día a día porque yo estuve ahí: polvo en las botas y aún así hay que pasar el presupuesto.»
-            </p>
+            <p>{{ 'auth.about.founderQuote' | translate }}</p>
           </blockquote>
         </figure>
       </div>
       <div class="about-founder-copy">
-        <h2 class="about-section-title">De la obra al código</h2>
-        <p>
-          Hola, soy <strong>German Castillo</strong>, el creador de Noemí. Hace cuatro años llegué desde Argentina a
-          Valencia con una mochila llena de sueños y ganas de salir adelante. Mi primer abrazo en España me lo dio la
-          construcción: trabajé como albañil, pintor y colocando suelos de parquet.
-        </p>
-        <p>
-          Sé lo que es terminar una jornada agotadora y, en lugar de descansar, pelearse con el ordenador para enviar un
-          presupuesto. Por eso volqué mi experiencia y mi pasión por la informática en una solución real. Noemí no es solo
-          software; es el agradecimiento a un sector que me dio todo al llegar y al que quiero devolver lo más valioso:
-          <strong>tu tiempo</strong>.
-        </p>
+        <h2 class="about-section-title">{{ 'auth.about.founderSectionTitle' | translate }}</h2>
+        <p [innerHTML]="'auth.about.founderP1' | translate"></p>
+        <p [innerHTML]="'auth.about.founderP2' | translate"></p>
         <div class="about-stats">
           <div class="about-stat about-stat--timer" aria-hidden="true">
             <span class="about-stat-ring"></span>
-            <span class="about-stat-timer-label">90s</span>
+            <span class="about-stat-timer-label">{{ 'auth.about.statTimerLabel' | translate }}</span>
           </div>
           <div class="about-stat">
-            <span class="about-stat-value">&lt; 90 s</span>
-            <span class="about-stat-label">para un presupuesto profesional</span>
+            <span class="about-stat-value">{{ 'auth.about.statBudgetValue' | translate }}</span>
+            <span class="about-stat-label">{{ 'auth.about.statBudgetLabel' | translate }}</span>
           </div>
           <div class="about-stat">
-            <span class="about-stat-value">1</span>
-            <span class="about-stat-label">German Castillo, soporte directo</span>
+            <span class="about-stat-value">{{ 'auth.about.statSupportValue' | translate }}</span>
+            <span class="about-stat-label">{{ 'auth.about.statSupportLabel' | translate }}</span>
           </div>
           <div class="about-stat">
-            <span class="about-stat-value">0</span>
-            <span class="about-stat-label">funciones de relleno que no usarás</span>
+            <span class="about-stat-value">{{ 'auth.about.statZeroValue' | translate }}</span>
+            <span class="about-stat-label">{{ 'auth.about.statZeroLabel' | translate }}</span>
           </div>
         </div>
       </div>
     </div>
 
     <div #revealEl class="about-pillars-wrap reveal">
-      <h2 class="about-section-title about-section-title--center">Menos burocracia, más oficio</h2>
-      <p class="about-pillars-intro">
-        A diferencia de otras soluciones pensadas solo para despachos, Noemí está diseñada para el profesional en
-        campo: simplicidad radical, móvil primero, y la promesa de no robarte el tiempo con complejidad innecesaria.
-      </p>
+      <h2 class="about-section-title about-section-title--center">{{ 'auth.about.pillarsTitle' | translate }}</h2>
+      <p class="about-pillars-intro">{{ 'auth.about.pillarsIntro' | translate }}</p>
       <figure class="about-pillars-visual">
         <img
           src="assets/about/login-beneficios-noemi.png"
-          alt="Vista previa de Noemí con beneficios clave para profesionales en campo"
+          [alt]="'auth.about.pillarsImageAlt' | translate"
           width="1536"
           height="768"
           loading="lazy"
@@ -112,70 +101,26 @@
         />
       </figure>
       <ul class="about-pillars">
-        <li class="about-pillar-card">
-          <span class="about-pillar-emoji" aria-hidden="true">⚡</span>
-          <h3 class="about-pillar-title">Velocidad en campo</h3>
-          <p>Interfaz optimizada para dedos, no solo para ratones. Tu oficina es donde tú estés.</p>
-        </li>
-        <li class="about-pillar-card">
-          <span class="about-pillar-emoji" aria-hidden="true">🔒</span>
-          <h3 class="about-pillar-title">Seguridad invisible</h3>
-          <p>JWT, encriptación y buenas prácticas trabajando en segundo plano. Tus datos son solo tuyos.</p>
-        </li>
-        <li class="about-pillar-card">
-          <span class="about-pillar-emoji" aria-hidden="true">🤝</span>
-          <h3 class="about-pillar-title">Soporte directo</h3>
-          <p>Cuando hablas con Noemí, hablas conmigo. Sin bots ni call centers: alguien que entiende tu lenguaje.</p>
-        </li>
-        <li class="about-pillar-card">
-          <span class="about-pillar-emoji" aria-hidden="true">📱</span>
-          <h3 class="about-pillar-title">Movilidad total</h3>
-          <p>Saca el móvil, añade materiales y servicios, y el cliente puede recibir su PDF antes de salir por la puerta.</p>
-        </li>
-        <li class="about-pillar-card">
-          <span class="about-pillar-emoji" aria-hidden="true">💡</span>
-          <h3 class="about-pillar-title">Claridad financiera</h3>
-          <p>Facturación y cobros sin jerga innecesaria: lo que importa, a la vista.</p>
-        </li>
-        <li class="about-pillar-card">
-          <span class="about-pillar-emoji" aria-hidden="true">🔄</span>
-          <h3 class="about-pillar-title">Evolución constante</h3>
-          <p>La plataforma crece con las necesidades reales de los autónomos en España, sin perder la esencia simple.</p>
-        </li>
+        @for (card of pillarCards; track card.titleKey) {
+          <li class="about-pillar-card">
+            <span class="about-pillar-emoji" aria-hidden="true">{{ card.emoji }}</span>
+            <h3 class="about-pillar-title">{{ card.titleKey | translate }}</h3>
+            <p>{{ card.bodyKey | translate }}</p>
+          </li>
+        }
       </ul>
     </div>
 
     <article #revealEl class="about-letter reveal" aria-labelledby="about-letter-heading">
-      <h2 id="about-letter-heading" class="visually-hidden">Carta del fundador</h2>
+      <h2 id="about-letter-heading" class="visually-hidden">{{ 'auth.about.letterHeadingHidden' | translate }}</h2>
       <div class="about-letter-inner">
-        <p class="about-letter-greeting">Querido compañero,</p>
-        <p>
-          Sé perfectamente lo que se siente al terminar una jornada de diez horas en la obra, con la espalda cansada y la
-          cabeza dando vueltas al siguiente presupuesto. Sé lo que es llegar a casa en Valencia, después de un día de
-          calor o de frío, y tener que abrir el ordenador porque «hay que facturar» para cobrar lo que te has ganado con
-          el sudor.
-        </p>
-        <p>
-          Hace cuatro años, cuando llegué con 24 años, la construcción me abrió las puertas y me enseñó el valor del
-          esfuerzo en este país. Trabajé duro como albañil, pintor y montador de parquet, agradecido por cada
-          oportunidad. Pero mientras mis manos trabajaban el suelo o las paredes, mi mente seguía conectada a mi gran
-          sueño: la informática.
-        </p>
-        <p>
-          Observaba a mis compañeros y veía que muchas soluciones grandes no hablaban nuestro idioma: programas complejos,
-          pensados para oficinas, no para quien gestiona el negocio desde la furgoneta o a pie de obra.
-        </p>
-        <p>
-          Por eso, ahora a mis 27 años, he desarrollado Noemí. No es solo código; es mi forma de darte las gracias. Es la
-          herramienta que yo hubiera querido tener cuando empecé. La he construido solo, paso a paso, con la misma
-          precisión que aprendí poniendo parquet, para que no pierdas ni un minuto más de lo necesario frente a la
-          pantalla.
-        </p>
-        <p>
-          Mi compromiso es sencillo: Noemí será siempre fácil, rápida y humana. Porque entiendo tu esfuerzo, respeto tu
-          oficio y quiero que, cuando termines tu trabajo, tu tiempo sea realmente tuyo.
-        </p>
-        <p>Gracias por confiar en un proyecto que nace del esfuerzo y del respeto al trabajo bien hecho.</p>
+        <p class="about-letter-greeting">{{ 'auth.about.letterGreeting' | translate }}</p>
+        <p>{{ 'auth.about.letterP1' | translate }}</p>
+        <p>{{ 'auth.about.letterP2' | translate }}</p>
+        <p>{{ 'auth.about.letterP3' | translate }}</p>
+        <p>{{ 'auth.about.letterP4' | translate }}</p>
+        <p>{{ 'auth.about.letterP5' | translate }}</p>
+        <p>{{ 'auth.about.letterP6' | translate }}</p>
         <div class="about-letter-footer">
           <img
             class="about-letter-portrait"
@@ -189,9 +134,9 @@
           />
           <div class="about-letter-footer-text">
             <p class="about-letter-signoff">
-              Un abrazo,<br />
-              <span class="about-letter-name">German Castillo</span><br />
-              <span>Tu compañero y desarrollador de Noemí.</span>
+              {{ 'auth.about.letterSignoffClosing' | translate }}<br />
+              <span class="about-letter-name">{{ 'auth.about.letterSignoffName' | translate }}</span><br />
+              <span>{{ 'auth.about.letterSignoffRole' | translate }}</span>
             </p>
             <img
               class="about-letter-signature"
@@ -207,11 +152,15 @@
     </article>
 
     <footer #revealEl class="about-cta reveal">
-      <h2 class="about-cta-title">Empieza gratis hoy</h2>
-      <p class="about-cta-text">Devolvamos juntos tus tardes, un presupuesto a la vez.</p>
+      <h2 class="about-cta-title">{{ 'auth.about.ctaTitle' | translate }}</h2>
+      <p class="about-cta-text">{{ 'auth.about.ctaText' | translate }}</p>
       <div class="about-cta-actions">
-        <a mat-raised-button color="primary" routerLink="/register" class="about-cta-primary">Crear cuenta</a>
-        <button type="button" mat-stroked-button class="about-cta-ghost" (click)="scrollToTop()">Volver arriba</button>
+        <a mat-raised-button color="primary" routerLink="/register" class="about-cta-primary">{{
+          'auth.about.ctaRegister' | translate
+        }}</a>
+        <button type="button" mat-stroked-button class="about-cta-ghost" (click)="scrollToTop()">
+          {{ 'auth.about.ctaBackToTop' | translate }}
+        </button>
       </div>
     </footer>
   </div>

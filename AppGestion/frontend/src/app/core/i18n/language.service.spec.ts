@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { TranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
-import { LanguageService, APP_LANGUAGE_STORAGE_KEY } from './language.service';
+import { LanguageService, APP_LANGUAGE_STORAGE_KEY, SUPPORTED_UI_LANGUAGES } from './language.service';
 
 describe('LanguageService', () => {
   describe('resolveInitialLanguage', () => {
@@ -46,24 +47,34 @@ describe('LanguageService', () => {
       vi.stubGlobal('navigator', { languages: ['ro-RO'] });
     });
 
-    it('configures translate and applies resolved language', async () => {
+    it('preloads all locale files, registers translations, then applies resolved language', async () => {
       const use = vi.fn().mockReturnValue(of({}));
+      const setTranslation = vi.fn();
       TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
         providers: [
           LanguageService,
           {
             provide: TranslateService,
             useValue: {
               addLangs: vi.fn(),
+              setTranslation,
               setFallbackLang: vi.fn(),
               use,
             },
           },
         ],
       });
+      const http = TestBed.inject(HttpTestingController);
       const svc = TestBed.inject(LanguageService);
-      await svc.init();
+      const done = svc.init();
+      for (const code of SUPPORTED_UI_LANGUAGES) {
+        http.expectOne(`assets/i18n/${code}.json`).flush({ x: 1 });
+      }
+      await done;
+      expect(setTranslation).toHaveBeenCalledTimes(SUPPORTED_UI_LANGUAGES.length);
       expect(use).toHaveBeenCalledWith('ro');
+      http.verify();
     });
   });
 });
