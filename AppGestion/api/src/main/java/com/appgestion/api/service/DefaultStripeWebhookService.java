@@ -68,6 +68,8 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
         StripeObject dataObject = event.getDataObjectDeserializer().getObject().orElse(null);
         if (dataObject != null) {
             dispatch(event.getType(), dataObject);
+        } else if (requiresDataObject(event.getType())) {
+            throw new IllegalStateException("No se pudo deserializar el objeto del evento Stripe: " + event.getType());
         }
 
         ProcessedStripeEvent processed = new ProcessedStripeEvent();
@@ -88,6 +90,20 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
         }
     }
 
+    private static boolean requiresDataObject(String type) {
+        if (type == null) {
+            return false;
+        }
+        return switch (type) {
+            case EVENT_CHECKOUT_SESSION_COMPLETED,
+                 EVENT_CUSTOMER_SUBSCRIPTION_UPDATED,
+                 EVENT_CUSTOMER_SUBSCRIPTION_DELETED,
+                 EVENT_INVOICE_PAID,
+                 EVENT_INVOICE_PAYMENT_FAILED -> true;
+            default -> false;
+        };
+    }
+
     private void handleCheckoutSessionCompleted(Session session) {
         String usuarioIdStr = session.getMetadata() != null ? session.getMetadata().get(METADATA_USUARIO_ID) : null;
         if (usuarioIdStr == null) {
@@ -106,7 +122,7 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
         try {
             subscription = subscriptionFetcher.fetch(subscriptionId);
         } catch (StripeException e) {
-            return;
+            throw new IllegalStateException("No se pudo recuperar la suscripcion de Stripe: " + subscriptionId, e);
         }
 
         String status = subscription.getStatus();

@@ -7,11 +7,13 @@ import com.appgestion.api.service.SubscriptionService;
 import com.appgestion.api.service.stripe.StripeSubscriptionFetcher;
 import com.appgestion.api.service.stripe.StripeWebhookEventParser;
 import com.appgestion.api.service.stripe.StripeWebhookProcessingResult;
+import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
 import com.stripe.model.EventDataObjectDeserializer;
 import com.stripe.model.Invoice;
 import com.stripe.model.StripeObject;
 import com.stripe.model.Subscription;
+import com.stripe.model.checkout.Session;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,9 +22,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -110,6 +114,47 @@ class StripeWebhookEventosTest {
         stripeWebhookService.processWebhook("{}", "sig");
 
         verify(subscriptionService).updateSubscription(eq("sub_inv"), eq("active"), isNull());
+    }
+
+    @Test
+    void checkoutSessionCompleted_siFallaConsultaSuscripcion_noRegistraProcessedEvent() throws Exception {
+        Session session = org.mockito.Mockito.mock(Session.class);
+        when(session.getMetadata()).thenReturn(Map.of("usuario_id", "42"));
+        when(session.getCustomer()).thenReturn("cus_fail");
+        when(session.getSubscription()).thenReturn("sub_fail");
+
+        Event event = eventWith("evt_checkout_retry", "checkout.session.completed", session);
+
+        when(webhookEventParser.parse(any(), any(), eq(SECRET))).thenReturn(event);
+        when(processedEventRepository.existsByEventId("evt_checkout_retry")).thenReturn(false);
+        when(subscriptionFetcher.fetch("sub_fail")).thenThrow(org.mockito.Mockito.mock(StripeException.class));
+
+        assertThatThrownBy(() -> stripeWebhookService.processWebhook("{}", "sig"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("sub_fail");
+
+        verify(subscriptionService, never()).activateSubscription(any(), any(), any(), any(), any());
+        verify(processedEventRepository, never()).save(any());
+    }
+
+    @Test
+    void checkoutSessionCompleted_sinObjetoDeserializado_noRegistraProcessedEvent() throws Exception {
+        Event event = org.mockito.Mockito.mock(Event.class);
+        when(event.getId()).thenReturn("evt_checkout_no_object");
+        when(event.getType()).thenReturn("checkout.session.completed");
+        EventDataObjectDeserializer deser = org.mockito.Mockito.mock(EventDataObjectDeserializer.class);
+        when(event.getDataObjectDeserializer()).thenReturn(deser);
+        when(deser.getObject()).thenReturn(Optional.empty());
+
+        when(webhookEventParser.parse(any(), any(), eq(SECRET))).thenReturn(event);
+        when(processedEventRepository.existsByEventId("evt_checkout_no_object")).thenReturn(false);
+
+        assertThatThrownBy(() -> stripeWebhookService.processWebhook("{}", "sig"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("checkout.session.completed");
+
+        verify(subscriptionService, never()).activateSubscription(any(), any(), any(), any(), any());
+        verify(processedEventRepository, never()).save(any());
     }
 
     @Test
