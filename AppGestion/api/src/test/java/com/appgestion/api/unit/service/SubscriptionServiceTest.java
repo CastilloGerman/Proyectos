@@ -63,8 +63,6 @@ class SubscriptionServiceTest {
         SubscriptionService service = service();
         Usuario usuario = usuario(11L, "cus_shared", "sub_current", SubscriptionStatus.ACTIVE);
         Subscription staleSubscription = mock(Subscription.class);
-        when(staleSubscription.getId()).thenReturn("sub_old");
-        when(staleSubscription.getStatus()).thenReturn("active");
         Invoice invoice = invoice("in_stale", "sub_old", "cus_shared");
 
         when(usuarioRepository.findByStripeSubscriptionId("sub_old")).thenReturn(Optional.empty());
