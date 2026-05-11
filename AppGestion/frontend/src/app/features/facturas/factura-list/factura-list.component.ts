@@ -22,12 +22,13 @@ import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import { AuthService } from '../../../core/auth/auth.service';
 import { FacturaService } from '../../../core/services/factura.service';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
-import { Factura } from '../../../core/models/factura.model';
+import { Factura, FacturaItemRequest, FacturaRequest } from '../../../core/models/factura.model';
 import { Presupuesto } from '../../../core/models/presupuesto.model';
 import { ImportarPresupuestoDialogComponent } from '../../../shared/importar-presupuesto-dialog/importar-presupuesto-dialog.component';
 import { ConfigEmpresaDialogComponent } from '../../../shared/config-empresa-dialog/config-empresa-dialog.component';
 import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/enviar-email-dialog.component';
 import { AnularFacturaDialogComponent } from '../../../shared/anular-factura-dialog/anular-factura-dialog.component';
+import { FacturaParcialImporteDialogComponent } from '../../../shared/factura-parcial-importe-dialog/factura-parcial-importe-dialog.component';
 
 @Component({
     selector: 'app-factura-list',
@@ -187,7 +188,16 @@ import { AnularFacturaDialogComponent } from '../../../shared/anular-factura-dia
           <ng-container matColumnDef="estadoPago">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado</th>
             <td mat-cell *matCellDef="let row">
-              <app-estado-badge [estado]="row.estadoPago"></app-estado-badge>
+              @if (auth.canMutate() && !row.anulada) {
+                <app-estado-badge
+                  [estado]="row.estadoPago"
+                  [menuOptions]="otrosEstadosPago(row.estadoPago)"
+                  [menuDisabled]="actualizandoEstadoFacturaId === row.id"
+                  (estadoSeleccionado)="cambiarEstadoPagoFactura(row, $event)"
+                ></app-estado-badge>
+              } @else {
+                <app-estado-badge [estado]="row.estadoPago"></app-estado-badge>
+              }
             </td>
           </ng-container>
           <ng-container matColumnDef="total">
@@ -385,10 +395,12 @@ import { AnularFacturaDialogComponent } from '../../../shared/anular-factura-dia
 })
 export class FacturaListComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly estadosPagoFacturaCatalogo = ['No Pagada', 'Parcial', 'Pagada'];
   displayedColumns = ['numeroFactura', 'tipoFactura', 'clienteNombre', 'fechaCreacion', 'fechaVencimiento', 'estadoPago', 'total', 'actions'];
   dataSource = new MatTableDataSource<Factura>([]);
   isLoading = false;
   loadingRecordatorioId: number | null = null;
+  actualizandoEstadoFacturaId: number | null = null;
 
   /**
    * La tabla está en @if (!isLoading): en ngAfterViewInit aún no existe MatSort/MatPaginator.
@@ -845,5 +857,100 @@ export class FacturaListComponent implements OnInit {
       },
       error: () => this.snackBar.open('Error al descargar PDF', 'Cerrar', { duration: 3000 }),
     });
+  }
+
+  otrosEstadosPago(actual: string): string[] {
+    const n = (x: string) => (x ?? '').trim().toLowerCase();
+    const a = n(actual);
+    return this.estadosPagoFacturaCatalogo.filter((e) => n(e) !== a);
+  }
+
+  cambiarEstadoPagoFactura(f: Factura, nuevo: string): void {
+    if (f.anulada) return;
+    const n = (x: string) => (x ?? '').trim().toLowerCase();
+    if (n(nuevo) === n(f.estadoPago ?? '')) return;
+
+    if (nuevo === 'Parcial') {
+      this.dialog
+        .open(FacturaParcialImporteDialogComponent, {
+          width: '440px',
+          maxWidth: '95vw',
+          data: {
+            totalFactura: f.total,
+            numeroFactura: f.numeroFactura,
+            clienteNombre: f.clienteNombre,
+            importeSugerido: f.montoCobrado,
+          },
+        })
+        .afterClosed()
+        .subscribe((importe: number | undefined) => {
+          if (importe == null) return;
+          this.ejecutarActualizacionEstadoFactura(f, nuevo, importe);
+        });
+      return;
+    }
+
+    this.ejecutarActualizacionEstadoFactura(f, nuevo);
+  }
+
+  private ejecutarActualizacionEstadoFactura(f: Factura, nuevo: string, montoParcial?: number): void {
+    this.actualizandoEstadoFacturaId = f.id;
+    const payload = this.buildFacturaUpdateRequestFromRow(f, nuevo, montoParcial);
+    this.facturaService.update(f.id, payload).subscribe({
+      next: (updated) => {
+        this.actualizandoEstadoFacturaId = null;
+        this.patchFacturaEnTabla(updated);
+        this.snackBar.open(`Estado de cobro: ${updated.estadoPago}`, 'Cerrar', { duration: 2500 });
+      },
+      error: (err) => {
+        this.actualizandoEstadoFacturaId = null;
+        const msg = err.error?.message ?? err.error?.detail ?? 'No se pudo actualizar el estado';
+        this.snackBar.open(typeof msg === 'string' ? msg : 'Error al actualizar el estado', 'Cerrar', { duration: 5000 });
+      },
+    });
+  }
+
+  private buildFacturaUpdateRequestFromRow(f: Factura, estadoPago: string, montoParcialExplicito?: number): FacturaRequest {
+    const items: FacturaItemRequest[] = (f.items ?? []).map((it) => {
+      const manual = it.esTareaManual === true;
+      return {
+        materialId: manual ? undefined : it.materialId,
+        tareaManual: manual ? (it.descripcion?.trim() || undefined) : undefined,
+        cantidad: it.cantidad,
+        precioUnitario: it.precioUnitario,
+        aplicaIva: it.aplicaIva,
+      };
+    });
+    const fechaCreacionIso = f.fechaCreacion ? f.fechaCreacion.split('T')[0] : '';
+    const fechaExp =
+      typeof f.fechaExpedicion === 'string' ? f.fechaExpedicion : f.fechaExpedicion ?? fechaCreacionIso;
+    return {
+      clienteId: f.clienteId,
+      items,
+      presupuestoId: f.presupuestoId,
+      numeroFactura: f.numeroFactura,
+      fechaExpedicion: fechaExp || new Date().toISOString().split('T')[0],
+      fechaOperacion: f.fechaOperacion,
+      fechaVencimiento: f.fechaVencimiento,
+      regimenFiscal: f.regimenFiscal,
+      condicionesPago: f.condicionesPago,
+      metodoPago: f.metodoPago,
+      estadoPago,
+      montoCobrado:
+        estadoPago === 'Parcial'
+          ? (montoParcialExplicito != null ? montoParcialExplicito : f.montoCobrado != null ? +f.montoCobrado : undefined)
+          : undefined,
+      notas: f.notas,
+      ivaHabilitado: f.ivaHabilitado,
+    };
+  }
+
+  private patchFacturaEnTabla(updated: Factura): void {
+    const rows = [...this.dataSource.data];
+    const idx = rows.findIndex((x) => x.id === updated.id);
+    if (idx >= 0) {
+      rows[idx] = { ...rows[idx], estadoPago: updated.estadoPago, montoCobrado: updated.montoCobrado };
+      this.dataSource.data = rows;
+    }
   }
 }

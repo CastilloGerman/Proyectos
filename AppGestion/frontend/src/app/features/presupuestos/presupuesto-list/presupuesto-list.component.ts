@@ -17,7 +17,7 @@ import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
 import { EstadoBadgeComponent } from '../../../shared/estado-badge/estado-badge.component';
 import { AuthService } from '../../../core/auth/auth.service';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
-import { Presupuesto } from '../../../core/models/presupuesto.model';
+import { Presupuesto, PresupuestoItemRequest, PresupuestoRequest } from '../../../core/models/presupuesto.model';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfigEmpresaDialogComponent } from '../../../shared/config-empresa-dialog/config-empresa-dialog.component';
 import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/enviar-email-dialog.component';
@@ -91,7 +91,16 @@ import { Observable } from 'rxjs';
           <ng-container matColumnDef="estado">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado</th>
             <td mat-cell *matCellDef="let row">
-              <app-estado-badge [estado]="row.estado"></app-estado-badge>
+              @if (auth.canMutate()) {
+                <app-estado-badge
+                  [estado]="row.estado"
+                  [menuOptions]="otrosEstadosPresupuesto(row.estado)"
+                  [menuDisabled]="actualizandoEstadoPresupuestoId === row.id"
+                  (estadoSeleccionado)="cambiarEstadoPresupuesto(row, $event)"
+                ></app-estado-badge>
+              } @else {
+                <app-estado-badge [estado]="row.estado"></app-estado-badge>
+              }
             </td>
           </ng-container>
           <ng-container matColumnDef="anticipo">
@@ -249,8 +258,10 @@ import { Observable } from 'rxjs';
 })
 export class PresupuestoListComponent implements OnInit, AfterViewInit {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly estadosPresupuestoCatalogo = ['Pendiente', 'Aceptado', 'Rechazado', 'En ejecución'];
   displayedColumns = ['clienteNombre', 'fechaCreacion', 'estado', 'anticipo', 'total', 'actions'];
   dataSource = new MatTableDataSource<Presupuesto>([]);
+  actualizandoEstadoPresupuestoId: number | null = null;
 
   @ViewChild(MatSort) sort!: MatSort;
   @ViewChild(MatPaginator) paginator!: MatPaginator;
@@ -325,6 +336,72 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
   private updateFilter(): void {
     this.dataSource.filter = `${this.textFilter}||${this.estadoFilter}`;
     if (this.dataSource.paginator) this.dataSource.paginator.firstPage();
+  }
+
+  otrosEstadosPresupuesto(actual: string): string[] {
+    const a = (actual ?? '').trim();
+    return this.estadosPresupuestoCatalogo.filter((e) => !this.equivalentesEstadoEjecucionUi(e, a));
+  }
+
+  /** Misma semántica que la API/UI: variantes con o sin tilde cuentan como el mismo estado. */
+  private equivalentesEstadoEjecucionUi(a: string, b: string): boolean {
+    const ej = ['en ejecución', 'en ejecucion'];
+    const la = a.trim().toLowerCase();
+    const lb = b.trim().toLowerCase();
+    if (ej.includes(la) && ej.includes(lb)) return true;
+    return la === lb;
+  }
+
+  cambiarEstadoPresupuesto(p: Presupuesto, nuevo: string): void {
+    const actual = (p.estado ?? '').trim();
+    if (this.equivalentesEstadoEjecucionUi(nuevo, actual)) return;
+    this.actualizandoEstadoPresupuestoId = p.id;
+    const payload = this.buildPresupuestoUpdateRequest(p, nuevo);
+    this.presupuestoService.update(p.id, payload).subscribe({
+      next: (updated) => {
+        this.actualizandoEstadoPresupuestoId = null;
+        this.patchPresupuestoEnTabla(updated);
+        this.snackBar.open(`Estado: ${updated.estado}`, 'Cerrar', { duration: 2500 });
+      },
+      error: (err) => {
+        this.actualizandoEstadoPresupuestoId = null;
+        const msg = err.error?.message ?? err.error?.detail ?? 'No se pudo actualizar el estado';
+        this.snackBar.open(typeof msg === 'string' ? msg : 'Error al actualizar el estado', 'Cerrar', { duration: 5000 });
+      },
+    });
+  }
+
+  private buildPresupuestoUpdateRequest(p: Presupuesto, estado: string): PresupuestoRequest {
+    const items: PresupuestoItemRequest[] = (p.items ?? []).map((it) => {
+      const manual = it.esTareaManual === true;
+      return {
+        materialId: manual ? undefined : it.materialId,
+        tareaManual: manual ? (it.descripcion?.trim() || undefined) : undefined,
+        cantidad: it.cantidad,
+        precioUnitario: it.precioUnitario,
+        visiblePdf: it.visiblePdf,
+      };
+    });
+    return {
+      clienteId: p.clienteId,
+      items,
+      ivaHabilitado: p.ivaHabilitado,
+      estado,
+      descuentoGlobalPorcentaje: p.descuentoGlobalPorcentaje,
+      descuentoGlobalFijo: p.descuentoGlobalFijo,
+      descuentoAntesIva: p.descuentoAntesIva ?? true,
+      condicionesActivas: p.condicionesActivas ?? [],
+      notaAdicional: p.notaAdicional ?? undefined,
+    };
+  }
+
+  private patchPresupuestoEnTabla(updated: Presupuesto): void {
+    const rows = [...this.dataSource.data];
+    const idx = rows.findIndex((x) => x.id === updated.id);
+    if (idx >= 0) {
+      rows[idx] = { ...rows[idx], estado: updated.estado };
+      this.dataSource.data = rows;
+    }
   }
 
   delete(presupuesto: Presupuesto): void {
