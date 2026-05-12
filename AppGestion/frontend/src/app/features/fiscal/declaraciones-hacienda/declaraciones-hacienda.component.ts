@@ -16,6 +16,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { FiscalService } from '../../../core/services/fiscal.service';
 import { FiscalCriterio, Modelo303Resumen, Modelo347Resumen } from '../../../core/models/fiscal.model';
 import { FiscalAlertaBannerComponent } from '../fiscal-alerta-banner/fiscal-alerta-banner.component';
+import { TranslateService } from '@ngx-translate/core';
 
 const DEFAULT_DOC_TITLE = 'Noemí - Web de Gestión';
 
@@ -44,6 +45,7 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
   private readonly fiscal = inject(FiscalService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly title = inject(Title);
+  private readonly translate = inject(TranslateService);
 
   readonly loading = signal(false);
   readonly loading347 = signal(false);
@@ -68,8 +70,12 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.loading.set(false);
-        const msg = err.error?.message ?? err.error?.detail ?? 'No se pudo cargar el resumen';
-        this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+        const raw = err.error?.message ?? err.error?.detail;
+        const msg =
+          typeof raw === 'string' && String(raw).trim() !== ''
+            ? String(raw).trim()
+            : this.translate.instant('snack.tax303SummaryLoadFail');
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
       },
     });
   }
@@ -83,7 +89,9 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.loading347.set(false);
-        this.snackBar.open('Error al cargar el listado 347', 'Cerrar', { duration: 4000 });
+        this.snackBar.open(this.translate.instant('snack.tax347LoadFail'), this.translate.instant('common.close'), {
+          duration: 4000,
+        });
       },
     });
   }
@@ -91,7 +99,9 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
   exportarPdf(): void {
     const r = this.resumen();
     if (!r) {
-      this.snackBar.open('Primero carga el resumen del trimestre', 'Cerrar', { duration: 3000 });
+      this.snackBar.open(this.translate.instant('snack.taxQuarterFirst'), this.translate.instant('common.close'), {
+        duration: 3000,
+      });
       return;
     }
     this.fiscal.downloadModelo303Pdf(this.year, this.trimestre, this.criterio, this.soloPagadas).subscribe({
@@ -103,7 +113,10 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
         a.click();
         URL.revokeObjectURL(url);
       },
-      error: () => this.snackBar.open('Error al generar el PDF', 'Cerrar', { duration: 3000 }),
+      error: () =>
+        this.snackBar.open(this.translate.instant('snack.taxPdfFail'), this.translate.instant('common.close'), {
+          duration: 3000,
+        }),
     });
   }
 

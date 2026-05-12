@@ -15,6 +15,7 @@ import { MatNativeDateModule, MAT_DATE_LOCALE } from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
 import { AuthService, UsuarioResponse } from '../../../core/auth/auth.service';
 import { getApiErrorMessage } from '../../../core/http/api-error.util';
+import { TranslateService } from '@ngx-translate/core';
 import { buildPaisOptionsEs } from '../../../shared/constants/paises-select-options';
 import { formatLocalDateForApi, parseApiLocalDate } from '../../../shared/utils/local-date.util';
 
@@ -68,6 +69,7 @@ export class PerfilComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly translate = inject(TranslateService);
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -186,12 +188,18 @@ export class PerfilComponent implements OnInit {
             { emitEvent: false }
           );
           this.form.markAsPristine();
-          this.snackBar.open('Cambios guardados correctamente', 'Cerrar', { duration: 3000 });
+          this.snackBar.open(this.translate.instant('snack.profileSaved'), this.translate.instant('common.close'), {
+            duration: 3000,
+          });
           this.saving.set(false);
         },
         error: (err) => {
           this.saving.set(false);
-          this.snackBar.open(getApiErrorMessage(err, 'No se pudo guardar el perfil'), 'Cerrar', { duration: 6000 });
+          this.snackBar.open(
+            getApiErrorMessage(err, this.translate.instant('snack.profileSaveFail')),
+            this.translate.instant('common.close'),
+            { duration: 6000 },
+          );
         },
       });
   }

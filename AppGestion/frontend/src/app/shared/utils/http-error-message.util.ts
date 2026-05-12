@@ -1,9 +1,19 @@
 import { HttpErrorResponse } from '@angular/common/http';
 
+/** Textos opcionales para errores de red/servidor (p. ej. desde i18n). */
+export interface HttpErrorPresetMessages {
+  offline?: string;
+  server?: string;
+}
+
 /**
- * Mensaje usable para snackbars a partir del cuerpo de error típico de la API Spring / JSON `{ error }`.
+ * Mensaje usable para snackbars a partir del cuerpo de error típico de la API (`error`, `message`, etc.).
  */
-export function messageFromHttpError(err: unknown, fallback: string): string {
+export function messageFromHttpError(
+  err: unknown,
+  fallback: string,
+  presets?: HttpErrorPresetMessages
+): string {
   if (err instanceof HttpErrorResponse) {
     const body = err.error;
     if (typeof body === 'string' && body.trim().length > 0) {
@@ -17,10 +27,16 @@ export function messageFromHttpError(err: unknown, fallback: string): string {
       }
     }
     if (err.status === 0) {
-      return 'Sin conexión con el servidor. Comprueba la red y que la API esté disponible.';
+      return (
+        presets?.offline ??
+        'Sin conexión a internet. Comprueba tu red e inténtalo de nuevo.'
+      );
     }
     if (err.status >= 500) {
-      return 'El servidor respondió con un error. Inténtalo más tarde.';
+      return (
+        presets?.server ??
+        'Algo falló por nuestra parte. Inténtalo de nuevo dentro de unos minutos.'
+      );
     }
   }
   return fallback;

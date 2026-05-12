@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,6 +10,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { ClienteService } from '../../../core/services/cliente.service';
 import { Cliente } from '../../../core/models/cliente.model';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-cliente-list',
@@ -165,6 +166,7 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
   `]
 })
 export class ClienteListComponent implements OnInit {
+  private readonly translate = inject(TranslateService);
   displayedColumns = ['nombre', 'estadoPanel', 'email', 'telefono', 'actions'];
   dataSource = new MatTableDataSource<Cliente>([]);
   provisionalesCount = 0;
@@ -198,11 +200,17 @@ export class ClienteListComponent implements OnInit {
       if (ok) {
         this.clienteService.delete(cliente.id).subscribe({
           next: () => {
-            this.snackBar.open('Cliente eliminado', 'Cerrar', { duration: 3000 });
+            this.snackBar.open(this.translate.instant('snack.clientDeleted'), this.translate.instant('common.close'), {
+              duration: 3000,
+            });
             this.load();
           },
           error: () => {
-            this.snackBar.open('Error al eliminar', 'Cerrar', { duration: 3000 });
+            this.snackBar.open(
+              this.translate.instant('snack.clientDeleteFail'),
+              this.translate.instant('common.close'),
+              { duration: 3000 },
+            );
           },
         });
       }

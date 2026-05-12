@@ -13,6 +13,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AuthService } from '../../core/auth/auth.service';
 import { SubscriptionService } from '../../core/services/subscription.service';
+import { TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
 import { USER_MENU_SECTIONS, UserMenuItem } from './user-menu.config';
 import { LogoutConfirmDialogComponent } from './logout-confirm-dialog.component';
@@ -30,6 +31,7 @@ export class UserDropdownComponent {
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly subscriptionService = inject(SubscriptionService);
+  private readonly translate = inject(TranslateService);
   private readonly host = inject(ElementRef<HTMLElement>);
 
   readonly sections = USER_MENU_SECTIONS;
@@ -135,18 +137,24 @@ export class UserDropdownComponent {
   }
 
   private openSubscriptionCheckout(): void {
+    const presets = {
+      offline: this.translate.instant('shell.snackbarOffline'),
+      server: this.translate.instant('shell.snackbarServerError'),
+    };
     this.subscriptionService.createCheckoutSession().subscribe({
       next: (res) => {
         const url = res.checkoutUrl?.trim();
         if (url) {
           window.location.href = url;
         } else {
-          this.snackBar.open('No se recibió la URL de pago', 'Cerrar', { duration: 4000 });
+          this.snackBar.open(this.translate.instant('shell.snackbarNoCheckoutUrl'), this.translate.instant('common.close'), {
+            duration: 4000,
+          });
         }
       },
       error: (err: unknown) => {
-        const msg = messageFromHttpError(err, 'No se pudo iniciar el pago');
-        this.snackBar.open(msg, 'Cerrar', { duration: 6500 });
+        const msg = messageFromHttpError(err, this.translate.instant('shell.snackbarPaymentErrorFallback'), presets);
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 6500 });
       },
     });
   }

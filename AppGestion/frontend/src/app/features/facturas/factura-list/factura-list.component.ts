@@ -29,6 +29,7 @@ import { ConfigEmpresaDialogComponent } from '../../../shared/config-empresa-dia
 import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/enviar-email-dialog.component';
 import { AnularFacturaDialogComponent } from '../../../shared/anular-factura-dialog/anular-factura-dialog.component';
 import { FacturaParcialImporteDialogComponent } from '../../../shared/factura-parcial-importe-dialog/factura-parcial-importe-dialog.component';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-factura-list',
@@ -395,6 +396,16 @@ import { FacturaParcialImporteDialogComponent } from '../../../shared/factura-pa
 })
 export class FacturaListComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly translate = inject(TranslateService);
+
+  private snackClose(): string {
+    return this.translate.instant('common.close');
+  }
+
+  private snackConfigure(): string {
+    return this.translate.instant('common.configure');
+  }
+
   private readonly estadosPagoFacturaCatalogo = ['No Pagada', 'Parcial', 'Pagada'];
   displayedColumns = ['numeroFactura', 'tipoFactura', 'clienteNombre', 'fechaCreacion', 'fechaVencimiento', 'estadoPago', 'total', 'actions'];
   dataSource = new MatTableDataSource<Factura>([]);
@@ -738,16 +749,21 @@ export class FacturaListComponent implements OnInit {
     this.facturaService.enviarRecordatorioCliente(factura.id).subscribe({
       next: () => {
         this.loadingRecordatorioId = null;
-        this.snackBar.open('Recordatorio enviado al cliente', 'Cerrar', { duration: 4000 });
+        this.snackBar.open(this.translate.instant('snack.invoiceReminderSent'), this.snackClose(), { duration: 4000 });
       },
       error: (err) => {
         this.loadingRecordatorioId = null;
-        const msg =
-          err.error?.message || err.error?.detail || err.error?.error || 'No se pudo enviar el recordatorio';
+        const msgRaw =
+          err.error?.message || err.error?.detail || err.error?.error || '';
+        const fallback = this.translate.instant('snack.invoiceSendReminderFail');
+        const msg = typeof msgRaw === 'string' && msgRaw.trim() ? msgRaw.trim() : fallback;
         const needsConfig =
           typeof msg === 'string' &&
-          (msg.includes('correo') || msg.includes('SMTP') || msg.includes('Configure') || msg.includes('configur'));
-        this.snackBar.open(typeof msg === 'string' ? msg : 'Error al enviar', needsConfig ? 'Configurar' : 'Cerrar', {
+          (msg.toLowerCase().includes('correo') ||
+            msg.toLowerCase().includes('smtp') ||
+            msg.includes('Configure') ||
+            msg.toLowerCase().includes('configur'));
+        this.snackBar.open(msg, needsConfig ? this.snackConfigure() : this.snackClose(), {
           duration: needsConfig ? 8000 : 5000,
         }).onAction().subscribe(() => {
           if (needsConfig) {
@@ -767,12 +783,14 @@ export class FacturaListComponent implements OnInit {
       }
       this.facturaService.anular(factura.id, motivo).subscribe({
         next: () => {
-          this.snackBar.open('Factura anulada', 'Cerrar', { duration: 3000 });
+          this.snackBar.open(this.translate.instant('snack.invoiceCanceled'), this.snackClose(), { duration: 3000 });
           this.load();
         },
         error: (err) => {
-          const msg = err.error?.message || err.error?.detail || err.error?.error || 'Error al anular';
-          this.snackBar.open(typeof msg === 'string' ? msg : 'Error al anular', 'Cerrar', { duration: 5000 });
+          const msgRaw = err.error?.message || err.error?.detail || err.error?.error || '';
+          const fb = this.translate.instant('snack.invoiceCancelFail');
+          const msg = typeof msgRaw === 'string' && msgRaw.trim() ? msgRaw.trim() : fb;
+          this.snackBar.open(msg, this.snackClose(), { duration: 5000 });
         },
       });
     });
@@ -793,19 +811,24 @@ export class FacturaListComponent implements OnInit {
               : this.presupuestoService.createFacturaFromPresupuesto(selected.id);
             req.subscribe({
               next: (factura) => {
-                this.snackBar.open('Factura creada desde presupuesto', 'Cerrar', { duration: 3000 });
+                this.snackBar.open(this.translate.instant('snack.invoiceFromBudget'), this.snackClose(), { duration: 3000 });
                 this.facturaService.getAll().subscribe((data) => {
                   this.dataSource.data = data;
                 });
               },
               error: (err) => {
-                this.snackBar.open(err.error?.message || 'Error al crear factura', 'Cerrar', { duration: 4000 });
+                const m = err.error?.message;
+                this.snackBar.open(
+                  typeof m === 'string' && m.trim() ? m : this.translate.instant('snack.invoiceCreateFail'),
+                  this.snackClose(),
+                  { duration: 4000 },
+                );
               },
             });
           }
         });
       },
-      error: () => this.snackBar.open('Error al cargar presupuestos', 'Cerrar', { duration: 3000 }),
+      error: () => this.snackBar.open(this.translate.instant('snack.budgetsLoadFail'), this.snackClose(), { duration: 3000 }),
     });
   }
 
@@ -828,12 +851,19 @@ export class FacturaListComponent implements OnInit {
       if (email !== undefined) {
         this.facturaService.enviarPorEmail(factura.id, email || undefined).subscribe({
           next: () => {
-            this.snackBar.open('Factura enviada por email correctamente', 'Cerrar', { duration: 3000 });
+            this.snackBar.open(this.translate.instant('snack.invoiceEmailSent'), this.snackClose(), { duration: 3000 });
           },
           error: (err) => {
-            const msg = err.error?.detail ?? err.error?.message ?? 'Error al enviar el email';
-            const needsConfig = msg.includes('Configure') || msg.includes('correo de envío');
-            this.snackBar.open(msg, needsConfig ? 'Configurar' : 'Cerrar', { duration: needsConfig ? 8000 : 5000 })
+            const msgRaw = err.error?.detail ?? err.error?.message ?? '';
+            const msg =
+              typeof msgRaw === 'string' && msgRaw.trim()
+                ? msgRaw.trim()
+                : this.translate.instant('snack.invoiceEmailFail');
+            const needsConfig =
+              msg.includes('Configure') || msg.toLowerCase().includes('correo de envío');
+            this.snackBar.open(msg, needsConfig ? this.snackConfigure() : this.snackClose(), {
+              duration: needsConfig ? 8000 : 5000,
+            })
               .onAction().subscribe(() => {
                 if (needsConfig) {
                   this.dialog.open(ConfigEmpresaDialogComponent, { width: '500px', data: { context: 'mail' } });
@@ -855,7 +885,7 @@ export class FacturaListComponent implements OnInit {
         a.click();
         URL.revokeObjectURL(url);
       },
-      error: () => this.snackBar.open('Error al descargar PDF', 'Cerrar', { duration: 3000 }),
+      error: () => this.snackBar.open(this.translate.instant('snack.pdfDownloadFail'), this.snackClose(), { duration: 3000 }),
     });
   }
 
@@ -900,12 +930,18 @@ export class FacturaListComponent implements OnInit {
       next: (updated) => {
         this.actualizandoEstadoFacturaId = null;
         this.patchFacturaEnTabla(updated);
-        this.snackBar.open(`Estado de cobro: ${updated.estadoPago}`, 'Cerrar', { duration: 2500 });
+        this.snackBar.open(
+          this.translate.instant('snack.paymentStatusUpdated', { status: updated.estadoPago }),
+          this.snackClose(),
+          { duration: 2500 },
+        );
       },
       error: (err) => {
         this.actualizandoEstadoFacturaId = null;
-        const msg = err.error?.message ?? err.error?.detail ?? 'No se pudo actualizar el estado';
-        this.snackBar.open(typeof msg === 'string' ? msg : 'Error al actualizar el estado', 'Cerrar', { duration: 5000 });
+        const msgRaw = err.error?.message ?? err.error?.detail ?? '';
+        const fb = this.translate.instant('snack.statusUpdateFail');
+        const msg = typeof msgRaw === 'string' && msgRaw.trim() ? msgRaw.trim() : fb;
+        this.snackBar.open(msg, this.snackClose(), { duration: 5000 });
       },
     });
   }

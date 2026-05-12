@@ -18,6 +18,8 @@ public record RegisterRequest(
         @Size(min = 6, message = "La contraseña debe tener al menos 6 caracteres")
         String password,
 
+        String referralToken,
+
         String rol,
 
         @Valid DeviceClientInfoRequest clientInfo

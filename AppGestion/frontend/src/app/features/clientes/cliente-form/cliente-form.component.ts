@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ClienteService } from '../../../core/services/cliente.service';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-cliente-form',
@@ -100,7 +101,8 @@ export class ClienteFormComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private clienteService: ClienteService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private translate: TranslateService
   ) {
     this.form = this.fb.group({
       nombre: ['', Validators.required],
@@ -154,12 +156,20 @@ export class ClienteFormComponent implements OnInit {
       : this.clienteService.create(payload);
     req.subscribe({
       next: () => {
-        this.snackBar.open(this.isEdit ? 'Cliente actualizado' : 'Cliente creado', 'Cerrar', { duration: 3000 });
+        this.snackBar.open(
+          this.translate.instant(this.isEdit ? 'snack.clientSavedUpdate' : 'snack.clientSavedCreate'),
+          this.translate.instant('common.close'),
+          { duration: 3000 },
+        );
         this.router.navigate(['/clientes']);
       },
       error: (err) => {
-        const msg = err.error?.error || err.error?.message || 'Error al guardar';
-        this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+        const msgRaw = err.error?.error || err.error?.message || '';
+        const msg =
+          typeof msgRaw === 'string' && String(msgRaw).trim() !== ''
+            ? String(msgRaw).trim()
+            : this.translate.instant('snack.clientSaveFail');
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
       },
     });
   }

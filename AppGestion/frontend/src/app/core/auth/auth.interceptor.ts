@@ -4,11 +4,13 @@ import { catchError, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from './auth.service';
+import { TranslateService } from '@ngx-translate/core';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
   const router = inject(Router);
   const snackBar = inject(MatSnackBar);
+  const translate = inject(TranslateService);
   const token = auth.getToken();
 
   const cloned = token
@@ -29,8 +31,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         const skipGlobalSessionHandler =
           publicAuth || isLogoutRequest || auth.isLogoutInProgress();
         if (!skipGlobalSessionHandler) {
-          const msg = err.error?.error || 'Tu sesión ha expirado. Inicia sesión de nuevo.';
-          snackBar.open(msg, 'Cerrar', { duration: 4000 });
+          snackBar.open(translate.instant('shell.snackbarSessionExpired'), translate.instant('common.close'), {
+            duration: 4000,
+          });
           auth.clearSessionLocal();
           router.navigate(['/login']);
         }

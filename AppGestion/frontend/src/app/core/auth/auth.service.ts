@@ -91,10 +91,15 @@ export class AuthService {
   }
 
   register(data: RegisterRequest): Observable<AuthResponse> {
-    const payload = {
-      ...data,
+    const payload: Record<string, unknown> = {
+      nombre: data.nombre,
+      email: data.email,
+      password: data.password,
       clientInfo: data.clientInfo ?? buildDeviceClientInfo(),
     };
+    if (data.rol) payload['rol'] = data.rol;
+    const ref = data.referralToken?.trim();
+    if (ref) payload['referralToken'] = ref;
     return this.http.post<AuthResponse>(`${this.authRoot}/register`, payload).pipe(
       tap((response) => this.handleAuthSuccess(response))
     );

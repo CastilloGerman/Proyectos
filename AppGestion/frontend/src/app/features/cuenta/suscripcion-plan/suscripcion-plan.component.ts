@@ -17,6 +17,7 @@ import { finalize } from 'rxjs/operators';
 import { forkJoin } from 'rxjs';
 import { messageFromHttpError } from '../../../shared/utils/http-error-message.util';
 import { MatButtonToggleChange, MatButtonToggleModule } from '@angular/material/button-toggle';
+import { TranslateService } from '@ngx-translate/core';
 
 /** Nombre comercial del plan (un solo precio Stripe en esta fase). */
 const DEFAULT_PLAN_LABEL = 'Plan profesional';
@@ -41,6 +42,7 @@ export class SuscripcionPlanComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly subscriptionApi = inject(SubscriptionService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly translate = inject(TranslateService);
   private readonly devApi = inject(DevApiService);
 
   readonly loading = signal(true);
@@ -194,6 +196,7 @@ export class SuscripcionPlanComponent implements OnInit {
 
   abrirCheckout(): void {
     this.openingCheckout.set(true);
+    const presets = this.snackHttpPresets();
     this.subscriptionApi
       .createCheckoutSession(this.checkoutBillingPeriod())
       .pipe(finalize(() => this.openingCheckout.set(false)))
@@ -203,18 +206,27 @@ export class SuscripcionPlanComponent implements OnInit {
           if (url) {
             window.location.href = url;
           } else {
-            this.snackBar.open('No se recibió la URL de pago', 'Cerrar', { duration: 4000 });
+            this.snackBar.open(
+              this.translate.instant('shell.snackbarNoCheckoutUrl'),
+              this.translate.instant('common.close'),
+              { duration: 4000 },
+            );
           }
         },
         error: (err: unknown) => {
-          const msg = messageFromHttpError(err, 'No se pudo iniciar el pago');
-          this.snackBar.open(msg, 'Cerrar', { duration: 6500 });
+          const msg = messageFromHttpError(
+            err,
+            this.translate.instant('shell.snackbarPaymentErrorFallback'),
+            presets,
+          );
+          this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 6500 });
         },
       });
   }
 
   abrirPortal(): void {
     this.openingPortal.set(true);
+    const presets = this.snackHttpPresets();
     this.subscriptionApi
       .createPortalSession()
       .pipe(finalize(() => this.openingPortal.set(false)))
@@ -224,29 +236,54 @@ export class SuscripcionPlanComponent implements OnInit {
           if (url) {
             window.location.href = url;
           } else {
-            this.snackBar.open('No se recibió el enlace del portal', 'Cerrar', { duration: 4000 });
+            this.snackBar.open(
+              this.translate.instant('shell.snackbarNoPortalUrl'),
+              this.translate.instant('common.close'),
+              { duration: 4000 },
+            );
           }
         },
         error: (err: unknown) => {
-          const msg = messageFromHttpError(err, 'No se pudo abrir el portal de facturación');
-          this.snackBar.open(msg, 'Cerrar', { duration: 6500 });
+          const msg = messageFromHttpError(
+            err,
+            this.translate.instant('shell.snackbarPortalErrorFallback'),
+            presets,
+          );
+          this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 6500 });
         },
       });
   }
 
   /** Solo desarrollo: alinear con banner del layout. */
   grantPremiumDev(): void {
+    const presets = this.snackHttpPresets();
     this.devApi.grantPremium().subscribe({
       next: () => {
         this.auth.refreshUser().subscribe((data) => {
           if (data) this.me.set(data);
-          this.snackBar.open('Premium activado (solo dev)', 'Cerrar', { duration: 3000 });
+          this.snackBar.open(
+            this.translate.instant('shell.snackbarDevPremiumOk'),
+            this.translate.instant('common.close'),
+            { duration: 3000 },
+          );
         });
       },
       error: (err) => {
-        this.snackBar.open(err.error?.message || 'No disponible en este entorno', 'Cerrar', { duration: 4000 });
+        const msg = messageFromHttpError(
+          err,
+          this.translate.instant('shell.snackbarDevPremiumUnavailable'),
+          presets,
+        );
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 4000 });
       },
     });
+  }
+
+  private snackHttpPresets() {
+    return {
+      offline: this.translate.instant('shell.snackbarOffline'),
+      server: this.translate.instant('shell.snackbarServerError'),
+    };
   }
 
   private formatEur(value: number | undefined): string {

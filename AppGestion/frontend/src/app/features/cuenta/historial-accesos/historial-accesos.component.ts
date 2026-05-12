@@ -26,6 +26,7 @@ import {
   AuditAccessPageDto,
 } from '../../../core/services/audit-access-api.service';
 import { getApiErrorMessage } from '../../../core/http/api-error.util';
+import { TranslateService } from '@ngx-translate/core';
 
 const EVENT_TYPES: { value: string; label: string }[] = [
   { value: 'LOGIN_SUCCESS', label: 'Inicio de sesión correcto' },
@@ -73,6 +74,7 @@ export class HistorialAccesosComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly fb = inject(FormBuilder);
+  private readonly translate = inject(TranslateService);
 
   readonly eventTypes = EVENT_TYPES;
 
@@ -134,7 +136,11 @@ export class HistorialAccesosComponent implements OnInit {
       error: (err) => {
         this.loadError.set(true);
         this.loading.set(false);
-        this.snackBar.open(getApiErrorMessage(err, 'No se pudo cargar el historial'), 'Cerrar', { duration: 6000 });
+        this.snackBar.open(
+          getApiErrorMessage(err, this.translate.instant('snack.accessHistoryLoadFail')),
+          this.translate.instant('common.close'),
+          { duration: 6000 },
+        );
       },
     });
   }
@@ -200,7 +206,11 @@ export class HistorialAccesosComponent implements OnInit {
         this.exporting.set(false);
         const blob = res.body;
         if (!blob) {
-          this.snackBar.open('Exportación vacía', 'Cerrar', { duration: 4000 });
+          this.snackBar.open(
+            this.translate.instant('snack.accessHistoryExportEmpty'),
+            this.translate.instant('common.close'),
+            { duration: 4000 },
+          );
           return;
         }
         const cd = res.headers.get('Content-Disposition');
@@ -214,7 +224,11 @@ export class HistorialAccesosComponent implements OnInit {
       },
       error: (err) => {
         this.exporting.set(false);
-        this.snackBar.open(getApiErrorMessage(err, 'No se pudo exportar'), 'Cerrar', { duration: 6000 });
+        this.snackBar.open(
+          getApiErrorMessage(err, this.translate.instant('snack.accessHistoryExportFail')),
+          this.translate.instant('common.close'),
+          { duration: 6000 },
+        );
       },
     });
   }

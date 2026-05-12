@@ -1,5 +1,6 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.constant.TrialConstants;
 import com.appgestion.api.domain.entity.Invitacion;
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.domain.enums.AuditAccessEventType;
@@ -8,7 +9,6 @@ import com.appgestion.api.dto.request.AcceptInvitacionRequest;
 import com.appgestion.api.dto.request.CreateInvitacionRequest;
 import com.appgestion.api.dto.response.AuthResponse;
 import com.appgestion.api.dto.response.InviteVerifyResponse;
-import com.appgestion.api.repository.EmpresaRepository;
 import com.appgestion.api.repository.InvitacionRepository;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.appgestion.api.util.EmailCopy;
@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
+import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
@@ -37,12 +38,10 @@ import org.slf4j.LoggerFactory;
 public class InvitacionService {
 
     private static final Logger log = LoggerFactory.getLogger(InvitacionService.class);
-    private static final int TRIAL_DAYS = 14;
     private static final int INVITE_VALID_DAYS = 7;
 
     private final InvitacionRepository invitacionRepository;
     private final UsuarioRepository usuarioRepository;
-    private final EmpresaRepository empresaRepository;
     private final JwtService jwtService;
     private final SubscriptionService subscriptionService;
     private final EmailService emailService;
@@ -56,7 +55,6 @@ public class InvitacionService {
 
     public InvitacionService(InvitacionRepository invitacionRepository,
                              UsuarioRepository usuarioRepository,
-                             EmpresaRepository empresaRepository,
                              JwtService jwtService,
                              SubscriptionService subscriptionService,
                              EmailService emailService,
@@ -66,7 +64,6 @@ public class InvitacionService {
                              AuditAccessService auditAccessService) {
         this.invitacionRepository = invitacionRepository;
         this.usuarioRepository = usuarioRepository;
-        this.empresaRepository = empresaRepository;
         this.jwtService = jwtService;
         this.subscriptionService = subscriptionService;
         this.emailService = emailService;
@@ -93,13 +90,14 @@ public class InvitacionService {
         inv.setExpiresAt(LocalDateTime.now().plusDays(INVITE_VALID_DAYS));
         invitacionRepository.save(inv);
 
-        String link = frontendUrl + "/invite/" + rawToken;
-        String nombreEmpresaInvitador = empresaRepository.findByUsuarioId(inviterUsuarioId).map(e -> e.getNombre()).orElse(null);
-        String asunto = "Te han invitado a probar " + EmailCopy.PRODUCT_NAME;
-        String cuerpo = EmailCopy.prefijoSoloEmpresa(nombreEmpresaInvitador)
-                + "<p>Alguien te ha enviado un enlace para crear tu propia cuenta en " + EmailCopy.htmlEscape(EmailCopy.PRODUCT_NAME) + ".</p>"
-                + "<p>Tendrás un periodo de prueba; después, para seguir creando y editando necesitarás una suscripción activa.</p>"
-                + "<p><a href=\"" + link + "\">Crear mi cuenta</a></p>"
+        String encodedToken = URLEncoder.encode(rawToken, StandardCharsets.UTF_8);
+        String link = frontendUrl.replaceAll("/+$", "") + "/login?ref=" + encodedToken;
+        String asunto = "Te han invitado a probar " + EmailCopy.PRODUCT_MARKETING_NAME;
+        String cuerpo = EmailCopy.inviteReferralTeamOpeningParagraphHtml()
+                + EmailCopy.inviteReferralProductParagraphHtml()
+                + EmailCopy.inviteReferralSomeoneSentLinkParagraphHtml()
+                + EmailCopy.inviteReferralTrialOneMonthParagraphHtml()
+                + "<p><a href=\"" + link + "\">Ir a iniciar sesión o registro</a></p>"
                 + "<p>El enlace caduca en " + INVITE_VALID_DAYS + " días.</p>";
 
         try {
@@ -118,7 +116,7 @@ public class InvitacionService {
         return invitacionRepository.findByTokenHash(hash)
                 .filter(inv -> inv.getUsedAt() == null)
                 .filter(inv -> inv.getExpiresAt().isAfter(LocalDateTime.now()))
-                .map(inv -> new InviteVerifyResponse(true, inv.getEmail()))
+                .map(inv -> new InviteVerifyResponse(true))
                 .orElse(InviteVerifyResponse.invalid());
     }
 
@@ -148,7 +146,7 @@ public class InvitacionService {
         usuario.setActivo(true);
         LocalDate trialStart = LocalDate.now();
         usuario.setTrialStartDate(trialStart);
-        usuario.setTrialEndDate(trialStart.plusDays(TRIAL_DAYS));
+        usuario.setTrialEndDate(trialStart.plusDays(TrialConstants.DEFAULT_TRIAL_DAYS));
         usuario.setSubscriptionStatus(SubscriptionStatus.TRIAL_ACTIVE);
         usuario.setReferredByUsuarioId(inviterId);
         usuario = organizationService.attachNewPersonalOrganization(usuario);
@@ -165,6 +163,30 @@ public class InvitacionService {
         return AuthResponse.of(token, usuario.getEmail(), usuario.getRol(), expiresAt,
                 usuario.getSubscriptionStatus(), usuario.getTrialEndDate(), subscriptionService.canWrite(usuario),
                 sesion.getId());
+    }
+
+    /**
+     * Token de invitación pendiente (no usado, no caducado). Marcar con {@link #markInvitationUsed} tras persistir el usuario.
+     */
+    public Invitacion assertValidInvitationForRegistration(String rawToken) {
+        if (rawToken == null || rawToken.isBlank()) {
+            throw new IllegalArgumentException("Enlace de referido inválido o caducado");
+        }
+        String hash = sha256Hex(rawToken.trim());
+        Invitacion inv = invitacionRepository.findByTokenHash(hash)
+                .orElseThrow(() -> new IllegalArgumentException("Enlace de referido inválido o caducado"));
+        if (inv.getUsedAt() != null) {
+            throw new IllegalArgumentException("Este enlace de referido ya se ha utilizado");
+        }
+        if (inv.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Enlace de referido caducado");
+        }
+        return inv;
+    }
+
+    public void markInvitationUsed(Invitacion inv) {
+        inv.setUsedAt(LocalDateTime.now());
+        invitacionRepository.save(inv);
     }
 
     private static String sha256Hex(String input) {

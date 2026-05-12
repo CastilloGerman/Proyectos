@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SupportApiService } from '../../../core/services/support-api.service';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-contactar-soporte',
@@ -33,6 +34,7 @@ export class ContactarSoporteComponent {
   private readonly supportApi = inject(SupportApiService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly route = inject(ActivatedRoute);
+  private readonly translate = inject(TranslateService);
 
   readonly sending = signal(false);
   readonly selectedFiles = signal<File[]>([]);
@@ -77,17 +79,22 @@ export class ContactarSoporteComponent {
     this.supportApi.contact(fd).subscribe({
         next: (res) => {
           this.sending.set(false);
-          this.snackBar.open(res.message ?? 'Mensaje enviado', 'Cerrar', { duration: 6000 });
+          this.snackBar.open(
+            res.message ?? this.translate.instant('snack.contactSupportSent'),
+            this.translate.instant('common.close'),
+            { duration: 6000 },
+          );
           this.form.reset();
           this.clearFiles(inputReset);
         },
         error: (err) => {
           this.sending.set(false);
+          const raw = err?.error?.message ?? err?.error?.detail;
           const msg =
-            err?.error?.message ??
-            err?.error?.detail ??
-            'No se pudo enviar el mensaje. Revisa la conexión o la configuración de correo.';
-          this.snackBar.open(msg, 'Cerrar', { duration: 8000 });
+            typeof raw === 'string' && raw.trim() !== ''
+              ? raw.trim()
+              : this.translate.instant('snack.contactSupportFail');
+          this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 8000 });
         },
       });
   }

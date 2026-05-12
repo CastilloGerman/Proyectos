@@ -10,6 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { AuthService, UsuarioResponse } from '../../../core/auth/auth.service';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-config-cuenta',
@@ -32,6 +33,7 @@ export class ConfigCuentaComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly translate = inject(TranslateService);
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -91,13 +93,19 @@ export class ConfigCuentaComponent implements OnInit {
             { emitEvent: false }
           );
           this.form.markAsPristine();
-          this.snackBar.open('Preferencias guardadas', 'Cerrar', { duration: 3000 });
+          this.snackBar.open(this.translate.instant('snack.prefsSaved'), this.translate.instant('common.close'), {
+            duration: 3000,
+          });
           this.saving.set(false);
         },
         error: (err) => {
           this.saving.set(false);
-          const msg = err.error?.message || err.error?.detail || 'No se pudo guardar';
-          this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+          const raw = err.error?.message || err.error?.detail;
+          const msg =
+            typeof raw === 'string' && String(raw).trim() !== ''
+              ? String(raw).trim()
+              : this.translate.instant('snack.prefsSaveFail');
+          this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
         },
       });
   }

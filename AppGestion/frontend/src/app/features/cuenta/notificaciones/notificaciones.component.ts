@@ -16,6 +16,7 @@ import {
   NotificacionDto,
   NotificacionesService,
 } from '../../../core/services/notificaciones.service';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-notificaciones',
@@ -39,6 +40,7 @@ export class NotificacionesComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly translate = inject(TranslateService);
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -76,7 +78,9 @@ export class NotificacionesComponent implements OnInit {
       },
       error: () => {
         this.loading.set(false);
-        this.snackBar.open('No se pudieron cargar las notificaciones', 'Cerrar', { duration: 5000 });
+        this.snackBar.open(this.translate.instant('snack.notificationsLoadFail'), this.translate.instant('common.close'), {
+          duration: 5000,
+        });
       },
     });
   }
@@ -101,12 +105,16 @@ export class NotificacionesComponent implements OnInit {
     this.notifSvc.markAllRead().subscribe({
       next: () => {
         this.saving.set(false);
-        this.snackBar.open('Notificaciones marcadas como leídas', 'Cerrar', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('snack.notificationsMarkedRead'), this.translate.instant('common.close'), {
+          duration: 3000,
+        });
         this.load();
       },
       error: () => {
         this.saving.set(false);
-        this.snackBar.open('No se pudo completar la acción', 'Cerrar', { duration: 4000 });
+        this.snackBar.open(this.translate.instant('snack.notificationsActionFail'), this.translate.instant('common.close'), {
+          duration: 4000,
+        });
       },
     });
   }

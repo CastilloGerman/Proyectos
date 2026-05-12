@@ -11,6 +11,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ConfigService } from '../../core/services/config.service';
 import { Empresa } from '../../core/models/empresa.model';
 import { dataUrlFromStoredBase64 } from '../../core/utils/image-data-url';
+import { TranslateService } from '@ngx-translate/core';
 
 export type ConfigContext = 'presupuesto' | 'factura' | 'mail';
 
@@ -168,6 +169,7 @@ export class ConfigEmpresaDialogComponent implements OnInit {
     private fb: FormBuilder,
     private configService: ConfigService,
     private snackBar: MatSnackBar,
+    private translate: TranslateService,
     public ref: MatDialogRef<ConfigEmpresaDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { context?: ConfigContext }
   ) {
@@ -219,7 +221,10 @@ export class ConfigEmpresaDialogComponent implements OnInit {
           mailPassword: '',
         });
       },
-      error: () => this.snackBar.open('Error al cargar configuración', 'Cerrar', { duration: 3000 }),
+      error: () =>
+        this.snackBar.open(this.translate.instant('snack.configLoadFail'), this.translate.instant('common.close'), {
+          duration: 3000,
+        }),
     });
   }
 
@@ -227,12 +232,16 @@ export class ConfigEmpresaDialogComponent implements OnInit {
     const input = ev.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file || !/^image\/(png|jpeg|jpg|webp)$/i.test(file.type)) {
-      this.snackBar.open('Formato no admitido (PNG, JPEG o WebP)', 'Cerrar', { duration: 4000 });
+      this.snackBar.open(this.translate.instant('snack.configLogoFormat'), this.translate.instant('common.close'), {
+        duration: 4000,
+      });
       input.value = '';
       return;
     }
     if (file.size > 380000) {
-      this.snackBar.open('El logo no puede superar ~380 KB', 'Cerrar', { duration: 4000 });
+      this.snackBar.open(this.translate.instant('snack.configLogoTooBig'), this.translate.instant('common.close'), {
+        duration: 4000,
+      });
       input.value = '';
       return;
     }
@@ -271,12 +280,16 @@ export class ConfigEmpresaDialogComponent implements OnInit {
     }
     this.configService.saveEmpresa(payload).subscribe({
       next: () => {
-        this.snackBar.open('Configuración guardada', 'Cerrar', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('snack.configSaved'), this.translate.instant('common.close'), {
+          duration: 3000,
+        });
         this.ref.close(true);
       },
       error: () => {
         this.saving = false;
-        this.snackBar.open('Error al guardar', 'Cerrar', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('snack.configSaveFail'), this.translate.instant('common.close'), {
+          duration: 3000,
+        });
       },
     });
   }

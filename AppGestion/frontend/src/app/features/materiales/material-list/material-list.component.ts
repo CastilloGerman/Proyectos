@@ -11,6 +11,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { MaterialService } from '../../../core/services/material.service';
 import { Material } from '../../../core/models/material.model';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-material-list',
@@ -95,7 +96,8 @@ export class MaterialListComponent implements OnInit {
     public auth: AuthService,
     private materialService: MaterialService,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -119,11 +121,15 @@ export class MaterialListComponent implements OnInit {
       if (ok) {
         this.materialService.delete(material.id).subscribe({
           next: () => {
-            this.snackBar.open('Material eliminado', 'Cerrar', { duration: 3000 });
+            this.snackBar.open(this.translate.instant('snack.materialDeleted'), this.translate.instant('common.close'), {
+              duration: 3000,
+            });
             this.load();
           },
           error: () => {
-            this.snackBar.open('Error al eliminar', 'Cerrar', { duration: 3000 });
+            this.snackBar.open(this.translate.instant('snack.materialDeleteFail'), this.translate.instant('common.close'), {
+              duration: 3000,
+            });
           },
         });
       }

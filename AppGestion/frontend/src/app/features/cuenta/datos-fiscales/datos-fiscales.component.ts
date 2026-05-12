@@ -14,6 +14,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { ConfigService } from '../../../core/services/config.service';
 import { Empresa } from '../../../core/models/empresa.model';
 import { nifIvaIntraValidator } from '../../../shared/validators/nif-iva-intra.validator';
+import { TranslateService } from '@ngx-translate/core';
 
 const REGIMEN_BASE: readonly string[] = [
   'Régimen general del IVA',
@@ -50,6 +51,7 @@ export class DatosFiscalesComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly config = inject(ConfigService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly translate = inject(TranslateService);
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -125,13 +127,19 @@ export class DatosFiscalesComponent implements OnInit {
             epigrafeIae: updated.epigrafeIae || '',
           });
           this.form.markAsPristine();
-          this.snackBar.open('Datos fiscales guardados', 'Cerrar', { duration: 3000 });
+          this.snackBar.open(this.translate.instant('snack.taxDataSaved'), this.translate.instant('common.close'), {
+            duration: 3000,
+          });
           this.saving.set(false);
         },
         error: (err) => {
           this.saving.set(false);
-          const msg = err.error?.message || err.error?.detail || err.error?.error || 'No se pudo guardar';
-          this.snackBar.open(typeof msg === 'string' ? msg : 'Error al guardar', 'Cerrar', { duration: 5000 });
+          const raw = err.error?.message || err.error?.detail || err.error?.error;
+          const msg =
+            typeof raw === 'string' && String(raw).trim() !== ''
+              ? String(raw).trim()
+              : this.translate.instant('snack.errorSave');
+          this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
         },
       });
   }

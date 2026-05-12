@@ -1,6 +1,6 @@
-import { AfterViewInit, Component, OnInit, ViewChild, ElementRef, signal, inject, DestroyRef } from '@angular/core';
+import { AfterViewInit, Component, OnInit, ViewChild, ElementRef, signal, computed, inject, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AboutComponent } from '../about/about.component';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -38,6 +38,9 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
           </div>
           <p class="login-tagline">{{ 'auth.login.tagline' | translate }}</p>
           <p class="login-subtitle">{{ 'auth.login.subtitle' | translate }}</p>
+          @if (referralToken()) {
+          <p class="referral-banner">{{ 'auth.login.referralBanner' | translate }}</p>
+          }
           <h1 class="login-title">{{ 'auth.login.title' | translate }}</h1>
           <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form">
             <mat-form-field appearance="outline" floatLabel="always" class="full-width">
@@ -125,7 +128,7 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
             </div>
           }
           <a routerLink="/forgot-password" class="forgot-link">{{ 'auth.login.forgotPassword' | translate }}</a>
-          <a routerLink="/register" class="register-link">{{ 'auth.login.register' | translate }}</a>
+          <a [routerLink]="['/register']" [queryParams]="registerLinkQueryParams()" class="register-link">{{ 'auth.login.register' | translate }}</a>
         </div>
       </div>
       <button
@@ -272,10 +275,21 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
     }
 
     .login-subtitle {
-      margin: 0 0 24px 0;
+      margin: 0 0 12px 0;
       font-size: 0.95rem;
       color: #64748b;
       text-align: center;
+    }
+
+    .referral-banner {
+      margin: 0 0 18px;
+      padding: 10px 12px;
+      font-size: 0.82rem;
+      line-height: 1.4;
+      text-align: center;
+      color: #1e3a8a;
+      background: rgba(30, 58, 138, 0.08);
+      border-radius: 12px;
     }
 
     .login-divider {
@@ -496,6 +510,12 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
       color: var(--app-text-secondary);
     }
 
+    :host-context(html.app-dark-theme) .referral-banner {
+      color: #e0e7ff;
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid var(--app-border);
+    }
+
     :host-context(html.app-dark-theme) .login-divider span {
       color: var(--app-text-muted);
     }
@@ -551,6 +571,11 @@ export class LoginComponent implements OnInit, AfterViewInit {
   readonly googleTotpStep = signal(false);
   googleTotpCode = '';
   private pendingGoogleToken: string | null = null;
+  readonly referralToken = signal<string | null>(null);
+  readonly registerLinkQueryParams = computed(() => {
+    const r = this.referralToken();
+    return r ? { ref: r } : {};
+  });
   /** Evita [GSI_LOGGER]: initialize() múltiples veces (p. ej. doble montaje en dev). */
   private static gsiInitializedForClientId: string | null = null;
   /** Valor fijo para evitar que el chunk lazy reciba un environment sin googleClientId; el botón real siempre se muestra. */
@@ -562,6 +587,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
     private fb: FormBuilder,
     private auth: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
     private snackBar: MatSnackBar
   ) {
     this.form = this.fb.group({
@@ -582,6 +608,10 @@ export class LoginComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((qp) => {
+      const raw = qp.get('ref');
+      this.referralToken.set(raw?.trim() ? raw.trim() : null);
+    });
     if (this.auth.isAuthenticated()) {
       this.router.navigate(['/dashboard']);
     }

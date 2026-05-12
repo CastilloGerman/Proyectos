@@ -79,6 +79,34 @@
   width: 100%;
 }
 
+.plant-cond-loading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0;
+  color: var(--app-text-secondary, #64748b);
+  font-size: 14px;
+}
+
+.plant-cond-hint {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--app-text-secondary, #64748b);
+}
+
+.plant-cond-actions {
+  margin-top: 16px;
+}
+
+.plant-cond-actions button {
+  min-width: 200px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 .plant-layout {
   display: grid;
   grid-template-columns: 1fr;

@@ -88,46 +88,5 @@
         </form>
       </mat-card-content>
     </mat-card>
-
-    <mat-card class="pref-card pref-card--condiciones">
-      <mat-card-content>
-        <section aria-labelledby="pref-presupuestos-cond-title">
-          <h2 id="pref-presupuestos-cond-title" class="pref-section-title">Presupuestos</h2>
-          <p class="pref-presupuestos-hint">
-            Marca las condiciones que quieras activadas por defecto al crear un presupuesto nuevo. En cada presupuesto puedes cambiarlas.
-          </p>
-          @if (!condicionesPresupuestosListo()) {
-            <div class="pref-state">
-              <mat-progress-spinner diameter="32" mode="indeterminate" />
-              <span>Cargando condiciones…</span>
-            </div>
-          } @else if (condicionesCatalogo().length === 0) {
-            <p class="pref-presupuestos-hint">No se pudieron cargar las condiciones. Reintenta más tarde.</p>
-          } @else {
-            <app-condiciones-presupuesto
-              name="condPred"
-              [disponibles]="condicionesCatalogo()"
-              [showNota]="false"
-              [(ngModel)]="condicionesPredModel"
-            />
-            <div class="pref-actions">
-              <button
-                mat-flat-button
-                color="primary"
-                type="button"
-                (click)="guardarCondicionesPredeterminadas()"
-                [disabled]="savingCondiciones()"
-              >
-                @if (savingCondiciones()) {
-                  <mat-progress-spinner diameter="20" mode="indeterminate" />
-                } @else {
-                  Guardar condiciones por defecto
-                }
-              </button>
-            </div>
-          }
-        </section>
-      </mat-card-content>
-    </mat-card>
   }
 </div>

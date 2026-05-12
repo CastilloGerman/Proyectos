@@ -26,6 +26,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { Cliente } from '../../../core/models/cliente.model';
 import { Material } from '../../../core/models/material.model';
 import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-presupuesto-rapido',
@@ -373,7 +374,8 @@ export class PresupuestoRapidoComponent implements OnInit {
     private presupuestoService: PresupuestoService,
     private clienteService: ClienteService,
     private materialService: MaterialService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private translate: TranslateService
   ) {}
 
   get materialItems(): FormArray {
@@ -413,13 +415,19 @@ export class PresupuestoRapidoComponent implements OnInit {
       next: (c) => {
         this.clientes = [...this.clientes, c].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
         this.form.patchValue({ clienteId: c.id });
-        this.snackBar.open('Cliente creado. Elige material y genera el PDF.', 'Cerrar', { duration: 3500 });
+        this.snackBar.open(this.translate.instant('snack.budgetQuickClientOk'), this.translate.instant('common.close'), {
+          duration: 3500,
+        });
         this.clienteModo = 'existente';
         this.nombreClienteNuevo = '';
       },
       error: (err) => {
-        const msg = err.error?.message || err.error?.detail || 'Error al crear el cliente';
-        this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+        const raw = err.error?.message || err.error?.detail;
+        const msg =
+          typeof raw === 'string' && raw.trim() !== ''
+            ? raw.trim()
+            : this.translate.instant('snack.budgetQuickClientFail');
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
       },
     });
   }
@@ -543,11 +551,9 @@ export class PresupuestoRapidoComponent implements OnInit {
     const v = this.form.getRawValue();
     const itemPayload = this.buildItemsPayload();
     if (itemPayload.length === 0) {
-      this.snackBar.open(
-        'Añade al menos una línea: elige un material o una tarea manual con descripción.',
-        'Cerrar',
-        { duration: 4500 }
-      );
+      this.snackBar.open(this.translate.instant('snack.budgetQuickNeedLine'), this.translate.instant('common.close'), {
+        duration: 4500,
+      });
       return;
     }
     this.loading = true;
@@ -570,14 +576,22 @@ export class PresupuestoRapidoComponent implements OnInit {
           },
           error: () => {
             this.loading = false;
-            this.snackBar.open('Presupuesto creado; error al generar PDF', 'Cerrar', { duration: 4000 });
+            this.snackBar.open(this.translate.instant('snack.budgetCreatedPdfWarn'), this.translate.instant('common.close'), {
+              duration: 4000,
+            });
           },
         });
-        this.snackBar.open('Presupuesto creado', 'Cerrar', { duration: 2500 });
+        this.snackBar.open(this.translate.instant('snack.budgetCreated'), this.translate.instant('common.close'), {
+          duration: 2500,
+        });
       },
       error: (err) => {
         this.loading = false;
-        this.snackBar.open(err.error?.message || 'Error al crear', 'Cerrar', { duration: 4000 });
+        this.snackBar.open(
+          err.error?.message || this.translate.instant('snack.budgetCreateFail'),
+          this.translate.instant('common.close'),
+          { duration: 4000 },
+        );
       },
     });
   }
@@ -601,11 +615,9 @@ export class PresupuestoRapidoComponent implements OnInit {
       if (navigator.canShare(data)) {
         try {
           await navigator.share(data);
-          this.snackBar.open(
-            'Elige WhatsApp en el menú para enviar el PDF y el mensaje (el texto lo puedes editar en la app).',
-            'Cerrar',
-            { duration: 6000 },
-          );
+          this.snackBar.open(this.translate.instant('snack.budgetShareHint'), this.translate.instant('common.close'), {
+            duration: 6000,
+          });
           return;
         } catch (e: unknown) {
           const name = e && typeof e === 'object' && 'name' in e ? (e as { name: string }).name : '';
@@ -613,7 +625,7 @@ export class PresupuestoRapidoComponent implements OnInit {
             this.openPdfBlobInTab(blob);
             return;
           }
-          this.snackBar.open('No se pudo compartir. Se abre el PDF en una pestaña nueva.', 'Cerrar', {
+          this.snackBar.open(this.translate.instant('snack.budgetShareOpenTab'), this.translate.instant('common.close'), {
             duration: 4000,
           });
           this.openPdfBlobInTab(blob);
@@ -623,11 +635,9 @@ export class PresupuestoRapidoComponent implements OnInit {
     }
 
     this.openPdfBlobInTab(blob);
-    this.snackBar.open(
-      'Se abrió el PDF. En este equipo no se puede adjuntar solo con un clic: usa el botón de WhatsApp para el texto y adjunta el PDF desde la pestaña del documento.',
-      'Cerrar',
-      { duration: 7000 },
-    );
+    this.snackBar.open(this.translate.instant('snack.budgetPdfDesktopHint'), this.translate.instant('common.close'), {
+      duration: 7000,
+    });
   }
 
   private buildWaLink(cli: Cliente | undefined, presupuestoId: number): string | null {

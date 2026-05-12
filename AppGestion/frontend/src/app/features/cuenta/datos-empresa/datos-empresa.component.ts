@@ -19,6 +19,7 @@ import { RUBRO_AUTONOMO_CATEGORIAS } from './rubro-autonomo.catalog';
 import { ConfigService } from '../../../core/services/config.service';
 import { Empresa } from '../../../core/models/empresa.model';
 import { dataUrlFromStoredBase64 } from '../../../core/utils/image-data-url';
+import { TranslateService } from '@ngx-translate/core';
 
 /** Límite servidor ~400 KB; margen en cliente. */
 const MAX_IMAGE_BYTES = 380_000;
@@ -50,6 +51,7 @@ export class DatosEmpresaComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly translate = inject(TranslateService);
 
   readonly rubroCategorias = RUBRO_AUTONOMO_CATEGORIAS;
 
@@ -91,13 +93,33 @@ export class DatosEmpresaComponent implements OnInit {
 
   oauthConnecting = false;
 
+  /** Texto compacto para la cabecera del panel de opciones de correo. */
+  emailEnvioResumen(): string {
+    switch (this.form.controls.emailProvider.value) {
+      case 'system':
+        return 'Correo de la aplicación';
+      case 'gmail':
+        return this.oauthConnected ? 'Gmail · Conectado' : 'Gmail · Sin conectar';
+      case 'outlook':
+        return this.oauthConnected ? 'Microsoft · Conectado' : 'Microsoft · Sin conectar';
+      case 'smtp_legacy':
+        return 'SMTP manual';
+      default:
+        return '';
+    }
+  }
+
   ngOnInit(): void {
     const oauth = this.route.snapshot.queryParamMap.get('oauth');
     if (oauth === 'success') {
-      this.snackBar.open('Cuenta de correo conectada correctamente', 'Cerrar', { duration: 4000 });
+      this.snackBar.open(this.translate.instant('snack.companyEmailOk'), this.translate.instant('common.close'), {
+        duration: 4000,
+      });
       void this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
     } else if (oauth === 'error') {
-      this.snackBar.open('No se pudo completar la conexión con el proveedor de correo', 'Cerrar', { duration: 5000 });
+      this.snackBar.open(this.translate.instant('snack.companyEmailFail'), this.translate.instant('common.close'), {
+        duration: 5000,
+      });
       void this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
     }
     this.cargar();
@@ -126,7 +148,9 @@ export class DatosEmpresaComponent implements OnInit {
       error: () => {
         this.loadError.set(true);
         this.loading.set(false);
-        this.snackBar.open('No se pudieron cargar los datos de empresa', 'Cerrar', { duration: 4000 });
+        this.snackBar.open(this.translate.instant('snack.companyDataLoadFail'), this.translate.instant('common.close'), {
+          duration: 4000,
+        });
       },
     });
   }
@@ -168,14 +192,18 @@ export class DatosEmpresaComponent implements OnInit {
     const file = input.files?.[0];
     if (!file) return;
     if (!/^image\/(png|jpeg|jpg|webp)$/i.test(file.type)) {
-      this.snackBar.open('Formato no admitido. Usa PNG, JPEG o WebP.', 'Cerrar', { duration: 4000 });
+      this.snackBar.open(this.translate.instant('snack.companyImageFormat'), this.translate.instant('common.close'), {
+        duration: 4000,
+      });
       input.value = '';
       return;
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      this.snackBar.open(`La imagen supera ${Math.round(MAX_IMAGE_BYTES / 1024)} KB. Reduce tamaño o comprime.`, 'Cerrar', {
-        duration: 5000,
-      });
+      this.snackBar.open(
+        this.translate.instant('snack.companyImageTooBig', { maxKb: Math.round(MAX_IMAGE_BYTES / 1024) }),
+        this.translate.instant('common.close'),
+        { duration: 5000 },
+      );
       input.value = '';
       return;
     }
@@ -244,14 +272,19 @@ export class DatosEmpresaComponent implements OnInit {
     this.config.saveEmpresa(payload as Partial<Empresa>).subscribe({
       next: (updated) => {
         this.aplicarEmpresa(updated);
-        this.snackBar.open('Datos de empresa guardados', 'Cerrar', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('snack.companyDataSaved'), this.translate.instant('common.close'), {
+          duration: 3000,
+        });
         this.saving.set(false);
       },
       error: (err) => {
         this.saving.set(false);
+        const raw = err.error?.message || err.error?.detail || err.error?.error;
         const msg =
-          err.error?.message || err.error?.detail || err.error?.error || 'No se pudo guardar. Revisa los datos.';
-        this.snackBar.open(typeof msg === 'string' ? msg : 'No se pudo guardar', 'Cerrar', { duration: 5000 });
+          typeof raw === 'string' && raw.trim() !== ''
+            ? raw.trim()
+            : this.translate.instant('snack.companySaveFail');
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
       },
     });
   }
@@ -267,8 +300,8 @@ export class DatosEmpresaComponent implements OnInit {
         },
         error: (err) => {
           this.oauthConnecting = false;
-          const msg = this.httpErrorMessage(err, 'No se pudo iniciar la conexión con Google');
-          this.snackBar.open(msg, 'Cerrar', { duration: 8000 });
+          const msg = this.httpErrorMessage(err, this.translate.instant('snack.companyOAuthGoogleStartFail'));
+          this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 8000 });
         },
       });
   }
@@ -284,8 +317,8 @@ export class DatosEmpresaComponent implements OnInit {
         },
         error: (err) => {
           this.oauthConnecting = false;
-          const msg = this.httpErrorMessage(err, 'No se pudo iniciar la conexión con Microsoft');
-          this.snackBar.open(msg, 'Cerrar', { duration: 8000 });
+          const msg = this.httpErrorMessage(err, this.translate.instant('snack.companyOAuthMicrosoftStartFail'));
+          this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 8000 });
         },
       });
   }
@@ -299,10 +332,15 @@ export class DatosEmpresaComponent implements OnInit {
   desconectarOAuth(): void {
     this.config.disconnectEmailOAuth().subscribe({
       next: () => {
-        this.snackBar.open('Cuenta de correo desconectada', 'Cerrar', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('snack.companyEmailDisconnected'), this.translate.instant('common.close'), {
+          duration: 3000,
+        });
         this.cargar();
       },
-      error: () => this.snackBar.open('No se pudo desconectar', 'Cerrar', { duration: 4000 }),
+      error: () =>
+        this.snackBar.open(this.translate.instant('snack.companyEmailDisconnectFail'), this.translate.instant('common.close'), {
+          duration: 4000,
+        }),
     });
   }
 }

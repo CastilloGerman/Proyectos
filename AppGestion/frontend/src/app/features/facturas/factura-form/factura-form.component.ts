@@ -23,6 +23,7 @@ import { Presupuesto } from '../../../core/models/presupuesto.model';
 import { Material } from '../../../core/models/material.model';
 import { Factura, FacturaCobro, FacturaItemRequest, FacturaRequest } from '../../../core/models/factura.model';
 import { startWith } from 'rxjs';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-factura-form',
@@ -459,7 +460,8 @@ export class FacturaFormComponent implements OnInit {
     private clienteService: ClienteService,
     private presupuestoService: PresupuestoService,
     private materialService: MaterialService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private translate: TranslateService
   ) {
     this.form = this.fb.group({
       clienteId: [null, Validators.required],
@@ -574,7 +576,11 @@ export class FacturaFormComponent implements OnInit {
     this.facturaService.getById(id).subscribe({
       next: (f) => {
         if (f.anulada) {
-          this.snackBar.open('Esta factura está anulada y no se puede editar.', 'Cerrar', { duration: 5000 });
+          this.snackBar.open(
+            this.translate.instant('snack.invoiceAnnulledReadonly'),
+            this.translate.instant('common.close'),
+            { duration: 5000 },
+          );
           void this.router.navigate(['/facturas']);
           return;
         }
@@ -613,8 +619,12 @@ export class FacturaFormComponent implements OnInit {
         this.validateClienteNifVsEmpresa();
       },
       error: (err) => {
-        const msg = err.error?.detail ?? err.error?.message ?? 'No se pudo cargar la factura';
-        this.snackBar.open(msg, 'Cerrar', { duration: 4000 });
+        const raw = err.error?.detail ?? err.error?.message;
+        const msg =
+          typeof raw === 'string' && raw.trim() !== ''
+            ? raw.trim()
+            : this.translate.instant('snack.invoiceLoadFail');
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 4000 });
         this.router.navigate(['/facturas']);
       },
     });
@@ -666,11 +676,18 @@ export class FacturaFormComponent implements OnInit {
           });
           const hoy = new Date().toISOString().split('T')[0];
           this.cobroForm.reset({ importe: null, fecha: hoy, metodo: 'Transferencia', notas: '' });
-          this.snackBar.open('Cobro registrado', 'Cerrar', { duration: 3000 });
+          this.snackBar.open(this.translate.instant('snack.invoiceChargeRegistered'), this.translate.instant('common.close'), {
+            duration: 3000,
+          });
           this.cobroSaving = false;
         },
         error: (err) => {
-          this.snackBar.open(err.error?.message || 'Error al registrar cobro', 'Cerrar', { duration: 4000 });
+          const raw = err.error?.message;
+          const msg =
+            typeof raw === 'string' && raw.trim() !== ''
+              ? raw.trim()
+              : this.translate.instant('snack.invoiceChargeFail');
+          this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 4000 });
           this.cobroSaving = false;
         },
       });
@@ -682,11 +699,18 @@ export class FacturaFormComponent implements OnInit {
     this.facturaService.generarEnlacePago(this.id).subscribe({
       next: (f) => {
         this.applyFacturaCobrosSnapshot(f);
-        this.snackBar.open('Enlace generado. Compártelo con el cliente.', 'Cerrar', { duration: 4000 });
+        this.snackBar.open(this.translate.instant('snack.invoicePayLinkOk'), this.translate.instant('common.close'), {
+          duration: 4000,
+        });
         this.paymentLinkLoading = false;
       },
       error: (err) => {
-        this.snackBar.open(err.error?.message || 'No se pudo generar el enlace', 'Cerrar', { duration: 5000 });
+        const raw = err.error?.message;
+        const msg =
+          typeof raw === 'string' && raw.trim() !== ''
+            ? raw.trim()
+            : this.translate.instant('snack.invoicePayLinkFail');
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
         this.paymentLinkLoading = false;
       },
     });
@@ -695,8 +719,14 @@ export class FacturaFormComponent implements OnInit {
   copyPaymentLink(): void {
     if (!this.paymentLinkUrl) return;
     navigator.clipboard.writeText(this.paymentLinkUrl).then(
-      () => this.snackBar.open('Enlace copiado', 'Cerrar', { duration: 2000 }),
-      () => this.snackBar.open('No se pudo copiar', 'Cerrar', { duration: 2000 })
+      () =>
+        this.snackBar.open(this.translate.instant('snack.linkCopied'), this.translate.instant('common.close'), {
+          duration: 2000,
+        }),
+      () =>
+        this.snackBar.open(this.translate.instant('snack.linkCopyFail'), this.translate.instant('common.close'), {
+          duration: 2000,
+        }),
     );
   }
 
@@ -722,7 +752,9 @@ export class FacturaFormComponent implements OnInit {
   onSubmit(): void {
     if (this.form.invalid || this.items.length === 0) {
       this.form.markAllAsTouched();
-      this.snackBar.open('Completa todos los campos y añade al menos una línea', 'Cerrar', { duration: 4000 });
+      this.snackBar.open(this.translate.instant('snack.invoiceNeedLines'), this.translate.instant('common.close'), {
+        duration: 4000,
+      });
       return;
     }
     const value = this.form.value;
@@ -761,15 +793,20 @@ export class FacturaFormComponent implements OnInit {
       : this.facturaService.create(payload);
     req.subscribe({
       next: () => {
-        this.snackBar.open(this.isEdit ? 'Factura actualizada' : 'Factura creada', 'Cerrar', { duration: 3000 });
+        this.snackBar.open(
+          this.translate.instant(this.isEdit ? 'snack.invoiceUpdated' : 'snack.invoiceCreated'),
+          this.translate.instant('common.close'),
+          { duration: 3000 },
+        );
         this.router.navigate(['/facturas']);
       },
       error: (err) => {
+        const raw = err.error?.message || err.error?.detail;
         const msg =
-          err.status === 400
-            ? err.error?.message || err.error?.detail || 'Error al guardar'
-            : err.error?.message || 'Error al guardar';
-        this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+          typeof raw === 'string' && String(raw).trim() !== ''
+            ? String(raw).trim()
+            : this.translate.instant('snack.invoiceSaveFail');
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
       },
     });
   }

@@ -13,6 +13,8 @@ import { MatDividerModule } from '@angular/material/divider';
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
 import { AuthService } from '../../core/auth/auth.service';
 import { environment } from '../../../environments/environment';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { messageFromHttpError } from '../utils/http-error-message.util';
 
 @Component({
     selector: 'app-invitar-usuario-dialog',
@@ -29,44 +31,41 @@ import { environment } from '../../../environments/environment';
         MatMenuModule,
         MatDividerModule,
         ClipboardModule,
+        TranslateModule,
     ],
     template: `
-    <h2 mat-dialog-title class="dialog-title">Enviar enlace de referido</h2>
+    <h2 mat-dialog-title class="dialog-title">{{ 'invite.dialogTitle' | translate }}</h2>
     <mat-dialog-content>
-      <p class="hint">
-        Se enviará un correo con un enlace para que esa persona cree <strong>su propia cuenta</strong>
-        con periodo de prueba. No comparte tus datos ni un “rol”: para seguir editando después del
-        trial necesitará suscripción activa, igual que tú.
-      </p>
+      <p class="hint">{{ 'invite.dialogHint' | translate }}</p>
       <form [formGroup]="form">
         <mat-form-field appearance="outline" class="full">
-          <mat-label>Email del referido</mat-label>
+          <mat-label>{{ 'invite.emailLabel' | translate }}</mat-label>
           <input matInput type="email" formControlName="email" />
         </mat-form-field>
       </form>
 
       <mat-divider class="divider"></mat-divider>
 
-      <p class="section-title">Página principal</p>
-      <p class="hint section-hint">Comparte este enlace por donde quieras; quien entre podrá registrarse.</p>
+      <p class="section-title">{{ 'invite.sectionHomeTitle' | translate }}</p>
+      <p class="hint section-hint">{{ 'invite.sectionHomeHint' | translate }}</p>
       <mat-form-field appearance="outline" class="full link-field">
-        <mat-label>Enlace de la aplicación</mat-label>
+        <mat-label>{{ 'invite.homeLinkLabel' | translate }}</mat-label>
         <input matInput [value]="paginaPrincipalUrl" readonly tabindex="-1" />
         <div class="suffix-actions" matSuffix>
           <button
             mat-icon-button
             type="button"
             [matMenuTriggerFor]="shareMenu"
-            matTooltip="Compartir"
-            aria-label="Compartir enlace">
+            [matTooltip]="'invite.shareTooltip' | translate"
+            [attr.aria-label]="'invite.shareAria' | translate">
             <mat-icon>share</mat-icon>
           </button>
           <button
             mat-icon-button
             type="button"
             (click)="copiarPaginaPrincipal()"
-            matTooltip="Copiar enlace"
-            aria-label="Copiar enlace">
+            [matTooltip]="'invite.copyTooltip' | translate"
+            [attr.aria-label]="'invite.copyAria' | translate">
             <mat-icon>content_copy</mat-icon>
           </button>
         </div>
@@ -74,20 +73,20 @@ import { environment } from '../../../environments/environment';
       <mat-menu #shareMenu="matMenu">
         <button mat-menu-item type="button" (click)="compartirWhatsApp()">
           <img src="assets/whatsapp-logo.png" alt="" class="wa-menu-logo" width="22" height="22" />
-          <span>WhatsApp</span>
+          <span>{{ 'invite.shareWhatsApp' | translate }}</span>
         </button>
         @if (puedeCompartirNativo) {
         <button mat-menu-item type="button" (click)="compartirNativo()">
           <mat-icon>send</mat-icon>
-          <span>Compartir (sistema)</span>
+          <span>{{ 'invite.shareNative' | translate }}</span>
         </button>
         }
       </mat-menu>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Cancelar</button>
+      <button mat-button mat-dialog-close>{{ 'invite.cancel' | translate }}</button>
       <button mat-raised-button color="primary" (click)="enviar()" [disabled]="form.invalid || sending">
-        Enviar enlace
+        {{ 'invite.send' | translate }}
       </button>
     </mat-dialog-actions>
   `,
@@ -142,6 +141,12 @@ import { environment } from '../../../environments/environment';
   `]
 })
 export class InvitarUsuarioDialogComponent {
+  /**
+   * Misma frase que `EmailCopy.INVITE_SHARE_TAGLINE` en la API (invitaciones por correo).
+   */
+  private static readonly SHARE_TAGLINE =
+    'Prueba Noemi Web — gestión para autónomos con presupuestos y facturación';
+
   form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
   });
@@ -156,7 +161,8 @@ export class InvitarUsuarioDialogComponent {
     private auth: AuthService,
     private ref: MatDialogRef<InvitarUsuarioDialogComponent, boolean>,
     private snackBar: MatSnackBar,
-    private clipboard: Clipboard
+    private clipboard: Clipboard,
+    private translate: TranslateService
   ) {}
 
   /** URL pública del front (home). */
@@ -173,13 +179,17 @@ export class InvitarUsuarioDialogComponent {
 
   copiarPaginaPrincipal(): void {
     const ok = this.clipboard.copy(this.paginaPrincipalUrl);
-    this.snackBar.open(ok ? 'Enlace copiado al portapapeles' : 'No se pudo copiar', 'Cerrar', {
-      duration: 2500,
-    });
+    this.snackBar.open(
+      ok ? this.translate.instant('invite.copyDone') : this.translate.instant('invite.copyFail'),
+      this.translate.instant('common.close'),
+      {
+        duration: 2500,
+      },
+    );
   }
 
   textoCompartir(): string {
-    return `Prueba AppGestion — gestión de presupuestos y facturas: ${this.paginaPrincipalUrl}`;
+    return `${InvitarUsuarioDialogComponent.SHARE_TAGLINE}: ${this.paginaPrincipalUrl}`;
   }
 
   compartirWhatsApp(): void {
@@ -191,7 +201,7 @@ export class InvitarUsuarioDialogComponent {
   async compartirNativo(): Promise<void> {
     try {
       await navigator.share({
-        title: 'AppGestion',
+        title: 'Noemi Web',
         text: this.textoCompartir(),
         url: this.paginaPrincipalUrl,
       });
@@ -211,8 +221,12 @@ export class InvitarUsuarioDialogComponent {
       },
       error: (err) => {
         this.sending = false;
-        const msg = err.error?.message || err.error?.error || 'No se pudo enviar el enlace';
-        this.snackBar.open(msg, 'Cerrar', { duration: 6000 });
+        const presets = {
+          offline: this.translate.instant('shell.snackbarOffline'),
+          server: this.translate.instant('shell.snackbarServerError'),
+        };
+        const msg = messageFromHttpError(err, this.translate.instant('invite.sendErrorFallback'), presets);
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 6000 });
       },
     });
   }

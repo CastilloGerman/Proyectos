@@ -16,6 +16,7 @@ import { ConfigService } from '../../../core/services/config.service';
 import { Empresa } from '../../../core/models/empresa.model';
 import { formatIbanDisplay, ibanValidator, normalizarIbanParaValidar } from '../../../shared/validators/iban.validator';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import { TranslateService } from '@ngx-translate/core';
 
 const BIZUM_MOVIL_ES = /^[6-9]\d{8}$/;
 
@@ -62,6 +63,7 @@ export class MetodosPagoComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly config = inject(ConfigService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly translate = inject(TranslateService);
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -158,13 +160,19 @@ export class MetodosPagoComponent implements OnInit {
             bizumTelefono: e.bizumTelefono || '',
           });
           this.form.markAsPristine();
-          this.snackBar.open('Métodos de cobro guardados', 'Cerrar', { duration: 3000 });
+          this.snackBar.open(this.translate.instant('snack.payMethodsSaved'), this.translate.instant('common.close'), {
+            duration: 3000,
+          });
           this.saving.set(false);
         },
         error: (err) => {
           this.saving.set(false);
-          const msg = err.error?.message || err.error?.detail || err.error?.error || 'No se pudo guardar';
-          this.snackBar.open(typeof msg === 'string' ? msg : 'Error al guardar', 'Cerrar', { duration: 5000 });
+          const raw = err.error?.message || err.error?.detail || err.error?.error;
+          const msg =
+            typeof raw === 'string' && String(raw).trim() !== ''
+              ? String(raw).trim()
+              : this.translate.instant('snack.payMethodsSaveFail');
+          this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
         },
       });
   }
@@ -206,7 +214,7 @@ export class MetodosPagoComponent implements OnInit {
     const activo = this.recordatorioForm.controls.activo.value;
     const dias = this.diasRecordatorioSeleccionados();
     if (activo && dias.length === 0) {
-      this.snackBar.open('Activa al menos un plazo (7, 15 o 30 días) o desactiva los recordatorios.', 'Cerrar', {
+      this.snackBar.open(this.translate.instant('snack.remindersNeedTerm'), this.translate.instant('common.close'), {
         duration: 5000,
       });
       return;
@@ -222,13 +230,19 @@ export class MetodosPagoComponent implements OnInit {
         next: (emp) => {
           this.aplicarRecordatoriosDesdeEmpresa(emp);
           this.recordatorioForm.markAsPristine();
-          this.snackBar.open('Recordatorios guardados', 'Cerrar', { duration: 3000 });
+          this.snackBar.open(this.translate.instant('snack.remindersSaved'), this.translate.instant('common.close'), {
+            duration: 3000,
+          });
           this.savingRecordatorios.set(false);
         },
         error: (err) => {
           this.savingRecordatorios.set(false);
-          const msg = err.error?.message || err.error?.detail || err.error?.error || 'No se pudo guardar';
-          this.snackBar.open(typeof msg === 'string' ? msg : 'Error al guardar', 'Cerrar', { duration: 5000 });
+          const raw = err.error?.message || err.error?.detail || err.error?.error;
+          const msg =
+            typeof raw === 'string' && String(raw).trim() !== ''
+              ? String(raw).trim()
+              : this.translate.instant('snack.remindersSaveFail');
+          this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
         },
       });
   }

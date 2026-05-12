@@ -7,10 +7,18 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { TranslateService } from '@ngx-translate/core';
 import { ClienteService } from '../../../core/services/cliente.service';
 import { AuthService } from '../../../core/auth/auth.service';
-import { ClienteFacturaResumen, ClientePanel } from '../../../core/models/cliente-panel.model';
+import { ClienteFacturaResumen, ClienteHistorialItem, ClientePanel, ClientePresupuestoResumen } from '../../../core/models/cliente-panel.model';
 import { EstadoBadgeComponent } from '../../../shared/estado-badge/estado-badge.component';
+import { PresupuestoService } from '../../../core/services/presupuesto.service';
+import { FacturaService } from '../../../core/services/factura.service';
+import { Presupuesto, PresupuestoItemRequest, PresupuestoRequest } from '../../../core/models/presupuesto.model';
+import { Factura, FacturaItemRequest, FacturaRequest } from '../../../core/models/factura.model';
+import { FacturaParcialImporteDialogComponent } from '../../../shared/factura-parcial-importe-dialog/factura-parcial-importe-dialog.component';
 
 @Component({
     selector: 'app-cliente-panel',
@@ -23,6 +31,8 @@ import { EstadoBadgeComponent } from '../../../shared/estado-badge/estado-badge.
         MatTableModule,
         MatTooltipModule,
         MatProgressSpinnerModule,
+        MatSnackBarModule,
+        MatDialogModule,
         EstadoBadgeComponent,
     ],
     template: `
@@ -121,7 +131,16 @@ import { EstadoBadgeComponent } from '../../../shared/estado-badge/estado-badge.
                 <ng-container matColumnDef="estadoPago">
                   <th mat-header-cell *matHeaderCellDef>Estado</th>
                   <td mat-cell *matCellDef="let row">
-                    <app-estado-badge [estado]="row.estadoPago"></app-estado-badge>
+                    @if (auth.canMutate()) {
+                      <app-estado-badge
+                        [estado]="row.estadoPago"
+                        [menuOptions]="otrosEstadosPago(row.estadoPago)"
+                        [menuDisabled]="actualizandoFacturaId === row.id"
+                        (estadoSeleccionado)="cambiarEstadoFacturaResumen(row, $event)"
+                      ></app-estado-badge>
+                    } @else {
+                      <app-estado-badge [estado]="row.estadoPago"></app-estado-badge>
+                    }
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="total">
@@ -166,7 +185,16 @@ import { EstadoBadgeComponent } from '../../../shared/estado-badge/estado-badge.
                 <ng-container matColumnDef="estado">
                   <th mat-header-cell *matHeaderCellDef>Estado</th>
                   <td mat-cell *matCellDef="let row">
-                    <app-estado-badge [estado]="row.estado"></app-estado-badge>
+                    @if (auth.canMutate()) {
+                      <app-estado-badge
+                        [estado]="row.estado"
+                        [menuOptions]="otrosEstadosPresupuesto(row.estado)"
+                        [menuDisabled]="actualizandoPresupuestoId === row.id"
+                        (estadoSeleccionado)="cambiarEstadoPresupuestoResumen(row, $event)"
+                      ></app-estado-badge>
+                    } @else {
+                      <app-estado-badge [estado]="row.estado"></app-estado-badge>
+                    }
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="facturaId">
@@ -230,7 +258,25 @@ import { EstadoBadgeComponent } from '../../../shared/estado-badge/estado-badge.
                 <ng-container matColumnDef="estado">
                   <th mat-header-cell *matHeaderCellDef>Estado</th>
                   <td mat-cell *matCellDef="let row">
-                    <app-estado-badge [estado]="row.estado"></app-estado-badge>
+                    @if (auth.canMutate()) {
+                      @if (row.tipo === 'FACTURA') {
+                        <app-estado-badge
+                          [estado]="row.estado"
+                          [menuOptions]="otrosEstadosPago(row.estado)"
+                          [menuDisabled]="actualizandoFacturaId === row.id"
+                          (estadoSeleccionado)="cambiarEstadoHistorialFactura(row, $event)"
+                        ></app-estado-badge>
+                      } @else {
+                        <app-estado-badge
+                          [estado]="row.estado"
+                          [menuOptions]="otrosEstadosPresupuesto(row.estado)"
+                          [menuDisabled]="actualizandoPresupuestoId === row.id"
+                          (estadoSeleccionado)="cambiarEstadoHistorialPresupuesto(row, $event)"
+                        ></app-estado-badge>
+                      }
+                    } @else {
+                      <app-estado-badge [estado]="row.estado"></app-estado-badge>
+                    }
                   </td>
                 </ng-container>
                 <tr mat-header-row *matHeaderRowDef="colsHistorial"></tr>
@@ -390,9 +436,20 @@ export class ClientePanelComponent implements OnInit {
 
   facturasPendiente: ClienteFacturaResumen[] = [];
 
+  actualizandoPresupuestoId: number | null = null;
+  actualizandoFacturaId: number | null = null;
+
+  private readonly estadosPresupuestoCatalogo = ['Pendiente', 'Aceptado', 'Rechazado', 'En ejecución'];
+  private readonly estadosPagoFacturaCatalogo = ['No Pagada', 'Parcial', 'Pagada'];
+
   constructor(
     private route: ActivatedRoute,
     private clienteService: ClienteService,
+    private presupuestoService: PresupuestoService,
+    private facturaService: FacturaService,
+    private snackBar: MatSnackBar,
+    private dialog: MatDialog,
+    private translate: TranslateService,
     public auth: AuthService
   ) {}
 
@@ -414,5 +471,225 @@ export class ClientePanelComponent implements OnInit {
         this.loading = false;
       },
     });
+  }
+
+  otrosEstadosPresupuesto(actual: string): string[] {
+    const a = (actual ?? '').trim();
+    return this.estadosPresupuestoCatalogo.filter((e) => !this.equivalentesEstadoEjecucionUi(e, a));
+  }
+
+  otrosEstadosPago(actual: string): string[] {
+    const n = (x: string) => (x ?? '').trim().toLowerCase();
+    const a = n(actual);
+    return this.estadosPagoFacturaCatalogo.filter((e) => n(e) !== a);
+  }
+
+  cambiarEstadoHistorialPresupuesto(row: ClienteHistorialItem, nuevo: string): void {
+    if (row.tipo !== 'PRESUPUESTO') return;
+    this.ejecutarCambioEstadoPresupuesto(row.id, nuevo, row.estado);
+  }
+
+  cambiarEstadoHistorialFactura(row: ClienteHistorialItem, nuevo: string): void {
+    if (row.tipo !== 'FACTURA') return;
+    this.ejecutarCambioEstadoFactura(row.id, nuevo, row.estado);
+  }
+
+  cambiarEstadoPresupuestoResumen(row: ClientePresupuestoResumen, nuevo: string): void {
+    this.ejecutarCambioEstadoPresupuesto(row.id, nuevo, row.estado);
+  }
+
+  cambiarEstadoFacturaResumen(row: ClienteFacturaResumen, nuevo: string): void {
+    this.ejecutarCambioEstadoFactura(row.id, nuevo, row.estadoPago);
+  }
+
+  private equivalentesEstadoEjecucionUi(a: string, b: string): boolean {
+    const ej = ['en ejecución', 'en ejecucion'];
+    const la = a.trim().toLowerCase();
+    const lb = b.trim().toLowerCase();
+    if (ej.includes(la) && ej.includes(lb)) return true;
+    return la === lb;
+  }
+
+  private ejecutarCambioEstadoPresupuesto(id: number, nuevo: string, estadoActual: string): void {
+    if (this.equivalentesEstadoEjecucionUi(nuevo, estadoActual)) return;
+
+    this.actualizandoPresupuestoId = id;
+    this.presupuestoService.getById(id).subscribe({
+      next: (p) => {
+        const payload = this.buildPresupuestoUpdateRequest(p, nuevo);
+        this.presupuestoService.update(id, payload).subscribe({
+          next: (updated) => {
+            this.actualizandoPresupuestoId = null;
+            this.refrescarPanel();
+            this.snackBar.open(
+              this.translate.instant('snack.estimateStatus', { status: updated.estado }),
+              this.closeLbl(),
+              { duration: 2500 },
+            );
+          },
+          error: (err) => {
+            this.actualizandoPresupuestoId = null;
+            this.snackEstadoError(err);
+          },
+        });
+      },
+      error: () => {
+        this.actualizandoPresupuestoId = null;
+        this.snackBar.open(this.translate.instant('snack.estimatesLoadFail'), this.closeLbl(), { duration: 4000 });
+      },
+    });
+  }
+
+  private ejecutarCambioEstadoFactura(id: number, nuevo: string, estadoActual: string): void {
+    const n = (x: string) => (x ?? '').trim().toLowerCase();
+    if (n(nuevo) === n(estadoActual ?? '')) return;
+
+    if (nuevo === 'Parcial') {
+      this.actualizandoFacturaId = id;
+      this.facturaService.getById(id).subscribe({
+        next: (f) => {
+          this.actualizandoFacturaId = null;
+          if (f.anulada) return;
+          this.dialog
+            .open(FacturaParcialImporteDialogComponent, {
+              width: '440px',
+              maxWidth: '95vw',
+              data: {
+                totalFactura: f.total,
+                numeroFactura: f.numeroFactura,
+                clienteNombre: f.clienteNombre,
+                importeSugerido: f.montoCobrado,
+              },
+            })
+            .afterClosed()
+            .subscribe((importe: number | undefined) => {
+              if (importe == null) return;
+              this.patchFacturaEstado(id, nuevo, importe);
+            });
+        },
+        error: () => {
+          this.actualizandoFacturaId = null;
+          this.snackBar.open(this.translate.instant('snack.invoiceLoadFail'), this.closeLbl(), { duration: 4000 });
+        },
+      });
+      return;
+    }
+
+    this.patchFacturaEstado(id, nuevo);
+  }
+
+  private patchFacturaEstado(id: number, nuevo: string, montoParcial?: number): void {
+    this.actualizandoFacturaId = id;
+    this.facturaService.getById(id).subscribe({
+      next: (f) => {
+        if (f.anulada) {
+          this.actualizandoFacturaId = null;
+          return;
+        }
+        const payload = this.buildFacturaUpdateRequestFromRow(f, nuevo, montoParcial);
+        this.facturaService.update(id, payload).subscribe({
+          next: (updated) => {
+            this.actualizandoFacturaId = null;
+            this.refrescarPanel();
+            this.snackBar.open(
+              this.translate.instant('snack.paymentStatusUpdated', { status: updated.estadoPago }),
+              this.closeLbl(),
+              { duration: 2500 },
+            );
+          },
+          error: (err) => {
+            this.actualizandoFacturaId = null;
+            this.snackEstadoError(err);
+          },
+        });
+      },
+      error: () => {
+        this.actualizandoFacturaId = null;
+        this.snackBar.open(this.translate.instant('snack.invoiceLoadFail'), this.closeLbl(), { duration: 4000 });
+      },
+    });
+  }
+
+  private buildPresupuestoUpdateRequest(p: Presupuesto, estado: string): PresupuestoRequest {
+    const items: PresupuestoItemRequest[] = (p.items ?? []).map((it) => {
+      const manual = it.esTareaManual === true;
+      return {
+        materialId: manual ? undefined : it.materialId,
+        tareaManual: manual ? (it.descripcion?.trim() || undefined) : undefined,
+        cantidad: it.cantidad,
+        precioUnitario: it.precioUnitario,
+        visiblePdf: it.visiblePdf,
+      };
+    });
+    return {
+      clienteId: p.clienteId,
+      items,
+      ivaHabilitado: p.ivaHabilitado,
+      estado,
+      descuentoGlobalPorcentaje: p.descuentoGlobalPorcentaje,
+      descuentoGlobalFijo: p.descuentoGlobalFijo,
+      descuentoAntesIva: p.descuentoAntesIva ?? true,
+      condicionesActivas: p.condicionesActivas ?? [],
+      notaAdicional: p.notaAdicional ?? undefined,
+    };
+  }
+
+  private buildFacturaUpdateRequestFromRow(f: Factura, estadoPago: string, montoParcialExplicito?: number): FacturaRequest {
+    const items: FacturaItemRequest[] = (f.items ?? []).map((it) => {
+      const manual = it.esTareaManual === true;
+      return {
+        materialId: manual ? undefined : it.materialId,
+        tareaManual: manual ? (it.descripcion?.trim() || undefined) : undefined,
+        cantidad: it.cantidad,
+        precioUnitario: it.precioUnitario,
+        aplicaIva: it.aplicaIva,
+      };
+    });
+    const fechaCreacionIso = f.fechaCreacion ? f.fechaCreacion.split('T')[0] : '';
+    const fechaExp =
+      typeof f.fechaExpedicion === 'string' ? f.fechaExpedicion : f.fechaExpedicion ?? fechaCreacionIso;
+    return {
+      clienteId: f.clienteId,
+      items,
+      presupuestoId: f.presupuestoId,
+      numeroFactura: f.numeroFactura,
+      fechaExpedicion: fechaExp || new Date().toISOString().split('T')[0],
+      fechaOperacion: f.fechaOperacion,
+      fechaVencimiento: f.fechaVencimiento,
+      regimenFiscal: f.regimenFiscal,
+      condicionesPago: f.condicionesPago,
+      metodoPago: f.metodoPago,
+      estadoPago,
+      montoCobrado:
+        estadoPago === 'Parcial'
+          ? (montoParcialExplicito != null ? montoParcialExplicito : f.montoCobrado != null ? +f.montoCobrado : undefined)
+          : undefined,
+      notas: f.notas,
+      ivaHabilitado: f.ivaHabilitado,
+    };
+  }
+
+  private refrescarPanel(): void {
+    const cid = this.panel?.cliente.id;
+    if (cid == null) return;
+    this.clienteService.getPanel(cid).subscribe({
+      next: (p) => {
+        this.panel = p;
+        this.facturasPendiente = p.facturas.filter((f) => f.pendiente > 0.001);
+      },
+    });
+  }
+
+  private closeLbl(): string {
+    return this.translate.instant('common.close');
+  }
+
+  private snackEstadoError(err: unknown): void {
+    const msgRaw = (err as { error?: { message?: unknown; detail?: unknown } })?.error?.message ??
+      (err as { error?: { detail?: unknown } })?.error?.detail ??
+      '';
+    const fb = this.translate.instant('snack.statusUpdateFail');
+    const msg = typeof msgRaw === 'string' && msgRaw.trim() ? msgRaw.trim() : fb;
+    this.snackBar.open(msg, this.closeLbl(), { duration: 5000 });
   }
 }

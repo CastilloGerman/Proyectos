@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MaterialService } from '../../../core/services/material.service';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-material-form',
@@ -76,7 +77,8 @@ export class MaterialFormComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private materialService: MaterialService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private translate: TranslateService
   ) {
     this.form = this.fb.group({
       nombre: ['', Validators.required],
@@ -115,12 +117,20 @@ export class MaterialFormComponent implements OnInit {
       : this.materialService.create(payload);
     req.subscribe({
       next: () => {
-        this.snackBar.open(this.isEdit ? 'Material actualizado' : 'Material creado', 'Cerrar', { duration: 3000 });
+        this.snackBar.open(
+          this.translate.instant(this.isEdit ? 'snack.materialUpdated' : 'snack.materialCreated'),
+          this.translate.instant('common.close'),
+          { duration: 3000 },
+        );
         this.router.navigate(['/materiales']);
       },
       error: (err) => {
-        const msg = err.error?.error || err.error?.message || 'Error al guardar';
-        this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+        const raw = err.error?.error || err.error?.message;
+        const msg =
+          typeof raw === 'string' && String(raw).trim() !== ''
+            ? String(raw).trim()
+            : this.translate.instant('snack.materialSaveFail');
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
       },
     });
   }

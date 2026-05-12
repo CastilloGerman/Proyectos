@@ -27,6 +27,7 @@ import { AnticipoResumen, PresupuestoItemRequest } from '../../../core/models/pr
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { CondicionesPresupuestoFormValue, PresupuestoCondicionDisponible } from '../../../core/models/presupuesto-condiciones.model';
 import { CondicionesPresupuestoComponent } from '../condiciones-presupuesto/condiciones-presupuesto.component';
+import { TranslateService } from '@ngx-translate/core';
 
 const IVA_RATE = 0.21;
 
@@ -608,7 +609,8 @@ export class PresupuestoFormComponent implements OnInit {
     private clienteService: ClienteService,
     private materialService: MaterialService,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private translate: TranslateService
   ) {
     this.form = this.fb.group({
       clienteId: [null, Validators.required],
@@ -627,14 +629,15 @@ export class PresupuestoFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    const showError = (msg: string) => this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+    const close = () => this.translate.instant('common.close');
+    const showError = (msg: string) => this.snackBar.open(msg, close(), { duration: 5000 });
     this.clienteService.getAll().subscribe({
       next: (data) => (this.clientes = data),
-      error: () => showError('Error al cargar clientes. Verifica que la API esté en ejecución.'),
+      error: () => showError(this.translate.instant('snack.clientsLoadFail')),
     });
     this.materialService.getAll().subscribe({
       next: (data) => (this.materiales = data),
-      error: () => showError('Error al cargar materiales.'),
+      error: () => showError(this.translate.instant('snack.materialsLoadFail')),
     });
     this.materialService.getTopUsados().subscribe({
       next: (data) => (this.topMateriales = data),
@@ -705,7 +708,7 @@ export class PresupuestoFormComponent implements OnInit {
             },
           });
         },
-        error: () => showError('No se pudieron cargar las condiciones del presupuesto.'),
+        error: () => showError(this.translate.instant('snack.budgetCondicionesLoadFail')),
       });
       const preCliente = this.route.snapshot.queryParamMap.get('clienteId');
       if (preCliente) {
@@ -750,7 +753,9 @@ export class PresupuestoFormComponent implements OnInit {
       error: () => {
         this.resumenAnticipo = null;
         this.anticipoResumenLoading = false;
-        this.snackBar.open('No se pudo cargar el resumen de anticipo.', 'Cerrar', { duration: 4000 });
+        this.snackBar.open(this.translate.instant('snack.depositSummaryFail'), this.translate.instant('common.close'), {
+          duration: 4000,
+        });
       },
     });
   }
@@ -759,7 +764,9 @@ export class PresupuestoFormComponent implements OnInit {
     if (!this.id) return;
     const imp = this.anticipoRegImporte === '' ? NaN : +this.anticipoRegImporte;
     if (!this.anticipoRegFecha || isNaN(imp) || imp <= 0) {
-      this.snackBar.open('Indica importe y fecha de anticipo válidos.', 'Cerrar', { duration: 4000 });
+      this.snackBar.open(this.translate.instant('snack.depositInvalid'), this.translate.instant('common.close'), {
+        duration: 4000,
+      });
       return;
     }
     this.anticipoCargando = true;
@@ -769,13 +776,19 @@ export class PresupuestoFormComponent implements OnInit {
         next: (p) => {
           this.facturaPrincipalId = p.facturaId ?? null;
           this.anticipoCargando = false;
-          this.snackBar.open('Anticipo registrado', 'Cerrar', { duration: 3000 });
+          this.snackBar.open(this.translate.instant('snack.depositRegistered'), this.translate.instant('common.close'), {
+            duration: 3000,
+          });
           this.loadResumenAnticipo();
         },
         error: (err) => {
           this.anticipoCargando = false;
-          const msg = err.error?.message || err.error?.detail || 'Error al registrar anticipo';
-          this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+          const raw = err.error?.message || err.error?.detail;
+          const msg =
+            typeof raw === 'string' && raw.trim() !== ''
+              ? raw.trim()
+              : this.translate.instant('snack.depositRegisterFail');
+          this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
         },
       });
   }
@@ -786,13 +799,19 @@ export class PresupuestoFormComponent implements OnInit {
     this.presupuestoService.generarFacturaAnticipo(this.id).subscribe({
       next: () => {
         this.anticipoCargando = false;
-        this.snackBar.open('Factura de anticipo creada', 'Cerrar', { duration: 3500 });
+        this.snackBar.open(this.translate.instant('snack.depositInvoiceCreated'), this.translate.instant('common.close'), {
+          duration: 3500,
+        });
         this.loadResumenAnticipo();
       },
       error: (err) => {
         this.anticipoCargando = false;
-        const msg = err.error?.message || err.error?.detail || 'Error al generar la factura de anticipo';
-        this.snackBar.open(msg, 'Cerrar', { duration: 6000 });
+        const raw = err.error?.message || err.error?.detail;
+        const msg =
+          typeof raw === 'string' && raw.trim() !== ''
+            ? raw.trim()
+            : this.translate.instant('snack.depositInvoiceFail');
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 6000 });
       },
     });
   }
@@ -824,13 +843,19 @@ export class PresupuestoFormComponent implements OnInit {
           next: (f) => {
             this.anticipoCargando = false;
             this.facturaPrincipalId = f.id;
-            this.snackBar.open('Factura final creada', 'Cerrar', { duration: 3000 });
+            this.snackBar.open(this.translate.instant('snack.finalInvoiceCreated'), this.translate.instant('common.close'), {
+              duration: 3000,
+            });
             this.router.navigate(['/facturas', f.id]);
           },
           error: (err) => {
             this.anticipoCargando = false;
-            const msg = err.error?.message || err.error?.detail || 'Error al generar la factura final';
-            this.snackBar.open(msg, 'Cerrar', { duration: 6000 });
+            const raw = err.error?.message || err.error?.detail;
+            const msg =
+              typeof raw === 'string' && raw.trim() !== ''
+                ? raw.trim()
+                : this.translate.instant('snack.finalInvoiceFail');
+            this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 6000 });
           },
         });
       });
@@ -856,13 +881,19 @@ export class PresupuestoFormComponent implements OnInit {
       next: (c) => {
         this.clientes = [...this.clientes, c].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
         this.form.patchValue({ clienteId: c.id });
-        this.snackBar.open('Cliente creado. Puedes continuar con el presupuesto.', 'Cerrar', { duration: 3500 });
+        this.snackBar.open(this.translate.instant('snack.inlineClientOk'), this.translate.instant('common.close'), {
+          duration: 3500,
+        });
         this.clienteModo = 'existente';
         this.nombreClienteNuevo = '';
       },
       error: (err) => {
-        const msg = err.error?.message || err.error?.detail || 'Error al crear el cliente';
-        this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+        const raw = err.error?.message || err.error?.detail;
+        const msg =
+          typeof raw === 'string' && raw.trim() !== ''
+            ? raw.trim()
+            : this.translate.instant('snack.inlineClientFail');
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
       },
     });
   }
@@ -1068,16 +1099,16 @@ export class PresupuestoFormComponent implements OnInit {
     });
     if (!this.form.get('clienteId')?.value) {
       this.form.markAllAsTouched();
-      this.snackBar.open('Selecciona un cliente o crea uno nuevo con «Crear y continuar».', 'Cerrar', { duration: 4500 });
+      this.snackBar.open(this.translate.instant('snack.budgetNeedClient'), this.translate.instant('common.close'), {
+        duration: 4500,
+      });
       return;
     }
     if (validItems.length === 0) {
       this.form.markAllAsTouched();
-      this.snackBar.open(
-        'Añade al menos una línea con material del catálogo o una tarea manual con descripción.',
-        'Cerrar',
-        { duration: 4500 }
-      );
+      this.snackBar.open(this.translate.instant('snack.budgetNeedLine'), this.translate.instant('common.close'), {
+        duration: 4500,
+      });
       return;
     }
     const items: PresupuestoItemRequest[] = validItems.map(({ ctrl }) => {
@@ -1111,7 +1142,11 @@ export class PresupuestoFormComponent implements OnInit {
       : this.presupuestoService.create(payload);
     req.subscribe({
       next: (presupuesto) => {
-        this.snackBar.open(this.isEdit ? 'Presupuesto actualizado' : 'Presupuesto creado', 'Cerrar', { duration: 3000 });
+        this.snackBar.open(
+          this.translate.instant(this.isEdit ? 'snack.budgetUpdated' : 'snack.budgetSavedCreated'),
+          this.translate.instant('common.close'),
+          { duration: 3000 },
+        );
         this.presupuestoService.downloadPdf(presupuesto.id).subscribe({
           next: (blob) => {
             const url = URL.createObjectURL(blob);
@@ -1123,8 +1158,12 @@ export class PresupuestoFormComponent implements OnInit {
         this.router.navigate(['/presupuestos']);
       },
       error: (err) => {
-        const msg = err.error?.message || err.error?.error || err.statusText || 'Error al guardar';
-        this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+        const raw = err.error?.message || err.error?.error;
+        const msg =
+          typeof raw === 'string' && String(raw).trim() !== ''
+            ? String(raw).trim()
+            : this.translate.instant('snack.budgetSaveFail');
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
       },
     });
   }

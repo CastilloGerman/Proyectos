@@ -202,6 +202,13 @@ export class AppAuthenticatedShellComponent implements OnInit {
     return d ?? TRIAL_DAYS_LEFT_FALLBACK;
   }
 
+  private snackHttpPresets() {
+    return {
+      offline: this.translate.instant('shell.snackbarOffline'),
+      server: this.translate.instant('shell.snackbarServerError'),
+    };
+  }
+
   openInvitar(): void {
     const ref = this.dialog.open(InvitarUsuarioDialogComponent, { width: 'min(480px, 96vw)', maxWidth: '96vw' });
     ref.afterClosed().subscribe((ok) => {
@@ -228,7 +235,7 @@ export class AppAuthenticatedShellComponent implements OnInit {
         }
       },
       error: (err: unknown) => {
-        const msg = messageFromHttpError(err, this.translate.instant('shell.snackbarPaymentErrorFallback'));
+        const msg = messageFromHttpError(err, this.translate.instant('shell.snackbarPaymentErrorFallback'), this.snackHttpPresets());
         this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 6500 });
       },
     });
@@ -246,13 +253,12 @@ export class AppAuthenticatedShellComponent implements OnInit {
         });
       },
       error: (err) => {
-        this.snackBar.open(
-          err.error?.message ||
-            err.message ||
-            this.translate.instant('shell.snackbarGrantPremiumFallback'),
-          this.translate.instant('common.close'),
-          { duration: 5000 },
+        const msg = messageFromHttpError(
+          err,
+          this.translate.instant('shell.snackbarGrantPremiumFallback'),
+          this.snackHttpPresets(),
         );
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
       },
     });
   }

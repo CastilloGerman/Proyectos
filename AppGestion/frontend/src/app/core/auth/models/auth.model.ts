@@ -18,12 +18,13 @@ export interface RegisterRequest {
   email: string;
   password: string;
   rol?: string;
+  /** Token de referido (?ref=) verificado antes del POST /auth/register. */
+  referralToken?: string;
   clientInfo?: DeviceClientInfo;
 }
 
 export interface InviteVerifyResponse {
   valid: boolean;
-  email?: string;
 }
 
 export interface AuthResponse {

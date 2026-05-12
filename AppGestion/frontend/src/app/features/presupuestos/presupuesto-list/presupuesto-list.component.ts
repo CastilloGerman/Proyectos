@@ -23,6 +23,7 @@ import { ConfigEmpresaDialogComponent } from '../../../shared/config-empresa-dia
 import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/enviar-email-dialog.component';
 import { CompletarClienteFiscalDialogComponent } from '../../../shared/completar-cliente-fiscal-dialog/completar-cliente-fiscal-dialog.component';
 import { Observable } from 'rxjs';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-presupuesto-list',
@@ -258,6 +259,16 @@ import { Observable } from 'rxjs';
 })
 export class PresupuestoListComponent implements OnInit, AfterViewInit {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly translate = inject(TranslateService);
+
+  private closeLbl(): string {
+    return this.translate.instant('common.close');
+  }
+
+  private cfgLbl(): string {
+    return this.translate.instant('common.configure');
+  }
+
   private readonly estadosPresupuestoCatalogo = ['Pendiente', 'Aceptado', 'Rechazado', 'En ejecución'];
   displayedColumns = ['clienteNombre', 'fechaCreacion', 'estado', 'anticipo', 'total', 'actions'];
   dataSource = new MatTableDataSource<Presupuesto>([]);
@@ -309,10 +320,11 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
     this.presupuestoService.getAll().subscribe({
       next: (data) => this.dataSource.data = data,
       error: (err) => {
-        const msg = err.status === 403
-          ? 'Acceso denegado. Verifica que la API esté en modo desarrollo (perfil local).'
-          : 'Error al cargar presupuestos';
-        this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+        const msg =
+          err.status === 403
+            ? this.translate.instant('snack.estimatesLoadForbidden')
+            : this.translate.instant('snack.estimatesLoadFail');
+        this.snackBar.open(msg, this.closeLbl(), { duration: 5000 });
       },
     });
   }
@@ -361,12 +373,18 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
       next: (updated) => {
         this.actualizandoEstadoPresupuestoId = null;
         this.patchPresupuestoEnTabla(updated);
-        this.snackBar.open(`Estado: ${updated.estado}`, 'Cerrar', { duration: 2500 });
+        this.snackBar.open(
+          this.translate.instant('snack.estimateStatus', { status: updated.estado }),
+          this.closeLbl(),
+          { duration: 2500 },
+        );
       },
       error: (err) => {
         this.actualizandoEstadoPresupuestoId = null;
-        const msg = err.error?.message ?? err.error?.detail ?? 'No se pudo actualizar el estado';
-        this.snackBar.open(typeof msg === 'string' ? msg : 'Error al actualizar el estado', 'Cerrar', { duration: 5000 });
+        const msgRaw = err.error?.message ?? err.error?.detail ?? '';
+        const fb = this.translate.instant('snack.statusUpdateFail');
+        const msg = typeof msgRaw === 'string' && msgRaw.trim() ? msgRaw.trim() : fb;
+        this.snackBar.open(msg, this.closeLbl(), { duration: 5000 });
       },
     });
   }
@@ -415,11 +433,11 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
       if (ok) {
         this.presupuestoService.delete(presupuesto.id).subscribe({
           next: () => {
-            this.snackBar.open('Presupuesto eliminado', 'Cerrar', { duration: 3000 });
+            this.snackBar.open(this.translate.instant('snack.estimateDeleted'), this.closeLbl(), { duration: 3000 });
             this.load();
           },
           error: () => {
-            this.snackBar.open('Error al eliminar', 'Cerrar', { duration: 3000 });
+            this.snackBar.open(this.translate.instant('snack.estimateDeleteFail'), this.closeLbl(), { duration: 3000 });
           },
         });
       }
@@ -448,9 +466,9 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
       req.subscribe({
         next: (factura) => {
           const msg = presupuesto.tieneAnticipo
-            ? 'Factura final creada (si aún no existía, también se emitió la factura de anticipo).'
-            : 'Factura creada. El presupuesto ha pasado a estado Aceptado.';
-          this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+            ? this.translate.instant('snack.invoiceFinalCreatedAdvance')
+            : this.translate.instant('snack.invoiceCreatedBudgetAccepted');
+          this.snackBar.open(msg, this.closeLbl(), { duration: 5000 });
           this.load();
           this.router.navigate(['/facturas', factura.id]);
         },
@@ -465,7 +483,11 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
               if (ok) ejecutarFactura();
             });
           } else {
-            this.snackBar.open(texto || 'Error al crear factura', 'Cerrar', { duration: 5000 });
+            this.snackBar.open(
+              texto.trim() ? texto : this.translate.instant('snack.invoiceCreateFromBudgetFail'),
+              this.closeLbl(),
+              { duration: 5000 },
+            );
           }
         },
       });
@@ -502,12 +524,19 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
       if (email !== undefined) {
         this.presupuestoService.enviarPorEmail(presupuesto.id, email || undefined).subscribe({
           next: () => {
-            this.snackBar.open('Presupuesto enviado por email correctamente', 'Cerrar', { duration: 3000 });
+            this.snackBar.open(this.translate.instant('snack.budgetEmailSent'), this.closeLbl(), { duration: 3000 });
           },
           error: (err) => {
-            const msg = err.error?.detail ?? err.error?.message ?? 'Error al enviar el email';
-            const needsConfig = msg.includes('Configure') || msg.includes('correo de envío');
-            this.snackBar.open(msg, needsConfig ? 'Configurar' : 'Cerrar', { duration: needsConfig ? 8000 : 5000 })
+            const msgRaw = err.error?.detail ?? err.error?.message ?? '';
+            const msg =
+              typeof msgRaw === 'string' && msgRaw.trim()
+                ? msgRaw.trim()
+                : this.translate.instant('snack.estimateEmailFailGeneric');
+            const needsConfig =
+              msg.includes('Configure') || msg.toLowerCase().includes('correo de envío');
+            this.snackBar.open(msg, needsConfig ? this.cfgLbl() : this.closeLbl(), {
+              duration: needsConfig ? 8000 : 5000,
+            })
               .onAction().subscribe(() => {
                 if (needsConfig) {
                   this.dialog.open(ConfigEmpresaDialogComponent, { width: '500px', data: { context: 'mail' } });
@@ -529,7 +558,7 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
         a.click();
         URL.revokeObjectURL(url);
       },
-      error: () => this.snackBar.open('Error al descargar PDF', 'Cerrar', { duration: 3000 }),
+      error: () => this.snackBar.open(this.translate.instant('snack.pdfDownloadFail'), this.closeLbl(), { duration: 3000 }),
     });
   }
 }

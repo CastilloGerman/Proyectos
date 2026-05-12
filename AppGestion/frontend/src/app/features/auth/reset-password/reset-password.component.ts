@@ -6,6 +6,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../core/auth/auth.service';
 
 function passwordMatchValidator(g: AbstractControl): ValidationErrors | null {
@@ -173,7 +174,8 @@ export class ResetPasswordComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private auth: AuthService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private translate: TranslateService
   ) {
     this.form = this.fb.group(
       {
@@ -196,16 +198,20 @@ export class ResetPasswordComponent implements OnInit {
     this.loading = true;
     this.auth.resetPassword(this.token, this.form.value.newPassword).subscribe({
       next: () => {
-        this.snackBar.open('Contraseña actualizada. Ya puedes iniciar sesión.', 'Cerrar', { duration: 5000 });
+        this.snackBar.open(
+          this.translate.instant('auth.passwordReset.success'),
+          this.translate.instant('common.close'),
+          { duration: 5000 },
+        );
         this.router.navigate(['/login']);
       },
-      error: (err) => {
+      error: (err: unknown) => {
         this.loading = false;
-        this.snackBar.open(
-          err.error?.message || 'Enlace inválido o expirado. Solicita uno nuevo.',
-          'Cerrar',
-          { duration: 5000 }
-        );
+        const apiErr = err as { error?: { message?: string } };
+        const srv =
+          typeof apiErr.error?.message === 'string' ? String(apiErr.error.message).trim() : '';
+        const msg = srv.length > 0 ? srv : this.translate.instant('auth.passwordReset.invalidLink');
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
       },
     });
   }

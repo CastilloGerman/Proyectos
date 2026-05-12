@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ClienteService } from '../../core/services/cliente.service';
+import { TranslateService } from '@ngx-translate/core';
 
 export interface CompletarClienteFiscalDialogData {
   clienteId: number;
@@ -114,7 +115,8 @@ export class CompletarClienteFiscalDialogComponent {
     private dialogRef: MatDialogRef<CompletarClienteFiscalDialogComponent, boolean>,
     @Inject(MAT_DIALOG_DATA) public data: CompletarClienteFiscalDialogData,
     private clienteService: ClienteService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private translate: TranslateService
   ) {}
 
   cancelar(): void {
@@ -145,12 +147,15 @@ export class CompletarClienteFiscalDialogComponent {
         },
         error: (err) => {
           this.saving = false;
-          const msg =
+          const raw =
             err.error?.message ||
             err.error?.detail ||
-            (typeof err.error === 'string' ? err.error : null) ||
-            'No se pudieron guardar los datos';
-          this.snackBar.open(msg, 'Cerrar', { duration: 6000 });
+            (typeof err.error === 'string' ? err.error : null);
+          const msg =
+            typeof raw === 'string' && String(raw).trim() !== ''
+              ? String(raw).trim()
+              : this.translate.instant('snack.clientSaveFail');
+          this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 6000 });
         },
       });
   }

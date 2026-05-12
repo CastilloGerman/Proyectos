@@ -6,6 +6,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
@@ -251,7 +252,8 @@ export class ForgotPasswordComponent {
   constructor(
     private fb: FormBuilder,
     private auth: AuthService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private translate: TranslateService
   ) {
     this.form = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -271,11 +273,9 @@ export class ForgotPasswordComponent {
       },
       error: () => {
         this.loading = false;
-        this.snackBar.open(
-          'No se pudo completar la solicitud. Comprueba la conexión y que la API esté disponible; inténtalo de nuevo.',
-          'Cerrar',
-          { duration: 7000 }
-        );
+        this.snackBar.open(this.translate.instant('auth.forgot.requestError'), this.translate.instant('common.close'), {
+          duration: 7000,
+        });
       },
     });
   }

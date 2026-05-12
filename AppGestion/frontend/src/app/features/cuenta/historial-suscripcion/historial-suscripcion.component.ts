@@ -11,6 +11,7 @@ import { MatTableModule } from '@angular/material/table';
 import { AuthService } from '../../../core/auth/auth.service';
 import { SubscriptionService } from '../../../core/services/subscription.service';
 import { SubscriptionInvoice } from '../../../core/models/subscription-invoice.model';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-historial-suscripcion',
@@ -32,6 +33,7 @@ export class HistorialSuscripcionComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly subscriptionApi = inject(SubscriptionService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly translate = inject(TranslateService);
 
   readonly loading = signal(true);
   readonly loadError = signal(false);
@@ -64,7 +66,11 @@ export class HistorialSuscripcionComponent implements OnInit {
       error: () => {
         this.loadError.set(true);
         this.loading.set(false);
-        this.snackBar.open('No se pudo cargar el historial. Inténtalo de nuevo.', 'Cerrar', { duration: 5000 });
+        this.snackBar.open(
+          this.translate.instant('snack.subscriptionHistoryLoadFail'),
+          this.translate.instant('common.close'),
+          { duration: 5000 },
+        );
       },
     });
   }
@@ -78,7 +84,11 @@ export class HistorialSuscripcionComponent implements OnInit {
       },
       error: (err) => {
         this.openingPortal.set(false);
-        this.snackBar.open(err.error?.error || 'No se pudo abrir el portal', 'Cerrar', { duration: 4000 });
+        this.snackBar.open(
+          err.error?.error || this.translate.instant('snack.subscriptionPortalFail'),
+          this.translate.instant('common.close'),
+          { duration: 4000 },
+        );
       },
     });
   }

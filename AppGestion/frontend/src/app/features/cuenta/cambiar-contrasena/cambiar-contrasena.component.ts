@@ -13,6 +13,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { passwordMatchValidator } from '../../../shared/validators/password-match.validator';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-cambiar-contrasena',
@@ -36,6 +37,7 @@ export class CambiarContrasenaComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly translate = inject(TranslateService);
 
   readonly saving = signal(false);
   hideCurrent = true;
@@ -71,17 +73,19 @@ export class CambiarContrasenaComponent implements OnInit, OnDestroy {
       next: () => {
         this.form.reset();
         this.form.markAsPristine();
-        this.snackBar.open('Contraseña actualizada correctamente', 'Cerrar', { duration: 4000 });
+        this.snackBar.open(this.translate.instant('snack.passwordChanged'), this.translate.instant('common.close'), {
+          duration: 4000,
+        });
         this.saving.set(false);
       },
       error: (err) => {
         this.saving.set(false);
+        const raw = err.error?.message || err.error?.detail || err.error?.error;
         const msg =
-          err.error?.message ||
-          err.error?.detail ||
-          err.error?.error ||
-          'No se pudo cambiar la contraseña';
-        this.snackBar.open(typeof msg === 'string' ? msg : 'Error al guardar', 'Cerrar', { duration: 5000 });
+          typeof raw === 'string' && String(raw).trim() !== ''
+            ? String(raw).trim()
+            : this.translate.instant('snack.passwordChangeFail');
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
       },
     });
   }

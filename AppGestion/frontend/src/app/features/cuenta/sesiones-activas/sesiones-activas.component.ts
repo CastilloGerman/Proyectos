@@ -10,6 +10,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from '../../../core/auth/auth.service';
 import { SesionDispositivoDto } from '../../../core/auth/models/auth.model';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-sesiones-activas',
@@ -29,6 +30,7 @@ import { SesionDispositivoDto } from '../../../core/auth/models/auth.model';
 export class SesionesActivasComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly translate = inject(TranslateService);
 
   readonly loading = signal(true);
   readonly loadError = signal<string | null>(null);
@@ -87,14 +89,20 @@ export class SesionesActivasComponent implements OnInit {
     this.auth.revokeSession(s.id).subscribe({
       next: () => {
         this.revokingId.set(null);
-        this.snackBar.open('Sesión cerrada en ese dispositivo.', 'Cerrar', { duration: 3500 });
+        this.snackBar.open(this.translate.instant('snack.sessionClosed'), this.translate.instant('common.close'), {
+          duration: 3500,
+        });
         this.reload();
       },
       error: (err) => {
         this.revokingId.set(null);
-        this.snackBar.open(err.error?.message || err.error?.error || 'No se pudo cerrar la sesión.', 'Cerrar', {
-          duration: 5000,
-        });
+        this.snackBar.open(
+          err.error?.message ||
+            err.error?.error ||
+            this.translate.instant('snack.sessionCloseFail'),
+          this.translate.instant('common.close'),
+          { duration: 5000 },
+        );
       },
     });
   }
@@ -108,16 +116,22 @@ export class SesionesActivasComponent implements OnInit {
       next: (res) => {
         this.revokingOthers.set(false);
         const n = res?.revokedCount ?? 0;
-        this.snackBar.open(n > 0 ? `Se cerraron ${n} sesión(es).` : 'No había otras sesiones activas.', 'Cerrar', {
-          duration: 4000,
-        });
+        const text =
+          n > 0
+            ? this.translate.instant('snack.sessionsClosedOthers', { count: n })
+            : this.translate.instant('snack.sessionsNoOthers');
+        this.snackBar.open(text, this.translate.instant('common.close'), { duration: 4000 });
         this.reload();
       },
       error: (err) => {
         this.revokingOthers.set(false);
-        this.snackBar.open(err.error?.message || err.error?.error || 'No se pudieron cerrar las otras sesiones.', 'Cerrar', {
-          duration: 5000,
-        });
+        this.snackBar.open(
+          err.error?.message ||
+            err.error?.error ||
+            this.translate.instant('snack.sessionsCloseOthersFail'),
+          this.translate.instant('common.close'),
+          { duration: 5000 },
+        );
       },
     });
   }

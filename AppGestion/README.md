@@ -197,12 +197,18 @@ Prefijos **tal como los expone el backend** (sin `/api`; el front añade `/api` 
 | POST | `/auth/forgot-password` | Solicitar reset de contraseña |
 | POST | `/auth/reset-password` | Restablecer contraseña |
 | POST | `/auth/invitations` | Crear invitación (roles ADMIN/USER) |
-| GET | `/auth/invite/verify` | Verificar token de invitación |
+| GET | `/auth/invite/verify` | Verificar token de invitación; respuesta JSON con único campo `valid` (booleano); no devuelve email |
 | POST | `/auth/invite/accept` | Aceptar invitación |
 | GET | `/auth/sessions` | Listar sesiones/dispositivos |
 | DELETE | `/auth/sessions/{sessionId}` | Revocar sesión |
 | DELETE | `/auth/sessions/others` | Revocar otras sesiones |
 | POST | `/auth/logout` | Cerrar sesión actual |
+
+**Referidos y enlace de invitación**
+
+- El correo de referido apunta al front en **`/login?ref=<token>`** (y las rutas antiguas `/invite/:token` redirigen allí). El usuario elige el email en **`/register?ref=<token>`**.
+- **`GET /auth/invite/verify?token=...`** (público): respuesta JSON **`{ "valid": true|false }`**. No incluye el email del destinatario; solo indica si el token existe, no está usado y no ha caducado.
+- **`POST /auth/register`**: cuerpo opcional **`referralToken`** (el mismo valor que en `ref`). Si es válido, el backend registra el referido y aplica la prueba según la lógica del servidor.
 
 ### Soporte, notificaciones y auditoría
 

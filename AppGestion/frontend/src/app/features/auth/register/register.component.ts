@@ -1,12 +1,15 @@
-import { Component, OnInit } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../core/auth/auth.service';
+import { RegisterRequest } from '../../../core/auth/models/auth.model';
 
 @Component({
     selector: 'app-register',
@@ -18,6 +21,7 @@ import { AuthService } from '../../../core/auth/auth.service';
         MatButtonModule,
         MatProgressSpinnerModule,
         MatSnackBarModule,
+        TranslateModule,
     ],
     template: `
     <div class="register-wrapper">
@@ -26,33 +30,64 @@ import { AuthService } from '../../../core/auth/auth.service';
           <div class="register-logo">
             <img src="assets/noemi-logo.png" alt="Noemí" class="register-logo-img" />
           </div>
-          <h1 class="register-title">Registro</h1>
-          <p class="register-subtitle">Crea tu cuenta</p>
+          <h1 class="register-title">{{ 'auth.register.title' | translate }}</h1>
+          @if (referralToken && referralCheckState === 'checking') {
+            <p class="register-ref-status">{{ 'auth.register.referralChecking' | translate }}</p>
+          }
+          @if (referralToken && referralCheckState === 'bad') {
+            <p class="register-ref-warn">{{ 'auth.register.referralInvalid' | translate }}</p>
+          }
+          @if (referralToken && referralCheckState === 'ok') {
+            <p class="register-ref-ok">{{ 'auth.register.referralValid' | translate }}</p>
+          }
+          <p class="register-subtitle">
+            {{ (referralToken ? 'auth.register.subtitleReferral' : 'auth.register.subtitle') | translate }}
+          </p>
           <form [formGroup]="form" (ngSubmit)="onSubmit()" class="register-form">
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Nombre</mat-label>
-              <input matInput formControlName="nombre" placeholder="Tu nombre">
-              <mat-error>El nombre es obligatorio</mat-error>
+            <mat-form-field appearance="outline" floatLabel="always" class="full-width">
+              <mat-label>{{ 'auth.register.nameLabel' | translate }}</mat-label>
+              <input matInput formControlName="nombre" [placeholder]="'auth.register.namePlaceholder' | translate" />
+              @if (form.get('nombre')?.hasError('required') && form.get('nombre')?.touched) {
+                <mat-error>{{ 'auth.register.nameRequired' | translate }}</mat-error>
+              }
             </mat-form-field>
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Email</mat-label>
-              <input matInput formControlName="email" type="email" placeholder="tu@email.com">
-              <mat-error>Email inválido</mat-error>
+            <mat-form-field appearance="outline" floatLabel="always" class="full-width">
+              <mat-label>{{ 'auth.login.email' | translate }}</mat-label>
+              <input matInput formControlName="email" type="email" autocomplete="email" />
+              @if (form.get('email')?.hasError('required') && form.get('email')?.touched) {
+                <mat-error>{{ 'auth.login.emailRequired' | translate }}</mat-error>
+              }
+              @if (form.get('email')?.hasError('email')) {
+                <mat-error>{{ 'auth.login.emailInvalid' | translate }}</mat-error>
+              }
             </mat-form-field>
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Contraseña</mat-label>
-              <input matInput formControlName="password" type="password">
-              <mat-error>Mínimo 6 caracteres</mat-error>
+            <mat-form-field appearance="outline" floatLabel="always" class="full-width">
+              <mat-label>{{ 'auth.login.password' | translate }}</mat-label>
+              <input matInput formControlName="password" type="password" autocomplete="new-password" />
+              @if (form.get('password')?.hasError('required') && form.get('password')?.touched) {
+                <mat-error>{{ 'auth.login.passwordRequired' | translate }}</mat-error>
+              }
+              @if (form.get('password')?.hasError('minlength')) {
+                <mat-error>{{ 'auth.register.passwordMinLength' | translate }}</mat-error>
+              }
             </mat-form-field>
-            <button mat-raised-button color="primary" type="submit" [disabled]="loading" class="submit-btn">
+            <button
+              mat-raised-button
+              color="primary"
+              type="submit"
+              [disabled]="loading || (referralToken && referralCheckState === 'checking')"
+              class="submit-btn"
+            >
               @if (loading) {
                 <mat-spinner diameter="24"></mat-spinner>
               } @else {
-                Registrarse
+                {{ 'auth.register.submit' | translate }}
               }
             </button>
           </form>
-          <a routerLink="/login" class="login-link">¿Ya tienes cuenta? Inicia sesión</a>
+          <a [routerLink]="['/login']" [queryParams]="loginQueryParams" class="login-link">{{
+            'auth.register.loginLink' | translate
+          }}</a>
         </div>
       </div>
     </div>
@@ -112,10 +147,37 @@ import { AuthService } from '../../../core/auth/auth.service';
     }
 
     .register-subtitle {
-      margin: 0 0 28px 0;
+      margin: 0 0 20px 0;
       font-size: 0.95rem;
       color: #64748b;
       text-align: center;
+      line-height: 1.45;
+    }
+
+    .register-ref-status,
+    .register-ref-ok,
+    .register-ref-warn {
+      margin: 0 0 10px;
+      padding: 10px 12px;
+      font-size: 0.82rem;
+      line-height: 1.35;
+      text-align: center;
+      border-radius: 12px;
+    }
+
+    .register-ref-status {
+      color: #475569;
+      background: rgba(71, 85, 105, 0.08);
+    }
+
+    .register-ref-ok {
+      color: #14532d;
+      background: #dcfce7;
+    }
+
+    .register-ref-warn {
+      color: #92400e;
+      background: #fef3c7;
     }
 
     .register-form {
@@ -183,13 +245,21 @@ import { AuthService } from '../../../core/auth/auth.service';
   `]
 })
 export class RegisterComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly translate = inject(TranslateService);
+  private readonly cdr = inject(ChangeDetectorRef);
   form: FormGroup;
   loading = false;
+
+  referralToken: string | null = null;
+  referralCheckState: 'idle' | 'checking' | 'ok' | 'bad' = 'idle';
+  loginQueryParams: Record<string, string> = {};
 
   constructor(
     private fb: FormBuilder,
     private auth: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
     private snackBar: MatSnackBar
   ) {
     this.form = this.fb.group({
@@ -203,6 +273,27 @@ export class RegisterComponent implements OnInit {
     if (this.auth.isAuthenticated()) {
       this.router.navigate(['/dashboard']);
     }
+    this.translate.onLangChange.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.cdr.detectChanges();
+    });
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((qp) => {
+      const ref = qp.get('ref')?.trim() || null;
+      this.referralToken = ref;
+      this.loginQueryParams = ref ? { ref } : {};
+      if (ref) {
+        this.referralCheckState = 'checking';
+        this.auth.verifyInviteToken(ref).subscribe({
+          next: (r) => {
+            this.referralCheckState = r.valid ? 'ok' : 'bad';
+          },
+          error: () => {
+            this.referralCheckState = 'bad';
+          },
+        });
+      } else {
+        this.referralCheckState = 'idle';
+      }
+    });
   }
 
   onSubmit(): void {
@@ -211,19 +302,27 @@ export class RegisterComponent implements OnInit {
       return;
     }
     this.loading = true;
-    this.auth.register(this.form.value).subscribe({
+    const v = this.form.value as { nombre: string; email: string; password: string };
+    const payload: RegisterRequest = {
+      nombre: v.nombre,
+      email: v.email,
+      password: v.password,
+    };
+    if (this.referralToken && this.referralCheckState === 'ok') {
+      payload.referralToken = this.referralToken;
+    }
+    this.auth.register(payload).subscribe({
       next: () => {
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {
         this.loading = false;
-        const msg = err.error?.message ?? err.error ?? err.message ?? 'Error al registrarse';
+        const msgRaw = err.error?.message ?? err.error ?? err.message ?? '';
+        const fb = this.translate.instant('auth.register.registerError');
+        const msg =
+          typeof msgRaw === 'string' && String(msgRaw).trim() !== '' ? String(msgRaw).trim() : fb;
         console.error('Error en registro:', err);
-        this.snackBar.open(
-          typeof msg === 'string' ? msg : 'Error al registrarse',
-          'Cerrar',
-          { duration: 4000 }
-        );
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 4000 });
       },
     });
   }

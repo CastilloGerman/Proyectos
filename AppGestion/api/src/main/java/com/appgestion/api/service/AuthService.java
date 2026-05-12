@@ -1,7 +1,9 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.constant.TrialConstants;
 import com.appgestion.api.domain.enums.AuditAccessEventType;
 import com.appgestion.api.domain.enums.SubscriptionStatus;
+import com.appgestion.api.domain.entity.Invitacion;
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.request.ChangePasswordRequest;
 import com.appgestion.api.dto.request.ForgotPasswordRequest;
@@ -49,7 +51,6 @@ public class AuthService {
 
     private static final Set<String> GENEROS_PERMITIDOS = Set.of(
             "MALE", "FEMALE", "NON_BINARY", "OTHER", "UNSPECIFIED");
-    private static final int TRIAL_DAYS = 14;
     private static final int TOTP_PENDING_MINUTES = 10;
 
     private final UsuarioRepository usuarioRepository;
@@ -64,6 +65,7 @@ public class AuthService {
     private final AuditAccessService auditAccessService;
     private final PresupuestoCondicionesService presupuestoCondicionesService;
     private final PasswordResetService passwordResetService;
+    private final InvitacionService invitacionService;
 
     public AuthService(UsuarioRepository usuarioRepository,
                        PasswordEncoder passwordEncoder,
@@ -76,7 +78,8 @@ public class AuthService {
                        SessionService sessionService,
                        AuditAccessService auditAccessService,
                        PresupuestoCondicionesService presupuestoCondicionesService,
-                       PasswordResetService passwordResetService) {
+                       PasswordResetService passwordResetService,
+                       InvitacionService invitacionService) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -89,27 +92,40 @@ public class AuthService {
         this.auditAccessService = auditAccessService;
         this.presupuestoCondicionesService = presupuestoCondicionesService;
         this.passwordResetService = passwordResetService;
+        this.invitacionService = invitacionService;
     }
 
     @Transactional
     public AuthResponse registrar(RegisterRequest request, HttpServletRequest httpRequest) {
-        if (usuarioRepository.existsByEmail(request.email())) {
+        Invitacion referralInv = null;
+        String refTok = request.referralToken();
+        if (refTok != null && !refTok.isBlank()) {
+            referralInv = invitacionService.assertValidInvitationForRegistration(refTok.trim());
+        }
+
+        String emailNormalized = request.email().trim().toLowerCase();
+        if (usuarioRepository.existsByEmail(emailNormalized)) {
             throw new IllegalArgumentException("Ya existe un usuario con ese email");
         }
 
         Usuario usuario = new Usuario();
         usuario.setNombre(request.nombre());
-        usuario.setEmail(request.email());
+        usuario.setEmail(emailNormalized);
         usuario.setPasswordHash(passwordEncoder.encode(request.password()));
         usuario.setRol(request.getRol());
         usuario.setActivo(true);
+        usuario.setReferredByUsuarioId(referralInv != null ? referralInv.getInviterUsuarioId() : null);
 
         LocalDate trialStart = LocalDate.now();
         usuario.setTrialStartDate(trialStart);
-        usuario.setTrialEndDate(trialStart.plusDays(TRIAL_DAYS));
+        usuario.setTrialEndDate(trialStart.plusDays(TrialConstants.DEFAULT_TRIAL_DAYS));
         usuario.setSubscriptionStatus(SubscriptionStatus.TRIAL_ACTIVE);
 
         usuario = organizationService.attachNewPersonalOrganization(usuario);
+
+        if (referralInv != null) {
+            invitacionService.markInvitationUsed(referralInv);
+        }
 
         notificacionService.ensureWelcomeIfEmpty(usuario.getId());
 
@@ -117,8 +133,12 @@ public class AuthService {
         String token = jwtService.generateToken(usuario.getEmail(), usuario.getRol(), sesion.getId());
         Instant expiresAt = Instant.now().plusMillis(jwtService.getExpirationMs());
 
+        Map<String, Object> auditExtras = referralInv != null
+                ? Map.of("channel", "REFERRAL_TOKEN", "inviterId", referralInv.getInviterUsuarioId())
+                : Map.of("channel", "PASSWORD");
+
         auditAccessService.recordForUsuario(usuario, AuditAccessEventType.REGISTER_SUCCESS, true, null, false,
-                httpRequest, sesion.getId(), "/auth/register", Map.of("channel", "PASSWORD"));
+                httpRequest, sesion.getId(), "/auth/register", auditExtras);
 
         return AuthResponse.of(token, usuario.getEmail(), usuario.getRol(), expiresAt,
                 usuario.getSubscriptionStatus(), usuario.getTrialEndDate(), subscriptionService.canWrite(usuario),
@@ -185,7 +205,7 @@ public class AuthService {
             nuevo.setActivo(true);
             LocalDate trialStart = LocalDate.now();
             nuevo.setTrialStartDate(trialStart);
-            nuevo.setTrialEndDate(trialStart.plusDays(TRIAL_DAYS));
+            nuevo.setTrialEndDate(trialStart.plusDays(TrialConstants.DEFAULT_TRIAL_DAYS));
             nuevo.setSubscriptionStatus(SubscriptionStatus.TRIAL_ACTIVE);
             return organizationService.attachNewPersonalOrganization(nuevo);
         });

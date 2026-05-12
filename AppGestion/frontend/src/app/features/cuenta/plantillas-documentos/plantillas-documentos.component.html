@@ -80,6 +80,49 @@
           </mat-card-content>
         </mat-card>
 
+        <mat-card class="plant-card plant-editor-block" id="plant-condiciones-presupuesto-default">
+          <mat-card-header>
+            <mat-card-title>Condiciones en presupuestos nuevos</mat-card-title>
+            <mat-card-subtitle>
+              Marca las condiciones que quieras activadas por defecto al crear un presupuesto nuevo. En cada presupuesto puedes
+              cambiarlas.
+            </mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            @if (!condicionesPresupuestosListo()) {
+              <div class="plant-cond-loading">
+                <mat-progress-spinner diameter="32" mode="indeterminate" />
+                <span>Cargando condiciones…</span>
+              </div>
+            } @else if (condicionesCatalogo().length === 0) {
+              <p class="plant-cond-hint">No se pudieron cargar las condiciones. Reintenta más tarde.</p>
+            } @else {
+              <app-condiciones-presupuesto
+                name="condPredPlant"
+                [disponibles]="condicionesCatalogo()"
+                [showNota]="false"
+                [(ngModel)]="condicionesPredModel"
+                [ngModelOptions]="{ standalone: true }"
+              />
+              <div class="plant-cond-actions">
+                <button
+                  mat-flat-button
+                  color="primary"
+                  type="button"
+                  (click)="guardarCondicionesPredeterminadas()"
+                  [disabled]="!puedeEditar || savingCondiciones()"
+                >
+                  @if (savingCondiciones()) {
+                    <mat-progress-spinner diameter="20" mode="indeterminate" />
+                  } @else {
+                    Guardar condiciones por defecto
+                  }
+                </button>
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+
         <mat-card
           class="plant-card plant-editor-block"
           id="plant-texto-factura"

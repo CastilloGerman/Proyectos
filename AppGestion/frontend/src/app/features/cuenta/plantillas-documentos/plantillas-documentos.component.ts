@@ -2,9 +2,9 @@ import { Component, DestroyRef, OnDestroy, OnInit, computed, inject, signal } fr
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { debounceTime, firstValueFrom, startWith } from 'rxjs';
+import { debounceTime, firstValueFrom, forkJoin, startWith } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -19,7 +19,13 @@ import { DomSanitizer, SafeResourceUrl, SafeUrl } from '@angular/platform-browse
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ConfigService, PlantillasPdfPreviewPayload } from '../../../core/services/config.service';
 import { AuthService } from '../../../core/auth/auth.service';
+import { PresupuestoService } from '../../../core/services/presupuesto.service';
 import { Empresa } from '../../../core/models/empresa.model';
+import {
+  CondicionesPresupuestoFormValue,
+  PresupuestoCondicionDisponible,
+} from '../../../core/models/presupuesto-condiciones.model';
+import { CondicionesPresupuestoComponent } from '../../presupuestos/condiciones-presupuesto/condiciones-presupuesto.component';
 import {
   PLACEHOLDER_CATALOG,
   PREVIEW_MOCK_BY_SCENARIO,
@@ -29,6 +35,7 @@ import {
   PlaceholderDef,
   PlantillaPdfPreviewEscenario,
 } from './document-template.models';
+import { TranslateService } from '@ngx-translate/core';
 
 const MAX_PIE = 1000;
 
@@ -41,8 +48,10 @@ const PH_FACT =
     selector: 'app-plantillas-documentos',
     imports: [
         CommonModule,
+        FormsModule,
         ReactiveFormsModule,
         RouterLink,
+        CondicionesPresupuestoComponent,
         MatCardModule,
         MatButtonModule,
         MatButtonToggleModule,
@@ -68,13 +77,20 @@ export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly config = inject(ConfigService);
   private readonly auth = inject(AuthService);
+  private readonly presupuestoService = inject(PresupuestoService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly translate = inject(TranslateService);
 
   readonly loading = signal(true);
   readonly saving = signal(false);
+  readonly savingCondiciones = signal(false);
   readonly loadError = signal(false);
+  /** Catálogo de condiciones (API); mismas claves que en el formulario de presupuesto. */
+  readonly condicionesCatalogo = signal<PresupuestoCondicionDisponible[]>([]);
+  readonly condicionesPresupuestosListo = signal(false);
+  condicionesPredModel: CondicionesPresupuestoFormValue = { condicionesActivas: [], notaAdicional: '' };
   readonly maxPie = MAX_PIE;
 
   /** 0 = presupuesto, 1 = factura */
@@ -222,14 +238,16 @@ export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
   copyPlaceholder(p: PlaceholderDef): void {
     void navigator.clipboard.writeText(p.token).then(
       () => {
-        this.snackBar.open(`Copiado. Pégalo en el cuadro de arriba (Ctrl+V).`, 'Cerrar', {
+        this.snackBar.open(this.translate.instant('snack.tplPlaceholderCopied'), this.translate.instant('common.close'), {
           duration: 4000,
         });
       },
       () => {
-        this.snackBar.open('No se pudo copiar automáticamente. Escríbelo a mano si hace falta.', 'Cerrar', {
-          duration: 3500,
-        });
+        this.snackBar.open(
+          this.translate.instant('snack.tplPlaceholderCopyFail'),
+          this.translate.instant('common.close'),
+          { duration: 3500 },
+        );
       },
     );
   }
@@ -267,6 +285,7 @@ export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
   cargar(): void {
     this.loadError.set(false);
     this.loading.set(true);
+    this.condicionesPresupuestosListo.set(false);
     this.config.getEmpresa().subscribe({
       next: (e: Empresa) => {
         this.form.patchValue({
@@ -279,11 +298,30 @@ export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
         if (this.previewMode() === 'pdf') {
           void this.refreshPdfPreview();
         }
+        forkJoin({
+          cat: this.presupuestoService.getCondicionesDisponibles(),
+          me: this.auth.refreshUser(),
+        }).subscribe({
+          next: ({ cat, me }) => {
+            this.condicionesCatalogo.set(cat);
+            this.condicionesPredModel = {
+              condicionesActivas: [...(me?.condicionesPresupuestoPredeterminadas ?? [])],
+              notaAdicional: '',
+            };
+            this.condicionesPresupuestosListo.set(true);
+          },
+          error: () => {
+            this.condicionesCatalogo.set([]);
+            this.condicionesPresupuestosListo.set(true);
+          },
+        });
       },
       error: () => {
         this.loadError.set(true);
         this.loading.set(false);
-        this.snackBar.open('No se pudieron cargar los textos.', 'Cerrar', { duration: 4000 });
+        this.snackBar.open(this.translate.instant('snack.tplLoadFail'), this.translate.instant('common.close'), {
+          duration: 4000,
+        });
       },
     });
   }
@@ -303,7 +341,7 @@ export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.form.markAsPristine();
-          this.snackBar.open('Guardado. Los próximos PDF usarán estos textos.', 'Cerrar', {
+          this.snackBar.open(this.translate.instant('snack.tplAppliedNextPdf'), this.translate.instant('common.close'), {
             duration: 4500,
           });
           this.saving.set(false);
@@ -313,11 +351,48 @@ export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.saving.set(false);
+          const raw = err?.error?.message ?? err?.error?.detail;
           const msg =
-            err?.error?.message ?? err?.error?.detail ?? 'No se pudo guardar. Revisa la conexión o tus permisos.';
-          this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
+            typeof raw === 'string' && String(raw).trim() !== ''
+              ? String(raw).trim()
+              : this.translate.instant('snack.tplSaveFail');
+          this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
         },
       });
+  }
+
+  guardarCondicionesPredeterminadas(): void {
+    if (!this.puedeEditar || this.savingCondiciones()) return;
+    this.savingCondiciones.set(true);
+    this.presupuestoService.guardarMisCondicionesPredeterminadas(this.condicionesPredModel.condicionesActivas).subscribe({
+      next: () => {
+        this.auth.refreshUser().subscribe({
+          next: () => {
+            this.snackBar.open(this.translate.instant('snack.defaultTermsSaved'), this.translate.instant('common.close'), {
+              duration: 3000,
+            });
+            this.savingCondiciones.set(false);
+          },
+          error: () => {
+            this.savingCondiciones.set(false);
+            this.snackBar.open(
+              this.translate.instant('snack.prefsSavedRefreshFail'),
+              this.translate.instant('common.close'),
+              { duration: 4000 },
+            );
+          },
+        });
+      },
+      error: (err) => {
+        this.savingCondiciones.set(false);
+        const raw = err.error?.message || err.error?.detail;
+        const msg =
+          typeof raw === 'string' && String(raw).trim() !== ''
+            ? String(raw).trim()
+            : this.translate.instant('snack.prefsSaveFail');
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
+      },
+    });
   }
 
   private applyEmpresaPreview(e: Empresa): void {
