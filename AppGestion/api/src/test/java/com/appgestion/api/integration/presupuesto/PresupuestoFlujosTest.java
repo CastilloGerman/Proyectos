@@ -6,6 +6,7 @@ import com.appgestion.api.domain.enums.TipoFactura;
 import com.appgestion.api.repository.ClienteRepository;
 import com.appgestion.api.repository.EmpresaRepository;
 import com.appgestion.api.repository.OrganizationRepository;
+import com.appgestion.api.repository.PresupuestoRepository;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,8 +21,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -43,6 +46,8 @@ class PresupuestoFlujosTest {
     private ClienteRepository clienteRepository;
     @Autowired
     private EmpresaRepository empresaRepository;
+    @Autowired
+    private PresupuestoRepository presupuestoRepository;
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -143,5 +148,50 @@ class PresupuestoFlujosTest {
                         .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.tipoFactura").value(TipoFactura.NORMAL.name()));
+    }
+
+    @Test
+    void actualizarEstado_noReemplazaLineasNiPierdeDescuentos() throws Exception {
+        String body = """
+                {
+                  "clienteId": %d,
+                  "items": [{"materialId": null, "tareaManual": "Concepto con descuento", "cantidad": 2.0, "precioUnitario": 100.0, "aplicaIva": false, "descuentoPorcentaje": 25.0, "descuentoFijo": 10.0}],
+                  "ivaHabilitado": true,
+                  "estado": "%s",
+                  "descuentoGlobalPorcentaje": 0.0,
+                  "descuentoGlobalFijo": 0.0,
+                  "descuentoAntesIva": true,
+                  "condicionesActivas": [],
+                  "notaAdicional": null
+                }
+                """.formatted(scenario.clienteCompletoId(), PresupuestoEstado.PENDIENTE);
+        String res = mockMvc.perform(post("/presupuestos")
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.total").value(140.0))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long presId = objectMapper.readTree(res).get("id").asLong();
+
+        mockMvc.perform(patch("/presupuestos/{id}/estado", presId)
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"estado\":\"Aceptado\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value(PresupuestoEstado.ACEPTADO))
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.total").value(140.0));
+
+        var presupuesto = presupuestoRepository.findById(presId).orElseThrow();
+        assertThat(presupuesto.getItems()).hasSize(1);
+        var item = presupuesto.getItems().get(0);
+        assertThat(item.getDescuentoPorcentaje()).isEqualTo(25.0);
+        assertThat(item.getDescuentoFijo()).isEqualTo(10.0);
+        assertThat(item.getAplicaIva()).isFalse();
+        assertThat(presupuesto.getTotal()).isEqualTo(140.0);
     }
 }

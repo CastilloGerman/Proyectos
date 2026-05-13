@@ -17,7 +17,7 @@ import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
 import { EstadoBadgeComponent } from '../../../shared/estado-badge/estado-badge.component';
 import { AuthService } from '../../../core/auth/auth.service';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
-import { Presupuesto, PresupuestoItemRequest, PresupuestoRequest } from '../../../core/models/presupuesto.model';
+import { Presupuesto } from '../../../core/models/presupuesto.model';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfigEmpresaDialogComponent } from '../../../shared/config-empresa-dialog/config-empresa-dialog.component';
 import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/enviar-email-dialog.component';
@@ -368,8 +368,7 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
     const actual = (p.estado ?? '').trim();
     if (this.equivalentesEstadoEjecucionUi(nuevo, actual)) return;
     this.actualizandoEstadoPresupuestoId = p.id;
-    const payload = this.buildPresupuestoUpdateRequest(p, nuevo);
-    this.presupuestoService.update(p.id, payload).subscribe({
+    this.presupuestoService.updateEstado(p.id, nuevo).subscribe({
       next: (updated) => {
         this.actualizandoEstadoPresupuestoId = null;
         this.patchPresupuestoEnTabla(updated);
@@ -387,30 +386,6 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
         this.snackBar.open(msg, this.closeLbl(), { duration: 5000 });
       },
     });
-  }
-
-  private buildPresupuestoUpdateRequest(p: Presupuesto, estado: string): PresupuestoRequest {
-    const items: PresupuestoItemRequest[] = (p.items ?? []).map((it) => {
-      const manual = it.esTareaManual === true;
-      return {
-        materialId: manual ? undefined : it.materialId,
-        tareaManual: manual ? (it.descripcion?.trim() || undefined) : undefined,
-        cantidad: it.cantidad,
-        precioUnitario: it.precioUnitario,
-        visiblePdf: it.visiblePdf,
-      };
-    });
-    return {
-      clienteId: p.clienteId,
-      items,
-      ivaHabilitado: p.ivaHabilitado,
-      estado,
-      descuentoGlobalPorcentaje: p.descuentoGlobalPorcentaje,
-      descuentoGlobalFijo: p.descuentoGlobalFijo,
-      descuentoAntesIva: p.descuentoAntesIva ?? true,
-      condicionesActivas: p.condicionesActivas ?? [],
-      notaAdicional: p.notaAdicional ?? undefined,
-    };
   }
 
   private patchPresupuestoEnTabla(updated: Presupuesto): void {
