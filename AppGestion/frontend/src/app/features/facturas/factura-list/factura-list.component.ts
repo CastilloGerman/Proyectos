@@ -22,7 +22,7 @@ import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import { AuthService } from '../../../core/auth/auth.service';
 import { FacturaService } from '../../../core/services/factura.service';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
-import { Factura, FacturaItemRequest, FacturaRequest } from '../../../core/models/factura.model';
+import { Factura } from '../../../core/models/factura.model';
 import { Presupuesto } from '../../../core/models/presupuesto.model';
 import { ImportarPresupuestoDialogComponent } from '../../../shared/importar-presupuesto-dialog/importar-presupuesto-dialog.component';
 import { ConfigEmpresaDialogComponent } from '../../../shared/config-empresa-dialog/config-empresa-dialog.component';
@@ -925,8 +925,7 @@ export class FacturaListComponent implements OnInit {
 
   private ejecutarActualizacionEstadoFactura(f: Factura, nuevo: string, montoParcial?: number): void {
     this.actualizandoEstadoFacturaId = f.id;
-    const payload = this.buildFacturaUpdateRequestFromRow(f, nuevo, montoParcial);
-    this.facturaService.update(f.id, payload).subscribe({
+    this.facturaService.updateEstadoPago(f.id, nuevo, montoParcial).subscribe({
       next: (updated) => {
         this.actualizandoEstadoFacturaId = null;
         this.patchFacturaEnTabla(updated);
@@ -944,41 +943,6 @@ export class FacturaListComponent implements OnInit {
         this.snackBar.open(msg, this.snackClose(), { duration: 5000 });
       },
     });
-  }
-
-  private buildFacturaUpdateRequestFromRow(f: Factura, estadoPago: string, montoParcialExplicito?: number): FacturaRequest {
-    const items: FacturaItemRequest[] = (f.items ?? []).map((it) => {
-      const manual = it.esTareaManual === true;
-      return {
-        materialId: manual ? undefined : it.materialId,
-        tareaManual: manual ? (it.descripcion?.trim() || undefined) : undefined,
-        cantidad: it.cantidad,
-        precioUnitario: it.precioUnitario,
-        aplicaIva: it.aplicaIva,
-      };
-    });
-    const fechaCreacionIso = f.fechaCreacion ? f.fechaCreacion.split('T')[0] : '';
-    const fechaExp =
-      typeof f.fechaExpedicion === 'string' ? f.fechaExpedicion : f.fechaExpedicion ?? fechaCreacionIso;
-    return {
-      clienteId: f.clienteId,
-      items,
-      presupuestoId: f.presupuestoId,
-      numeroFactura: f.numeroFactura,
-      fechaExpedicion: fechaExp || new Date().toISOString().split('T')[0],
-      fechaOperacion: f.fechaOperacion,
-      fechaVencimiento: f.fechaVencimiento,
-      regimenFiscal: f.regimenFiscal,
-      condicionesPago: f.condicionesPago,
-      metodoPago: f.metodoPago,
-      estadoPago,
-      montoCobrado:
-        estadoPago === 'Parcial'
-          ? (montoParcialExplicito != null ? montoParcialExplicito : f.montoCobrado != null ? +f.montoCobrado : undefined)
-          : undefined,
-      notas: f.notas,
-      ivaHabilitado: f.ivaHabilitado,
-    };
   }
 
   private patchFacturaEnTabla(updated: Factura): void {

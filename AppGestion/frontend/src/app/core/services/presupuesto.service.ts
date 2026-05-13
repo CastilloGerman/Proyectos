@@ -50,6 +50,10 @@ export class PresupuestoService {
     return this.http.put<Presupuesto>(`${this.apiUrl}/${id}`, data);
   }
 
+  updateEstado(id: number, estado: string): Observable<Presupuesto> {
+    return this.http.patch<Presupuesto>(`${this.apiUrl}/${id}/estado`, { estado });
+  }
+
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
