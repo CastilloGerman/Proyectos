@@ -66,7 +66,7 @@ class SubscriptionServiceTest {
         SubscriptionService service = service();
         Usuario usuario = usuario("user@example.com", "sub_current", SubscriptionStatus.PAST_DUE);
         usuario.setSubscriptionRequiresPaymentAction(true);
-        Invoice invoice = invoice("in_current", "sub_current", "cus_123");
+        Invoice invoice = invoice("in_current", "sub_current", null);
         StripeException stripeException = org.mockito.Mockito.mock(StripeException.class);
 
         when(stripeException.getMessage()).thenReturn("stripe unavailable");
@@ -104,7 +104,9 @@ class SubscriptionServiceTest {
         Invoice invoice = org.mockito.Mockito.mock(Invoice.class);
         when(invoice.getId()).thenReturn(invoiceId);
         when(invoice.getSubscription()).thenReturn(subscriptionId);
-        when(invoice.getCustomer()).thenReturn(customerId);
+        if (customerId != null) {
+            when(invoice.getCustomer()).thenReturn(customerId);
+        }
         when(invoice.getAmountPaid()).thenReturn(999L);
         when(invoice.getCurrency()).thenReturn("eur");
         when(invoice.getStatus()).thenReturn("paid");
