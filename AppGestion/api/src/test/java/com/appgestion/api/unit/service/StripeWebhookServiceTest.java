@@ -11,7 +11,6 @@ import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Event;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -71,9 +70,10 @@ class StripeWebhookServiceTest {
     }
 
     @Test
-    void processWebhook_savesProcessedEventAfterHandling() throws Exception {
+    void processWebhook_knownEventWithoutDeserializableObject_requestsRetryWithoutSavingProcessedEvent() throws Exception {
         Event event = mock(Event.class);
         when(event.getId()).thenReturn("evt_new");
+        when(event.getType()).thenReturn("customer.subscription.updated");
         when(webhookEventParser.parse(any(), any(), eq("whsec_test_secret"))).thenReturn(event);
         when(processedEventRepository.existsByEventId("evt_new")).thenReturn(false);
 
@@ -84,10 +84,8 @@ class StripeWebhookServiceTest {
         StripeWebhookProcessingResult r = stripeWebhookService.processWebhook("{}", "sig");
 
         assertThat(r.signatureInvalid()).isFalse();
+        assertThat(r.processingFailed()).isTrue();
         verify(subscriptionService, never()).cancelSubscription(any());
-        ArgumentCaptor<com.appgestion.api.domain.entity.ProcessedStripeEvent> cap =
-                ArgumentCaptor.forClass(com.appgestion.api.domain.entity.ProcessedStripeEvent.class);
-        verify(processedEventRepository).save(cap.capture());
-        assertThat(cap.getValue().getEventId()).isEqualTo("evt_new");
+        verify(processedEventRepository, never()).save(any());
     }
 }

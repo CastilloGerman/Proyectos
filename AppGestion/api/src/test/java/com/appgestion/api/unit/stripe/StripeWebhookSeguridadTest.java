@@ -55,6 +55,19 @@ class StripeWebhookSeguridadTest {
     }
 
     @Test
+    void webhookConEventoNoProcesable_devuelve500ParaReintento() throws Exception {
+        when(stripeWebhookService.processWebhook(any(), any()))
+                .thenReturn(StripeWebhookProcessingResult.processingFailed());
+
+        mockMvc.perform(post("/webhook/stripe")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}")
+                        .header("Stripe-Signature", "t=123,v1=abc"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string("Webhook processing failed"));
+    }
+
+    @Test
     void webhookSinHeaderFirma_devuelve400() throws Exception {
         mockMvc.perform(post("/webhook/stripe")
                         .contentType(MediaType.APPLICATION_JSON)
