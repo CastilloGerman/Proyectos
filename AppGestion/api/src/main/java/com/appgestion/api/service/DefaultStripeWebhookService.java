@@ -69,7 +69,13 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
         }
 
         StripeObject dataObject = event.getDataObjectDeserializer().getObject().orElse(null);
-        if (dataObject != null) {
+        if (dataObject == null) {
+            if (requiresDataObject(event.getType())) {
+                log.warn("Stripe webhook {} ({}) sin data.object deserializable; se reintentará",
+                        event.getId(), event.getType());
+                return StripeWebhookProcessingResult.failedProcessing();
+            }
+        } else {
             dispatch(event.getType(), dataObject);
         }
 
@@ -91,6 +97,22 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
             case EVENT_INVOICE_PAYMENT_ACTION_REQUIRED -> handleInvoicePaymentActionRequired((Invoice) dataObject);
             default -> log.debug("Stripe webhook ignorado: {}", type);
         }
+    }
+
+    private boolean requiresDataObject(String type) {
+        if (type == null) {
+            return false;
+        }
+        return switch (type) {
+            case EVENT_CHECKOUT_SESSION_COMPLETED,
+                    EVENT_CUSTOMER_SUBSCRIPTION_CREATED,
+                    EVENT_CUSTOMER_SUBSCRIPTION_UPDATED,
+                    EVENT_CUSTOMER_SUBSCRIPTION_DELETED,
+                    EVENT_INVOICE_PAID,
+                    EVENT_INVOICE_PAYMENT_FAILED,
+                    EVENT_INVOICE_PAYMENT_ACTION_REQUIRED -> true;
+            default -> false;
+        };
     }
 
     private void handleCheckoutSessionCompleted(Session session) {
