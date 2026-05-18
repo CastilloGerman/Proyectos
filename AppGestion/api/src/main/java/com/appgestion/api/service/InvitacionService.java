@@ -27,6 +27,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -75,8 +76,8 @@ public class InvitacionService {
 
     @Transactional
     public void crearInvitacion(CreateInvitacionRequest request, Long inviterUsuarioId) {
-        String email = request.email().trim().toLowerCase();
-        if (usuarioRepository.existsByEmail(email)) {
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        if (usuarioRepository.existsByEmailIgnoreCase(email)) {
             throw new IllegalArgumentException("Ya existe un usuario con ese email");
         }
         String rawToken = UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
@@ -132,7 +133,7 @@ public class InvitacionService {
             throw new IllegalArgumentException("Invitación expirada");
         }
         String email = inv.getEmail();
-        if (usuarioRepository.existsByEmail(email)) {
+        if (usuarioRepository.existsByEmailIgnoreCase(email)) {
             throw new IllegalArgumentException("Ya existe un usuario con ese email");
         }
 
