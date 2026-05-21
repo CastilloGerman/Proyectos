@@ -73,14 +73,14 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
         if (dataObject == null) {
             if (requiresDataObject(eventType)) {
                 log.warn("Stripe webhook {} sin data.object; se solicitará reintento", eventType);
-                return StripeWebhookProcessingResult.processingFailed();
+                return StripeWebhookProcessingResult.failed();
             }
         } else {
             try {
                 dispatch(eventType, dataObject);
             } catch (RetryableStripeWebhookException e) {
                 log.warn("Stripe webhook {} no procesado: {}", eventType, e.getMessage());
-                return StripeWebhookProcessingResult.processingFailed();
+                return StripeWebhookProcessingResult.failed();
             }
         }
 
