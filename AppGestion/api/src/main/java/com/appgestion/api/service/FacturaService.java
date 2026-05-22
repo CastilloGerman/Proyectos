@@ -9,6 +9,7 @@ import com.appgestion.api.domain.enums.TipoFactura;
 import com.appgestion.api.service.factura.FacturaNumeroManualParser;
 import com.appgestion.api.service.factura.FacturaNumeroResuelto;
 import com.appgestion.api.dto.request.FacturaCobroRequest;
+import com.appgestion.api.dto.request.FacturaEstadoPagoRequest;
 import com.appgestion.api.dto.request.FacturaItemRequest;
 import com.appgestion.api.dto.request.FacturaRequest;
 import com.appgestion.api.dto.request.EnviarEmailRequest;
@@ -164,7 +165,10 @@ public class FacturaService {
         if (request.presupuestoId() != null) {
             presupuesto = presupuestoRepository.findByIdAndUsuarioId(request.presupuestoId(), usuarioId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
-            presupuesto.setEstado(PresupuestoEstado.ACEPTADO);
+            Long presupuestoActualId = factura.getPresupuesto() != null ? factura.getPresupuesto().getId() : null;
+            if (!request.presupuestoId().equals(presupuestoActualId)) {
+                presupuesto.setEstado(PresupuestoEstado.ACEPTADO);
+            }
         }
 
         validarDatosFactura(usuarioId, cliente);
@@ -189,6 +193,38 @@ public class FacturaService {
         calcularTotales(factura);
         factura = facturaRepository.save(factura);
         return facturaResponseMapper.toResponse(factura, facturaCobroRepository.findByFacturaIdOrderByFechaDescCreatedAtDesc(factura.getId()));
+    }
+
+    @Transactional
+    public FacturaResponse actualizarEstadoPago(Long id, FacturaEstadoPagoRequest request, Long usuarioId) {
+        Factura factura = facturaRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
+
+        if (Boolean.TRUE.equals(factura.getAnulada())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede editar una factura anulada");
+        }
+
+        String estadoPago = request.estadoPago().trim();
+        factura.setEstadoPago(estadoPago);
+        if (estadoPago.equalsIgnoreCase(FacturaEstadoPago.PARCIAL)) {
+            Double montoCobrado = request.montoCobrado();
+            if (montoCobrado == null || montoCobrado <= 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indique un importe cobrado parcial válido");
+            }
+            double total = Optional.ofNullable(factura.getTotal()).orElse(0.0);
+            if (montoCobrado >= total) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El importe parcial debe ser menor que el total");
+            }
+            factura.setMontoCobrado(montoCobrado);
+        } else if (estadoPago.equalsIgnoreCase(FacturaEstadoPago.PAGADA)) {
+            factura.setMontoCobrado(factura.getTotal());
+        } else if (estadoPago.equalsIgnoreCase(FacturaEstadoPago.NO_PAGADA)) {
+            factura.setMontoCobrado(null);
+        }
+
+        factura = facturaRepository.save(factura);
+        return facturaResponseMapper.toResponse(factura,
+                facturaCobroRepository.findByFacturaIdOrderByFechaDescCreatedAtDesc(factura.getId()));
     }
 
     @Transactional
