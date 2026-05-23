@@ -61,7 +61,6 @@ class SubscriptionServiceTest {
 
         Subscription subscription = mock(Subscription.class);
         when(subscription.getId()).thenReturn("sub_123");
-        when(subscription.getCustomer()).thenReturn("cus_123");
         when(subscription.getStatus()).thenReturn("active");
         when(subscription.getCancelAtPeriodEnd()).thenReturn(false);
         when(subscription.getItems()).thenReturn(null);
