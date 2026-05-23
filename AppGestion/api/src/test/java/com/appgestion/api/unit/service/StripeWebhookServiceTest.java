@@ -8,7 +8,9 @@ import com.appgestion.api.service.stripe.StripeSubscriptionFetcher;
 import com.appgestion.api.service.stripe.StripeWebhookEventParser;
 import com.appgestion.api.service.stripe.StripeWebhookProcessingResult;
 import com.stripe.exception.SignatureVerificationException;
+import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
+import com.stripe.model.checkout.Session;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -24,6 +26,7 @@ import static org.mockito.Mockito.*;
 class StripeWebhookServiceTest {
 
     private final StripeWebhookEventParser webhookEventParser;
+    private final StripeSubscriptionFetcher subscriptionFetcher;
     private final SubscriptionService subscriptionService;
     private final ProcessedStripeEventRepository processedEventRepository;
     private final StripeWebhookService stripeWebhookService;
@@ -34,6 +37,7 @@ class StripeWebhookServiceTest {
             @Mock SubscriptionService subscriptionService,
             @Mock ProcessedStripeEventRepository processedEventRepository) {
         this.webhookEventParser = webhookEventParser;
+        this.subscriptionFetcher = subscriptionFetcher;
         this.subscriptionService = subscriptionService;
         this.processedEventRepository = processedEventRepository;
         this.stripeWebhookService = new DefaultStripeWebhookService(
@@ -71,9 +75,10 @@ class StripeWebhookServiceTest {
     }
 
     @Test
-    void processWebhook_savesProcessedEventAfterHandling() throws Exception {
+    void processWebhook_unknownEventWithoutDataObject_savesProcessedEvent() throws Exception {
         Event event = mock(Event.class);
         when(event.getId()).thenReturn("evt_new");
+        when(event.getType()).thenReturn("ping");
         when(webhookEventParser.parse(any(), any(), eq("whsec_test_secret"))).thenReturn(event);
         when(processedEventRepository.existsByEventId("evt_new")).thenReturn(false);
 
@@ -89,5 +94,48 @@ class StripeWebhookServiceTest {
                 ArgumentCaptor.forClass(com.appgestion.api.domain.entity.ProcessedStripeEvent.class);
         verify(processedEventRepository).save(cap.capture());
         assertThat(cap.getValue().getEventId()).isEqualTo("evt_new");
+    }
+
+    @Test
+    void processWebhook_knownEventWithoutDataObject_failsWithoutProcessedMarker() throws Exception {
+        Event event = mock(Event.class);
+        when(event.getId()).thenReturn("evt_missing_object");
+        when(event.getType()).thenReturn("invoice.paid");
+        when(webhookEventParser.parse(any(), any(), eq("whsec_test_secret"))).thenReturn(event);
+        when(processedEventRepository.existsByEventId("evt_missing_object")).thenReturn(false);
+
+        var deser = mock(com.stripe.model.EventDataObjectDeserializer.class);
+        when(event.getDataObjectDeserializer()).thenReturn(deser);
+        when(deser.getObject()).thenReturn(java.util.Optional.empty());
+
+        StripeWebhookProcessingResult r = stripeWebhookService.processWebhook("{}", "sig");
+
+        assertThat(r.processingFailed()).isTrue();
+        verify(subscriptionService, never()).recordInvoicePaid(any());
+        verify(processedEventRepository, never()).save(any());
+    }
+
+    @Test
+    void processWebhook_checkoutFetchFailure_failsWithoutProcessedMarker() throws Exception {
+        Event event = mock(Event.class);
+        when(event.getId()).thenReturn("evt_checkout");
+        when(event.getType()).thenReturn("checkout.session.completed");
+        when(webhookEventParser.parse(any(), any(), eq("whsec_test_secret"))).thenReturn(event);
+        when(processedEventRepository.existsByEventId("evt_checkout")).thenReturn(false);
+
+        Session session = mock(Session.class);
+        when(session.getMetadata()).thenReturn(java.util.Map.of("usuario_id", "42"));
+        when(session.getCustomer()).thenReturn("cus_123");
+        when(session.getSubscription()).thenReturn("sub_123");
+        var deser = mock(com.stripe.model.EventDataObjectDeserializer.class);
+        when(event.getDataObjectDeserializer()).thenReturn(deser);
+        when(deser.getObject()).thenReturn(java.util.Optional.of(session));
+        when(subscriptionFetcher.fetch("sub_123")).thenThrow(mock(StripeException.class));
+
+        StripeWebhookProcessingResult r = stripeWebhookService.processWebhook("{}", "sig");
+
+        assertThat(r.processingFailed()).isTrue();
+        verify(subscriptionService, never()).syncFromStripeSubscription(any(), any(), any());
+        verify(processedEventRepository, never()).save(any());
     }
 }
