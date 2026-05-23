@@ -71,7 +71,7 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
         StripeObject dataObject = event.getDataObjectDeserializer().getObject().orElse(null);
         if (dataObject == null && requiresDataObject(event.getType())) {
             log.warn("Stripe webhook {} sin data.object deserializable; se reintentará", event.getType());
-            return StripeWebhookProcessingResult.processingFailed();
+            return StripeWebhookProcessingResult.failed();
         }
 
         if (dataObject != null) {
@@ -79,7 +79,7 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
                 dispatch(event.getType(), dataObject);
             } catch (WebhookProcessingException e) {
                 log.warn("Stripe webhook {} no procesado: {}", event.getType(), e.getMessage());
-                return StripeWebhookProcessingResult.processingFailed();
+                return StripeWebhookProcessingResult.failed();
             }
         }
 
