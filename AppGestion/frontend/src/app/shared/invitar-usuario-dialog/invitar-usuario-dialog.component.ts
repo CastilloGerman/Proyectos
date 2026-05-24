@@ -12,6 +12,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
 import { AuthService } from '../../core/auth/auth.service';
+import { NOEMI_SITE_HOST, NOEMI_SITE_ORIGIN } from '../../core/constants/noemi-site.constants';
 import { environment } from '../../../environments/environment';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { messageFromHttpError } from '../utils/http-error-message.util';
@@ -145,7 +146,7 @@ export class InvitarUsuarioDialogComponent {
    * Misma frase que `EmailCopy.INVITE_SHARE_TAGLINE` en la API (invitaciones por correo).
    */
   private static readonly SHARE_TAGLINE =
-    'Prueba Noemi Web — gestión para autónomos con presupuestos y facturación';
+    `Prueba ${NOEMI_SITE_HOST} — gestión para autónomos con presupuestos y facturación`;
 
   form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -174,7 +175,7 @@ export class InvitarUsuarioDialogComponent {
     if (typeof window !== 'undefined' && window.location?.origin) {
       return window.location.origin;
     }
-    return 'http://localhost:4200';
+    return environment.production ? NOEMI_SITE_ORIGIN : 'http://localhost:4200';
   }
 
   copiarPaginaPrincipal(): void {
@@ -201,7 +202,7 @@ export class InvitarUsuarioDialogComponent {
   async compartirNativo(): Promise<void> {
     try {
       await navigator.share({
-        title: 'Noemi Web',
+        title: NOEMI_SITE_HOST,
         text: this.textoCompartir(),
         url: this.paginaPrincipalUrl,
       });

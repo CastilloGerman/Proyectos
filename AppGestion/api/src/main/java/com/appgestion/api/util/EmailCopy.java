@@ -12,11 +12,16 @@ public final class EmailCopy {
      */
     public static final String PRODUCT_MARKETING_NAME = "Noemi Web";
 
+    /** Dominio público del SPA (enlaces de referidos, compartir, correos). */
+    public static final String PUBLIC_SITE_HOST = "noemiweb.com";
+
+    public static final String PUBLIC_SITE_ORIGIN = "https://" + PUBLIC_SITE_HOST;
+
     /**
      * Mensaje igual al compartir enlace (WhatsApp, Web Share) en Angular. También puede usarse como resumen verbal de la marca.
      */
     public static final String INVITE_SHARE_TAGLINE =
-            "Prueba Noemi Web — gestión para autónomos con presupuestos y facturación";
+            "Prueba " + PUBLIC_SITE_HOST + " — gestión para autónomos con presupuestos y facturación";
 
     private EmailCopy() {
     }
@@ -32,7 +37,7 @@ public final class EmailCopy {
      * Qué es el producto; misma línea conceptual que describe la web antes del enlace de alta.
      */
     public static final String INVITE_REFERRAL_PRODUCT_LINE =
-            "Noemi es la web de gestión para autónomos con presupuestos y facturación";
+            PUBLIC_SITE_HOST + " es la web de gestión para autónomos con presupuestos y facturación";
 
     public static String inviteReferralProductParagraphHtml() {
         return "<p>" + htmlEscape(INVITE_REFERRAL_PRODUCT_LINE) + ".</p>";

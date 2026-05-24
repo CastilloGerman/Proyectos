@@ -97,7 +97,7 @@ public class InvitacionService {
                 + EmailCopy.inviteReferralProductParagraphHtml()
                 + EmailCopy.inviteReferralSomeoneSentLinkParagraphHtml()
                 + EmailCopy.inviteReferralTrialOneMonthParagraphHtml()
-                + "<p><a href=\"" + link + "\">Ir a iniciar sesión o registro</a></p>"
+                + "<p><a href=\"" + link + "\">Abrir " + EmailCopy.PUBLIC_SITE_HOST + "</a></p>"
                 + "<p>El enlace caduca en " + INVITE_VALID_DAYS + " días.</p>";
 
         try {

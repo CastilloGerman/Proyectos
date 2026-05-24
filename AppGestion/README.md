@@ -157,7 +157,7 @@ La SPA queda en **`http://localhost:4200`**. Las peticiones a **`/api/...`** las
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` | SMTP (`spring.mail.*`) |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY` | Stripe (`stripe.*` + validación en prod) |
 | `STRIPE_SUCCESS_URL`, `STRIPE_CANCEL_URL`, `STRIPE_PORTAL_RETURN_URL` | URLs de retorno Stripe |
-| `FRONTEND_URL` | URL del front (`app.frontend-url`) |
+| `FRONTEND_URL` | URL del front (`app.frontend-url`); en producción: `https://noemiweb.com` |
 | `SUPPORT_INBOX_EMAIL` | Buzón para formulario de soporte (`app.support.inbox-email`) |
 | `TOTP_ISSUER` | Nombre del emisor en apps TOTP |
 | `SESSIONS_CLEANUP_*`, `AUDIT_*` | Limpieza de sesiones y auditoría |
@@ -216,7 +216,7 @@ Prefijos **tal como los expone el backend** (sin `/api`; el front añade `/api` 
 
 **Referidos y enlace de invitación**
 
-- El correo de referido apunta al front en **`/login?ref=<token>`** (y las rutas antiguas `/invite/:token` redirigen allí). El usuario elige el email en **`/register?ref=<token>`**.
+- El correo de referido apunta al front en **`https://noemiweb.com/login?ref=<token>`** (y las rutas antiguas `/invite/:token` redirigen allí). El usuario elige el email en **`https://noemiweb.com/register?ref=<token>`**.
 - **`GET /auth/invite/verify?token=...`** (público): respuesta JSON **`{ "valid": true|false }`**. No incluye el email del destinatario; solo indica si el token existe, no está usado y no ha caducado.
 - **`POST /auth/register`**: cuerpo opcional **`referralToken`** (el mismo valor que en `ref`). Si es válido, el backend registra el referido y aplica la prueba según la lógica del servidor.
 
