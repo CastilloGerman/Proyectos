@@ -6,7 +6,7 @@ export const environment = {
    */
   apiUrl: 'https://api.noemiweb.com',
   /** Base pública del SPA (enlaces en invitaciones, etc.). Vacío = `window.location.origin` en runtime. */
-  appPublicUrl: 'https://app.noemiweb.com' as string,
+  appPublicUrl: 'https://noemiweb.com' as string,
   /** Mismo Client ID que en development; añade el origen de producción en Google Cloud Console */
   googleClientId: '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.apps.googleusercontent.com',
   helpCenterUrl: '' as string,

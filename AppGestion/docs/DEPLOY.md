@@ -44,13 +44,13 @@ Secuencia orientativa para el **primer go-live**. Los detalles de cada variable 
 
    1. [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → **APIs y servicios** → **Credenciales** → el **ID de cliente de OAuth** de tipo **Aplicación web** cuyo `client_id` coincide con `googleClientId` en `frontend/src/environments/environment.prod.ts` (y `login.component.ts` si está alineado).
    2. En **Orígenes de JavaScript autorizados**, añade **exactamente** (sin barra final, sin path):
-      - Producción **según donde abre el usuario la app**, p. ej. `https://app.noemiweb.com` si ese es tu SPA (véase también `appPublicUrl` / despliegue real).
+      - Producción **según donde abre el usuario la app**, p. ej. `https://noemiweb.com` si ese es tu SPA (véase también `appPublicUrl` / despliegue real).
       - Si el mismo SPA responde en **apex y `www`**, registra ambos como orígenes distintos: `https://ejemplo.com` y `https://www.ejemplo.com`.
       - Desarrollo local: `http://localhost:4200` y `http://127.0.0.1:4200` si usas cualquiera de los dos.
    3. Ignora errores tipo *«registra redirect URI»* pensando solo en redirects: hasta que el **origen** coincidís, aparecerá **`Error 400: origin_mismatch`**.
 
    **¿Qué falla si omites algo?**  
-   **`Error 400: origin_mismatch` / política OAuth 2.0** — Google rechaza porque el origen de la pestaña (`https://app.tudominio.com`) no está en la lista.
+   **`Error 400: origin_mismatch` / política OAuth 2.0** — Google rechaza porque el origen de la pestaña (`https://tudominio.com`) no está en la lista.
 
    **`URI de redirección autorizada`** en el mismo cliente: solo interesa para otros flujos (p. ej. OAuth de Gmail en empresa). Para el botón de login GSI bastan bien los **orígenes JS** si usas únicamente el flujo por credencial.
 
@@ -100,7 +100,7 @@ Secuencia orientativa para el **primer go-live**. Los detalles de cada variable 
 
 ### CORS
 
-- **`CORS_ALLOWED_ORIGINS`**: dominios del frontend, **separados por coma** (ej. `https://app.tudominio.com`).
+- **`CORS_ALLOWED_ORIGINS`**: dominios del frontend, **separados por coma** (ej. `https://tudominio.com`).
 - Con credenciales en CORS no puede usarse `*`; debe ser una lista explícita.
 
 ### Correo (envío transaccional y cola)

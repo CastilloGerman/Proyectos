@@ -5,7 +5,7 @@
 
 .DESCRIPTION
   Requiere un API Token de Cloudflare con permisos: Zone.DNS Edit, Zone.Settings Edit, Zone.Zone Read.
-  Crea o actualiza los registros CNAME api y app (proxied). Ajusta SSL a strict y always_use_https.
+  Crea o actualiza los registros CNAME api, raiz (@) y app (proxied). Ajusta SSL a strict y always_use_https.
 
   Variables de entorno:
     CLOUDFLARE_API_TOKEN  (obligatorio)
@@ -17,7 +17,7 @@
   Target que muestra Railway para api.noemiweb.com (ej. xxxxx.up.railway.app).
 
 .PARAMETER AppCnameTarget
-  Target que muestra Railway para app.noemiweb.com.
+  Target que muestra Railway para el frontend (noemiweb.com). Se usa tambien para app.noemiweb.com como alias de compatibilidad.
 
 .PARAMETER ZoneName
   Dominio raíz en Cloudflare (por defecto noemiweb.com).
@@ -27,7 +27,7 @@
 
 .EXAMPLE
   $env:CLOUDFLARE_API_TOKEN = '...'
-  .\configure-cloudflare-noemiweb.ps1 -ApiCnameTarget 'api-xxxxx.up.railway.app' -AppCnameTarget 'app-xxxxx.up.railway.app'
+  .\configure-cloudflare-noemiweb.ps1 -ApiCnameTarget 'api-xxxxx.up.railway.app' -AppCnameTarget 'frontend-xxxxx.up.railway.app'
 #>
 param(
     [Parameter(Mandatory = $true)]
@@ -207,6 +207,7 @@ function Ensure-Cname {
 }
 
 Ensure-Cname -RecordName 'api' -Target $ApiCnameTarget
+Ensure-Cname -RecordName '@' -Target $AppCnameTarget
 Ensure-Cname -RecordName 'app' -Target $AppCnameTarget
 
 Write-Host 'SSL/TLS -> Full (strict)'
@@ -217,4 +218,5 @@ Invoke-CfApi -Method Patch -Uri "$base/zones/$zoneId/settings/always_use_https" 
 
 Write-Host 'Listo. Espera propagación DNS/TLS y verifica:'
 Write-Host '  curl.exe -I https://api.noemiweb.com/actuator/health'
+Write-Host '  curl.exe -I https://noemiweb.com'
 Write-Host '  curl.exe -I https://app.noemiweb.com'
