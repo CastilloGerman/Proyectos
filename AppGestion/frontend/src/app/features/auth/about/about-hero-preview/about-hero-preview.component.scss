@@ -1,0 +1,282 @@
+$accent: #e84545;
+$border: var(--app-border, #e5e7eb);
+$text-primary: var(--app-text-primary, #1a1a2e);
+$text-muted: var(--app-text-muted, #6b7280);
+$surface: var(--app-bg-card, #fff);
+$surface-muted: var(--app-bg-subtle, #f9fafb);
+
+.preview-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+  padding: 1.25rem;
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.screen-mock {
+  border: 1px solid $border;
+  border-radius: 12px;
+  overflow: hidden;
+  background: $surface-muted;
+}
+
+.mock-bar {
+  background: $surface;
+  border-bottom: 1px solid $border;
+  padding: 8px 12px;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+
+  &.red {
+    background: #ff5f57;
+  }
+
+  &.yellow {
+    background: #febc2e;
+  }
+
+  &.green {
+    background: #28c840;
+  }
+}
+
+.mock-body {
+  display: flex;
+}
+
+.mock-sidebar {
+  width: 72px;
+  background: $surface;
+  border-right: 1px solid $border;
+  padding: 10px 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mock-logo {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 10px;
+
+  &-mark {
+    width: 10px;
+    height: 10px;
+    background: $accent;
+    border-radius: 2px;
+  }
+
+  &-text {
+    font-size: 7px;
+    font-weight: 700;
+    color: $text-primary;
+  }
+}
+
+.mock-nav {
+  font-size: 6px;
+  color: $text-muted;
+  padding: 3px 5px;
+  border-radius: 3px;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &.active {
+    background: rgba(148, 163, 184, 0.15);
+    color: $text-primary;
+    font-weight: 600;
+  }
+}
+
+.mock-content {
+  flex: 1;
+  padding: 10px 8px;
+}
+
+.mock-title {
+  font-size: 8px;
+  font-weight: 700;
+  color: $text-primary;
+  margin: 0 0 2px;
+}
+
+.mock-sub {
+  font-size: 6px;
+  color: $text-muted;
+  margin: 0 0 8px;
+}
+
+.mock-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.mock-stat {
+  background: rgba(148, 163, 184, 0.12);
+  border-radius: 4px;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.mock-num {
+  font-size: 9px;
+  font-weight: 700;
+  color: $text-primary;
+}
+
+.mock-lbl {
+  font-size: 5px;
+  color: $text-muted;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mock-bars {
+  height: 14px;
+  background: rgba(148, 163, 184, 0.12);
+  border-radius: 3px;
+  overflow: hidden;
+  display: flex;
+  gap: 1px;
+  padding: 2px;
+}
+
+.bar-seg {
+  border-radius: 2px;
+  height: 100%;
+
+  &.green {
+    width: 30%;
+    background: #4caf50;
+  }
+
+  &.blue {
+    width: 25%;
+    background: #2196f3;
+  }
+
+  &.orange {
+    width: 15%;
+    background: #ff9800;
+  }
+
+  &.red {
+    width: 20%;
+    background: $accent;
+  }
+}
+
+.benefits {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.benefits-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: $text-primary;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin: 0 0 4px;
+}
+
+.benefit-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  border: 1px solid $border;
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  background: $surface;
+  transition: box-shadow 0.15s ease;
+
+  &:hover {
+    box-shadow: var(--app-shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.06));
+  }
+}
+
+.benefit-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+
+  &.yellow {
+    background: #fff8e1;
+  }
+
+  &.blue {
+    background: #e3f2fd;
+  }
+
+  &.green {
+    background: #e8f5e9;
+  }
+}
+
+.benefit-heading {
+  font-size: 13px;
+  font-weight: 700;
+  color: $text-primary;
+  margin: 0 0 3px;
+}
+
+.benefit-desc {
+  font-size: 12px;
+  color: $text-muted;
+  line-height: 1.4;
+  margin: 0;
+}
+
+:host-context(html.app-dark-theme) .screen-mock {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+:host-context(html.app-dark-theme) .mock-bar,
+:host-context(html.app-dark-theme) .mock-sidebar,
+:host-context(html.app-dark-theme) .benefit-card {
+  background: var(--app-bg-card, #1a222c);
+}
+
+:host-context(html.app-dark-theme) .benefit-heading,
+:host-context(html.app-dark-theme) .benefits-title,
+:host-context(html.app-dark-theme) .mock-title,
+:host-context(html.app-dark-theme) .mock-num {
+  color: var(--app-text-primary, #f8fafc);
+}
+
+:host-context(html.app-dark-theme) .benefit-desc,
+:host-context(html.app-dark-theme) .mock-sub,
+:host-context(html.app-dark-theme) .mock-lbl,
+:host-context(html.app-dark-theme) .mock-nav {
+  color: var(--app-text-muted, #94a3b8);
+}
+
+:host-context(html.app-dark-theme) .mock-nav.active {
+  color: var(--app-text-primary, #f8fafc);
+}

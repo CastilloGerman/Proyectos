@@ -145,6 +145,18 @@
       "pillarsTitle": "Moins de paperasse, plus de métier",
       "pillarsIntro": "Contrairement aux outils pensés seulement pour les bureaux, Noemí est faite pour le terrain : simplicité radicale, mobile d’abord, et la promesse de ne pas te voler du temps avec une complexité inutile.",
       "pillarsImageAlt": "Aperçu de Noemí avec les avantages clés pour les pros sur le terrain",
+      "preview": {
+        "dashboardSubtitle": "Résumé de votre activité",
+        "billed": "Total facturé",
+        "pending": "À encaisser",
+        "benefitsTitle": "AVANTAGES CLÉS :",
+        "benefit1Title": "Devis Instantanés",
+        "benefit1Desc": "Créez des devis en quelques secondes. Moins d'erreurs.",
+        "benefit2Title": "Facturation sans Erreur",
+        "benefit2Desc": "Facturation rapide et professionnelle. Contrôle total.",
+        "benefit3Title": "Contrôle Total sur Mobile",
+        "benefit3Desc": "Accédez à tout, où que vous soyez."
+      },
       "pillar1Title": "Rapidité sur le terrain",
       "pillar1Body": "Interface pensée pour les doigts, pas seulement la souris. Ton bureau est là où tu es.",
       "pillar2Title": "Sécurité discrète",

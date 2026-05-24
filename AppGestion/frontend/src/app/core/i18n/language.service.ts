@@ -8,7 +8,7 @@ export const APP_LANGUAGE_STORAGE_KEY = 'app_language';
 
 /** Ukrainian uses ISO 639-1 `uk`; UI label for the switcher remains `UK` per product spec. */
 export const SUPPORTED_UI_LANGUAGES = ['es', 'en', 'fr', 'ro', 'uk'] as const;
-const I18N_ASSET_VERSION = '20260509-about-i18n';
+const I18N_ASSET_VERSION = '20260524-about-hero-preview';
 
 export type SupportedUiLanguage = (typeof SUPPORTED_UI_LANGUAGES)[number];
 

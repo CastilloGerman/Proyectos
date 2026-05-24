@@ -145,6 +145,18 @@
       "pillarsTitle": "Less paperwork, more craft",
       "pillarsIntro": "Unlike tools built only for offices, Noemí is designed for professionals in the field: radical simplicity, mobile-first, and a promise not to waste your time on unnecessary complexity.",
       "pillarsImageAlt": "Preview of Noemí with key benefits for field professionals",
+      "preview": {
+        "dashboardSubtitle": "Activity summary",
+        "billed": "Total billed",
+        "pending": "Pending",
+        "benefitsTitle": "KEY BENEFITS:",
+        "benefit1Title": "Instant Quotes",
+        "benefit1Desc": "Create quotes in seconds. Fewer errors.",
+        "benefit2Title": "Error-Free Invoicing",
+        "benefit2Desc": "Fast and professional invoicing. Total control.",
+        "benefit3Title": "Total Mobile Control",
+        "benefit3Desc": "Access everything from wherever you are."
+      },
       "pillar1Title": "Speed in the field",
       "pillar1Body": "Interface optimised for thumbs, not only for mice. Your office is wherever you are.",
       "pillar2Title": "Invisible security",

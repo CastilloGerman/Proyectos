@@ -11,10 +11,11 @@ import {
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { TranslateModule } from '@ngx-translate/core';
+import { AboutHeroPreviewComponent } from './about-hero-preview/about-hero-preview.component';
 
 @Component({
   selector: 'app-about',
-  imports: [RouterLink, MatButtonModule, TranslateModule],
+  imports: [RouterLink, MatButtonModule, TranslateModule, AboutHeroPreviewComponent],
   templateUrl: './about.component.html',
   styleUrl: './about.component.scss',
 })

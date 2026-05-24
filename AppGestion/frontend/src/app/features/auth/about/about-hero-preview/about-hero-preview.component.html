@@ -1,0 +1,78 @@
+<div class="preview-layout" role="img" [attr.aria-label]="'auth.about.pillarsImageAlt' | translate">
+  <div class="screen-mock" aria-hidden="true">
+    <div class="mock-bar">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+    </div>
+    <div class="mock-body">
+      <nav class="mock-sidebar">
+        <div class="mock-logo">
+          <div class="mock-logo-mark"></div>
+          <span class="mock-logo-text">Noemí</span>
+        </div>
+        <span class="mock-nav active">{{ 'nav.dashboard' | translate }}</span>
+        <span class="mock-nav">{{ 'nav.materials' | translate }}</span>
+        <span class="mock-nav">{{ 'nav.clients' | translate }}</span>
+        <span class="mock-nav">{{ 'nav.budgets' | translate }}</span>
+        <span class="mock-nav">{{ 'nav.invoices' | translate }}</span>
+      </nav>
+      <div class="mock-content">
+        <p class="mock-title">{{ 'nav.dashboard' | translate }}</p>
+        <p class="mock-sub">{{ 'auth.about.preview.dashboardSubtitle' | translate }}</p>
+        <div class="mock-stats">
+          <div class="mock-stat">
+            <span class="mock-num">30</span>
+            <span class="mock-lbl">{{ 'nav.budgets' | translate }}</span>
+          </div>
+          <div class="mock-stat">
+            <span class="mock-num">19</span>
+            <span class="mock-lbl">{{ 'nav.invoices' | translate }}</span>
+          </div>
+          <div class="mock-stat">
+            <span class="mock-num">4.810€</span>
+            <span class="mock-lbl">{{ 'auth.about.preview.billed' | translate }}</span>
+          </div>
+          <div class="mock-stat">
+            <span class="mock-num">1.585€</span>
+            <span class="mock-lbl">{{ 'auth.about.preview.pending' | translate }}</span>
+          </div>
+        </div>
+        <div class="mock-bars">
+          <div class="bar-seg green"></div>
+          <div class="bar-seg blue"></div>
+          <div class="bar-seg orange"></div>
+          <div class="bar-seg red"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="benefits">
+    <p class="benefits-title">{{ 'auth.about.preview.benefitsTitle' | translate }}</p>
+
+    <div class="benefit-card">
+      <div class="benefit-icon yellow" aria-hidden="true">⚡</div>
+      <div>
+        <p class="benefit-heading">{{ 'auth.about.preview.benefit1Title' | translate }}</p>
+        <p class="benefit-desc">{{ 'auth.about.preview.benefit1Desc' | translate }}</p>
+      </div>
+    </div>
+
+    <div class="benefit-card">
+      <div class="benefit-icon blue" aria-hidden="true">📂</div>
+      <div>
+        <p class="benefit-heading">{{ 'auth.about.preview.benefit2Title' | translate }}</p>
+        <p class="benefit-desc">{{ 'auth.about.preview.benefit2Desc' | translate }}</p>
+      </div>
+    </div>
+
+    <div class="benefit-card">
+      <div class="benefit-icon green" aria-hidden="true">✅</div>
+      <div>
+        <p class="benefit-heading">{{ 'auth.about.preview.benefit3Title' | translate }}</p>
+        <p class="benefit-desc">{{ 'auth.about.preview.benefit3Desc' | translate }}</p>
+      </div>
+    </div>
+  </div>
+</div>

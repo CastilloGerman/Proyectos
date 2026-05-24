@@ -90,15 +90,7 @@
       <h2 class="about-section-title about-section-title--center">{{ 'auth.about.pillarsTitle' | translate }}</h2>
       <p class="about-pillars-intro">{{ 'auth.about.pillarsIntro' | translate }}</p>
       <figure class="about-pillars-visual">
-        <img
-          src="assets/about/login-beneficios-noemi.png"
-          [alt]="'auth.about.pillarsImageAlt' | translate"
-          width="1536"
-          height="768"
-          loading="lazy"
-          decoding="async"
-          (error)="onImgError($event)"
-        />
+        <app-about-hero-preview />
       </figure>
       <ul class="about-pillars">
         @for (card of pillarCards; track card.titleKey) {

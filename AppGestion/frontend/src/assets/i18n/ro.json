@@ -145,6 +145,18 @@
       "pillarsTitle": "Mai puțină birocrație, mai mult meșteșug",
       "pillarsIntro": "Spre deosebire de soluțiile gândite doar pentru birouri, Noemí e pentru profesionistul din teren: simplitate radicală, mobil mai întâi, și promisiunea să nu-ți fure timpul cu complexitate inutilă.",
       "pillarsImageAlt": "Previzualizare Noemí cu beneficii cheie pentru profesioniști pe teren",
+      "preview": {
+        "dashboardSubtitle": "Rezumatul activității",
+        "billed": "Total facturat",
+        "pending": "De încasat",
+        "benefitsTitle": "BENEFICII CHEIE:",
+        "benefit1Title": "Devize Instantanee",
+        "benefit1Desc": "Creează devize în câteva secunde. Mai puține erori.",
+        "benefit2Title": "Facturare Fără Erori",
+        "benefit2Desc": "Facturare rapidă și profesională. Control total.",
+        "benefit3Title": "Control Total de pe Mobil",
+        "benefit3Desc": "Accesează totul de oriunde te-ai afla."
+      },
       "pillar1Title": "Viteză pe teren",
       "pillar1Body": "Interfață optimizată pentru degete, nu doar pentru mouse. Biroul tău e oriunde ești tu.",
       "pillar2Title": "Securitate invizibilă",

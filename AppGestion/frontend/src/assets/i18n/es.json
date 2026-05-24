@@ -292,6 +292,18 @@
       "pillarsTitle": "Menos burocracia, más oficio",
       "pillarsIntro": "A diferencia de otras soluciones pensadas solo para despachos, Noemí está diseñada para el profesional en campo: simplicidad radical, móvil primero, y la promesa de no robarte el tiempo con complejidad innecesaria.",
       "pillarsImageAlt": "Vista previa de Noemí con beneficios clave para profesionales en campo",
+      "preview": {
+        "dashboardSubtitle": "Resumen de tu actividad",
+        "billed": "Total facturado",
+        "pending": "Por cobrar",
+        "benefitsTitle": "BENEFICIOS CLAVE:",
+        "benefit1Title": "Presupuestos Instantáneos",
+        "benefit1Desc": "Crea presupuestos en segundos. Menos errores.",
+        "benefit2Title": "Facturas Sin Errores",
+        "benefit2Desc": "Facturación rápida y profesional. Control total.",
+        "benefit3Title": "Control Total desde el Móvil",
+        "benefit3Desc": "Accede a todo desde donde estés."
+      },
       "pillar1Title": "Velocidad en campo",
       "pillar1Body": "Interfaz optimizada para dedos, no solo para ratones. Tu oficina es donde tú estés.",
       "pillar2Title": "Seguridad invisible",
