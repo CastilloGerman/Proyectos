@@ -1,6 +1,7 @@
 package com.appgestion.api.service;
 
 import com.appgestion.api.constant.TaxConstants;
+import com.appgestion.api.constant.PresupuestoEstado;
 import com.appgestion.api.domain.entity.*;
 import com.appgestion.api.domain.enums.TipoFactura;
 import com.appgestion.api.dto.request.PresupuestoItemRequest;
@@ -159,6 +160,25 @@ public class PresupuestoService {
         presupuesto.getItems().clear();
         mapItems(request.items(), presupuesto);
         calcularTotales(presupuesto);
+        presupuesto = presupuestoRepository.save(presupuesto);
+        return toResponse(presupuesto);
+    }
+
+    @Transactional
+    public PresupuestoResponse actualizarEstado(Long id, String estado, Long usuarioId) {
+        Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
+
+        String normalized = estado != null ? estado.trim() : "";
+        if (!PresupuestoEstado.PENDIENTE.equals(normalized)
+                && !PresupuestoEstado.ACEPTADO.equals(normalized)
+                && !PresupuestoEstado.RECHAZADO.equals(normalized)
+                && !PresupuestoEstado.EN_EJECUCION.equals(normalized)
+                && !PresupuestoEstado.EN_EJECUCION_SIN_TILDE.equals(normalized)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado de presupuesto no reconocido");
+        }
+
+        presupuesto.setEstado(normalized);
         presupuesto = presupuestoRepository.save(presupuesto);
         return toResponse(presupuesto);
     }
