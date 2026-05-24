@@ -1,15 +1,14 @@
 <div class="ha-page">
   <a mat-button routerLink="/dashboard" class="ha-back">
     <mat-icon>arrow_back</mat-icon>
-    Volver
+    {{ 'common.back' | translate }}
   </a>
 
   <div class="ha-head">
-    <h1 class="ha-title">Historial de accesos</h1>
+    <h1 class="ha-title">{{ 'acctAudit.title' | translate }}</h1>
     <p class="ha-sub">
-      Trazabilidad de inicios de sesión, cambios de seguridad y acciones sensibles.
-      {{ isAdmin() ? 'Como administrador ves eventos de toda la organización.' : 'Solo ves la actividad de tu usuario.' }}
-      Las marcas de tiempo se muestran en <strong>UTC</strong> para alinearlas con el servidor.
+      {{ (isAdmin() ? 'acctAudit.subAdmin' : 'acctAudit.subUser') | translate }}
+      {{ 'acctAudit.utcNote' | translate }}
     </p>
   </div>
 
@@ -18,10 +17,9 @@
       <mat-card class="ha-alert ha-alert--warn" appearance="outlined">
         <mat-icon>warning_amber</mat-icon>
         <div>
-          <strong>Posible actividad anómala</strong>
+          <strong>{{ 'acctAudit.warnTitle' | translate }}</strong>
           <p>
-            En las últimas 24&nbsp;h hay <strong>{{ meta.failedCount24h }}</strong> eventos fallidos en el ámbito visible
-            ({{ meta.sensitiveCount24h }} sensibles). Revisa los fallos de inicio de sesión y la columna de motivo.
+            {{ 'acctAudit.warnBody' | translate: { n: meta.failedCount24h, m: meta.sensitiveCount24h } }}
           </p>
         </div>
       </mat-card>
@@ -32,48 +30,48 @@
     <mat-card-content>
       <form [formGroup]="filters" class="ha-filter-grid" (ngSubmit)="aplicarFiltros()">
         <mat-form-field appearance="outline" class="ha-fg">
-          <mat-label>Desde (fecha)</mat-label>
+          <mat-label>{{ 'acctAudit.fltFrom' | translate }}</mat-label>
           <input matInput type="date" formControlName="fromDate" />
         </mat-form-field>
         <mat-form-field appearance="outline" class="ha-fg">
-          <mat-label>Hasta (fecha)</mat-label>
+          <mat-label>{{ 'acctAudit.fltTo' | translate }}</mat-label>
           <input matInput type="date" formControlName="toDate" />
         </mat-form-field>
         <mat-form-field appearance="outline" class="ha-fg ha-fg--grow">
-          <mat-label>Tipo de evento</mat-label>
+          <mat-label>{{ 'acctAudit.fltType' | translate }}</mat-label>
           <mat-select formControlName="eventType">
-            <mat-option value="">Todos</mat-option>
-            @for (e of eventTypes; track e.value) {
-              <mat-option [value]="e.value">{{ e.label }}</mat-option>
+            <mat-option value="">{{ 'acctAudit.fltAll' | translate }}</mat-option>
+            @for (e of eventCodes; track e) {
+              <mat-option [value]="e">{{ eventoEtiqueta(e) }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline" class="ha-fg">
-          <mat-label>Estado</mat-label>
+          <mat-label>{{ 'acctAudit.fltStatus' | translate }}</mat-label>
           <mat-select formControlName="success">
-            <mat-option value="">Todos</mat-option>
-            <mat-option value="true">Éxito</mat-option>
-            <mat-option value="false">Fallo</mat-option>
+            <mat-option value="">{{ 'acctAudit.fltAll' | translate }}</mat-option>
+            <mat-option value="true">{{ 'acctAudit.ok' | translate }}</mat-option>
+            <mat-option value="false">{{ 'acctAudit.fail' | translate }}</mat-option>
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline" class="ha-fg">
-          <mat-label>IP (contiene)</mat-label>
+          <mat-label>{{ 'acctAudit.fltIp' | translate }}</mat-label>
           <input matInput formControlName="ip" autocomplete="off" />
         </mat-form-field>
         <mat-form-field appearance="outline" class="ha-fg ha-fg--grow">
-          <mat-label>Búsqueda</mat-label>
-          <input matInput formControlName="q" placeholder="Correo, ruta, motivo…" autocomplete="off" />
+          <mat-label>{{ 'acctAudit.fltQ' | translate }}</mat-label>
+          <input matInput formControlName="q" [placeholder]="'acctAudit.fltQPh' | translate" autocomplete="off" />
         </mat-form-field>
         @if (isAdmin()) {
           <mat-form-field appearance="outline" class="ha-fg">
-            <mat-label>ID usuario</mat-label>
+            <mat-label>{{ 'acctAudit.fltUserId' | translate }}</mat-label>
             <input matInput type="number" formControlName="usuarioId" min="1" />
-            <mat-hint>Opcional: filtrar por miembro</mat-hint>
+            <mat-hint>{{ 'acctAudit.fltUserHint' | translate }}</mat-hint>
           </mat-form-field>
         }
         <div class="ha-filter-actions">
-          <button mat-flat-button color="primary" type="submit" [disabled]="loading()">Aplicar filtros</button>
-          <button mat-stroked-button type="button" (click)="limpiarFiltros()" [disabled]="loading()">Limpiar</button>
+          <button mat-flat-button color="primary" type="submit" [disabled]="loading()">{{ 'acctAudit.apply' | translate }}</button>
+          <button mat-stroked-button type="button" (click)="limpiarFiltros()" [disabled]="loading()">{{ 'acctAudit.clear' | translate }}</button>
           <button
             mat-stroked-button
             type="button"
@@ -85,7 +83,7 @@
             } @else {
               <mat-icon>download</mat-icon>
             }
-            CSV
+            {{ 'acctAudit.exportCsv' | translate }}
           </button>
           <button
             mat-stroked-button
@@ -93,7 +91,7 @@
             (click)="exportar('json')"
             [disabled]="loading() || exporting()"
           >
-            JSON
+            {{ 'acctAudit.exportJson' | translate }}
           </button>
         </div>
       </form>
@@ -103,13 +101,13 @@
   @if (loading() && tableRows().length === 0) {
     <div class="ha-state">
       <mat-progress-spinner diameter="40" mode="indeterminate" />
-      <span>Cargando eventos…</span>
+      <span>{{ 'acctAudit.loadRows' | translate }}</span>
     </div>
   } @else if (loadError() && tableRows().length === 0) {
     <mat-card appearance="outlined">
       <mat-card-content>
-        <p>No se pudo cargar el historial.</p>
-        <button mat-stroked-button color="primary" type="button" (click)="cargar()">Reintentar</button>
+        <p>{{ 'acctAudit.loadFail' | translate }}</p>
+        <button mat-stroked-button color="primary" type="button" (click)="cargar()">{{ 'acctAudit.retry' | translate }}</button>
       </mat-card-content>
     </mat-card>
   } @else {
@@ -117,13 +115,13 @@
       <table class="ha-native-table">
         <thead>
           <tr>
-            <th scope="col">Fecha (UTC)</th>
-            <th scope="col">Usuario</th>
-            <th scope="col">Evento</th>
-            <th scope="col">IP</th>
-            <th scope="col">Estado</th>
-            <th scope="col">Ubicación</th>
-            <th scope="col" class="ha-native-table__col-expand" aria-label="Detalle"></th>
+            <th scope="col">{{ 'acctAudit.colWhen' | translate }}</th>
+            <th scope="col">{{ 'acctAudit.colUser' | translate }}</th>
+            <th scope="col">{{ 'acctAudit.colEvent' | translate }}</th>
+            <th scope="col">{{ 'acctAudit.colIp' | translate }}</th>
+            <th scope="col">{{ 'acctAudit.colState' | translate }}</th>
+            <th scope="col">{{ 'acctAudit.colLoc' | translate }}</th>
+            <th scope="col" class="ha-native-table__col-expand" [attr.aria-label]="'acctAudit.colDetail' | translate"></th>
           </tr>
         </thead>
         <tbody>
@@ -132,27 +130,27 @@
               [class.ha-row--fail]="!row.success"
               [class.ha-row--sensitive]="row.sensitive"
             >
-              <td>{{ row.occurredAt | date: 'dd/MM/yyyy HH:mm:ss' : 'UTC' : 'es' }}</td>
-              <td>{{ row.userEmail ?? '—' }}</td>
+              <td>{{ row.occurredAt | date: 'dd/MM/yyyy HH:mm:ss' : 'UTC' }}</td>
+              <td>{{ row.userEmail ?? ('acctProf.unknown' | translate) }}</td>
               <td>
                 <span [matTooltip]="row.eventType">{{ eventoEtiqueta(row.eventType) }}</span>
                 @if (row.sensitive) {
-                  <span class="ha-chip-warn">Sensible</span>
+                  <span class="ha-chip-warn">{{ 'acctAudit.sensitiveChip' | translate }}</span>
                 }
               </td>
-              <td>{{ row.ipAddress ?? '—' }}</td>
+              <td>{{ row.ipAddress ?? ('acctProf.unknown' | translate) }}</td>
               <td>
                 @if (row.success) {
-                  <span class="ha-ok">Éxito</span>
+                  <span class="ha-ok">{{ 'acctAudit.ok' | translate }}</span>
                 } @else {
-                  <span class="ha-fail">Fallo</span>
+                  <span class="ha-fail">{{ 'acctAudit.fail' | translate }}</span>
                 }
                 @if (row.failureReason) {
                   <div class="ha-reason">{{ row.failureReason }}</div>
                 }
               </td>
               <td>
-                {{ row.countryCode ?? '—' }}
+                {{ row.countryCode ?? ('acctProf.unknown' | translate) }}
                 @if (!row.countryCode && row.userAgent) {
                   <mat-icon class="ha-hint-icon" [matTooltip]="row.userAgent" matTooltipShowDelay="200">info_outline</mat-icon>
                 }
@@ -162,7 +160,7 @@
                   type="button"
                   class="ha-expand-btn"
                   [attr.aria-expanded]="expandedId() === row.id"
-                  [attr.aria-label]="expandedId() === row.id ? 'Ocultar detalle' : 'Ver detalle'"
+                  [attr.aria-label]="(expandedId() === row.id ? 'acctAudit.ariaHideDetail' : 'acctAudit.ariaShowDetail') | translate"
                   (click)="toggleExpand(row); $event.stopPropagation()"
                 >
                   <mat-icon>{{ expandedId() === row.id ? 'expand_less' : 'expand_more' }}</mat-icon>
@@ -174,18 +172,18 @@
                 <td colspan="7">
                   <mat-card class="ha-detail" appearance="outlined">
                     <mat-card-content>
-                      <h3 class="ha-detail__title">Detalle del evento #{{ row.id }}</h3>
+                      <h3 class="ha-detail__title">{{ 'acctAudit.detailTitle' | translate: { id: row.id } }}</h3>
                       <mat-divider />
                       <dl class="ha-dl">
-                        <dt>User-Agent</dt>
-                        <dd>{{ row.userAgent ?? '—' }}</dd>
-                        <dt>Sesión</dt>
-                        <dd>{{ row.sessionId ?? '—' }}</dd>
-                        <dt>Recurso</dt>
-                        <dd>{{ row.resourcePath ?? '—' }}</dd>
-                        <dt>Trace / correlación</dt>
-                        <dd>{{ row.traceId ?? '—' }}</dd>
-                        <dt>Metadata (JSON)</dt>
+                        <dt>{{ 'acctAudit.ua' | translate }}</dt>
+                        <dd>{{ row.userAgent ?? ('acctProf.unknown' | translate) }}</dd>
+                        <dt>{{ 'acctAudit.session' | translate }}</dt>
+                        <dd>{{ row.sessionId ?? ('acctProf.unknown' | translate) }}</dd>
+                        <dt>{{ 'acctAudit.resource' | translate }}</dt>
+                        <dd>{{ row.resourcePath ?? ('acctProf.unknown' | translate) }}</dd>
+                        <dt>{{ 'acctAudit.trace' | translate }}</dt>
+                        <dd>{{ row.traceId ?? ('acctProf.unknown' | translate) }}</dd>
+                        <dt>{{ 'acctAudit.metaJson' | translate }}</dt>
                         <dd>
                           <pre class="ha-json">{{ metadataPretty(row.metadataJson) }}</pre>
                         </dd>
@@ -211,8 +209,5 @@
   }
 
   <mat-divider class="ha-foot-divider" />
-  <p class="ha-footnote">
-    Los registros son solo inserción en base de datos; la retención máxima la configura el servidor. La IP puede
-    mostrarse anonimizada según política (último octeto en cero).
-  </p>
+  <p class="ha-footnote">{{ 'acctAudit.foot' | translate }}</p>
 </div>

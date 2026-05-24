@@ -12,7 +12,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { switchMap } from 'rxjs';
 import { AuthService, UsuarioResponse } from '../../../core/auth/auth.service';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-totp-2fa',
@@ -28,6 +28,7 @@ import { TranslateService } from '@ngx-translate/core';
         MatProgressSpinnerModule,
         MatSnackBarModule,
         MatDividerModule,
+        TranslateModule,
     ],
     templateUrl: './totp-2fa.component.html',
     styleUrl: './totp-2fa.component.scss'

@@ -1,4 +1,5 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,7 +11,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { ClienteService } from '../../../core/services/cliente.service';
 import { Cliente } from '../../../core/models/cliente.model';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-cliente-list',
@@ -21,31 +22,32 @@ import { TranslateService } from '@ngx-translate/core';
         MatIconModule,
         MatSnackBarModule,
         MatTooltipModule,
+        TranslateModule,
     ],
     template: `
     <div class="cliente-list">
       @if (provisionalesCount > 0) {
         <div class="banner-fiscal" role="status">
-          Tienes {{ provisionalesCount }} cliente{{ provisionalesCount === 1 ? '' : 's' }} sin datos fiscales completos.
+          {{ 'cliList.provisionalBanner' | translate: { count: provisionalesCount } }}
         </div>
       }
       <div class="header">
-        <h1>Clientes</h1>
+        <h1>{{ 'cliList.title' | translate }}</h1>
         @if (auth.canMutate()) {
         <a mat-raised-button color="primary" routerLink="/clientes/nuevo">
           <mat-icon>add</mat-icon>
-          Nuevo cliente
+          {{ 'cliList.newClient' | translate }}
         </a>
         }
       </div>
       <div class="table-container">
         <table mat-table [dataSource]="dataSource" class="full-width">
           <ng-container matColumnDef="nombre">
-            <th mat-header-cell *matHeaderCellDef>Nombre</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'cliList.colName' | translate }}</th>
             <td mat-cell *matCellDef="let row">{{ row.nombre }}</td>
           </ng-container>
           <ng-container matColumnDef="estadoPanel">
-            <th mat-header-cell *matHeaderCellDef>Cobros y documentos</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'cliList.colPaymentsDocs' | translate }}</th>
             <td mat-cell *matCellDef="let row">
               <a
                 mat-stroked-button
@@ -54,26 +56,26 @@ import { TranslateService } from '@ngx-translate/core';
                 class="btn-ver-estado"
               >
                 <mat-icon>insights</mat-icon>
-                Ver estado
+                {{ 'cliList.viewStatus' | translate }}
               </a>
             </td>
           </ng-container>
           <ng-container matColumnDef="email">
-            <th mat-header-cell *matHeaderCellDef>Email</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'cliList.colEmail' | translate }}</th>
             <td mat-cell *matCellDef="let row">{{ row.email }}</td>
           </ng-container>
           <ng-container matColumnDef="telefono">
-            <th mat-header-cell *matHeaderCellDef>Teléfono</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'cliList.colPhone' | translate }}</th>
             <td mat-cell *matCellDef="let row">{{ row.telefono }}</td>
           </ng-container>
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let row">
               @if (auth.canMutate()) {
-              <button mat-icon-button [routerLink]="['/clientes', row.id]" matTooltip="Editar">
+              <button mat-icon-button [routerLink]="['/clientes', row.id]" [matTooltip]="'cliList.tooltipEdit' | translate">
                 <mat-icon>edit</mat-icon>
               </button>
-              <button mat-icon-button color="warn" (click)="delete(row)" matTooltip="Eliminar">
+              <button mat-icon-button color="warn" (click)="delete(row)" [matTooltip]="'cliList.tooltipDelete' | translate">
                 <mat-icon>delete</mat-icon>
               </button>
               }
@@ -85,10 +87,10 @@ import { TranslateService } from '@ngx-translate/core';
             <td class="mat-cell" colspan="5">
               <div class="empty-state">
                 <mat-icon class="empty-illus" aria-hidden="true">groups</mat-icon>
-                <p class="empty-title">Aún no tienes clientes</p>
-                <p class="empty-text">Crea el primero para vincular presupuestos y facturas.</p>
+                <p class="empty-title">{{ 'cliList.emptyTitle' | translate }}</p>
+                <p class="empty-text">{{ 'cliList.emptyText' | translate }}</p>
                 @if (auth.canMutate()) {
-                <a mat-stroked-button color="primary" routerLink="/clientes/nuevo">Nuevo cliente</a>
+                <a mat-stroked-button color="primary" routerLink="/clientes/nuevo">{{ 'cliList.newClient' | translate }}</a>
                 }
               </div>
             </td>
@@ -167,6 +169,8 @@ import { TranslateService } from '@ngx-translate/core';
 })
 export class ClienteListComponent implements OnInit {
   private readonly translate = inject(TranslateService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
   displayedColumns = ['nombre', 'estadoPanel', 'email', 'telefono', 'actions'];
   dataSource = new MatTableDataSource<Cliente>([]);
   provisionalesCount = 0;
@@ -179,6 +183,7 @@ export class ClienteListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.translate.onLangChange.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.cdr.markForCheck());
     this.load();
   }
 
@@ -192,8 +197,8 @@ export class ClienteListComponent implements OnInit {
   delete(cliente: Cliente): void {
     const ref = this.dialog.open(ConfirmDialogComponent, {
       data: {
-        title: 'Eliminar cliente',
-        message: `¿Eliminar a ${cliente.nombre}?`,
+        title: this.translate.instant('cliList.dlgDeleteTitle'),
+        message: this.translate.instant('cliList.dlgDeleteMsg', { name: cliente.nombre }),
       },
     });
     ref.afterClosed().subscribe((ok) => {

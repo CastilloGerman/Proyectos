@@ -2,12 +2,14 @@
   <div class="mp-page__head">
     <a mat-button routerLink="/dashboard" class="mp-back">
       <mat-icon>arrow_back</mat-icon>
-      Volver
+      {{ 'common.back' | translate }}
     </a>
     <div>
-      <h1 class="mp-page__title">Métodos de cobro</h1>
+      <h1 class="mp-page__title">{{ 'acctPay.title' | translate }}</h1>
       <p class="mp-page__subtitle">
-        Define <strong>cómo te pagan tus clientes</strong> en las facturas: forma de pago por defecto, datos bancarios o Bizum, y recordatorios de cobro automáticos.
+        {{ 'acctPay.subtitleLead' | translate }}
+        <strong>{{ 'acctPay.subtitleBold' | translate }}</strong>
+        {{ 'acctPay.subtitleTrail' | translate }}
       </p>
     </div>
   </div>
@@ -15,38 +17,36 @@
   @if (loading()) {
     <div class="mp-state">
       <mat-progress-spinner diameter="40" mode="indeterminate" />
-      <span>Cargando…</span>
+      <span>{{ 'acctPay.loading' | translate }}</span>
     </div>
   } @else if (loadError()) {
     <mat-card class="mp-card">
       <mat-card-content>
-        <p>No pudimos cargar los datos.</p>
-        <button mat-stroked-button type="button" color="primary" (click)="cargar()">Reintentar</button>
+        <p>{{ 'acctPay.loadErr' | translate }}</p>
+        <button mat-stroked-button type="button" color="primary" (click)="cargar()">{{ 'acctPay.retry' | translate }}</button>
       </mat-card-content>
     </mat-card>
   } @else {
     <mat-card class="mp-card">
       <mat-card-header>
-        <mat-card-title>Cobro en tus facturas a clientes</mat-card-title>
-        <mat-card-subtitle>
-          Se usarán como valores por defecto al crear una factura nueva. Siempre podrás cambiarlos en cada documento.
-        </mat-card-subtitle>
+        <mat-card-title>{{ 'acctPay.cardInvoiceTitle' | translate }}</mat-card-title>
+        <mat-card-subtitle>{{ 'acctPay.cardInvoiceSub' | translate }}</mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
         <form [formGroup]="form" (ngSubmit)="guardar()" class="mp-form">
           <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
-            <mat-label>Forma de pago por defecto</mat-label>
+            <mat-label>{{ 'acctPay.methodLabel' | translate }}</mat-label>
             <mat-select formControlName="defaultMetodoPago">
-              <mat-option value="Transferencia">Transferencia bancaria</mat-option>
-              <mat-option value="Bizum">Bizum</mat-option>
-              <mat-option value="Tarjeta">Tarjeta</mat-option>
-              <mat-option value="Efectivo">Efectivo</mat-option>
+              <mat-option value="Transferencia">{{ 'acctPay.mTransfer' | translate }}</mat-option>
+              <mat-option value="Bizum">{{ 'acctPay.mBizum' | translate }}</mat-option>
+              <mat-option value="Tarjeta">{{ 'acctPay.mCard' | translate }}</mat-option>
+              <mat-option value="Efectivo">{{ 'acctPay.mCash' | translate }}</mat-option>
             </mat-select>
-            <mat-hint>Aparece en el PDF como “Forma de pago”</mat-hint>
+            <mat-hint>{{ 'acctPay.methodHint' | translate }}</mat-hint>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
-            <mat-label>IBAN (opcional)</mat-label>
+            <mat-label>{{ 'acctPay.ibanLabel' | translate }}</mat-label>
             <input
               matInput
               formControlName="ibanCuenta"
@@ -57,42 +57,59 @@
             />
             @if (form.controls.ibanCuenta.hasError('ibanInvalido') && form.controls.ibanCuenta.touched) {
               <mat-error>
-                IBAN no válido: comprueba los dígitos (en España, 24 caracteres: ES + 22 números). Puedes escribirlo con espacios.
+                {{ 'acctPay.ibanErr' | translate }}
               </mat-error>
             }
             <mat-hint>
-              Recomendado si cobras por transferencia. Puedes usar el formato con espacios; al guardar se envía sin separadores.
+              {{ 'acctPay.ibanHint' | translate }}
             </mat-hint>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
-            <mat-label>Titular de la cuenta (opcional)</mat-label>
-            <input matInput formControlName="titularCuenta" maxlength="150" placeholder="Nombre del titular" autocomplete="name" />
+            <mat-label>{{ 'acctPay.holderLabel' | translate }}</mat-label>
+            <input
+              matInput
+              formControlName="titularCuenta"
+              maxlength="150"
+              [placeholder]="'acctPay.holderPh' | translate"
+              autocomplete="name"
+            />
             <mat-hint align="end">{{ form.controls.titularCuenta.value.length }}/150</mat-hint>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
-            <mat-label>Banco (opcional)</mat-label>
-            <input matInput formControlName="nombreBanco" maxlength="100" placeholder="Ej. Banco Santander" autocomplete="organization" />
+            <mat-label>{{ 'acctPay.bankLabel' | translate }}</mat-label>
+            <input
+              matInput
+              formControlName="nombreBanco"
+              maxlength="100"
+              [placeholder]="'acctPay.bankPh' | translate"
+              autocomplete="organization"
+            />
             <mat-hint align="end">{{ form.controls.nombreBanco.value.length }}/100</mat-hint>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
-            <mat-label>Teléfono Bizum (opcional)</mat-label>
-            <input matInput formControlName="bizumTelefono" placeholder="600 000 000" autocomplete="tel" />
+            <mat-label>{{ 'acctPay.bizumLbl' | translate }}</mat-label>
+            <input matInput formControlName="bizumTelefono" [placeholder]="'acctPay.bizumPh' | translate" autocomplete="tel" />
             @if (form.controls.bizumTelefono.hasError('bizumInvalido') && form.controls.bizumTelefono.touched) {
-              <mat-error>Móvil español (9 dígitos, empieza por 6–9)</mat-error>
+              <mat-error>{{ 'acctPay.bizumErr' | translate }}</mat-error>
             }
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
-            <mat-label>Condiciones de pago por defecto</mat-label>
-            <input matInput formControlName="defaultCondicionesPago" maxlength="200" placeholder="Ej. Transferencia a 30 días" />
+            <mat-label>{{ 'acctPay.termsLabel' | translate }}</mat-label>
+            <input
+              matInput
+              formControlName="defaultCondicionesPago"
+              maxlength="200"
+              [placeholder]="'acctPay.termsPh' | translate"
+            />
             <mat-hint align="end">{{ form.controls.defaultCondicionesPago.value.length }}/200</mat-hint>
           </mat-form-field>
 
           <div class="mp-preview" aria-live="polite">
-            <span class="mp-preview__label">Vista resumida en factura</span>
+            <span class="mp-preview__label">{{ 'acctPay.previewLabel' | translate }}</span>
             <p class="mp-preview__text">{{ vistaPdf() }}</p>
           </div>
 
@@ -103,7 +120,7 @@
               @if (saving()) {
                 <mat-progress-spinner diameter="20" mode="indeterminate" />
               }
-              Guardar
+              {{ 'acctPay.save' | translate }}
             </button>
           </div>
         </form>
@@ -112,25 +129,25 @@
 
     <mat-card class="mp-card">
       <mat-card-header>
-        <mat-card-title>Recordatorios automáticos al cliente</mat-card-title>
+        <mat-card-title>{{ 'acctPay.remTitle' | translate }}</mat-card-title>
         <mat-card-subtitle>
-          Correo al cliente (email del contacto) en los plazos indicados <strong>después de la fecha de vencimiento</strong>, si la factura sigue
-          pendiente de cobro.
+          {{ 'acctPay.remSubBefore' | translate }}<strong>{{ 'acctPay.remSubBold' | translate }}</strong
+          >{{ 'acctPay.remSubAfter' | translate }}
         </mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
         <form [formGroup]="recordatorioForm" (ngSubmit)="guardarRecordatorios()" class="mp-form mp-form--rec">
-          <mat-slide-toggle formControlName="activo" color="primary"> Activar recordatorios por email al cliente </mat-slide-toggle>
-          <p class="mp-hint mp-rec-intro">Elige uno o varios plazos (días tras el vencimiento):</p>
+          <mat-slide-toggle formControlName="activo" color="primary">{{ 'acctPay.remToggle' | translate }}</mat-slide-toggle>
+          <p class="mp-hint mp-rec-intro">{{ 'acctPay.remPick' | translate }}</p>
           <div class="mp-rec-dias">
-            <mat-checkbox formControlName="dia7">A los 7 días</mat-checkbox>
-            <mat-checkbox formControlName="dia15">A los 15 días</mat-checkbox>
-            <mat-checkbox formControlName="dia30">A los 30 días</mat-checkbox>
+            <mat-checkbox formControlName="dia7">{{ 'acctPay.d7' | translate }}</mat-checkbox>
+            <mat-checkbox formControlName="dia15">{{ 'acctPay.d15' | translate }}</mat-checkbox>
+            <mat-checkbox formControlName="dia30">{{ 'acctPay.d30' | translate }}</mat-checkbox>
           </div>
           <p class="mp-hint">
-            Por defecto los recordatorios se envían con el correo de la aplicación; no hace falta configurar SMTP. Si prefieres usar tu Gmail, Microsoft u otro método, puedes cambiarlo en
-            <a routerLink="/cuenta/datos-empresa">datos de la empresa</a>
-            (envío de correo). Por cada factura y plazo solo se envía un correo. Si el cliente no tiene email en su ficha, no se enviará.
+            {{ 'acctPay.remFootLead' | translate }}
+            <a routerLink="/cuenta/datos-empresa">{{ 'acctPay.remFootLink' | translate }}</a
+            >{{ 'acctPay.remFootTrail' | translate }}
           </p>
           <div class="mp-form-actions">
             <button
@@ -142,7 +159,7 @@
               @if (savingRecordatorios()) {
                 <mat-progress-spinner diameter="20" mode="indeterminate" />
               }
-              Guardar recordatorios
+              {{ 'acctPay.saveReminders' | translate }}
             </button>
           </div>
         </form>
@@ -150,7 +167,7 @@
     </mat-card>
 
     <p class="mp-footnote">
-      Los datos de IBAN y Bizum se guardan cifrados en tránsito (HTTPS) y solo son accesibles para tu cuenta.
+      {{ 'acctPay.footnote' | translate }}
     </p>
   }
 </div>

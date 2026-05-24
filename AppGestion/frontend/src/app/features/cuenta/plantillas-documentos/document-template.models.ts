@@ -102,12 +102,13 @@ export interface DocumentTemplate extends DocumentTemplateSummary {
 /** Perfil de datos de ejemplo (HTML + mismo escenario en PDF del servidor). */
 export type PlantillaPdfPreviewEscenario = 'DEFAULT' | 'MIXED_IVA' | 'LONG_LINES' | 'LONG_FOOTER';
 
-export const PREVIEW_SCENARIO_LABELS: Record<PlantillaPdfPreviewEscenario, string> = {
-  DEFAULT: 'Trabajo normal (varias líneas)',
-  MIXED_IVA: 'Con partidas con IVA y sin IVA',
-  LONG_LINES: 'Nombres de trabajo muy largos',
-  LONG_FOOTER: 'Solo para probar mucho texto al final',
-};
+/** Orden estable del selector HTML / payload `escenario`. */
+export const PREVIEW_ESCENARIOS_ORDER: PlantillaPdfPreviewEscenario[] = [
+  'DEFAULT',
+  'MIXED_IVA',
+  'LONG_LINES',
+  'LONG_FOOTER',
+];
 
 /** Texto de ejemplo (menos de 1000 caracteres) para probar saltos de línea en el pie del PDF. */
 export const SAMPLE_LONG_FOOTER_TEXT =

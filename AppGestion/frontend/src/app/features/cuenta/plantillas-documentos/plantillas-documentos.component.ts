@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { debounceTime, firstValueFrom, forkJoin, startWith } from 'rxjs';
+import { debounceTime, firstValueFrom, forkJoin, map, startWith } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -28,21 +28,27 @@ import {
 import { CondicionesPresupuestoComponent } from '../../presupuestos/condiciones-presupuesto/condiciones-presupuesto.component';
 import {
   PLACEHOLDER_CATALOG,
+  PREVIEW_ESCENARIOS_ORDER,
   PREVIEW_MOCK_BY_SCENARIO,
-  PREVIEW_SCENARIO_LABELS,
   SAMPLE_LONG_FOOTER_TEXT,
   DocumentPreviewMock,
   PlaceholderDef,
   PlantillaPdfPreviewEscenario,
 } from './document-template.models';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 const MAX_PIE = 1000;
 
-const PH_PRESU =
-  'Ejemplo: Presupuesto válido 30 días. El IVA se detalla en el cuerpo del documento.';
-const PH_FACT =
-  'Ejemplo: Gracias por su confianza. Para cualquier consulta puede llamarnos o escribirnos.';
+const PH_TRANSLATION_KEYS: Record<string, string> = {
+  '{{client_name}}': 'acctTpl.ph_client_name',
+  '{{client_tax_id}}': 'acctTpl.ph_client_tax_id',
+  '{{client_address}}': 'acctTpl.ph_client_address',
+  '{{doc_number}}': 'acctTpl.ph_doc_number',
+  '{{doc_date}}': 'acctTpl.ph_doc_date',
+  '{{subtotal}}': 'acctTpl.ph_subtotal',
+  '{{tax_total}}': 'acctTpl.ph_tax_total',
+  '{{total}}': 'acctTpl.ph_total',
+};
 
 @Component({
     selector: 'app-plantillas-documentos',
@@ -62,18 +68,12 @@ const PH_FACT =
         MatProgressSpinnerModule,
         MatSnackBarModule,
         MatTooltipModule,
+        TranslateModule,
     ],
     templateUrl: './plantillas-documentos.component.html',
     styleUrl: './plantillas-documentos.component.scss'
 })
 export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
-  readonly placeholderPresupuesto = PH_PRESU;
-  readonly placeholderFactura = PH_FACT;
-
-  readonly escenarioOptions: { value: PlantillaPdfPreviewEscenario; label: string }[] = (
-    Object.keys(PREVIEW_SCENARIO_LABELS) as PlantillaPdfPreviewEscenario[]
-  ).map((value) => ({ value, label: PREVIEW_SCENARIO_LABELS[value] }));
-
   private readonly fb = inject(FormBuilder);
   private readonly config = inject(ConfigService);
   private readonly auth = inject(AuthService);
@@ -82,6 +82,28 @@ export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
   private readonly sanitizer = inject(DomSanitizer);
   private readonly destroyRef = inject(DestroyRef);
   private readonly translate = inject(TranslateService);
+
+  private readonly localeTick = toSignal(this.translate.onLangChange.pipe(map(() => Date.now())), {
+    initialValue: 0,
+  });
+
+  readonly placeholderPresupuesto = computed(() => {
+    void this.localeTick();
+    return this.translate.instant('acctTpl.placeholderBudget');
+  });
+
+  readonly placeholderFactura = computed(() => {
+    void this.localeTick();
+    return this.translate.instant('acctTpl.placeholderInvoice');
+  });
+
+  readonly escenarioOptions = computed(() => {
+    void this.localeTick();
+    return PREVIEW_ESCENARIOS_ORDER.map((value) => ({
+      value,
+      label: this.translate.instant(`acctTpl.scenario_${value}`),
+    }));
+  });
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -128,14 +150,16 @@ export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
   readonly logoPreviewSafeUrl = signal<SafeUrl | null>(null);
 
   readonly empresaPreviewNombre = computed(() => {
+    void this.localeTick();
     const n = this.empresaPreview()?.nombre?.trim();
-    return n || 'Tu negocio';
+    return n || this.translate.instant('acctTpl.previewBizDefault');
   });
 
   readonly empresaPreviewSubline = computed(() => {
+    void this.localeTick();
     const e = this.empresaPreview();
     if (!e) {
-      return 'Tus datos (los pones en «Nombre, dirección y logo»)';
+      return this.translate.instant('acctTpl.previewAddrFallback');
     }
     const parts: string[] = [];
     if (e.direccion?.trim()) {
@@ -149,12 +173,19 @@ export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
       parts.push(e.pais.trim());
     }
     if (e.nif?.trim()) {
-      parts.push(`NIF ${e.nif.trim()}`);
+      parts.push(`${this.translate.instant('acctTpl.previewTaxPrefix')} ${e.nif.trim()}`);
     }
-    return parts.length > 0 ? parts.join(' · ') : 'Tus datos (los pones en «Nombre, dirección y logo»)';
+    return parts.length > 0 ? parts.join(' · ') : this.translate.instant('acctTpl.previewAddrFallback');
+  });
+
+  readonly previewDocCap = computed(() => {
+    void this.localeTick();
+    const key = this.previewTabIndex() === 0 ? 'acctTpl.docCapBudget' : 'acctTpl.docCapInv';
+    return this.translate.instant(key);
   });
 
   readonly textoPieVistaPrevia = computed(() => {
+    void this.localeTick();
     const idx = this.previewTabIndex();
     const v = this.formValue();
     const mock = this.activeMock();
@@ -231,8 +262,15 @@ export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
     }
   }
 
+  placeholderBtnLabel(p: PlaceholderDef): string {
+    void this.localeTick();
+    const k = PH_TRANSLATION_KEYS[p.token];
+    return k ? this.translate.instant(k) : p.descripcion;
+  }
+
   tooltipPlaceholder(p: PlaceholderDef): string {
-    return `Ejemplo en el documento: ${p.ejemplo}`;
+    void this.localeTick();
+    return `${this.translate.instant('acctTpl.phTipSuffix')}${p.ejemplo}`;
   }
 
   copyPlaceholder(p: PlaceholderDef): void {
@@ -259,12 +297,24 @@ export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
   }
 
   fmtEuro(value: number): string {
-    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(value);
+    return new Intl.NumberFormat(this.dateLocaleTag(), { style: 'currency', currency: 'EUR' }).format(value);
+  }
+
+  private dateLocaleTag(): string {
+    const lang = (this.translate.currentLang || 'es').split('-')[0].toLowerCase();
+    const map: Record<string, string> = {
+      es: 'es-ES',
+      en: 'en-GB',
+      fr: 'fr-FR',
+      ro: 'ro-RO',
+      uk: 'uk-UA',
+    };
+    return map[lang] ?? 'es-ES';
   }
 
   private sustituirPlaceholders(raw: string, tipo: 'PRESUPUESTO' | 'FACTURA', mock: DocumentPreviewMock): string {
     const docNum = tipo === 'PRESUPUESTO' ? 'PRES-2025-0099' : mock.numeroDocumento;
-    const fecha = new Date(mock.fechaEmision + 'T12:00:00').toLocaleDateString('es-ES');
+    const fecha = new Date(mock.fechaEmision + 'T12:00:00').toLocaleDateString(this.dateLocaleTag());
     const mapa: Record<string, string> = {
       '{{client_name}}': mock.clienteNombre,
       '{{client_tax_id}}': mock.clienteNif,
@@ -441,7 +491,7 @@ export class PlantillasDocumentosComponent implements OnInit, OnDestroy {
         return;
       }
       this.revokePdfUrl();
-      let msg = 'No se pudo mostrar el PDF de ejemplo.';
+      let msg = this.translate.instant('acctTpl.pdfPreviewFailDefault');
       if (e instanceof HttpErrorResponse && e.error instanceof ArrayBuffer) {
         try {
           const t = new TextDecoder().decode(e.error);

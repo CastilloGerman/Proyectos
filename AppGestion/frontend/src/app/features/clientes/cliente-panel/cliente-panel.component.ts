@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -9,7 +10,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { ClienteService } from '../../../core/services/cliente.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ClienteFacturaResumen, ClienteHistorialItem, ClientePanel, ClientePresupuestoResumen } from '../../../core/models/cliente-panel.model';
@@ -34,6 +35,7 @@ import { FacturaParcialImporteDialogComponent } from '../../../shared/factura-pa
         MatSnackBarModule,
         MatDialogModule,
         EstadoBadgeComponent,
+        TranslateModule,
     ],
     template: `
     <div class="cliente-panel">
@@ -41,20 +43,20 @@ import { FacturaParcialImporteDialogComponent } from '../../../shared/factura-pa
         <div class="loading-wrap">
           <mat-spinner diameter="40"></mat-spinner>
         </div>
-      } @else if (error) {
+      } @else if (errorKey) {
         <mat-card class="error-card">
-          <p>{{ error }}</p>
-          <a mat-stroked-button routerLink="/clientes">Volver a clientes</a>
+          <p>{{ errorKey | translate }}</p>
+          <a mat-stroked-button routerLink="/clientes">{{ 'cliPanel.backToCustomers' | translate }}</a>
         </mat-card>
       } @else if (panel) {
         <header class="panel-header">
           <div class="title-row">
-            <a mat-icon-button routerLink="/clientes" matTooltip="Lista de clientes">
+            <a mat-icon-button routerLink="/clientes" [matTooltip]="'cliPanel.clientListAria' | translate">
               <mat-icon>arrow_back</mat-icon>
             </a>
             <div class="titles">
               <h1>{{ panel.cliente.nombre }}</h1>
-              <p class="subtitle">Estado del cliente: cobros, presupuestos e historial</p>
+              <p class="subtitle">{{ 'cliPanel.subtitle' | translate }}</p>
             </div>
           </div>
           <div class="contact-line">
@@ -69,16 +71,16 @@ import { FacturaParcialImporteDialogComponent } from '../../../shared/factura-pa
             @if (auth.canMutate()) {
               <a mat-stroked-button [routerLink]="['/clientes', panel.cliente.id]">
                 <mat-icon>edit</mat-icon>
-                Editar datos
+                {{ 'cliPanel.btnEditClient' | translate }}
               </a>
             }
             <a mat-stroked-button [routerLink]="['/presupuestos/nuevo']" [queryParams]="{ clienteId: panel.cliente.id }">
               <mat-icon>note_add</mat-icon>
-              Nuevo presupuesto
+              {{ 'cliPanel.btnNewEstimate' | translate }}
             </a>
             <a mat-raised-button color="primary" [routerLink]="['/facturas/nuevo']" [queryParams]="{ clienteId: panel.cliente.id }">
               <mat-icon>receipt_long</mat-icon>
-              Nueva factura
+              {{ 'cliPanel.btnNewInvoice' | translate }}
             </a>
           </div>
         </header>
@@ -88,48 +90,48 @@ import { FacturaParcialImporteDialogComponent } from '../../../shared/factura-pa
             <mat-icon class="kpi-icon warn">pending_actions</mat-icon>
             <div>
               <div class="kpi-value">{{ panel.totalPendienteCobro | number: '1.2-2' }} €</div>
-              <div class="kpi-label">Pendiente de cobro</div>
+              <div class="kpi-label">{{ 'cliPanel.kpiOutstanding' | translate }}</div>
             </div>
           </mat-card>
           <mat-card class="kpi">
             <mat-icon class="kpi-icon">receipt</mat-icon>
             <div>
               <div class="kpi-value">{{ panel.facturasConPendiente }}</div>
-              <div class="kpi-label">Facturas con saldo</div>
+              <div class="kpi-label">{{ 'cliPanel.kpiInvoicesDue' | translate }}</div>
             </div>
           </mat-card>
           <mat-card class="kpi">
             <mat-icon class="kpi-icon accent">description</mat-icon>
             <div>
               <div class="kpi-value">{{ panel.presupuestosActivos.length }}</div>
-              <div class="kpi-label">Presupuestos activos</div>
-              <div class="kpi-hint">Todos salvo rechazados</div>
+              <div class="kpi-label">{{ 'cliPanel.kpiActiveEstimates' | translate }}</div>
+              <div class="kpi-hint">{{ 'cliPanel.kpiActiveEstimatesHint' | translate }}</div>
             </div>
           </mat-card>
         </section>
 
         <mat-card class="section-card">
           <mat-card-header>
-            <mat-card-title>Pendiente de cobro</mat-card-title>
-            <mat-card-subtitle>Facturas no pagadas del todo (incluye parciales)</mat-card-subtitle>
+            <mat-card-title>{{ 'cliPanel.pendingTitle' | translate }}</mat-card-title>
+            <mat-card-subtitle>{{ 'cliPanel.pendingSubtitle' | translate }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             @if (facturasPendiente.length === 0) {
-              <p class="empty-inline">No hay importe pendiente con este cliente.</p>
+              <p class="empty-inline">{{ 'cliPanel.emptyPending' | translate }}</p>
             } @else {
               <table mat-table [dataSource]="facturasPendiente" class="full-width">
                 <ng-container matColumnDef="numeroFactura">
-                  <th mat-header-cell *matHeaderCellDef>Factura</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'cliPanel.colInvoice' | translate }}</th>
                   <td mat-cell *matCellDef="let row">
                     <a [routerLink]="['/facturas', row.id]">{{ row.numeroFactura }}</a>
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="fechaVencimiento">
-                  <th mat-header-cell *matHeaderCellDef>Vencimiento</th>
-                  <td mat-cell *matCellDef="let row">{{ row.fechaVencimiento || '—' }}</td>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'cliPanel.colDue' | translate }}</th>
+                  <td mat-cell *matCellDef="let row">{{ row.fechaVencimiento || ('cliPanel.dash' | translate) }}</td>
                 </ng-container>
                 <ng-container matColumnDef="estadoPago">
-                  <th mat-header-cell *matHeaderCellDef>Estado</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'cliPanel.colStatus' | translate }}</th>
                   <td mat-cell *matCellDef="let row">
                     @if (auth.canMutate()) {
                       <app-estado-badge
@@ -144,11 +146,11 @@ import { FacturaParcialImporteDialogComponent } from '../../../shared/factura-pa
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="total">
-                  <th mat-header-cell *matHeaderCellDef>Total</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'cliPanel.colTotal' | translate }}</th>
                   <td mat-cell *matCellDef="let row">{{ row.total | number: '1.2-2' }} €</td>
                 </ng-container>
                 <ng-container matColumnDef="pendiente">
-                  <th mat-header-cell *matHeaderCellDef>Pendiente</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'cliPanel.colPending' | translate }}</th>
                   <td mat-cell *matCellDef="let row" class="cell-pendiente">{{ row.pendiente | number: '1.2-2' }} €</td>
                 </ng-container>
                 <tr mat-header-row *matHeaderRowDef="colsPendiente"></tr>
@@ -160,30 +162,30 @@ import { FacturaParcialImporteDialogComponent } from '../../../shared/factura-pa
 
         <mat-card class="section-card">
           <mat-card-header>
-            <mat-card-title>Presupuestos activos</mat-card-title>
-            <mat-card-subtitle>Pendiente, aceptado o en ejecución (excluye rechazados)</mat-card-subtitle>
+            <mat-card-title>{{ 'cliPanel.activeEstimatesTitle' | translate }}</mat-card-title>
+            <mat-card-subtitle>{{ 'cliPanel.activeEstimatesSubtitle' | translate }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             @if (panel.presupuestosActivos.length === 0) {
-              <p class="empty-inline">No hay presupuestos activos.</p>
+              <p class="empty-inline">{{ 'cliPanel.emptyActiveEstimates' | translate }}</p>
             } @else {
               <table mat-table [dataSource]="panel.presupuestosActivos" class="full-width">
                 <ng-container matColumnDef="id">
-                  <th mat-header-cell *matHeaderCellDef>ID</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'cliPanel.colId' | translate }}</th>
                   <td mat-cell *matCellDef="let row">
                     <a [routerLink]="['/presupuestos', row.id]">#{{ row.id }}</a>
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="fechaCreacion">
-                  <th mat-header-cell *matHeaderCellDef>Fecha</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'cliPanel.colDate' | translate }}</th>
                   <td mat-cell *matCellDef="let row">{{ row.fechaCreacion | date: 'short' }}</td>
                 </ng-container>
                 <ng-container matColumnDef="total">
-                  <th mat-header-cell *matHeaderCellDef>Total</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'cliPanel.colTotal' | translate }}</th>
                   <td mat-cell *matCellDef="let row">{{ row.total | number: '1.2-2' }} €</td>
                 </ng-container>
                 <ng-container matColumnDef="estado">
-                  <th mat-header-cell *matHeaderCellDef>Estado</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'cliPanel.colStatus' | translate }}</th>
                   <td mat-cell *matCellDef="let row">
                     @if (auth.canMutate()) {
                       <app-estado-badge
@@ -198,12 +200,12 @@ import { FacturaParcialImporteDialogComponent } from '../../../shared/factura-pa
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="facturaId">
-                  <th mat-header-cell *matHeaderCellDef>Factura</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'cliPanel.colInvoiceLink' | translate }}</th>
                   <td mat-cell *matCellDef="let row">
                     @if (row.facturaId) {
-                      <a [routerLink]="['/facturas', row.facturaId]">Ver</a>
+                      <a [routerLink]="['/facturas', row.facturaId]">{{ 'cliPanel.view' | translate }}</a>
                     } @else {
-                      —
+                      {{ 'cliPanel.dash' | translate }}
                     }
                   </td>
                 </ng-container>
@@ -216,30 +218,30 @@ import { FacturaParcialImporteDialogComponent } from '../../../shared/factura-pa
 
         <mat-card class="section-card">
           <mat-card-header>
-            <mat-card-title>Historial</mat-card-title>
-            <mat-card-subtitle>Facturas y presupuestos ordenados del más reciente al más antiguo</mat-card-subtitle>
+            <mat-card-title>{{ 'cliPanel.histTitle' | translate }}</mat-card-title>
+            <mat-card-subtitle>{{ 'cliPanel.histSubtitle' | translate }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             @if (panel.historial.length === 0) {
-              <p class="empty-inline">Aún no hay documentos con este cliente.</p>
+              <p class="empty-inline">{{ 'cliPanel.emptyHistory' | translate }}</p>
             } @else {
               <table mat-table [dataSource]="panel.historial" class="full-width historial-table">
                 <ng-container matColumnDef="fechaOrden">
-                  <th mat-header-cell *matHeaderCellDef>Fecha</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'cliPanel.colDate' | translate }}</th>
                   <td mat-cell *matCellDef="let row">{{ row.fechaOrden | date: 'short' }}</td>
                 </ng-container>
                 <ng-container matColumnDef="tipo">
-                  <th mat-header-cell *matHeaderCellDef>Tipo</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'cliPanel.colType' | translate }}</th>
                   <td mat-cell *matCellDef="let row">
                     @if (row.tipo === 'FACTURA') {
-                      <span class="tipo-badge factura">Factura</span>
+                      <span class="tipo-badge factura">{{ 'cliPanel.typeInvoice' | translate }}</span>
                     } @else {
-                      <span class="tipo-badge presupuesto">Presupuesto</span>
+                      <span class="tipo-badge presupuesto">{{ 'cliPanel.typeEstimate' | translate }}</span>
                     }
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="etiqueta">
-                  <th mat-header-cell *matHeaderCellDef>Documento</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'cliPanel.colDocument' | translate }}</th>
                   <td mat-cell *matCellDef="let row">
                     @if (row.tipo === 'FACTURA') {
                       <a [routerLink]="['/facturas', row.id]">{{ row.etiqueta }}</a>
@@ -252,11 +254,11 @@ import { FacturaParcialImporteDialogComponent } from '../../../shared/factura-pa
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="importe">
-                  <th mat-header-cell *matHeaderCellDef>Importe</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'cliPanel.colAmount' | translate }}</th>
                   <td mat-cell *matCellDef="let row">{{ row.importe | number: '1.2-2' }} €</td>
                 </ng-container>
                 <ng-container matColumnDef="estado">
-                  <th mat-header-cell *matHeaderCellDef>Estado</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'cliPanel.colStatus' | translate }}</th>
                   <td mat-cell *matCellDef="let row">
                     @if (auth.canMutate()) {
                       @if (row.tipo === 'FACTURA') {
@@ -428,7 +430,8 @@ import { FacturaParcialImporteDialogComponent } from '../../../shared/factura-pa
 export class ClientePanelComponent implements OnInit {
   panel: ClientePanel | null = null;
   loading = true;
-  error: string | null = null;
+  /** Clave ngx-translate; ver `cliPanel.err*` */
+  errorKey: string | null = null;
 
   colsPendiente = ['numeroFactura', 'fechaVencimiento', 'estadoPago', 'total', 'pendiente'];
   colsPresupuesto = ['id', 'fechaCreacion', 'total', 'estado', 'facturaId'];
@@ -438,6 +441,9 @@ export class ClientePanelComponent implements OnInit {
 
   actualizandoPresupuestoId: number | null = null;
   actualizandoFacturaId: number | null = null;
+
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly estadosPresupuestoCatalogo = ['Pendiente', 'Aceptado', 'Rechazado', 'En ejecución'];
   private readonly estadosPagoFacturaCatalogo = ['No Pagada', 'Parcial', 'Pagada'];
@@ -454,9 +460,11 @@ export class ClientePanelComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.translate.onLangChange.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.cdr.markForCheck());
+
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) {
-      this.error = 'Cliente no indicado';
+      this.errorKey = 'cliPanel.errNoCustomerId';
       this.loading = false;
       return;
     }
@@ -467,7 +475,7 @@ export class ClientePanelComponent implements OnInit {
         this.loading = false;
       },
       error: () => {
-        this.error = 'No se pudo cargar el panel del cliente.';
+        this.errorKey = 'cliPanel.errLoadPanel';
         this.loading = false;
       },
     });

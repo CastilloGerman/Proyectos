@@ -1,51 +1,48 @@
 <div class="wrap">
   <a mat-button routerLink="/dashboard" class="back">
     <mat-icon>arrow_back</mat-icon>
-    Volver
+    {{ 'common.back' | translate }}
   </a>
 
   <mat-card class="card">
     <div class="head">
       <mat-icon class="head__icon" aria-hidden="true">support_agent</mat-icon>
-      <h1 class="title">Contactar soporte</h1>
-      <p class="lead">
-        Describe tu incidencia y, si quieres, adjunta capturas o un vídeo corto. El mensaje se envía al equipo de
-        soporte desde tu cuenta.
-      </p>
+      <h1 class="title">{{ 'support.title' | translate }}</h1>
+      <p class="lead">{{ 'support.lead' | translate }}</p>
     </div>
 
     <form [formGroup]="form" (ngSubmit)="enviar(fileInput)">
       <mat-form-field appearance="outline" class="full">
-        <mat-label>Asunto</mat-label>
+        <mat-label>{{ 'support.subject' | translate }}</mat-label>
         <input matInput formControlName="asunto" autocomplete="off" maxlength="200" />
         @if (form.controls.asunto.hasError('required') && form.controls.asunto.touched) {
-          <mat-error>Indica un asunto</mat-error>
+          <mat-error>{{ 'support.subjectErr' | translate }}</mat-error>
         }
         @if (form.controls.asunto.hasError('minlength') && form.controls.asunto.touched) {
-          <mat-error>Mínimo 3 caracteres</mat-error>
+          <mat-error>{{ 'support.subjectMin' | translate }}</mat-error>
         }
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="full">
-        <mat-label>Describe la incidencia</mat-label>
+        <mat-label>{{ 'support.message' | translate }}</mat-label>
         <textarea
           matInput
           formControlName="mensaje"
           rows="8"
-          placeholder="Qué ocurría, pasos para reproducirlo, mensaje de error, etc."
+          [placeholder]="'support.messagePh' | translate"
         ></textarea>
         @if (form.controls.mensaje.hasError('required') && form.controls.mensaje.touched) {
-          <mat-error>Escribe los detalles</mat-error>
+          <mat-error>{{ 'support.messageErr' | translate }}</mat-error>
         }
         @if (form.controls.mensaje.hasError('minlength') && form.controls.mensaje.touched) {
-          <mat-error>Mínimo 10 caracteres</mat-error>
+          <mat-error>{{ 'support.messageMin' | translate }}</mat-error>
         }
         <mat-hint align="end">{{ form.controls.mensaje.value.length }} / 8000</mat-hint>
       </mat-form-field>
 
       <div class="files-block">
-        <label class="files-label">Adjuntos (opcional)</label>
-        <p class="files-hint">Imágenes, vídeos (p. ej. MP4) o PDF. Hasta 5 archivos; 25 MB por archivo como máximo.</p>
+        <label class="files-label">{{ 'support.attachments' | translate }}</label>
+        <p class="files-hint">{{ 'support.attachmentsHint' | translate }}</p>
         <input
           #fileInput
           type="file"
@@ -60,18 +57,18 @@
               <li>{{ f.name }} ({{ f.size | number }} bytes)</li>
             }
           </ul>
-          <button mat-button type="button" (click)="clearFiles(fileInput)">Quitar archivos</button>
+          <button mat-button type="button" (click)="clearFiles(fileInput)">{{ 'support.clearFiles' | translate }}</button>
         }
       </div>
 
       <div class="actions">
-        <button mat-stroked-button type="button" routerLink="/cuenta/centro-ayuda">Centro de ayuda</button>
+        <button mat-stroked-button type="button" routerLink="/cuenta/centro-ayuda">{{ 'support.helpCenter' | translate }}</button>
         <button mat-raised-button color="primary" type="submit" [disabled]="sending()">
           @if (sending()) {
             <span class="btn-spinner"><mat-spinner diameter="20" /></span>
-            Enviando…
+            {{ 'support.sending' | translate }}
           } @else {
-            Enviar al soporte
+            {{ 'support.submit' | translate }}
           }
         </button>
       </div>

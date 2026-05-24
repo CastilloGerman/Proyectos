@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, ViewChild, AfterViewInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, OnInit, ViewChild, AfterViewInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -23,7 +23,7 @@ import { ConfigEmpresaDialogComponent } from '../../../shared/config-empresa-dia
 import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/enviar-email-dialog.component';
 import { CompletarClienteFiscalDialogComponent } from '../../../shared/completar-cliente-fiscal-dialog/completar-cliente-fiscal-dialog.component';
 import { Observable } from 'rxjs';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-presupuesto-list',
@@ -43,37 +43,38 @@ import { TranslateService } from '@ngx-translate/core';
         MatSortModule,
         MatPaginatorModule,
         EstadoBadgeComponent,
+        TranslateModule,
     ],
     template: `
     <div class="presupuesto-list">
       <div class="header">
-        <h1>Presupuestos</h1>
+        <h1>{{ 'budList.title' | translate }}</h1>
         <div class="header-actions">
-          <button mat-icon-button (click)="openConfig()" matTooltip="Textos al final del PDF">
+          <button mat-icon-button (click)="openConfig()" [matTooltip]="'budList.tooltipPdfTexts' | translate">
             <mat-icon>settings</mat-icon>
           </button>
           @if (auth.canMutate()) {
           <a mat-raised-button color="primary" routerLink="/presupuestos/nuevo">
             <mat-icon>add</mat-icon>
-            Nuevo presupuesto
+            {{ 'budList.newBudget' | translate }}
           </a>
           }
         </div>
       </div>
       <div class="filters-bar">
         <mat-form-field appearance="outline" class="filter-text">
-          <mat-label>Buscar</mat-label>
+          <mat-label>{{ 'budList.filterSearch' | translate }}</mat-label>
           <mat-icon matPrefix>search</mat-icon>
-          <input matInput (input)="applyTextFilter($event)" placeholder="Cliente…">
+          <input matInput (input)="applyTextFilter($event)" [placeholder]="'budList.filterSearchPlaceholder' | translate">
         </mat-form-field>
         <mat-form-field appearance="outline" class="filter-estado">
-          <mat-label>Estado</mat-label>
+          <mat-label>{{ 'budList.filterStatus' | translate }}</mat-label>
           <mat-select [value]="estadoFilter" (selectionChange)="applyEstadoFilter($event.value)">
-            <mat-option value="">Todos</mat-option>
-            <mat-option value="Pendiente">Pendiente</mat-option>
-            <mat-option value="Aceptado">Aceptado</mat-option>
-            <mat-option value="Rechazado">Rechazado</mat-option>
-            <mat-option value="En ejecución">En ejecución</mat-option>
+            <mat-option value="">{{ 'budList.allEstados' | translate }}</mat-option>
+            <mat-option value="Pendiente">{{ 'est.lbl.budPending' | translate }}</mat-option>
+            <mat-option value="Aceptado">{{ 'est.lbl.budAccepted' | translate }}</mat-option>
+            <mat-option value="Rechazado">{{ 'est.lbl.budRejected' | translate }}</mat-option>
+            <mat-option value="En ejecución">{{ 'est.lbl.budInProgress' | translate }}</mat-option>
           </mat-select>
         </mat-form-field>
       </div>
@@ -82,15 +83,15 @@ import { TranslateService } from '@ngx-translate/core';
         <div class="table-container">
         <table mat-table [dataSource]="dataSource" matSort class="full-width">
           <ng-container matColumnDef="clienteNombre">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Cliente</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'budList.colCustomer' | translate }}</th>
             <td mat-cell *matCellDef="let row">{{ row.clienteNombre }}</td>
           </ng-container>
           <ng-container matColumnDef="fechaCreacion">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'budList.colDate' | translate }}</th>
             <td mat-cell *matCellDef="let row">{{ row.fechaCreacion | date:'dd/MM/yyyy' }}</td>
           </ng-container>
           <ng-container matColumnDef="estado">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'budList.colStatus' | translate }}</th>
             <td mat-cell *matCellDef="let row">
               @if (auth.canMutate()) {
                 <app-estado-badge
@@ -105,10 +106,10 @@ import { TranslateService } from '@ngx-translate/core';
             </td>
           </ng-container>
           <ng-container matColumnDef="anticipo">
-            <th mat-header-cell *matHeaderCellDef>Anticipo</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'budList.colDeposit' | translate }}</th>
             <td mat-cell *matCellDef="let row" class="anticipo-cell">
               @if (row.tieneAnticipo && row.importeAnticipo != null && row.importeAnticipo > 0) {
-                <span [matTooltip]="row.anticipoFacturado ? 'Anticipo facturado' : 'Anticipo registrado (pendiente de factura de anticipo)'">
+                <span [matTooltip]="(row.anticipoFacturado ? 'budList.tooltipDepositInvoiced' : 'budList.tooltipDepositPending') | translate">
                   {{ row.importeAnticipo | number:'1.2-2' }} €
                   @if (row.anticipoFacturado) {
                     <mat-icon class="anticipo-ok">receipt</mat-icon>
@@ -120,32 +121,32 @@ import { TranslateService } from '@ngx-translate/core';
             </td>
           </ng-container>
           <ng-container matColumnDef="total">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Total</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'budList.colTotal' | translate }}</th>
             <td mat-cell *matCellDef="let row" class="text-right">{{ row.total | number:'1.2-2' }} €</td>
           </ng-container>
           <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'budList.colActions' | translate }}</th>
             <td mat-cell *matCellDef="let row" class="actions-cell">
               @if (auth.canMutate()) {
-              <a mat-stroked-button [routerLink]="['/presupuestos', row.id]" matTooltip="Editar presupuesto y estado (pendiente, aceptado, rechazado)" class="action-edit">
+              <a mat-stroked-button [routerLink]="['/presupuestos', row.id]" [matTooltip]="'budList.tooltipEditBudget' | translate" class="action-edit">
                 <mat-icon>edit</mat-icon>
-                Editar
+                {{ 'budList.edit' | translate }}
               </a>
               }
               @if (auth.canMutate() && puedeFacturar(row)) {
-                <button mat-stroked-button color="accent" (click)="crearFactura(row)" matTooltip="Generar factura en un clic desde este presupuesto" class="action-facturar">
+                <button mat-stroked-button color="accent" (click)="crearFactura(row)" [matTooltip]="'budList.invoiceFromEstimate' | translate" class="action-facturar">
                   <mat-icon>receipt_long</mat-icon>
-                  Facturar
+                  {{ 'budList.invoiceFromEstimate' | translate }}
                 </button>
               }
-              <button mat-icon-button (click)="enviarEmail(row)" matTooltip="Enviar por email">
+              <button mat-icon-button (click)="enviarEmail(row)" [matTooltip]="'budList.sendEmailTooltip' | translate">
                 <mat-icon>email</mat-icon>
               </button>
-              <button mat-icon-button (click)="downloadPdf(row)" matTooltip="Descargar PDF">
+              <button mat-icon-button (click)="downloadPdf(row)" [matTooltip]="'budList.downloadPdfTooltip' | translate">
                 <mat-icon>picture_as_pdf</mat-icon>
               </button>
               @if (auth.canMutate()) {
-              <button mat-icon-button color="warn" (click)="delete(row)" matTooltip="Eliminar">
+              <button mat-icon-button color="warn" (click)="delete(row)" [matTooltip]="'budList.deleteTooltip' | translate">
                 <mat-icon>delete</mat-icon>
               </button>
               }
@@ -154,7 +155,7 @@ import { TranslateService } from '@ngx-translate/core';
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
           <tr class="mat-row" *matNoDataRow>
-            <td class="mat-cell" colspan="5">No hay presupuestos que coincidan con el filtro</td>
+            <td class="mat-cell" [attr.colspan]="displayedColumns.length">{{ 'budList.emptyFilter' | translate }}</td>
           </tr>
         </table>
         <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons></mat-paginator>
@@ -260,6 +261,7 @@ import { TranslateService } from '@ngx-translate/core';
 export class PresupuestoListComponent implements OnInit, AfterViewInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly translate = inject(TranslateService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   private closeLbl(): string {
     return this.translate.instant('common.close');
@@ -297,6 +299,8 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
+    this.translate.onLangChange.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.cdr.markForCheck());
+
     this.route.queryParams.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const e = params['estado'];
       if (e === 'Pendiente' || e === 'Aceptado' || e === 'Rechazado' || e === 'En ejecución') {
@@ -425,8 +429,8 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
   delete(presupuesto: Presupuesto): void {
     const ref = this.dialog.open(ConfirmDialogComponent, {
       data: {
-        title: 'Eliminar presupuesto',
-        message: `¿Eliminar presupuesto de ${presupuesto.clienteNombre}?`,
+        title: this.translate.instant('budList.deleteConfirmTitle'),
+        message: this.translate.instant('budList.deleteConfirmMsg', { customer: presupuesto.clienteNombre }),
       },
     });
     ref.afterClosed().subscribe((ok) => {
@@ -516,7 +520,7 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
     const ref = this.dialog.open(EnviarEmailDialogComponent, {
       width: '400px',
       data: {
-        titulo: 'Enviar presupuesto por email',
+        titulo: this.translate.instant('budList.emailDialogTitle'),
         emailCliente: presupuesto.clienteEmail || undefined,
       },
     });

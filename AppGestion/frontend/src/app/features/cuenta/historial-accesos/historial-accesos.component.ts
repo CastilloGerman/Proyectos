@@ -26,25 +26,25 @@ import {
   AuditAccessPageDto,
 } from '../../../core/services/audit-access-api.service';
 import { getApiErrorMessage } from '../../../core/http/api-error.util';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
-const EVENT_TYPES: { value: string; label: string }[] = [
-  { value: 'LOGIN_SUCCESS', label: 'Inicio de sesión correcto' },
-  { value: 'LOGIN_FAILURE', label: 'Inicio de sesión fallido' },
-  { value: 'LOGOUT', label: 'Cierre de sesión' },
-  { value: 'REGISTER_SUCCESS', label: 'Registro de cuenta' },
-  { value: 'INVITE_ACCEPT_SUCCESS', label: 'Alta por invitación' },
-  { value: 'PASSWORD_CHANGE_SUCCESS', label: 'Contraseña cambiada' },
-  { value: 'PASSWORD_CHANGE_FAILURE', label: 'Cambio de contraseña fallido' },
-  { value: 'PASSWORD_RESET_REQUESTED', label: 'Solicitud recuperación contraseña' },
-  { value: 'PASSWORD_RESET_COMPLETED', label: 'Contraseña restablecida (enlace)' },
-  { value: 'SESSION_REVOKED_DEVICE', label: 'Sesión cerrada (otro dispositivo)' },
-  { value: 'SESSION_REVOKED_OTHERS', label: 'Cerrar otras sesiones' },
-  { value: 'TOTP_ENABLED', label: '2FA activado' },
-  { value: 'TOTP_DISABLED', label: '2FA desactivado' },
-  { value: 'TOTP_SETUP_CANCELLED', label: 'Configuración 2FA cancelada' },
-  { value: 'AUDIT_EXPORT_JSON', label: 'Exportación auditoría (JSON)' },
-  { value: 'AUDIT_EXPORT_CSV', label: 'Exportación auditoría (CSV)' },
+const EVENT_CODES: readonly string[] = [
+  'LOGIN_SUCCESS',
+  'LOGIN_FAILURE',
+  'LOGOUT',
+  'REGISTER_SUCCESS',
+  'INVITE_ACCEPT_SUCCESS',
+  'PASSWORD_CHANGE_SUCCESS',
+  'PASSWORD_CHANGE_FAILURE',
+  'PASSWORD_RESET_REQUESTED',
+  'PASSWORD_RESET_COMPLETED',
+  'SESSION_REVOKED_DEVICE',
+  'SESSION_REVOKED_OTHERS',
+  'TOTP_ENABLED',
+  'TOTP_DISABLED',
+  'TOTP_SETUP_CANCELLED',
+  'AUDIT_EXPORT_JSON',
+  'AUDIT_EXPORT_CSV',
 ];
 
 @Component({
@@ -65,6 +65,7 @@ const EVENT_TYPES: { value: string; label: string }[] = [
         MatDividerModule,
         MatProgressSpinnerModule,
         MatSnackBarModule,
+        TranslateModule,
     ],
     templateUrl: './historial-accesos.component.html',
     styleUrl: './historial-accesos.component.scss'
@@ -76,7 +77,7 @@ export class HistorialAccesosComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly translate = inject(TranslateService);
 
-  readonly eventTypes = EVENT_TYPES;
+  readonly eventCodes = EVENT_CODES;
 
   /** Filas de la página actual (tabla HTML nativa, sin mat-table/CDK). */
   readonly tableRows = signal<AuditAccessEventDto[]>([]);
@@ -106,7 +107,9 @@ export class HistorialAccesosComponent implements OnInit {
   }
 
   eventoEtiqueta(code: string): string {
-    return EVENT_TYPES.find((e) => e.value === code)?.label ?? code;
+    const k = `acctAudit.ev_${code}`;
+    const t = this.translate.instant(k);
+    return !t || t === k ? code : t;
   }
 
   cargar(): void {

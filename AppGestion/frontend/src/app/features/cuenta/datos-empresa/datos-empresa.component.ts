@@ -19,7 +19,7 @@ import { RUBRO_AUTONOMO_CATEGORIAS } from './rubro-autonomo.catalog';
 import { ConfigService } from '../../../core/services/config.service';
 import { Empresa } from '../../../core/models/empresa.model';
 import { dataUrlFromStoredBase64 } from '../../../core/utils/image-data-url';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 /** Límite servidor ~400 KB; margen en cliente. */
 const MAX_IMAGE_BYTES = 380_000;
@@ -41,6 +41,7 @@ const MAX_IMAGE_BYTES = 380_000;
         MatExpansionModule,
         MatSelectModule,
         MatRadioModule,
+        TranslateModule,
     ],
     templateUrl: './datos-empresa.component.html',
     styleUrl: './datos-empresa.component.scss'
@@ -97,13 +98,17 @@ export class DatosEmpresaComponent implements OnInit {
   emailEnvioResumen(): string {
     switch (this.form.controls.emailProvider.value) {
       case 'system':
-        return 'Correo de la aplicación';
+        return this.translate.instant('acctCo.summarySystem');
       case 'gmail':
-        return this.oauthConnected ? 'Gmail · Conectado' : 'Gmail · Sin conectar';
+        return this.oauthConnected
+          ? this.translate.instant('acctCo.summaryGmailConn')
+          : this.translate.instant('acctCo.summaryGmailDisc');
       case 'outlook':
-        return this.oauthConnected ? 'Microsoft · Conectado' : 'Microsoft · Sin conectar';
+        return this.oauthConnected
+          ? this.translate.instant('acctCo.summaryMicrosoftConn')
+          : this.translate.instant('acctCo.summaryMicrosoftDisc');
       case 'smtp_legacy':
-        return 'SMTP manual';
+        return this.translate.instant('acctCo.summarySmtp');
       default:
         return '';
     }

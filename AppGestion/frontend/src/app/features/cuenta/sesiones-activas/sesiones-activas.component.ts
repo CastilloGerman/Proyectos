@@ -10,7 +10,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from '../../../core/auth/auth.service';
 import { SesionDispositivoDto } from '../../../core/auth/models/auth.model';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-sesiones-activas',
@@ -23,6 +23,7 @@ import { TranslateService } from '@ngx-translate/core';
         MatDividerModule,
         RouterLink,
         DatePipe,
+        TranslateModule,
     ],
     templateUrl: './sesiones-activas.component.html',
     styleUrl: './sesiones-activas.component.scss'
@@ -62,7 +63,11 @@ export class SesionesActivasComponent implements OnInit {
         this.loading.set(false);
       },
       error: (err) => {
-        this.loadError.set(err.error?.message || err.error?.error || 'No se pudieron cargar las sesiones.');
+        this.loadError.set(
+          err.error?.message ||
+            err.error?.error ||
+            this.translate.instant('acctSess.loadFail'),
+        );
         this.loading.set(false);
       },
     });
@@ -71,13 +76,13 @@ export class SesionesActivasComponent implements OnInit {
   tipoDispositivoLabel(t: string | null | undefined): string {
     switch (t) {
       case 'MOBILE':
-        return 'Móvil';
+        return this.translate.instant('acctSess.devMobile');
       case 'TABLET':
-        return 'Tablet';
+        return this.translate.instant('acctSess.devTablet');
       case 'DESKTOP':
-        return 'PC / escritorio';
+        return this.translate.instant('acctSess.devDesktop');
       default:
-        return t || '—';
+        return (t ?? '').trim() !== '' ? t! : this.translate.instant('acctProf.unknown');
     }
   }
 
@@ -108,7 +113,7 @@ export class SesionesActivasComponent implements OnInit {
   }
 
   cerrarResto(): void {
-    if (!confirm('¿Cerrar sesión en todos los demás dispositivos? Esta sesión (este navegador) seguirá activa.')) {
+    if (!confirm(this.translate.instant('acctSess.confirmCloseOthers'))) {
       return;
     }
     this.revokingOthers.set(true);

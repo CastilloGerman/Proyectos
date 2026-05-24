@@ -10,7 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { AuthService, UsuarioResponse } from '../../../core/auth/auth.service';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-config-cuenta',
@@ -25,6 +25,7 @@ import { TranslateService } from '@ngx-translate/core';
         MatProgressSpinnerModule,
         MatSnackBarModule,
         MatDividerModule,
+        TranslateModule,
     ],
     templateUrl: './config-cuenta.component.html',
     styleUrl: './config-cuenta.component.scss'

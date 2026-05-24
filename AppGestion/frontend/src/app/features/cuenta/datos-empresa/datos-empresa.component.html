@@ -2,12 +2,12 @@
   <div class="empresa-page__head">
     <a mat-button routerLink="/dashboard" class="empresa-back">
       <mat-icon>arrow_back</mat-icon>
-      Volver
+      {{ 'common.back' | translate }}
     </a>
     <div>
-      <h1 class="empresa-page__title">Datos de empresa</h1>
+      <h1 class="empresa-page__title">{{ 'acctCo.title' | translate }}</h1>
       <p class="empresa-page__subtitle">
-        Lo que configures aquí sale arriba de tus presupuestos y facturas en PDF (quién eres y cómo contactarte). El logo va en la cabecera.
+        {{ 'acctCo.subtitle' | translate }}
       </p>
     </div>
   </div>
@@ -15,88 +15,88 @@
   @if (loading()) {
     <div class="empresa-state">
       <mat-progress-spinner diameter="40" mode="indeterminate" />
-      <span>Cargando datos…</span>
+      <span>{{ 'acctCo.loading' | translate }}</span>
     </div>
   } @else if (loadError()) {
     <mat-card class="empresa-card">
       <mat-card-content>
-        <p>No pudimos cargar la configuración. Comprueba la conexión e inténtalo de nuevo.</p>
-        <button mat-stroked-button type="button" color="primary" (click)="cargar()">Reintentar</button>
+        <p>{{ 'acctCo.loadErr' | translate }}</p>
+        <button mat-stroked-button type="button" color="primary" (click)="cargar()">{{ 'acctCo.retry' | translate }}</button>
       </mat-card-content>
     </mat-card>
   } @else {
     <form [formGroup]="form" (ngSubmit)="guardar()" class="empresa-stack">
       <mat-card class="empresa-card">
         <mat-card-header>
-          <mat-card-title>Identificación y contacto</mat-card-title>
-          <mat-card-subtitle>Datos legales y cómo te verán tus clientes en los documentos</mat-card-subtitle>
+          <mat-card-title>{{ 'acctCo.cardIdTitle' | translate }}</mat-card-title>
+          <mat-card-subtitle>{{ 'acctCo.cardIdSub' | translate }}</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content class="empresa-fields">
           <mat-form-field appearance="outline" class="full">
-            <mat-label>Razón social o nombre comercial</mat-label>
+            <mat-label>{{ 'acctCo.nameLbl' | translate }}</mat-label>
             <input matInput formControlName="nombre" autocomplete="organization" maxlength="200" />
             <mat-hint align="end">{{ form.controls.nombre.value.length }}/200</mat-hint>
             @if (form.controls.nombre.hasError('required') && form.controls.nombre.touched) {
-              <mat-error>Campo obligatorio</mat-error>
+              <mat-error>{{ 'acctCo.required' | translate }}</mat-error>
             }
           </mat-form-field>
           <mat-form-field appearance="outline" class="full">
-            <mat-label>NIF / CIF</mat-label>
+            <mat-label>{{ 'acctCo.nifLbl' | translate }}</mat-label>
             <input matInput formControlName="nif" autocomplete="off" maxlength="20" />
             @if (form.controls.nif.hasError('required') && form.controls.nif.touched) {
-              <mat-error>Campo obligatorio</mat-error>
+              <mat-error>{{ 'acctCo.required' | translate }}</mat-error>
             }
             @if (form.controls.nif.hasError('nifInvalido') && form.controls.nif.touched) {
-              <mat-error>NIF/CIF no válido</mat-error>
+              <mat-error>{{ 'acctCo.nifErr' | translate }}</mat-error>
             }
           </mat-form-field>
           <mat-form-field appearance="outline" class="full">
-            <mat-label>Dirección</mat-label>
+            <mat-label>{{ 'acctCo.addrLbl' | translate }}</mat-label>
             <input matInput formControlName="direccion" autocomplete="street-address" maxlength="255" />
             @if (form.controls.direccion.hasError('required') && form.controls.direccion.touched) {
-              <mat-error>Campo obligatorio</mat-error>
+              <mat-error>{{ 'acctCo.required' | translate }}</mat-error>
             }
           </mat-form-field>
           <div class="empresa-row">
             <mat-form-field appearance="outline" class="grow">
-              <mat-label>Código postal</mat-label>
+              <mat-label>{{ 'acctCo.postLbl' | translate }}</mat-label>
               <input matInput formControlName="codigoPostal" maxlength="10" />
               @if (form.controls.codigoPostal.hasError('required') && form.controls.codigoPostal.touched) {
-                <mat-error>Obligatorio</mat-error>
+                <mat-error>{{ 'acctCo.postShort' | translate }}</mat-error>
               }
             </mat-form-field>
             <mat-form-field appearance="outline" class="grow grow--wide">
-              <mat-label>Provincia</mat-label>
+              <mat-label>{{ 'acctCo.provLbl' | translate }}</mat-label>
               <input matInput formControlName="provincia" maxlength="100" />
               @if (form.controls.provincia.hasError('required') && form.controls.provincia.touched) {
-                <mat-error>Obligatorio</mat-error>
+                <mat-error>{{ 'acctCo.postShort' | translate }}</mat-error>
               }
             </mat-form-field>
           </div>
           <mat-form-field appearance="outline" class="full">
-            <mat-label>País</mat-label>
+            <mat-label>{{ 'acctCo.countryLbl' | translate }}</mat-label>
             <input matInput formControlName="pais" maxlength="100" />
             @if (form.controls.pais.hasError('required') && form.controls.pais.touched) {
-              <mat-error>Campo obligatorio</mat-error>
+              <mat-error>{{ 'acctCo.required' | translate }}</mat-error>
             }
           </mat-form-field>
           <div class="empresa-row">
             <mat-form-field appearance="outline" class="grow">
-              <mat-label>Teléfono</mat-label>
+              <mat-label>{{ 'acctCo.phoneLbl' | translate }}</mat-label>
               <input matInput formControlName="telefono" type="tel" autocomplete="tel" maxlength="50" />
             </mat-form-field>
             <mat-form-field appearance="outline" class="grow grow--wide">
-              <mat-label>Email de contacto</mat-label>
+              <mat-label>{{ 'acctCo.emailLbl' | translate }}</mat-label>
               <input matInput formControlName="email" type="email" autocomplete="email" maxlength="150" />
               @if (form.controls.email.hasError('email') && form.controls.email.touched) {
-                <mat-error>Email no válido</mat-error>
+                <mat-error>{{ 'acctCo.emailErr' | translate }}</mat-error>
               }
             </mat-form-field>
           </div>
           <mat-form-field appearance="outline" class="full">
-            <mat-label>Rubro o actividad (opcional)</mat-label>
+            <mat-label>{{ 'acctCo.rubroLbl' | translate }}</mat-label>
             <mat-select formControlName="rubroAutonomoCodigo" panelClass="empresa-rubro-panel">
-              <mat-option value="">Sin indicar</mat-option>
+              <mat-option value="">{{ 'acctCo.rubroNone' | translate }}</mat-option>
               @for (cat of rubroCategorias; track cat.id) {
                 <mat-optgroup [label]="cat.etiqueta">
                   @for (op of cat.opciones; track op.codigo) {
@@ -105,32 +105,32 @@
                 </mat-optgroup>
               }
             </mat-select>
-            <mat-hint>Solo para estadísticas internas de la plataforma; no aparece en presupuestos ni facturas.</mat-hint>
+            <mat-hint>{{ 'acctCo.rubroHint' | translate }}</mat-hint>
           </mat-form-field>
         </mat-card-content>
       </mat-card>
 
       <mat-card class="empresa-card">
         <mat-card-header>
-          <mat-card-title>Logo en documentos</mat-card-title>
-          <mat-card-subtitle>PNG, JPEG o WebP. Máximo ~380 KB. Aparece junto al título en PDF de presupuesto y factura.</mat-card-subtitle>
+          <mat-card-title>{{ 'acctCo.logoTitle' | translate }}</mat-card-title>
+          <mat-card-subtitle>{{ 'acctCo.logoSub' | translate }}</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
           @if (logoPreviewSrc) {
             <div class="empresa-preview-wrap">
-              <img [src]="logoPreviewSrc" alt="Vista previa del logo" class="empresa-preview empresa-preview--logo" />
+              <img [src]="logoPreviewSrc" [attr.alt]="'acctCo.logoAlt' | translate" class="empresa-preview empresa-preview--logo" />
             </div>
           } @else {
-            <p class="empresa-hint-muted">Sin logo. Se generará el PDF solo con el texto de cabecera.</p>
+            <p class="empresa-hint-muted">{{ 'acctCo.noLogoHint' | translate }}</p>
           }
           <div class="empresa-img-actions">
             <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" #logoInput (change)="onLogoFile($event)" hidden />
             <button mat-stroked-button type="button" (click)="logoInput.click()">
               <mat-icon>upload</mat-icon>
-              Subir logo
+              {{ 'acctCo.btnUploadLogo' | translate }}
             </button>
             @if (logoPreviewSrc || tieneLogoGuardada) {
-              <button mat-button type="button" color="warn" (click)="quitarLogo()">Quitar logo</button>
+              <button mat-button type="button" color="warn" (click)="quitarLogo()">{{ 'acctCo.btnRemoveLogo' | translate }}</button>
             }
           </div>
         </mat-card-content>
@@ -138,17 +138,17 @@
 
       <mat-card class="empresa-card">
         <mat-card-header>
-          <mat-card-title>Notas al pie</mat-card-title>
-          <mat-card-subtitle>Texto fijo al final de cada PDF (condiciones, IVA, datos bancarios, etc.)</mat-card-subtitle>
+          <mat-card-title>{{ 'acctCo.footerTitle' | translate }}</mat-card-title>
+          <mat-card-subtitle>{{ 'acctCo.footerSub' | translate }}</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content class="empresa-fields">
           <mat-form-field appearance="outline" class="full">
-            <mat-label>Presupuestos</mat-label>
+            <mat-label>{{ 'acctCo.footerBudget' | translate }}</mat-label>
             <textarea matInput formControlName="notasPiePresupuesto" rows="4" maxlength="1000"></textarea>
             <mat-hint align="end">{{ form.controls.notasPiePresupuesto.value.length }}/1000</mat-hint>
           </mat-form-field>
           <mat-form-field appearance="outline" class="full">
-            <mat-label>Facturas</mat-label>
+            <mat-label>{{ 'acctCo.footerInvoice' | translate }}</mat-label>
             <textarea matInput formControlName="notasPieFactura" rows="4" maxlength="1000"></textarea>
             <mat-hint align="end">{{ form.controls.notasPieFactura.value.length }}/1000</mat-hint>
           </mat-form-field>
@@ -158,51 +158,47 @@
       <mat-accordion class="empresa-accordion">
         <mat-expansion-panel>
           <mat-expansion-panel-header>
-            <mat-panel-title>Opciones avanzadas de correo</mat-panel-title>
+            <mat-panel-title>{{ 'acctCo.advEmailTitle' | translate }}</mat-panel-title>
             <mat-panel-description>{{ emailEnvioResumen() }}</mat-panel-description>
           </mat-expansion-panel-header>
           <div class="empresa-fields empresa-fields--email-mode">
             <p class="empresa-hint-muted">
-              Por defecto los mensajes salen por el servicio de la aplicación (no necesitas configurar nada). Opcionalmente puedes usar tu Gmail o Microsoft.
+              {{ 'acctCo.advancedIntro' | translate }}
             </p>
             <mat-radio-group formControlName="emailProvider" class="empresa-radio-stack">
-              <mat-radio-button value="system">Correo de la aplicación (recomendado)</mat-radio-button>
-              <mat-radio-button value="gmail">Mi cuenta Gmail (OAuth)</mat-radio-button>
-              <mat-radio-button value="outlook">Mi cuenta Microsoft / Outlook (OAuth)</mat-radio-button>
-              <mat-radio-button value="smtp_legacy">SMTP manual (solo migración desde configuración antigua)</mat-radio-button>
+              <mat-radio-button value="system">{{ 'acctCo.optSystem' | translate }}</mat-radio-button>
+              <mat-radio-button value="gmail">{{ 'acctCo.optGmailOAuth' | translate }}</mat-radio-button>
+              <mat-radio-button value="outlook">{{ 'acctCo.optOutlookOAuth' | translate }}</mat-radio-button>
+              <mat-radio-button value="smtp_legacy">{{ 'acctCo.optSmtpLegacy' | translate }}</mat-radio-button>
             </mat-radio-group>
 
             @if (form.controls.emailProvider.value === 'system') {
               <mat-form-field appearance="outline" class="full">
-                <mat-label>Remitente visible (opcional, modo aplicación)</mat-label>
-                <input matInput formControlName="systemFromOverride" placeholder="Nombre y dirección From (opcional)" maxlength="255" />
-                <mat-hint>Si lo dejas vacío, usa el remitente por defecto del servidor.</mat-hint>
+                <mat-label>{{ 'acctCo.systemFromLbl' | translate }}</mat-label>
+                <input
+                  matInput
+                  formControlName="systemFromOverride"
+                  [placeholder]="'acctCo.systemFromPh' | translate"
+                  maxlength="255"
+                />
+                <mat-hint>{{ 'acctCo.systemFromHint' | translate }}</mat-hint>
               </mat-form-field>
             }
 
             @if (form.controls.emailProvider.value === 'gmail' || form.controls.emailProvider.value === 'outlook') {
               <div class="empresa-oauth-actions">
                 @if (form.controls.emailProvider.value === 'gmail' && !googleOAuthConfigured) {
-                  <p class="empresa-hint-warn">
-                    OAuth de Google no está configurado en el servidor. Añade las variables de entorno o
-                    <code>app.email.google.*</code> en
-                    <code>application-local.yml</code>
-                    (ver <code>docs/EMAIL-OAUTH-SETUP.md</code>).
-                  </p>
+                  <p class="empresa-hint-warn">{{ 'acctCo.oauthWarnGoogle' | translate }}</p>
                 }
                 @if (form.controls.emailProvider.value === 'outlook' && !microsoftOAuthConfigured) {
-                  <p class="empresa-hint-warn">
-                    OAuth de Microsoft no está configurado en el servidor. Añade
-                    <code>app.email.microsoft.*</code>
-                    o las variables documentadas en <code>docs/EMAIL-OAUTH-SETUP.md</code>.
-                  </p>
+                  <p class="empresa-hint-warn">{{ 'acctCo.oauthWarnMs' | translate }}</p>
                 }
                 <p class="empresa-hint-muted">
-                  Estado:
+                  {{ 'acctCo.oauthStatePrefix' | translate }}
                   @if (oauthConnected) {
-                    <strong>Conectado</strong>
+                    <strong>{{ 'acctCo.oauthConnectedBold' | translate }}</strong>
                   } @else {
-                    <span>No conectado — pulsa el botón del proveedor para autorizar el envío.</span>
+                    <span>{{ 'acctCo.oauthDisconnected' | translate }}</span>
                   }
                 </p>
                 <div class="empresa-row empresa-row--wrap">
@@ -214,7 +210,7 @@
                       (click)="conectarGoogle()"
                       [disabled]="oauthConnecting || !googleOAuthConfigured"
                     >
-                      Conectar Gmail
+                      {{ 'acctCo.btnGmail' | translate }}
                     </button>
                   }
                   @if (form.controls.emailProvider.value === 'outlook') {
@@ -225,20 +221,20 @@
                       (click)="conectarMicrosoft()"
                       [disabled]="oauthConnecting || !microsoftOAuthConfigured"
                     >
-                      Conectar Microsoft
+                      {{ 'acctCo.btnMs' | translate }}
                     </button>
                   }
                   @if (oauthConnected) {
-                    <button mat-button type="button" color="warn" (click)="desconectarOAuth()">Desconectar cuenta</button>
+                    <button mat-button type="button" color="warn" (click)="desconectarOAuth()">{{ 'acctCo.btnDisconnectAcct' | translate }}</button>
                   }
                 </div>
                 <mat-form-field appearance="outline" class="full">
-                  <mat-label>Si OAuth falla</mat-label>
+                  <mat-label>{{ 'acctCo.oauthFailLbl' | translate }}</mat-label>
                   <mat-select formControlName="oauthOnFailure">
-                    <mat-option value="system">Enviar por el correo de la aplicación (recomendado)</mat-option>
-                    <mat-option value="fail">No enviar el correo</mat-option>
+                    <mat-option value="system">{{ 'acctCo.optFailSystem' | translate }}</mat-option>
+                    <mat-option value="fail">{{ 'acctCo.optFailBlock' | translate }}</mat-option>
                   </mat-select>
-                  <mat-hint>Se aplica si el token caduca o el proveedor rechaza el envío.</mat-hint>
+                  <mat-hint>{{ 'acctCo.oauthFailHint' | translate }}</mat-hint>
                 </mat-form-field>
               </div>
             }
@@ -247,29 +243,33 @@
 
         <mat-expansion-panel>
           <mat-expansion-panel-header>
-            <mat-panel-title>Correo SMTP (heredado)</mat-panel-title>
-            <mat-panel-description>Opcional · {{ mailConfigurado ? 'Configurado' : 'No configurado' }}</mat-panel-description>
+            <mat-panel-title>{{ 'acctCo.smtpPanelTitle' | translate }}</mat-panel-title>
+            <mat-panel-description>
+              {{ 'acctCo.optionalBullet' | translate }}{{ mailConfigurado ? ('acctCo.smtpConfigured' | translate) : ('acctCo.smtpNotCfg' | translate) }}
+            </mat-panel-description>
           </mat-expansion-panel-header>
           <div class="empresa-fields empresa-fields--smtp">
             <p class="empresa-hint-muted">
-              Configuración antigua por usuario y contraseña. Elige «SMTP manual» arriba solo si debes seguir usando este método; para nuevas cuentas recomendamos el correo de la aplicación o OAuth.
+              {{ 'acctCo.smtpIntro' | translate }}
             </p>
             <mat-form-field appearance="outline" class="full">
-              <mat-label>Servidor SMTP</mat-label>
+              <mat-label>{{ 'acctCo.smtpHost' | translate }}</mat-label>
               <input matInput formControlName="mailHost" placeholder="smtp.gmail.com" />
             </mat-form-field>
             <mat-form-field appearance="outline" class="full smtp-port">
-              <mat-label>Puerto</mat-label>
+              <mat-label>{{ 'acctCo.smtpPort' | translate }}</mat-label>
               <input matInput type="number" formControlName="mailPort" />
             </mat-form-field>
             <mat-form-field appearance="outline" class="full">
-              <mat-label>Usuario / email</mat-label>
+              <mat-label>{{ 'acctCo.smtpUser' | translate }}</mat-label>
               <input matInput formControlName="mailUsername" autocomplete="username" />
             </mat-form-field>
             <mat-form-field appearance="outline" class="full">
-              <mat-label>Contraseña</mat-label>
+              <mat-label>{{ 'acctCo.smtpPass' | translate }}</mat-label>
               <input matInput formControlName="mailPassword" type="password" autocomplete="new-password" />
-              <mat-hint>{{ mailConfigurado ? 'Dejar vacío para no cambiar la guardada' : 'En Gmail suele usarse contraseña de aplicación' }}</mat-hint>
+              <mat-hint>{{
+                mailConfigurado ? ('acctCo.smtpPassHintStored' | translate) : ('acctCo.smtpPassHintEmpty' | translate)
+              }}</mat-hint>
             </mat-form-field>
           </div>
         </mat-expansion-panel>
@@ -280,7 +280,7 @@
           @if (saving()) {
             <mat-progress-spinner diameter="20" mode="indeterminate" />
           } @else {
-            Guardar cambios
+            {{ 'acctCo.saveChanges' | translate }}
           }
         </button>
       </div>

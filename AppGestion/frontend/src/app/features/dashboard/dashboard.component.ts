@@ -1,6 +1,7 @@
-import { AfterViewInit, ChangeDetectorRef, Component, NgZone, OnInit } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, DestroyRef, NgZone, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,6 +18,7 @@ import { Factura } from '../../core/models/factura.model';
 import { Material } from '../../core/models/material.model';
 import { EstadoBadgeComponent } from '../../shared/estado-badge/estado-badge.component';
 import { catchError, forkJoin, of } from 'rxjs';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 interface PresupuestoStats {
   pendientes: number;
@@ -72,12 +74,13 @@ export interface TopCliente {
         MatSelectModule,
         RouterLink,
         EstadoBadgeComponent,
+        TranslateModule,
     ],
     template: `
     <div class="dashboard">
       <header class="dashboard-header">
-        <h1>Dashboard</h1>
-        <p class="subtitle">Resumen de tu actividad</p>
+        <h1>{{ 'nav.dashboard' | translate }}</h1>
+        <p class="subtitle">{{ 'dashboard.subtitle' | translate }}</p>
       </header>
 
       <section class="kpi-grid">
@@ -87,9 +90,9 @@ export interface TopCliente {
           </div>
           <div class="kpi-content">
             <span class="kpi-value">{{ presupuestosCount }}</span>
-            <span class="kpi-label">Presupuestos</span>
+            <span class="kpi-label">{{ 'nav.budgets' | translate }}</span>
           </div>
-          <a mat-button routerLink="/presupuestos" class="kpi-link">Ver todos</a>
+          <a mat-button routerLink="/presupuestos" class="kpi-link">{{ 'dashboard.seeAllEstimates' | translate }}</a>
         </div>
         <div class="kpi-card kpi-facturas">
           <div class="kpi-icon">
@@ -97,9 +100,9 @@ export interface TopCliente {
           </div>
           <div class="kpi-content">
             <span class="kpi-value">{{ facturasCount }}</span>
-            <span class="kpi-label">Facturas</span>
+            <span class="kpi-label">{{ 'nav.invoices' | translate }}</span>
           </div>
-          <a mat-button routerLink="/facturas" class="kpi-link">Ver todas</a>
+          <a mat-button routerLink="/facturas" class="kpi-link">{{ 'dashboard.seeAllInvoices' | translate }}</a>
         </div>
         <div class="kpi-card kpi-facturado">
           <div class="kpi-icon">
@@ -107,9 +110,9 @@ export interface TopCliente {
           </div>
           <div class="kpi-content">
             <span class="kpi-value">{{ facturaStats.totalFacturado | number:'1.2-2' }} €</span>
-            <span class="kpi-label">Total facturado</span>
+            <span class="kpi-label">{{ 'dashboard.totalInvoiced' | translate }}</span>
           </div>
-          <a mat-button routerLink="/facturas" class="kpi-link">Ver facturas</a>
+          <a mat-button routerLink="/facturas" class="kpi-link">{{ 'dashboard.seeInvoices' | translate }}</a>
         </div>
         <div class="kpi-card kpi-pendiente">
           <div class="kpi-icon">
@@ -117,9 +120,9 @@ export interface TopCliente {
           </div>
           <div class="kpi-content">
             <span class="kpi-value">{{ facturaStats.totalPendiente | number:'1.2-2' }} €</span>
-            <span class="kpi-label">Por cobrar</span>
+            <span class="kpi-label">{{ 'dashboard.toCollect' | translate }}</span>
           </div>
-          <a mat-button routerLink="/facturas" [queryParams]="{ pendienteCobro: '1' }" class="kpi-link">Ver pendientes</a>
+          <a mat-button routerLink="/facturas" [queryParams]="{ pendienteCobro: '1' }" class="kpi-link">{{ 'dashboard.seePending' | translate }}</a>
         </div>
       </section>
 
@@ -127,29 +130,29 @@ export interface TopCliente {
         <mat-card class="stats-card">
           <mat-card-header>
             <mat-icon class="section-icon presupuesto">pie_chart</mat-icon>
-            <mat-card-title>Presupuestos por estado</mat-card-title>
+            <mat-card-title>{{ 'dashboard.budgetsByStatus' | translate }}</mat-card-title>
           </mat-card-header>
           <mat-card-content>
             <div class="distribution-bar">
               <div
                 class="bar-segment pendiente"
                 [style.flex]="presupuestoStats.pendientes || 0.01"
-                [matTooltip]="presupuestoStats.pendientes + ' pendientes'"
+                [matTooltip]="'dashboard.budgetBarPending' | translate: { count: presupuestoStats.pendientes }"
               ></div>
               <div
                 class="bar-segment aceptado"
                 [style.flex]="presupuestoStats.aceptados || 0.01"
-                [matTooltip]="presupuestoStats.aceptados + ' aceptados'"
+                [matTooltip]="'dashboard.budgetBarAccepted' | translate: { count: presupuestoStats.aceptados }"
               ></div>
               <div
                 class="bar-segment ejecucion"
                 [style.flex]="presupuestoStats.enEjecucion || 0.01"
-                [matTooltip]="presupuestoStats.enEjecucion + ' en ejecución'"
+                [matTooltip]="'dashboard.budgetBarInProgress' | translate: { count: presupuestoStats.enEjecucion }"
               ></div>
               <div
                 class="bar-segment rechazado"
                 [style.flex]="presupuestoStats.rechazados || 0.01"
-                [matTooltip]="presupuestoStats.rechazados + ' rechazados'"
+                [matTooltip]="'dashboard.budgetBarRejected' | translate: { count: presupuestoStats.rechazados }"
               ></div>
             </div>
             <div class="distribution-legend presupuesto-legend">
@@ -158,15 +161,15 @@ export interface TopCliente {
                   class="legend-item legend-link"
                   [routerLink]="['/presupuestos']"
                   [queryParams]="{ estado: 'Pendiente' }"
-                  matTooltip="Ver presupuestos pendientes"
+                  [matTooltip]="'dashboard.tipViewPendingEstimates' | translate"
                 >
                   <span class="dot pendiente"></span>
-                  <span>Pendientes: {{ presupuestoStats.pendientes }}</span>
+                  <span>{{ 'dashboard.legendPending' | translate }} {{ presupuestoStats.pendientes }}</span>
                 </a>
               } @else {
                 <div class="legend-item">
                   <span class="dot pendiente"></span>
-                  <span>Pendientes: {{ presupuestoStats.pendientes }}</span>
+                  <span>{{ 'dashboard.legendPending' | translate }} {{ presupuestoStats.pendientes }}</span>
                 </div>
               }
               @if (presupuestoStats.aceptados > 0) {
@@ -174,15 +177,15 @@ export interface TopCliente {
                   class="legend-item legend-link"
                   [routerLink]="['/presupuestos']"
                   [queryParams]="{ estado: 'Aceptado' }"
-                  matTooltip="Ver presupuestos aceptados"
+                  [matTooltip]="'dashboard.tipViewAcceptedEstimates' | translate"
                 >
                   <span class="dot aceptado"></span>
-                  <span>Aceptados: {{ presupuestoStats.aceptados }}</span>
+                  <span>{{ 'dashboard.legendAccepted' | translate }} {{ presupuestoStats.aceptados }}</span>
                 </a>
               } @else {
                 <div class="legend-item">
                   <span class="dot aceptado"></span>
-                  <span>Aceptados: {{ presupuestoStats.aceptados }}</span>
+                  <span>{{ 'dashboard.legendAccepted' | translate }} {{ presupuestoStats.aceptados }}</span>
                 </div>
               }
               @if (presupuestoStats.enEjecucion > 0) {
@@ -190,15 +193,15 @@ export interface TopCliente {
                   class="legend-item legend-link"
                   [routerLink]="['/presupuestos']"
                   [queryParams]="{ estado: 'En ejecución' }"
-                  matTooltip="Ver presupuestos en ejecución"
+                  [matTooltip]="'dashboard.tipViewInProgressEstimates' | translate"
                 >
                   <span class="dot ejecucion"></span>
-                  <span>En ejecución: {{ presupuestoStats.enEjecucion }}</span>
+                  <span>{{ 'dashboard.legendInProgress' | translate }} {{ presupuestoStats.enEjecucion }}</span>
                 </a>
               } @else {
                 <div class="legend-item">
                   <span class="dot ejecucion"></span>
-                  <span>En ejecución: {{ presupuestoStats.enEjecucion }}</span>
+                  <span>{{ 'dashboard.legendInProgress' | translate }} {{ presupuestoStats.enEjecucion }}</span>
                 </div>
               }
               @if (presupuestoStats.rechazados > 0) {
@@ -206,43 +209,43 @@ export interface TopCliente {
                   class="legend-item legend-link"
                   [routerLink]="['/presupuestos']"
                   [queryParams]="{ estado: 'Rechazado' }"
-                  matTooltip="Ver presupuestos rechazados"
+                  [matTooltip]="'dashboard.tipViewRejectedEstimates' | translate"
                 >
                   <span class="dot rechazado"></span>
-                  <span>Rechazados: {{ presupuestoStats.rechazados }}</span>
+                  <span>{{ 'dashboard.legendRejected' | translate }} {{ presupuestoStats.rechazados }}</span>
                 </a>
               } @else {
                 <div class="legend-item">
                   <span class="dot rechazado"></span>
-                  <span>Rechazados: {{ presupuestoStats.rechazados }}</span>
+                  <span>{{ 'dashboard.legendRejected' | translate }} {{ presupuestoStats.rechazados }}</span>
                 </div>
               }
             </div>
-            <p class="stats-total">Valor total presupuestos: {{ presupuestoStats.totalValor | number:'1.2-2' }} €</p>
+            <p class="stats-total">{{ 'dashboard.budgetTotalValue' | translate }} {{ presupuestoStats.totalValor | number:'1.2-2' }} €</p>
           </mat-card-content>
         </mat-card>
 
         <mat-card class="stats-card">
           <mat-card-header>
             <mat-icon class="section-icon factura">account_balance_wallet</mat-icon>
-            <mat-card-title>Facturas por estado de pago</mat-card-title>
+            <mat-card-title>{{ 'dashboard.invoicesByPaymentStatus' | translate }}</mat-card-title>
           </mat-card-header>
           <mat-card-content>
             <div class="distribution-bar">
               <div
                 class="bar-segment no-pagada"
                 [style.flex]="facturaStats.noPagadas || 0.01"
-                [matTooltip]="facturaStats.noPagadas + ' no pagadas'"
+                [matTooltip]="'dashboard.invoiceBarUnpaid' | translate: { count: facturaStats.noPagadas }"
               ></div>
               <div
                 class="bar-segment parcial"
                 [style.flex]="facturaStats.parciales || 0.01"
-                [matTooltip]="facturaStats.parciales + ' parciales'"
+                [matTooltip]="'dashboard.invoiceBarPartial' | translate: { count: facturaStats.parciales }"
               ></div>
               <div
                 class="bar-segment pagada"
                 [style.flex]="facturaStats.pagadas || 0.01"
-                [matTooltip]="facturaStats.pagadas + ' pagadas'"
+                [matTooltip]="'dashboard.invoiceBarPaid' | translate: { count: facturaStats.pagadas }"
               ></div>
             </div>
             <div class="distribution-legend">
@@ -251,15 +254,15 @@ export interface TopCliente {
                   class="legend-item legend-link"
                   [routerLink]="['/facturas']"
                   [queryParams]="{ estadoPago: 'No Pagada' }"
-                  matTooltip="Ver facturas no pagadas en el listado"
+                  [matTooltip]="'dashboard.tipViewUnpaidInvoices' | translate"
                 >
                   <span class="dot no-pagada"></span>
-                  <span>No pagadas: {{ facturaStats.noPagadas }}</span>
+                  <span>{{ 'dashboard.legendUnpaid' | translate }} {{ facturaStats.noPagadas }}</span>
                 </a>
               } @else {
                 <div class="legend-item">
                   <span class="dot no-pagada"></span>
-                  <span>No pagadas: {{ facturaStats.noPagadas }}</span>
+                  <span>{{ 'dashboard.legendUnpaid' | translate }} {{ facturaStats.noPagadas }}</span>
                 </div>
               }
               @if (facturaStats.parciales > 0) {
@@ -267,15 +270,15 @@ export interface TopCliente {
                   class="legend-item legend-link"
                   [routerLink]="['/facturas']"
                   [queryParams]="{ estadoPago: 'Parcial' }"
-                  matTooltip="Ver facturas con pago parcial"
+                  [matTooltip]="'dashboard.tipViewPartialInvoices' | translate"
                 >
                   <span class="dot parcial"></span>
-                  <span>Parciales: {{ facturaStats.parciales }}</span>
+                  <span>{{ 'dashboard.legendPartial' | translate }} {{ facturaStats.parciales }}</span>
                 </a>
               } @else {
                 <div class="legend-item">
                   <span class="dot parcial"></span>
-                  <span>Parciales: {{ facturaStats.parciales }}</span>
+                  <span>{{ 'dashboard.legendPartial' | translate }} {{ facturaStats.parciales }}</span>
                 </div>
               }
               @if (facturaStats.pagadas > 0) {
@@ -283,21 +286,21 @@ export interface TopCliente {
                   class="legend-item legend-link"
                   [routerLink]="['/facturas']"
                   [queryParams]="{ estadoPago: 'Pagada' }"
-                  matTooltip="Ver facturas pagadas"
+                  [matTooltip]="'dashboard.tipViewPaidInvoices' | translate"
                 >
                   <span class="dot pagada"></span>
-                  <span>Pagadas: {{ facturaStats.pagadas }}</span>
+                  <span>{{ 'dashboard.legendPaid' | translate }} {{ facturaStats.pagadas }}</span>
                 </a>
               } @else {
                 <div class="legend-item">
                   <span class="dot pagada"></span>
-                  <span>Pagadas: {{ facturaStats.pagadas }}</span>
+                  <span>{{ 'dashboard.legendPaid' | translate }} {{ facturaStats.pagadas }}</span>
                 </div>
               }
             </div>
             <div class="payment-summary">
-              <span class="cobrado">Cobrado: {{ facturaStats.totalCobrado | number:'1.2-2' }} €</span>
-              <span class="pendiente">Pendiente: {{ facturaStats.totalPendiente | number:'1.2-2' }} €</span>
+              <span class="cobrado">{{ 'dashboard.collected' | translate }} {{ facturaStats.totalCobrado | number:'1.2-2' }} €</span>
+              <span class="pendiente">{{ 'dashboard.outstanding' | translate }} {{ facturaStats.totalPendiente | number:'1.2-2' }} €</span>
             </div>
           </mat-card-content>
         </mat-card>
@@ -310,7 +313,7 @@ export interface TopCliente {
           </div>
           <div class="salud-content">
             <span class="salud-value">{{ saludCobros.vencidas }}</span>
-            <span class="salud-label">Facturas vencidas</span>
+            <span class="salud-label">{{ 'dashboard.overdueInvoices' | translate }}</span>
             @if (saludCobros.importeVencido > 0) {
               <span class="salud-importe">{{ saludCobros.importeVencido | number:'1.2-2' }} €</span>
             }
@@ -320,8 +323,8 @@ export interface TopCliente {
             [routerLink]="['/facturas']"
             [queryParams]="saludCobros.vencidas > 0 ? { vencimiento: 'vencidas' } : {}"
             class="salud-cta"
-            [matTooltip]="saludCobros.vencidas > 0 ? 'Listado filtrado: vencidas y no cobradas' : 'Ver todas las facturas'"
-          >Ver facturas</a>
+            [matTooltip]="(saludCobros.vencidas > 0 ? 'dashboard.tipOverdueFilter' : 'dashboard.tipAllInvoices') | translate"
+          >{{ 'dashboard.seeInvoices' | translate }}</a>
         </div>
 
         <div class="salud-card salud-proximas" [class.salud-warn]="saludCobros.proximasAVencer > 0">
@@ -330,7 +333,7 @@ export interface TopCliente {
           </div>
           <div class="salud-content">
             <span class="salud-value">{{ saludCobros.proximasAVencer }}</span>
-            <span class="salud-label">Vencen en 7 días</span>
+            <span class="salud-label">{{ 'dashboard.dueWithin7Days' | translate }}</span>
             @if (saludCobros.importeProximas > 0) {
               <span class="salud-importe">{{ saludCobros.importeProximas | number:'1.2-2' }} €</span>
             }
@@ -340,8 +343,8 @@ export interface TopCliente {
             [routerLink]="['/facturas']"
             [queryParams]="saludCobros.proximasAVencer > 0 ? { vencimiento: 'proximas7' } : {}"
             class="salud-cta"
-            [matTooltip]="saludCobros.proximasAVencer > 0 ? 'Listado filtrado: vencen en los próximos 7 días' : 'Ver todas las facturas'"
-          >Ver facturas</a>
+            [matTooltip]="(saludCobros.proximasAVencer > 0 ? 'dashboard.tipDueSoonFilter' : 'dashboard.tipAllInvoices') | translate"
+          >{{ 'dashboard.seeInvoices' | translate }}</a>
         </div>
 
         <div class="salud-card salud-ratio">
@@ -350,7 +353,7 @@ export interface TopCliente {
           </div>
           <div class="salud-content">
             <span class="salud-value">{{ saludCobros.ratioCobro | number:'1.0-0' }}%</span>
-            <span class="salud-label">Ratio de cobro</span>
+            <span class="salud-label">{{ 'dashboard.collectionRatio' | translate }}</span>
           </div>
           <div class="salud-bar-wrap">
             <mat-progress-bar mode="determinate" [value]="saludCobros.ratioCobro" color="primary"></mat-progress-bar>
@@ -363,8 +366,14 @@ export interface TopCliente {
           <mat-card-header>
             <mat-icon class="section-icon chart">show_chart</mat-icon>
             <div class="chart-header-text">
-              <mat-card-title>Ingresos por mes</mat-card-title>
-              <p class="chart-subtitle">{{ chartSubtitle }}</p>
+              <mat-card-title>{{ 'dashboard.revenueByMonth' | translate }}</mat-card-title>
+              <p class="chart-subtitle">
+                @if (chartIngresosMode === 'ultimoMes') {
+                  {{ 'dashboard.chartSubtitleLastMonth' | translate }}
+                } @else {
+                  {{ 'dashboard.chartSubtitleYear' | translate }}
+                }
+              </p>
             </div>
           </mat-card-header>
           <mat-card-content>
@@ -375,12 +384,12 @@ export interface TopCliente {
                 appearance="standard"
                 class="chart-mode-toggle"
               >
-                <mat-button-toggle value="ultimoMes">Último mes</mat-button-toggle>
-                <mat-button-toggle value="anio">Año</mat-button-toggle>
+                <mat-button-toggle value="ultimoMes">{{ 'dashboard.chartModeLastMonth' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="anio">{{ 'dashboard.chartModeYear' | translate }}</mat-button-toggle>
               </mat-button-toggle-group>
               @if (chartIngresosMode === 'anio') {
                 <mat-form-field appearance="outline" class="chart-filter-year">
-                  <mat-label>Año</mat-label>
+                  <mat-label>{{ 'dashboard.yearLabel' | translate }}</mat-label>
                   <mat-select [value]="selectedChartYear" (selectionChange)="onChartYearChange($event.value)">
                     @for (y of chartYearOptions; track y) {
                       <mat-option [value]="y">{{ y }}</mat-option>
@@ -390,9 +399,9 @@ export interface TopCliente {
               }
             </div>
             @if (facturasCount === 0) {
-              <p class="chart-empty">No hay datos de facturación para mostrar. Crea facturas para ver el gráfico.</p>
+              <p class="chart-empty">{{ 'dashboard.chartEmpty' | translate }}</p>
             } @else {
-              <div class="chart-wrap" [attr.aria-label]="'Gráfico de ingresos por mes'">
+              <div class="chart-wrap" [attr.aria-label]="'dashboard.chartAria' | translate">
                 <svg class="area-chart" viewBox="0 0 620 240" preserveAspectRatio="xMidYMid meet">
                   <defs>
                     <linearGradient id="ingresosGradient" x1="0" x2="0" y1="0" y2="1">
@@ -402,7 +411,7 @@ export interface TopCliente {
                   </defs>
                   <!-- Eje Y: línea y etiqueta -->
                   <line x1="70" y1="20" x2="70" y2="180" stroke="var(--app-border)" stroke-width="1"/>
-                  <text x="24" y="100" class="chart-axis-label" text-anchor="middle" transform="rotate(-90 24 100)">Importe (€)</text>
+                  <text x="24" y="100" class="chart-axis-label" text-anchor="middle" transform="rotate(-90 24 100)">{{ 'dashboard.axisAmountEur' | translate }}</text>
                   <!-- Marcas y valores del eje Y -->
                   @for (tick of chartYTicks; track tick.value) {
                     <line [attr.x1]="70" [attr.y1]="tick.y" [attr.x2]="578" [attr.y2]="tick.y" stroke="var(--app-border)" stroke-width="0.5" stroke-dasharray="4 2"/>
@@ -410,7 +419,7 @@ export interface TopCliente {
                   }
                   <!-- Eje X: línea -->
                   <line x1="70" y1="180" x2="578" y2="180" stroke="var(--app-border)" stroke-width="1"/>
-                  <text x="324" y="218" class="chart-axis-label" text-anchor="middle">{{ chartXAxisLabel }}</text>
+                  <text x="324" y="218" class="chart-axis-label" text-anchor="middle">{{ (chartIngresosMode === 'ultimoMes' ? 'dashboard.axisPeriod' : 'dashboard.axisMonth') | translate }}</text>
                   @if (chartIngresosMode === 'ultimoMes' && ultimoMesBarRect) {
                     <rect
                       [attr.x]="ultimoMesBarRect.x"
@@ -459,7 +468,7 @@ export interface TopCliente {
                         (click)="onChartMonthClick($event, i)"
                         (keydown.enter)="selectMonthDetail(i)"
                         role="button"
-                        [attr.aria-label]="'Ver detalle de ' + item.name + ' ' + selectedChartYear"
+                        [attr.aria-label]="'dashboard.chartMonthDetailAria' | translate: { month: item.name, year: selectedChartYear }"
                         tabindex="0"
                       >
                         <title>{{ chartMonthTooltip(i) }}</title>
@@ -468,19 +477,19 @@ export interface TopCliente {
                   }
                 </svg>
                 <div class="chart-legend">
-                  <span class="chart-legend-desc">Suma total del periodo mostrado:</span>
+                  <span class="chart-legend-desc">{{ 'dashboard.periodTotalLabel' | translate }}</span>
                   <span class="chart-legend-total">{{ chartTotal | number:'1.2-2' }} €</span>
                 </div>
                 @if (monthDrill && chartIngresosMode === 'anio') {
                   <div class="month-drill">
                     <div class="month-drill-head">
                       <span class="month-drill-title">{{ monthDrill.label }}</span>
-                      <button mat-button type="button" (click)="clearMonthDrill()" class="month-drill-close">Cerrar</button>
+                      <button mat-button type="button" (click)="clearMonthDrill()" class="month-drill-close">{{ 'dashboard.closeDetail' | translate }}</button>
                     </div>
                     <p class="month-drill-amount">
-                      Total facturado: <strong>{{ monthDrill.value | number:'1.2-2' }} €</strong>
+                      {{ 'dashboard.drillAmountLabel' | translate }} <strong>{{ monthDrill.value | number:'1.2-2' }} €</strong>
                     </p>
-                    <p class="month-drill-count">{{ monthDrill.facturasCount }} factura(s) en ese mes</p>
+                    <p class="month-drill-count">{{ monthDrillInvoiceLine }}</p>
                   </div>
                 }
               </div>
@@ -493,16 +502,14 @@ export interface TopCliente {
         <mat-card class="recent-card">
           <mat-card-header class="top-clientes-card-header">
             <div class="top-clientes-titles">
-              <mat-card-title>Top clientes</mat-card-title>
-              <mat-card-subtitle>
-                Pendiente de cobro, presupuestos e historial por cliente
-              </mat-card-subtitle>
+              <mat-card-title>{{ 'dashboard.topCustomers' | translate }}</mat-card-title>
+              <mat-card-subtitle>{{ 'dashboard.topCustomersHint' | translate }}</mat-card-subtitle>
             </div>
-            <a mat-button routerLink="/clientes">Ver todos</a>
+            <a mat-button routerLink="/clientes">{{ 'dashboard.seeAllClients' | translate }}</a>
           </mat-card-header>
           <mat-card-content>
             @if (topClientes.length === 0) {
-              <p class="empty">No hay datos de clientes en presupuestos ni facturas</p>
+              <p class="empty">{{ 'dashboard.topCustomersEmpty' | translate }}</p>
             } @else {
               <ul class="recent-list top-list top-clientes-list">
                 @for (c of topClientes; track c.clienteId; let i = $index) {
@@ -510,7 +517,7 @@ export interface TopCliente {
                     <a [routerLink]="['/clientes', c.clienteId, 'panel']" class="top-cliente-link">
                       <span class="top-rank">#{{ i + 1 }}</span>
                       <span class="recent-name">{{ c.clienteNombre }}</span>
-                      <span class="recent-meta">{{ c.count }} operaciones</span>
+                      <span class="recent-meta">{{ 'dashboard.operationsCount' | translate: { count: c.count } }}</span>
                     </a>
                     <a
                       mat-stroked-button
@@ -518,7 +525,7 @@ export interface TopCliente {
                       [routerLink]="['/clientes', c.clienteId, 'panel']"
                       class="top-cliente-panel-btn"
                     >
-                      Ver estado
+                      {{ 'dashboard.viewStatus' | translate }}
                     </a>
                   </li>
                 }
@@ -528,12 +535,12 @@ export interface TopCliente {
         </mat-card>
         <mat-card class="recent-card">
           <mat-card-header>
-            <mat-card-title>Top materiales utilizados</mat-card-title>
-            <a mat-button routerLink="/materiales">Ver todos</a>
+            <mat-card-title>{{ 'dashboard.topMaterialsTitle' | translate }}</mat-card-title>
+            <a mat-button routerLink="/materiales">{{ 'dashboard.seeAllMaterials' | translate }}</a>
           </mat-card-header>
           <mat-card-content>
             @if (topMateriales.length === 0) {
-              <p class="empty">No hay materiales utilizados</p>
+              <p class="empty">{{ 'dashboard.topMaterialsEmpty' | translate }}</p>
             } @else {
               <ul class="recent-list top-list">
                 @for (m of topMateriales; track m.id; let i = $index) {
@@ -554,12 +561,12 @@ export interface TopCliente {
       <section class="recent-section">
         <mat-card class="recent-card">
           <mat-card-header>
-            <mat-card-title>Últimos presupuestos</mat-card-title>
-            <a mat-button routerLink="/presupuestos">Ver todos</a>
+            <mat-card-title>{{ 'dashboard.recentEstimates' | translate }}</mat-card-title>
+            <a mat-button routerLink="/presupuestos">{{ 'dashboard.seeAllEstimates' | translate }}</a>
           </mat-card-header>
           <mat-card-content>
             @if (recentPresupuestos.length === 0) {
-              <p class="empty">No hay presupuestos</p>
+              <p class="empty">{{ 'dashboard.recentEstimatesEmpty' | translate }}</p>
             } @else {
               <ul class="recent-list">
                 @for (p of recentPresupuestos; track p.id) {
@@ -579,12 +586,12 @@ export interface TopCliente {
         </mat-card>
         <mat-card class="recent-card">
           <mat-card-header>
-            <mat-card-title>Últimas facturas</mat-card-title>
-            <a mat-button routerLink="/facturas">Ver todas</a>
+            <mat-card-title>{{ 'dashboard.recentInvoices' | translate }}</mat-card-title>
+            <a mat-button routerLink="/facturas">{{ 'dashboard.seeAllInvoices' | translate }}</a>
           </mat-card-header>
           <mat-card-content>
             @if (recentFacturas.length === 0) {
-              <p class="empty">No hay facturas</p>
+              <p class="empty">{{ 'dashboard.recentInvoicesEmpty' | translate }}</p>
             } @else {
               <ul class="recent-list">
                 @for (f of recentFacturas; track f.id) {
@@ -1326,15 +1333,42 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     return this.ingresosPorMes.reduce((s, d) => s + d.value, 0);
   }
 
-  get chartSubtitle(): string {
-    if (this.chartIngresosMode === 'ultimoMes') {
-      return 'Total facturado en el último mes natural (mes anterior al actual), según fecha de emisión.';
-    }
-    return 'Enero a diciembre del año seleccionado. Pasa el cursor sobre un mes o haz clic para ver importe y número de facturas.';
+  get monthDrillInvoiceLine(): string {
+    if (!this.monthDrill) return '';
+    const c = this.monthDrill.facturasCount;
+    const key = c === 1 ? 'dashboard.drillInvoiceCount1' : 'dashboard.drillInvoiceCountN';
+    return this.translate.instant(key, { count: c });
   }
 
-  get chartXAxisLabel(): string {
-    return this.chartIngresosMode === 'ultimoMes' ? 'Periodo' : 'Mes';
+  /** Abreviaturas de mes (i18n) para ejes del gráfico. */
+  private readonly monthShortKeys = [
+    'jan',
+    'feb',
+    'mar',
+    'apr',
+    'may',
+    'jun',
+    'jul',
+    'aug',
+    'sep',
+    'oct',
+    'nov',
+    'dec',
+  ] as const;
+
+  private monthShort(monthIndex0: number): string {
+    const key = this.monthShortKeys[monthIndex0];
+    return key ? this.translate.instant(`dashboard.month.${key}`) : '';
+  }
+
+  private refreshMonthDrillLabel(): void {
+    if (!this.monthDrill?.key) return;
+    const parts = this.monthDrill.key.split('-').map(Number);
+    const y = parts[0];
+    const mm = parts[1];
+    if (y === undefined || mm === undefined || Number.isNaN(y) || Number.isNaN(mm)) return;
+    const label = `${this.monthShort(mm - 1)} ${y}`;
+    this.monthDrill = { ...this.monthDrill, label };
   }
 
   get chartYearOptions(): number[] {
@@ -1416,10 +1450,19 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     private facturaService: FacturaService,
     private materialService: MaterialService,
     private cdr: ChangeDetectorRef,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private translate: TranslateService,
+    private destroyRef: DestroyRef,
   ) {}
 
   ngOnInit(): void {
+    this.translate.onLangChange.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      if (this.allFacturas.length) {
+        this.ingresosPorMes = this.computeIngresosChartData(this.allFacturas);
+      }
+      this.refreshMonthDrillLabel();
+      this.cdr.detectChanges();
+    });
     forkJoin({
       presupuestos: this.presupuestoService.getAll().pipe(catchError(() => of<Presupuesto[]>([]))),
       facturas: this.facturaService.getAll().pipe(catchError(() => of<Factura[]>([]))),
@@ -1576,8 +1619,6 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     };
   }
 
-  private static readonly MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-
   chartLabelX(i: number): number {
     if (this.chartIngresosMode === 'ultimoMes') {
       return this.chartPadLeft + this.chartWidth / 2;
@@ -1606,7 +1647,14 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     const item = this.ingresosPorMes[i];
     if (!item?.key) return '';
     const n = this.countFacturasInMonthKey(item.key);
-    return `${item.name} ${this.selectedChartYear}: ${item.value.toFixed(2)} € (${n} factura${n === 1 ? '' : 's'})`;
+    const invoiceWord = this.translate.instant(n === 1 ? 'dashboard.invoiceSingular' : 'dashboard.invoicePlural');
+    return this.translate.instant('dashboard.chartMonthTooltip', {
+      month: item.name,
+      year: String(this.selectedChartYear),
+      amount: item.value.toFixed(2),
+      count: n,
+      invoiceWord,
+    });
   }
 
   onChartIngresosModeChange(mode: 'ultimoMes' | 'anio'): void {
@@ -1644,7 +1692,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     const [y, m] = item.key.split('-').map(Number);
     const count = this.countFacturasInMonth(y, m - 1);
     this.monthDrill = {
-      label: `${DashboardComponent.MESES[m - 1]} ${y}`,
+      label: `${this.monthShort(m - 1)} ${y}`,
       value: item.value,
       facturasCount: count,
       key: item.key,
@@ -1690,7 +1738,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
         total += f.total ?? 0;
       }
     }
-    const name = `${DashboardComponent.MESES[m]} ${y}`;
+    const name = `${this.monthShort(m)} ${y}`;
     return [{ name, value: total, key }];
   }
 
@@ -1705,7 +1753,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
           total += f.total ?? 0;
         }
       }
-      result.push({ name: DashboardComponent.MESES[m], value: total, key });
+      result.push({ name: this.monthShort(m), value: total, key });
     }
     return result;
   }

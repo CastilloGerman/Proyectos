@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -23,7 +23,7 @@ import { Presupuesto } from '../../../core/models/presupuesto.model';
 import { Material } from '../../../core/models/material.model';
 import { Factura, FacturaCobro, FacturaItemRequest, FacturaRequest } from '../../../core/models/factura.model';
 import { startWith } from 'rxjs';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-factura-form',
@@ -40,132 +40,133 @@ import { TranslateService } from '@ngx-translate/core';
         MatCheckboxModule,
         MatSnackBarModule,
         MatDividerModule,
+        TranslateModule,
     ],
     template: `
     <div class="factura-form">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>{{ isEdit ? 'Editar factura' : 'Nueva factura' }}</mat-card-title>
+          <mat-card-title>{{ isEdit ? ('factForm.edit' | translate) : ('factForm.new' | translate) }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <form [formGroup]="form" (ngSubmit)="onSubmit()">
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Cliente</mat-label>
+              <mat-label>{{ 'factForm.customer' | translate }}</mat-label>
               <mat-select formControlName="clienteId" required>
                 @for (c of clientes; track c.id) {
                   <mat-option [value]="c.id">{{ c.nombre }}</mat-option>
                 }
               </mat-select>
               @if (form.get('clienteId')?.hasError('required') && form.get('clienteId')?.touched) {
-                <mat-error>Selecciona un cliente</mat-error>
+                <mat-error>{{ 'factForm.pickCustomer' | translate }}</mat-error>
               }
               @if (form.get('clienteId')?.hasError('nifIgual')) {
                 <mat-error>
-                  El cliente seleccionado tiene el mismo NIF que tu perfil. Por favor selecciona otro cliente.
+                  {{ 'factForm.sameNifError' | translate }}
                 </mat-error>
               }
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Presupuesto (opcional)</mat-label>
+              <mat-label>{{ 'factForm.budgetOptional' | translate }}</mat-label>
               <mat-select formControlName="presupuestoId">
-                <mat-option [value]="null">Ninguno</mat-option>
+                <mat-option [value]="null">{{ 'factForm.budgetNone' | translate }}</mat-option>
                 @for (p of presupuestos; track p.id) {
                   <mat-option [value]="p.id">{{ p.clienteNombre }} - {{ p.total | number:'1.2-2' }} €</mat-option>
                 }
               </mat-select>
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Nº Factura</mat-label>
-              <input matInput formControlName="numeroFactura" placeholder="Se genera automático si se deja vacío">
+              <mat-label>{{ 'factForm.invoiceNo' | translate }}</mat-label>
+              <input matInput formControlName="numeroFactura" [placeholder]="'factForm.invoiceNoHint' | translate">
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Fecha expedición</mat-label>
+              <mat-label>{{ 'factForm.issueDate' | translate }}</mat-label>
               <input matInput formControlName="fechaExpedicion" type="date">
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Fecha operación (opcional)</mat-label>
+              <mat-label>{{ 'factForm.operationDateOpt' | translate }}</mat-label>
               <input matInput formControlName="fechaOperacion" type="date">
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Fecha vencimiento</mat-label>
+              <mat-label>{{ 'factForm.dueDate' | translate }}</mat-label>
               <input matInput formControlName="fechaVencimiento" type="date">
-              <mat-hint>Opciones rápidas:</mat-hint>
+              <mat-hint>{{ 'factForm.dueQuick' | translate }}</mat-hint>
             </mat-form-field>
             <div class="vencimiento-buttons">
-              <button type="button" mat-stroked-button (click)="setVencimiento(15)">15 días</button>
-              <button type="button" mat-stroked-button (click)="setVencimiento(30)">30 días</button>
-              <button type="button" mat-stroked-button (click)="setVencimiento(60)">60 días</button>
-              <button type="button" mat-stroked-button (click)="setVencimiento(90)">90 días</button>
+              <button type="button" mat-stroked-button (click)="setVencimiento(15)">{{ 'factForm.days15' | translate }}</button>
+              <button type="button" mat-stroked-button (click)="setVencimiento(30)">{{ 'factForm.days30' | translate }}</button>
+              <button type="button" mat-stroked-button (click)="setVencimiento(60)">{{ 'factForm.days60' | translate }}</button>
+              <button type="button" mat-stroked-button (click)="setVencimiento(90)">{{ 'factForm.days90' | translate }}</button>
             </div>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Régimen fiscal</mat-label>
-              <input matInput formControlName="regimenFiscal" placeholder="Régimen general del IVA">
+              <mat-label>{{ 'factForm.taxRegime' | translate }}</mat-label>
+              <input matInput formControlName="regimenFiscal" [placeholder]="'factForm.taxRegimePh' | translate">
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Condiciones de pago</mat-label>
-              <input matInput formControlName="condicionesPago" placeholder="30 días">
+              <mat-label>{{ 'factForm.payTerms' | translate }}</mat-label>
+              <input matInput formControlName="condicionesPago" [placeholder]="'factForm.payTermsPh' | translate">
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Método de pago</mat-label>
+              <mat-label>{{ 'factForm.payMethod' | translate }}</mat-label>
               <mat-select formControlName="metodoPago">
-                <mat-option value="Transferencia">Transferencia</mat-option>
-                <mat-option value="Bizum">Bizum</mat-option>
-                <mat-option value="Efectivo">Efectivo</mat-option>
-                <mat-option value="Tarjeta">Tarjeta</mat-option>
+                <mat-option value="Transferencia">{{ 'payMethod.Transferencia' | translate }}</mat-option>
+                <mat-option value="Bizum">{{ 'payMethod.Bizum' | translate }}</mat-option>
+                <mat-option value="Efectivo">{{ 'payMethod.Efectivo' | translate }}</mat-option>
+                <mat-option value="Tarjeta">{{ 'payMethod.Tarjeta' | translate }}</mat-option>
               </mat-select>
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Estado de pago</mat-label>
+              <mat-label>{{ 'factForm.payStatus' | translate }}</mat-label>
               <mat-select formControlName="estadoPago">
-                <mat-option value="No Pagada">No Pagada</mat-option>
-                <mat-option value="Pagada">Pagada</mat-option>
-                <mat-option value="Parcial">Parcial</mat-option>
+                <mat-option value="No Pagada">{{ 'est.lbl.payUnpaid' | translate }}</mat-option>
+                <mat-option value="Pagada">{{ 'est.lbl.payPaid' | translate }}</mat-option>
+                <mat-option value="Parcial">{{ 'est.lbl.payPartial' | translate }}</mat-option>
               </mat-select>
             </mat-form-field>
             @if (form.get('estadoPago')?.value === 'Parcial') {
               <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Importe cobrado (€)</mat-label>
-                <input matInput type="number" formControlName="montoCobrado" min="0" step="0.01" placeholder="Importe real cobrado hasta ahora">
-                <mat-hint>Introduce el importe ya recibido para un cálculo preciso</mat-hint>
+                <mat-label>{{ 'factForm.partialAmount' | translate }}</mat-label>
+                <input matInput type="number" formControlName="montoCobrado" min="0" step="0.01" [placeholder]="'factForm.partialAmountPh' | translate">
+                <mat-hint>{{ 'factForm.partialHint' | translate }}</mat-hint>
               </mat-form-field>
             }
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Notas</mat-label>
+              <mat-label>{{ 'factForm.notes' | translate }}</mat-label>
               <textarea matInput formControlName="notas" rows="2"></textarea>
             </mat-form-field>
-            <mat-checkbox formControlName="ivaHabilitado">IVA incluido</mat-checkbox>
+            <mat-checkbox formControlName="ivaHabilitado">{{ 'factForm.vatIncluded' | translate }}</mat-checkbox>
             <div formArrayName="items" class="items-section">
               <div class="items-header">
-                <h3>Líneas</h3>
+                <h3>{{ 'factForm.linesTitle' | translate }}</h3>
                 <button type="button" mat-stroked-button (click)="addItem()">
                   <mat-icon>add</mat-icon>
-                  Añadir línea
+                  {{ 'factForm.addLine' | translate }}
                 </button>
               </div>
               @for (item of items.controls; track item; let i = $index) {
                 <div [formGroupName]="i" class="item-row">
                   <mat-form-field appearance="outline" class="material-select">
-                    <mat-label>Material</mat-label>
+                    <mat-label>{{ 'factForm.material' | translate }}</mat-label>
                     <mat-select formControlName="materialId" (selectionChange)="onMaterialSelect(i, $event.value)">
-                      <mat-option [value]="null">Ninguno</mat-option>
+                      <mat-option [value]="null">{{ 'factForm.materialNone' | translate }}</mat-option>
                       @for (m of materiales; track m.id) {
                         <mat-option [value]="m.id">{{ m.nombre }} ({{ m.precioUnitario | number:'1.2-2' }} €)</mat-option>
                       }
                     </mat-select>
                   </mat-form-field>
                   <mat-form-field appearance="outline">
-                    <mat-label>Descripción</mat-label>
-                    <input matInput formControlName="tareaManual" placeholder="Descripción">
+                    <mat-label>{{ 'factForm.description' | translate }}</mat-label>
+                    <input matInput formControlName="tareaManual" [placeholder]="'factForm.description' | translate">
                   </mat-form-field>
                   <mat-form-field appearance="outline">
-                    <mat-label>Cantidad</mat-label>
+                    <mat-label>{{ 'factForm.qty' | translate }}</mat-label>
                     <input matInput type="number" formControlName="cantidad" min="0.001" step="0.01">
                   </mat-form-field>
                   <mat-form-field appearance="outline">
-                    <mat-label>Precio unit.</mat-label>
+                    <mat-label>{{ 'factForm.unitPrice' | translate }}</mat-label>
                     <input matInput type="number" formControlName="precioUnitario" min="0" step="0.01">
                   </mat-form-field>
-                  <mat-checkbox formControlName="aplicaIva">IVA</mat-checkbox>
+                  <mat-checkbox formControlName="aplicaIva">{{ 'factForm.vatShort' | translate }}</mat-checkbox>
                   <button type="button" mat-icon-button color="warn" (click)="removeItem(i)">
                     <mat-icon>delete</mat-icon>
                   </button>
@@ -175,20 +176,24 @@ import { TranslateService } from '@ngx-translate/core';
             @if (isEdit && id && auth.canMutate()) {
               <mat-divider class="section-divider"></mat-divider>
               <div class="cobros-section">
-                <h3>Cobros parciales</h3>
+                <h3>{{ 'factForm.partialChargesTitle' | translate }}</h3>
                 <p class="hint-cobros">
-                  Registra cada abono; el estado de pago y el importe cobrado se actualizan en el servidor.
-                  Total factura: <strong>{{ facturaTotal | number:'1.2-2' }} €</strong> · Cobrado:
-                  <strong>{{ montoCobradoServidor | number:'1.2-2' }} €</strong>
+                  {{
+                    'factForm.partialChargesIntro'
+                      | translate: {
+                          invoiceTotal: facturaTotal | number: '1.2-2',
+                          charged: montoCobradoServidor | number: '1.2-2'
+                        }
+                  }}
                 </p>
                 @if (cobros.length > 0) {
                   <table class="cobros-table">
                     <thead>
                       <tr>
-                        <th>Fecha</th>
-                        <th>Importe</th>
-                        <th>Método</th>
-                        <th>Notas</th>
+                        <th>{{ 'factForm.thDate' | translate }}</th>
+                        <th>{{ 'factForm.thAmount' | translate }}</th>
+                        <th>{{ 'factForm.thMethod' | translate }}</th>
+                        <th>{{ 'factForm.thNotes' | translate }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -196,8 +201,8 @@ import { TranslateService } from '@ngx-translate/core';
                         <tr>
                           <td>{{ c.fecha | date:'dd/MM/yyyy' }}</td>
                           <td>{{ c.importe | number:'1.2-2' }} €</td>
-                          <td>{{ c.metodo || '—' }}</td>
-                          <td>{{ c.notas || '—' }}</td>
+                          <td>{{ paymentMethodLabel(c.metodo) }}</td>
+                          <td>{{ c.notas ? c.notas : ('cliPanel.dash' | translate) }}</td>
                         </tr>
                       }
                     </tbody>
@@ -205,53 +210,53 @@ import { TranslateService } from '@ngx-translate/core';
                 }
                 <div class="nuevo-cobro-row" [formGroup]="cobroForm">
                   <mat-form-field appearance="outline">
-                    <mat-label>Importe (€)</mat-label>
+                    <mat-label>{{ 'factForm.newChargeAmount' | translate }}</mat-label>
                     <input matInput type="number" formControlName="importe" min="0.01" step="0.01">
                   </mat-form-field>
                   <mat-form-field appearance="outline">
-                    <mat-label>Fecha</mat-label>
+                    <mat-label>{{ 'factForm.chargeDate' | translate }}</mat-label>
                     <input matInput type="date" formControlName="fecha">
                   </mat-form-field>
                   <mat-form-field appearance="outline">
-                    <mat-label>Método</mat-label>
+                    <mat-label>{{ 'factForm.chargeMethod' | translate }}</mat-label>
                     <mat-select formControlName="metodo">
-                      <mat-option value="Transferencia">Transferencia</mat-option>
-                      <mat-option value="Efectivo">Efectivo</mat-option>
-                      <mat-option value="Tarjeta">Tarjeta</mat-option>
-                      <mat-option value="Bizum">Bizum</mat-option>
+                      <mat-option value="Transferencia">{{ 'payMethod.Transferencia' | translate }}</mat-option>
+                      <mat-option value="Efectivo">{{ 'payMethod.Efectivo' | translate }}</mat-option>
+                      <mat-option value="Tarjeta">{{ 'payMethod.Tarjeta' | translate }}</mat-option>
+                      <mat-option value="Bizum">{{ 'payMethod.Bizum' | translate }}</mat-option>
                     </mat-select>
                   </mat-form-field>
                   <mat-form-field appearance="outline" class="cobro-notas">
-                    <mat-label>Notas</mat-label>
+                    <mat-label>{{ 'factForm.notes' | translate }}</mat-label>
                     <input matInput formControlName="notas">
                   </mat-form-field>
                   <button type="button" mat-stroked-button color="primary" (click)="addCobro()" [disabled]="cobroForm.invalid || cobroSaving">
-                    {{ cobroSaving ? 'Registrando…' : 'Registrar cobro' }}
+                    {{ cobroSaving ? ('factForm.registering' | translate) : ('factForm.registerCharge' | translate) }}
                   </button>
                 </div>
               </div>
               <div class="payment-link-section">
-                <h3>Enlace de pago (Stripe)</h3>
-                <p class="hint-cobros">Genera una URL para que el cliente pague el importe pendiente con tarjeta.</p>
+                <h3>{{ 'factForm.stripeTitle' | translate }}</h3>
+                <p class="hint-cobros">{{ 'factForm.stripeHint' | translate }}</p>
                 @if (paymentLinkUrl) {
                   <div class="link-row">
                     <code class="payment-url">{{ paymentLinkUrl }}</code>
                     <button type="button" mat-stroked-button (click)="copyPaymentLink()">
                       <mat-icon>content_copy</mat-icon>
-                      Copiar
+                      {{ 'factForm.copyLink' | translate }}
                     </button>
                   </div>
                 }
                 <button type="button" mat-raised-button color="accent" (click)="createPaymentLink()" [disabled]="paymentLinkLoading">
-                  {{ paymentLinkLoading ? 'Generando…' : (paymentLinkUrl ? 'Renovar enlace de pago' : 'Generar enlace de pago') }}
+                  {{ paymentLinkLoading ? ('factForm.generating' | translate) : (paymentLinkUrl ? ('factForm.renewLink' | translate) : ('factForm.genLink' | translate)) }}
                 </button>
               </div>
             }
 
             <div class="actions">
-              <button mat-button type="button" routerLink="/facturas">Cancelar</button>
+              <button mat-button type="button" routerLink="/facturas">{{ 'common.cancel' | translate }}</button>
               <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || form.pending || !auth.canMutate()">
-                {{ isEdit ? 'Guardar' : 'Crear' }}
+                {{ isEdit ? ('common.save' | translate) : ('common.create' | translate) }}
               </button>
             </div>
           </form>
@@ -421,6 +426,7 @@ import { TranslateService } from '@ngx-translate/core';
 })
 export class FacturaFormComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
   form: FormGroup;
   cobroForm: FormGroup;
   clientes: Cliente[] = [];
@@ -448,6 +454,15 @@ export class FacturaFormComponent implements OnInit {
 
   get items(): FormArray {
     return this.form.get('items') as FormArray;
+  }
+
+  /** Traduce método de cobro conocido desde la API para la tabla histórico. */
+  paymentMethodLabel(metodo?: string | null): string {
+    const m = String(metodo ?? '').trim();
+    if (!m) return this.translate.instant('cliPanel.dash');
+    const key = 'payMethod.' + m;
+    const t = this.translate.instant(key);
+    return t !== key ? t : m;
   }
 
   constructor(
@@ -489,6 +504,8 @@ export class FacturaFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.translate.onLangChange.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.cdr.markForCheck());
+
     this.configService.getEmpresa().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((e) => {
       this.empresaNif = e.nif?.trim() || null;
       this.validateClienteNifVsEmpresa();

@@ -172,6 +172,16 @@ stripe listen --forward-to localhost:8081/webhook/stripe
 
 Configurar `STRIPE_WEBHOOK_SECRET` con el `whsec_...` que muestre Stripe.
 
+### Mensual y anual en la pasarela Stripe (upsell)
+
+El checkout abre siempre con el **precio mensual** cuando existen `STRIPE_PRICE_MONTHLY` y `STRIPE_PRICE_YEARLY`. Para que el cliente vea **ambas opciones dentro de Stripe Checkout**, configura un **subscription upsell** en el Dashboard:
+
+1. **Productos** → tu plan → abre el **precio mensual** (`STRIPE_PRICE_MONTHLY`).
+2. En **Upsells**, elige el precio anual (`STRIPE_PRICE_YEARLY`).
+3. Ambos precios deben ser del **mismo producto**, misma moneda y tipo recurrente.
+
+Documentación: [Stripe subscription upsells](https://docs.stripe.com/payments/checkout/upsells).
+
 ---
 
 ## 🔌 API REST
@@ -288,7 +298,7 @@ Prefijos **tal como los expone el backend** (sin `/api`; el front añade `/api` 
 
 | Método | Ruta | Descripción breve |
 |--------|------|-------------------|
-| POST | `/subscription/checkout` | Checkout Stripe — cuerpo opcional `{ "billingPeriod": "YEARLY" }` para anual; sin cuerpo u omisión = mensual |
+| POST | `/subscription/checkout` | Checkout Stripe (precio mensual base; mensual/anual en pasarela si el upsell está configurado en Stripe) |
 | GET | `/subscription/invoices` | Facturas Stripe |
 | POST | `/subscription/portal` | Portal cliente Stripe |
 | POST | `/webhook/stripe` | Webhook Stripe |

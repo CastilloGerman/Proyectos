@@ -2,41 +2,37 @@
   <div class="pref-page__head">
     <a mat-button routerLink="/dashboard" class="pref-back">
       <mat-icon>arrow_back</mat-icon>
-      Volver
+      {{ 'common.back' | translate }}
     </a>
-    <h1 class="pref-page__title">Preferencias</h1>
-    <p class="pref-page__subtitle">
-      Ajusta cómo ves fechas, horas e importes en la aplicación. Los datos fiscales de tu empresa se configuran aparte.
-    </p>
+    <h1 class="pref-page__title">{{ 'pref.pageTitle' | translate }}</h1>
+    <p class="pref-page__subtitle">{{ 'pref.pageSubtitle' | translate }}</p>
   </div>
 
   @if (loading()) {
     <div class="pref-state pref-state--center">
       <mat-progress-spinner diameter="40" mode="indeterminate" />
-      <span>Cargando preferencias…</span>
+      <span>{{ 'pref.loading' | translate }}</span>
     </div>
   } @else if (loadError()) {
     <mat-card class="pref-card">
       <mat-card-content>
-        <p>No pudimos cargar tus preferencias.</p>
-        <button mat-stroked-button type="button" color="primary" (click)="reintentar()">Reintentar</button>
+        <p>{{ 'pref.loadFail' | translate }}</p>
+        <button mat-stroked-button type="button" color="primary" (click)="reintentar()">{{ 'pref.retry' | translate }}</button>
       </mat-card-content>
     </mat-card>
   } @else {
     <mat-card class="pref-card">
       <mat-card-content>
         <section class="pref-appearance" aria-labelledby="pref-appearance-title">
-          <h2 id="pref-appearance-title" class="pref-section-title">Apariencia</h2>
+          <h2 id="pref-appearance-title" class="pref-section-title">{{ 'pref.appearance' | translate }}</h2>
           <mat-slide-toggle
             [checked]="theme.isDark()"
             (change)="theme.setDark($event.checked)"
             color="primary"
           >
-            Modo oscuro
+            {{ 'pref.darkMode' | translate }}
           </mat-slide-toggle>
-          <p class="pref-appearance__hint">
-            Interfaz más cómoda con poca luz. La preferencia se guarda en este navegador (no en el servidor).
-          </p>
+          <p class="pref-appearance__hint">{{ 'pref.darkModeHint' | translate }}</p>
         </section>
         <mat-divider class="pref-divider" />
         <section class="pref-ui-lang" aria-labelledby="pref-ui-lang-title">
@@ -57,23 +53,23 @@
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="pref-field">
-            <mat-label>Zona horaria</mat-label>
+            <mat-label>{{ 'pref.timeZoneLabel' | translate }}</mat-label>
             <mat-select formControlName="timeZone" required>
               @for (opt of timezoneOptions(); track opt.value) {
                 <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
               }
             </mat-select>
-            <mat-hint>Se usará para mostrar fechas y horas en tu zona.</mat-hint>
+            <mat-hint>{{ 'pref.timeZoneHint' | translate }}</mat-hint>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="pref-field">
-            <mat-label>Moneda por defecto</mat-label>
+            <mat-label>{{ 'pref.currencyLabel' | translate }}</mat-label>
             <mat-select formControlName="currencyCode" required>
               @for (opt of currencyOptions(); track opt.value) {
                 <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
               }
             </mat-select>
-            <mat-hint>Formato de importes en listas y formularios; no cambia la moneda legal de una factura ya emitida.</mat-hint>
+            <mat-hint>{{ 'pref.currencyHint' | translate }}</mat-hint>
           </mat-form-field>
 
           <div class="pref-actions">
@@ -81,7 +77,7 @@
               @if (saving()) {
                 <mat-progress-spinner diameter="20" mode="indeterminate" />
               } @else {
-                Guardar preferencias
+                {{ 'pref.savePreferences' | translate }}
               }
             </button>
           </div>

@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
@@ -27,7 +27,7 @@ import { AnticipoResumen, PresupuestoItemRequest } from '../../../core/models/pr
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { CondicionesPresupuestoFormValue, PresupuestoCondicionDisponible } from '../../../core/models/presupuesto-condiciones.model';
 import { CondicionesPresupuestoComponent } from '../condiciones-presupuesto/condiciones-presupuesto.component';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 const IVA_RATE = 0.21;
 
@@ -51,20 +51,20 @@ const IVA_RATE = 0.21;
         MatDialogModule,
         FormsModule,
         CondicionesPresupuestoComponent,
+        TranslateModule,
     ],
     template: `
     <div class="presupuesto-form">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>{{ isEdit ? 'Editar presupuesto' : 'Nuevo presupuesto' }}</mat-card-title>
+          <mat-card-title>{{ isEdit ? ('budgetForm.edit' | translate) : ('budgetForm.new' | translate) }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
           @if (!isEdit) {
             <div class="section anticipo-section anticipo-cartel-solo">
-              <h3>Anticipo / seña</h3>
+              <h3>{{ 'budgetForm.depositCartelEditTitle' | translate }}</h3>
               <p class="hint-anticipo">
-                Tras <strong>guardar</strong> el presupuesto, vuelve a abrirlo con estado <strong>Aceptado</strong> o <strong>En ejecución</strong>
-                para registrar el anticipo cobrado y emitir las facturas (anticipo y final).
+                {{ 'budgetForm.depositCartelEditHint' | translate }}
               </p>
             </div>
           }
@@ -72,20 +72,20 @@ const IVA_RATE = 0.21;
             <!-- 1. Cliente y Estado -->
             <div class="form-row cliente-block">
               <div class="cliente-modo">
-                <mat-label class="modo-label">Cliente del presupuesto</mat-label>
+                <mat-label class="modo-label">{{ 'budgetForm.customerModeLabel' | translate }}</mat-label>
                 <mat-radio-group
                   [(ngModel)]="clienteModo"
                   [ngModelOptions]="{standalone: true}"
                   (ngModelChange)="onClienteModoChange($event)"
                   class="modo-radios"
                 >
-                  <mat-radio-button value="existente">Seleccionar cliente existente</mat-radio-button>
-                  <mat-radio-button value="nuevo">Cliente nuevo rápido</mat-radio-button>
+                  <mat-radio-button value="existente">{{ 'budgetForm.modeExisting' | translate }}</mat-radio-button>
+                  <mat-radio-button value="nuevo">{{ 'budgetForm.modeNew' | translate }}</mat-radio-button>
                 </mat-radio-group>
               </div>
               @if (clienteModo === 'existente') {
                 <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>Cliente</mat-label>
+                  <mat-label>{{ 'budgetForm.customerLabel' | translate }}</mat-label>
                   <mat-select formControlName="clienteId" required>
                     <mat-select-trigger>
                       {{ nombreClienteSeleccionado() }}
@@ -95,44 +95,44 @@ const IVA_RATE = 0.21;
                         <span class="opt-line">
                           <span>{{ c.nombre }}</span>
                           @if (c.estadoCliente === 'PROVISIONAL') {
-                            <span class="badge-fiscal">Sin datos fiscales</span>
+                            <span class="badge-fiscal">{{ 'budgetForm.provisionalBadge' | translate }}</span>
                           }
                         </span>
                       </mat-option>
                     }
                   </mat-select>
-                  <mat-error>Selecciona un cliente</mat-error>
+                  <mat-error>{{ 'budgetForm.pickCustomerErr' | translate }}</mat-error>
                 </mat-form-field>
               } @else {
                 <div class="nuevo-rapido">
                   <mat-form-field appearance="outline" class="nombre-nuevo">
-                    <mat-label>Nombre del cliente</mat-label>
-                    <input matInput [(ngModel)]="nombreClienteNuevo" [ngModelOptions]="{standalone: true}" placeholder="Ej. Juan García" />
+                    <mat-label>{{ 'budgetForm.quickNameLabel' | translate }}</mat-label>
+                    <input matInput [(ngModel)]="nombreClienteNuevo" [ngModelOptions]="{standalone: true}" [placeholder]="'budgetForm.quickNamePh' | translate" />
                   </mat-form-field>
                   <button type="button" mat-stroked-button color="primary" (click)="crearClienteRapido()"
                     [disabled]="!auth.canMutate() || !nombreClienteNuevo.trim()">
-                    Crear y continuar
+                    {{ 'budgetForm.createContinue' | translate }}
                   </button>
                 </div>
               }
               <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Estado</mat-label>
+                <mat-label>{{ 'budgetForm.statusLabel' | translate }}</mat-label>
                 <mat-select formControlName="estado">
-                  <mat-option value="Pendiente">Pendiente</mat-option>
-                  <mat-option value="Aceptado">Aceptado</mat-option>
-                  <mat-option value="En ejecución">En ejecución</mat-option>
-                  <mat-option value="Rechazado">Rechazado</mat-option>
+                  <mat-option value="Pendiente">{{ 'est.lbl.budPending' | translate }}</mat-option>
+                  <mat-option value="Aceptado">{{ 'est.lbl.budAccepted' | translate }}</mat-option>
+                  <mat-option value="En ejecución">{{ 'est.lbl.budInProgress' | translate }}</mat-option>
+                  <mat-option value="Rechazado">{{ 'est.lbl.budRejected' | translate }}</mat-option>
                 </mat-select>
               </mat-form-field>
-              <mat-checkbox formControlName="ivaHabilitado">IVA incluido</mat-checkbox>
+              <mat-checkbox formControlName="ivaHabilitado">{{ 'budgetForm.vatIncluded' | translate }}</mat-checkbox>
             </div>
 
             <!-- 2. Materiales (primero, con línea visible al abrir) -->
             <div class="section materiales-section">
-              <h3>Materiales</h3>
+              <h3>{{ 'budgetForm.materialsTitle' | translate }}</h3>
               @if (topMateriales.length > 0) {
                 <div class="top-materiales">
-                  <span class="top-label">Más usados:</span>
+                  <span class="top-label">{{ 'budgetForm.topUsed' | translate }}</span>
                   @for (m of topMateriales; track m.id) {
                     <button type="button" mat-stroked-button class="chip-btn" (click)="addMaterialFromTop(m)">
                       {{ m.nombre }}
@@ -144,31 +144,31 @@ const IVA_RATE = 0.21;
                 @for (item of materialItems.controls; track item; let i = $index) {
                   <div [formGroupName]="i" class="item-row material-row">
                     @if (showVisibilityColumn) {
-                      <mat-checkbox formControlName="visiblePdf" matTooltip="Visible en el PDF" class="visibility-check"></mat-checkbox>
+                      <mat-checkbox formControlName="visiblePdf" [matTooltip]="'budgetForm.tooltipVisiblePdf' | translate" class="visibility-check"></mat-checkbox>
                     }
                     <mat-form-field appearance="outline" class="material-select">
-                      <mat-label>Material</mat-label>
+                      <mat-label>{{ 'factForm.material' | translate }}</mat-label>
                       <mat-select formControlName="materialId" (selectionChange)="onMaterialSelect(i, $event.value)">
-                        <mat-option [value]="null">Seleccionar...</mat-option>
+                        <mat-option [value]="null">{{ 'budgetForm.selectMaterialPlaceholder' | translate }}</mat-option>
                         @for (m of materiales; track m.id) {
                           <mat-option [value]="m.id">{{ m.nombre }} ({{ m.precioUnitario | number:'1.2-2' }} €)</mat-option>
                         }
                       </mat-select>
                     </mat-form-field>
                     <mat-form-field appearance="outline">
-                      <mat-label>Descripción</mat-label>
-                      <input matInput formControlName="tareaManual" placeholder="Se rellena al seleccionar material">
+                      <mat-label>{{ 'factForm.description' | translate }}</mat-label>
+                      <input matInput formControlName="tareaManual" [placeholder]="'budgetForm.materialDescPh' | translate">
                     </mat-form-field>
                     <mat-form-field appearance="outline">
-                      <mat-label>Cantidad</mat-label>
+                      <mat-label>{{ 'factForm.qty' | translate }}</mat-label>
                       <input matInput type="number" formControlName="cantidad" min="0.001" step="0.01">
                     </mat-form-field>
                     <mat-form-field appearance="outline">
-                      <mat-label>Precio unit.</mat-label>
+                      <mat-label>{{ 'factForm.unitPrice' | translate }}</mat-label>
                       <input matInput type="number" formControlName="precioUnitario" min="0" step="0.01">
                     </mat-form-field>
-                    <mat-checkbox formControlName="aplicaIva">IVA</mat-checkbox>
-                    <button type="button" mat-icon-button color="warn" (click)="removeMaterialItem(i)" matTooltip="Eliminar">
+                    <mat-checkbox formControlName="aplicaIva">{{ 'factForm.vatShort' | translate }}</mat-checkbox>
+                    <button type="button" mat-icon-button color="warn" (click)="removeMaterialItem(i)" [matTooltip]="'cliList.tooltipDelete' | translate">
                       <mat-icon>delete</mat-icon>
                     </button>
                   </div>
@@ -176,33 +176,33 @@ const IVA_RATE = 0.21;
               </div>
               <button type="button" mat-stroked-button (click)="addMaterialItem()">
                 <mat-icon>add</mat-icon>
-                Añadir material
+                {{ 'budgetForm.addMaterial' | translate }}
               </button>
             </div>
 
             <!-- 3. Tareas manuales -->
             <div class="section tareas-section">
-              <h3>Tareas manuales</h3>
+              <h3>{{ 'budgetForm.manualTasksTitle' | translate }}</h3>
               <div formArrayName="manualItems">
                 @for (item of manualItems.controls; track item; let i = $index) {
                   <div [formGroupName]="i" class="item-row manual-row">
                     @if (showVisibilityColumn) {
-                      <mat-checkbox formControlName="visiblePdf" matTooltip="Visible en el PDF" class="visibility-check"></mat-checkbox>
+                      <mat-checkbox formControlName="visiblePdf" [matTooltip]="'budgetForm.tooltipVisiblePdf' | translate" class="visibility-check"></mat-checkbox>
                     }
                     <mat-form-field appearance="outline" class="desc-wide">
-                      <mat-label>Descripción</mat-label>
-                      <input matInput formControlName="tareaManual" placeholder="Descripción del trabajo específico">
+                      <mat-label>{{ 'factForm.description' | translate }}</mat-label>
+                      <input matInput formControlName="tareaManual" [placeholder]="'budgetForm.manualDescPh' | translate">
                     </mat-form-field>
                     <mat-form-field appearance="outline">
-                      <mat-label>Cantidad</mat-label>
+                      <mat-label>{{ 'factForm.qty' | translate }}</mat-label>
                       <input matInput type="number" formControlName="cantidad" min="0.001" step="0.01">
                     </mat-form-field>
                     <mat-form-field appearance="outline">
-                      <mat-label>Precio unit.</mat-label>
+                      <mat-label>{{ 'factForm.unitPrice' | translate }}</mat-label>
                       <input matInput type="number" formControlName="precioUnitario" min="0" step="0.01">
                     </mat-form-field>
-                    <mat-checkbox formControlName="aplicaIva">IVA</mat-checkbox>
-                    <button type="button" mat-icon-button color="warn" (click)="removeManualItem(i)" matTooltip="Eliminar">
+                    <mat-checkbox formControlName="aplicaIva">{{ 'factForm.vatShort' | translate }}</mat-checkbox>
+                    <button type="button" mat-icon-button color="warn" (click)="removeManualItem(i)" [matTooltip]="'cliList.tooltipDelete' | translate">
                       <mat-icon>delete</mat-icon>
                     </button>
                   </div>
@@ -210,10 +210,10 @@ const IVA_RATE = 0.21;
               </div>
               <button type="button" mat-stroked-button (click)="addManualTaskItem()">
                 <mat-icon>add</mat-icon>
-                Añadir tarea manual
+                {{ 'budgetForm.addManualTask' | translate }}
               </button>
               <mat-checkbox [(ngModel)]="showVisibilityColumn" [ngModelOptions]="{standalone: true}" class="visibility-toggle">
-                Mostrar opciones de visibilidad
+                {{ 'budgetForm.showVisibilityToggle' | translate }}
               </mat-checkbox>
             </div>
 
@@ -228,18 +228,17 @@ const IVA_RATE = 0.21;
             @if (mostrarSeccionAnticipo()) {
             @if (estadoMuestraFlujoAnticipo()) {
             <div class="section anticipo-section">
-              <h3>Anticipo / seña (fiscal)</h3>
+              <h3>{{ 'budgetForm.depositFiscalTitle' | translate }}</h3>
               <p class="hint-anticipo">
-                Registra el cobro del anticipo (seña), emite la factura de anticipo y, al finalizar el trabajo, la factura final con descuento del anticipo ya facturado.
+                {{ 'budgetForm.depositFiscalHint' | translate }}
               </p>
               @if (!estadoPermiteRegistrarAnticipoApi()) {
                 <p class="hint-estado">
-                  Para <strong>registrar por primera vez</strong> un anticipo, el estado del presupuesto debe ser <strong>Aceptado</strong>
-                  (puedes cambiarlo arriba). Si ya tenías anticipo registrado, el resumen y las facturas siguen disponibles.
+                  {{ 'budgetForm.depositStateHintAccepted' | translate }}
                 </p>
               }
               @if (!auth.canMutate()) {
-                <p class="hint-estado">Tu cuenta no tiene permiso de edición (solo lectura); no se pueden registrar anticipos ni generar facturas desde aquí.</p>
+                <p class="hint-estado">{{ 'budgetForm.depositReadOnlyHint' | translate }}</p>
               }
               @if (resumenAnticipo) {
                 <div class="anticipo-resumen-block">
@@ -247,52 +246,51 @@ const IVA_RATE = 0.21;
                     @if (estadoPermiteRegistrarAnticipoApi()) {
                     <div class="discount-fields">
                       <mat-form-field appearance="outline">
-                        <mat-label>Importe anticipo (€, IVA incl.)</mat-label>
+                        <mat-label>{{ 'budgetForm.depositAmountLabel' | translate }}</mat-label>
                         <input matInput type="number" [(ngModel)]="anticipoRegImporte" [ngModelOptions]="{standalone: true}" min="0.01" step="0.01" placeholder="0">
                       </mat-form-field>
                       <mat-form-field appearance="outline">
-                        <mat-label>Fecha del anticipo</mat-label>
+                        <mat-label>{{ 'budgetForm.depositDateLabel' | translate }}</mat-label>
                         <input matInput type="date" [(ngModel)]="anticipoRegFecha" [ngModelOptions]="{standalone: true}">
                       </mat-form-field>
                       <button type="button" mat-raised-button color="primary" (click)="registrarAnticipoClick()" [disabled]="anticipoCargando || !auth.canMutate()">
-                        Registrar anticipo
+                        {{ 'budgetForm.registerDeposit' | translate }}
                       </button>
                     </div>
                     } @else {
-                    <p class="text-muted">Cambia el estado a <strong>Aceptado</strong> para indicar importe y fecha del anticipo.</p>
+                    <p class="text-muted">{{ 'budgetForm.depositChangeStateHint' | translate }}</p>
                     }
                   } @else {
                     <div class="resumen-grid">
-                      <span>Total presupuesto</span><span>{{ resumenAnticipo.totalPresupuesto | number:'1.2-2' }} €</span>
-                      <span>Anticipo (IVA incl.)</span><span>{{ resumenAnticipo.importeAnticipo | number:'1.2-2' }} €</span>
-                      <span>Base / IVA anticipo</span><span>{{ resumenAnticipo.baseAnticipo | number:'1.2-2' }} € / {{ resumenAnticipo.ivaAnticipo | number:'1.2-2' }} €</span>
-                      <span>Pendiente (neto a facturar en final)</span><span>{{ resumenAnticipo.importePendiente | number:'1.2-2' }} €</span>
+                      <span>{{ 'budgetForm.resumenTotal' | translate }}</span><span>{{ resumenAnticipo.totalPresupuesto | number:'1.2-2' }} €</span>
+                      <span>{{ 'budgetForm.resumenAnticipo' | translate }}</span><span>{{ resumenAnticipo.importeAnticipo | number:'1.2-2' }} €</span>
+                      <span>{{ 'budgetForm.resumenBaseIvaAnticipo' | translate }}</span><span>{{ resumenAnticipo.baseAnticipo | number:'1.2-2' }} € / {{ resumenAnticipo.ivaAnticipo | number:'1.2-2' }} €</span>
+                      <span>{{ 'budgetForm.resumenPendiente' | translate }}</span><span>{{ resumenAnticipo.importePendiente | number:'1.2-2' }} €</span>
                     </div>
                     @if (!resumenAnticipo.anticipoYaFacturado) {
                       <button type="button" mat-raised-button color="primary" (click)="generarFacturaAnticipoClick()" [disabled]="anticipoCargando || !auth.canMutate()" class="anticipo-btn">
-                        Generar factura de anticipo
+                        {{ 'budgetForm.genDepositInvoice' | translate }}
                       </button>
                     } @else if (!facturaPrincipalId) {
                       <button type="button" mat-raised-button color="accent" (click)="confirmarFacturaFinal()" [disabled]="anticipoCargando || !auth.canMutate()" class="anticipo-btn">
-                        Generar factura final (restante)
+                        {{ 'budgetForm.genFinalInvoice' | translate }}
                       </button>
                     } @else {
-                      <p class="hint-ok">Ya existe factura de venta principal (n.º enlazado en el listado).</p>
+                      <p class="hint-ok">{{ 'budgetForm.finalInvoiceAlready' | translate }}</p>
                     }
                   }
                 </div>
               } @else if (anticipoResumenLoading) {
-                <p class="text-muted">Cargando resumen…</p>
+                <p class="text-muted">{{ 'budgetForm.depositLoading' | translate }}</p>
               } @else {
-                <p class="text-muted">No se pudo cargar el resumen de anticipo.</p>
+                <p class="text-muted">{{ 'budgetForm.depositLoadFail' | translate }}</p>
               }
             </div>
             } @else {
             <div class="section anticipo-section anticipo-cartel-solo">
-              <h3>Anticipo / seña</h3>
+              <h3>{{ 'budgetForm.depositCartelOnlyTitle' | translate }}</h3>
               <p class="hint-anticipo">
-                Cuando el presupuesto pase a <strong>Aceptado</strong> o <strong>En ejecución</strong>, aquí podrás registrar el anticipo cobrado,
-                generar la factura de anticipo y la factura final con el descuento correspondiente.
+                {{ 'budgetForm.depositCartelOnlyHint' | translate }}
               </p>
             </div>
             }
@@ -300,60 +298,60 @@ const IVA_RATE = 0.21;
 
             <!-- 4. Descuentos -->
             <div class="section discount-section">
-              <h3>Descuentos globales</h3>
+              <h3>{{ 'budgetForm.discountSectionTitle' | translate }}</h3>
               <div class="discount-fields">
                 <mat-form-field appearance="outline">
-                  <mat-label>Descuento %</mat-label>
+                  <mat-label>{{ 'budgetForm.discountPct' | translate }}</mat-label>
                   <input matInput type="number" formControlName="descuentoGlobalPorcentaje" min="0" max="100" step="0.01">
                 </mat-form-field>
                 <mat-form-field appearance="outline">
-                  <mat-label>Descuento (€)</mat-label>
+                  <mat-label>{{ 'budgetForm.discountEur' | translate }}</mat-label>
                   <input matInput type="number" formControlName="descuentoGlobalFijo" min="0" step="0.01">
                 </mat-form-field>
-                <mat-checkbox formControlName="descuentoAntesIva">Aplicar descuento antes del IVA</mat-checkbox>
+                <mat-checkbox formControlName="descuentoAntesIva">{{ 'budgetForm.discountBeforeVat' | translate }}</mat-checkbox>
               </div>
             </div>
 
             <!-- 5. Resumen de costes -->
             <div class="section cost-summary">
-              <h3>Resumen de costes</h3>
+              <h3>{{ 'budgetForm.costSummaryTitle' | translate }}</h3>
               <div class="summary-rows">
                 <div class="summary-row">
-                  <span>Subtotal ítems:</span>
+                  <span>{{ 'budgetForm.subtotalItems' | translate }}</span>
                   <span>{{ costesResumen.subtotalItems | number:'1.2-2' }} €</span>
                 </div>
                 @if (costesResumen.descuentoPorcentaje > 0 || costesResumen.descuentoFijo > 0) {
                   <div class="summary-row discount">
-                    <span>Descuento aplicado:</span>
+                    <span>{{ 'budgetForm.discountApplied' | translate }}</span>
                     <span>- {{ costesResumen.descuentoTotal | number:'1.2-2' }} €</span>
                   </div>
                 }
                 <div class="summary-row">
-                  <span>Base IVA:</span>
+                  <span>{{ 'budgetForm.baseVat' | translate }}</span>
                   <span>{{ costesResumen.baseIva | number:'1.2-2' }} €</span>
                 </div>
                 @if (form.get('ivaHabilitado')?.value) {
                   <div class="summary-row">
-                    <span>IVA (21%):</span>
+                    <span>{{ 'budgetForm.vat21' | translate }}</span>
                     <span>{{ costesResumen.iva | number:'1.2-2' }} €</span>
                   </div>
                 }
                 <div class="summary-row total">
-                  <span>Total:</span>
+                  <span>{{ 'budgetForm.total' | translate }}</span>
                   <span>{{ costesResumen.total | number:'1.2-2' }} €</span>
                 </div>
               </div>
             </div>
 
             <div class="actions">
-              <button mat-button type="button" routerLink="/presupuestos">Cancelar</button>
+              <button mat-button type="button" routerLink="/presupuestos">{{ 'common.cancel' | translate }}</button>
               <button
                 mat-raised-button
                 color="primary"
                 type="submit"
                 [disabled]="botonCrearDeshabilitado()"
               >
-                {{ isEdit ? 'Guardar' : 'Crear' }}
+                {{ isEdit ? ('common.save' | translate) : ('common.create' | translate) }}
               </button>
             </div>
           </form>
@@ -540,6 +538,7 @@ const IVA_RATE = 0.21;
 })
 export class PresupuestoFormComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   form: FormGroup;
   /** Catálogo de condiciones (solo claves + textos desde API). */
@@ -629,6 +628,8 @@ export class PresupuestoFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.translate.onLangChange.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.cdr.markForCheck());
+
     const close = () => this.translate.instant('common.close');
     const showError = (msg: string) => this.snackBar.open(msg, close(), { duration: 5000 });
     this.clienteService.getAll().subscribe({
@@ -820,18 +821,18 @@ export class PresupuestoFormComponent implements OnInit {
     const r = this.resumenAnticipo;
     if (!this.id || !r) return;
     const msg = [
-      `Total presupuesto: ${r.totalPresupuesto.toFixed(2)} €`,
-      `Importe pendiente (a cobrar en la final): ${r.importePendiente.toFixed(2)} €`,
+      this.translate.instant('budgetForm.finalConfirmLine1', { total: r.totalPresupuesto.toFixed(2) }),
+      this.translate.instant('budgetForm.finalConfirmLine2', { pending: r.importePendiente.toFixed(2) }),
       '',
-      '¿Emitir la factura final con descuento del anticipo ya facturado?',
+      this.translate.instant('budgetForm.finalConfirmQuestion'),
     ].join('\n');
     this.dialog
       .open(ConfirmDialogComponent, {
         width: '440px',
         data: {
-          title: 'Factura final con anticipo',
+          title: this.translate.instant('budgetForm.finalConfirmTitle'),
           message: msg,
-          confirmLabel: 'Generar factura final',
+          confirmLabel: this.translate.instant('budgetForm.finalConfirmBtn'),
           confirmColor: 'primary',
         },
       })

@@ -1,0 +1,51 @@
+// Capa de fondo animada — Noemi brand lines
+// Solo usa transform + opacity para evitar reflow/repaint.
+
+:host {
+  display: block;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.noemi-bg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.noemi-line {
+  fill: none;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  animation-name: noemi-draw;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  animation-fill-mode: both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    stroke-dashoffset: 0;
+    opacity: 0.06;
+  }
+}
+
+@keyframes noemi-draw {
+  0% {
+    stroke-dashoffset: var(--dasharray, 1100);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}

@@ -14,6 +14,7 @@ import {
   debounceTime, distinctUntilChanged, switchMap,
   catchError, takeUntil, map
 } from 'rxjs/operators';
+import { TranslateModule } from '@ngx-translate/core';
 import { FacturaService } from '../../core/services/factura.service';
 import { PresupuestoService } from '../../core/services/presupuesto.service';
 import { ClienteService } from '../../core/services/cliente.service';
@@ -35,6 +36,7 @@ export interface SearchResult {
         MatIconModule,
         MatAutocompleteModule,
         MatProgressSpinnerModule,
+        TranslateModule,
     ],
     template: `
     <div class="search-wrap">
@@ -44,7 +46,7 @@ export interface SearchResult {
           <input
             matInput
             type="search"
-            placeholder="Buscar factura, cliente, presupuesto…"
+            placeholder="{{ 'search.placeholder' | translate }}"
             [formControl]="searchCtrl"
             [matAutocomplete]="auto"
             (focus)="onFocus()"
@@ -57,10 +59,10 @@ export interface SearchResult {
 
       <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onSelect($event.option.value)">
         @if (results.length === 0 && (searchCtrl.value?.length ?? 0) >= 2 && !loading) {
-          <mat-option disabled>Sin resultados</mat-option>
+          <mat-option disabled>{{ 'search.noResults' | translate }}</mat-option>
         }
         @for (group of groupedResults; track group.type) {
-          <mat-optgroup [label]="group.label">
+          <mat-optgroup [label]="group.labelKey | translate">
             @for (r of group.items; track r.id) {
               <mat-option [value]="r">
                 <span class="result-label">{{ r.label }}</span>
@@ -159,7 +161,7 @@ export interface SearchResult {
 export class SearchBarComponent implements OnDestroy {
   searchCtrl = new FormControl('');
   results: SearchResult[] = [];
-  groupedResults: { type: string; label: string; items: SearchResult[] }[] = [];
+  groupedResults: { type: string; labelKey: string; items: SearchResult[] }[] = [];
   loading = false;
 
   private destroy$ = new Subject<void>();
@@ -214,10 +216,10 @@ export class SearchBarComponent implements OnDestroy {
 
       this.results = [...facturaResults, ...presupuestoResults, ...clienteResults];
       this.groupedResults = [
-        facturaResults.length ? { type: 'factura', label: 'Facturas', items: facturaResults } : null,
-        presupuestoResults.length ? { type: 'presupuesto', label: 'Presupuestos', items: presupuestoResults } : null,
-        clienteResults.length ? { type: 'cliente', label: 'Clientes', items: clienteResults } : null,
-      ].filter(Boolean) as { type: string; label: string; items: SearchResult[] }[];
+        facturaResults.length ? { type: 'factura', labelKey: 'nav.invoices', items: facturaResults } : null,
+        presupuestoResults.length ? { type: 'presupuesto', labelKey: 'nav.budgets', items: presupuestoResults } : null,
+        clienteResults.length ? { type: 'cliente', labelKey: 'nav.clients', items: clienteResults } : null,
+      ].filter(Boolean) as { type: string; labelKey: string; items: SearchResult[] }[];
     });
   }
 

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -10,7 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SupportApiService } from '../../../core/services/support-api.service';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-contactar-soporte',
@@ -25,11 +25,12 @@ import { TranslateService } from '@ngx-translate/core';
         MatIconModule,
         MatProgressSpinnerModule,
         MatSnackBarModule,
+        TranslateModule,
     ],
     templateUrl: './contactar-soporte.component.html',
     styleUrl: './contactar-soporte.component.scss'
 })
-export class ContactarSoporteComponent {
+export class ContactarSoporteComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly supportApi = inject(SupportApiService);
   private readonly snackBar = inject(MatSnackBar);
@@ -44,10 +45,10 @@ export class ContactarSoporteComponent {
     mensaje: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(8000)]],
   });
 
-  constructor() {
+  ngOnInit(): void {
     const motivo = this.route.snapshot.queryParamMap.get('motivo');
     if (motivo === 'reporte') {
-      this.form.patchValue({ asunto: 'Reporte / incidencia en la aplicación' });
+      this.form.patchValue({ asunto: this.translate.instant('support.reportPresetSubject') });
     }
   }
 

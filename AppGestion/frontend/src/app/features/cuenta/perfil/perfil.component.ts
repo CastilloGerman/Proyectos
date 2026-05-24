@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -15,7 +16,8 @@ import { MatNativeDateModule, MAT_DATE_LOCALE } from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
 import { AuthService, UsuarioResponse } from '../../../core/auth/auth.service';
 import { getApiErrorMessage } from '../../../core/http/api-error.util';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { map } from 'rxjs';
 import { buildPaisOptionsEs } from '../../../shared/constants/paises-select-options';
 import { formatLocalDateForApi, parseApiLocalDate } from '../../../shared/utils/local-date.util';
 
@@ -60,6 +62,7 @@ function fechaNacimientoOpcionalValida(c: AbstractControl): ValidationErrors | n
         MatDatepickerModule,
         MatNativeDateModule,
         MatSelectModule,
+        TranslateModule,
     ],
     providers: [{ provide: MAT_DATE_LOCALE, useValue: 'es-ES' }],
     templateUrl: './perfil.component.html',
@@ -70,6 +73,11 @@ export class PerfilComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly translate = inject(TranslateService);
+
+  /** Recomputes date/role labels when the UI language changes. */
+  private readonly localeTick = toSignal(this.translate.onLangChange.pipe(map(() => Date.now())), {
+    initialValue: 0,
+  });
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -92,32 +100,37 @@ export class PerfilComponent implements OnInit {
   readonly emailDisplay = computed(() => this.me()?.email ?? this.auth.user()?.email ?? '');
 
   readonly fechaAltaFmt = computed(() => {
+    void this.localeTick();
     const raw = this.me()?.fechaCreacion;
-    if (!raw) return '—';
+    if (!raw) return this.translate.instant('acctProf.unknown');
     const d = new Date(raw);
     return Number.isNaN(d.getTime())
-      ? '—'
-      : d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+      ? this.translate.instant('acctProf.unknown')
+      : d.toLocaleDateString(this.dateLocaleTag(), { day: 'numeric', month: 'long', year: 'numeric' });
   });
 
   readonly rolEtiqueta = computed(() => {
+    void this.localeTick();
     const r = (this.me()?.rol ?? this.auth.user()?.rol ?? 'USER').toUpperCase();
-    if (r === 'ADMIN') return 'Administrador';
-    return 'Usuario';
+    const key =
+      r === 'ADMIN' ? ('acctProf.roleADMIN' as const) : r === 'USER' ? ('acctProf.roleUSER' as const) : null;
+    return key ? this.translate.instant(key) : r;
   });
 
   readonly estadoSuscripcion = computed(() => {
+    void this.localeTick();
     const s = this.me()?.subscriptionStatus ?? this.auth.user()?.subscriptionStatus;
-    if (!s) return '—';
-    const map: Record<string, string> = {
-      TRIAL_ACTIVE: 'Prueba activa',
-      TRIAL_EXPIRED: 'Prueba finalizada',
-      ACTIVE: 'Suscripción activa',
-      PAST_DUE: 'Pago pendiente',
-      CANCELED: 'Cancelada',
-      EXPIRED: 'Expirada',
-    };
-    return map[s] ?? s;
+    if (!s) return this.translate.instant('acctProf.unknown');
+    const subKey =
+      {
+        TRIAL_ACTIVE: 'acctProf.subTRIAL_ACTIVE',
+        TRIAL_EXPIRED: 'acctProf.subTRIAL_EXPIRED',
+        ACTIVE: 'acctProf.subACTIVE',
+        PAST_DUE: 'acctProf.subPAST_DUE',
+        CANCELED: 'acctProf.subCANCELED',
+        EXPIRED: 'acctProf.subEXPIRED',
+      }[s as string];
+    return subKey ? this.translate.instant(subKey) : s;
   });
 
   ngOnInit(): void {
@@ -206,5 +219,17 @@ export class PerfilComponent implements OnInit {
 
   reintentar(): void {
     this.ngOnInit();
+  }
+
+  private dateLocaleTag(): string {
+    const lang = (this.translate.currentLang || 'es').split('-')[0].toLowerCase();
+    const map: Record<string, string> = {
+      es: 'es-ES',
+      en: 'en-GB',
+      fr: 'fr-FR',
+      ro: 'ro-RO',
+      uk: 'uk-UA',
+    };
+    return map[lang] ?? 'es-ES';
   }
 }

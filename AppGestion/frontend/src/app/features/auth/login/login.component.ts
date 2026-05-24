@@ -10,6 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AuthService } from '../../../core/auth/auth.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { AnimatedBackgroundComponent } from '../../../shared/animated-background/animated-background.component';
 
 /** Client ID de Google para el botón "Iniciar con Google" (mismo que en environment). */
 const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.apps.googleusercontent.com';
@@ -27,17 +28,25 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
         MatSnackBarModule,
         AboutComponent,
         TranslateModule,
+        AnimatedBackgroundComponent,
     ],
     template: `
     <div class="login-page" id="login-page-top">
     <div class="login-wrapper">
-      <div class="login-container">
+      <app-animated-background [opacity]="0.45" />
+      <div class="login-layout">
+        <section class="hero-section" aria-labelledby="login-hero-title">
+          <div class="hero-content">
+            <h1 id="login-hero-title" class="hero-headline">{{ 'auth.login.heroTitle' | translate }}</h1>
+            <div class="hero-accent-line" aria-hidden="true"></div>
+            <p class="hero-lead">{{ 'auth.login.subtitle' | translate }}</p>
+          </div>
+        </section>
+        <div class="login-container">
         <div class="login-card">
           <div class="login-logo">
             <img src="assets/noemi-logo.png" alt="Noemí" class="login-logo-img" />
           </div>
-          <p class="login-tagline">{{ 'auth.login.tagline' | translate }}</p>
-          <p class="login-subtitle">{{ 'auth.login.subtitle' | translate }}</p>
           @if (referralToken()) {
           <p class="referral-banner">{{ 'auth.login.referralBanner' | translate }}</p>
           }
@@ -131,6 +140,7 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
           <a [routerLink]="['/register']" [queryParams]="registerLinkQueryParams()" class="register-link">{{ 'auth.login.register' | translate }}</a>
         </div>
       </div>
+      </div>
       <button
         type="button"
         class="scroll-down-btn"
@@ -160,12 +170,86 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
       position: relative;
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: stretch;
       justify-content: center;
       padding: 24px;
       padding-bottom: 80px;
-      background: linear-gradient(160deg, #e8ecf4 0%, #d4dceb 40%, #c9d1e0 100%);
+      background: #eceef4;
+      overflow: hidden;
       transition: background 0.4s ease;
+    }
+
+    .login-layout {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+      gap: clamp(2rem, 5vw, 4rem);
+      align-items: center;
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .hero-section {
+      position: relative;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      max-width: 36rem;
+    }
+
+    .hero-headline {
+      margin: 0 0 1.25rem;
+      font-size: clamp(1.85rem, 4.5vw, 3rem);
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      line-height: 1.12;
+      text-transform: uppercase;
+      color: #2d3e50;
+    }
+
+    .hero-accent-line {
+      height: 4px;
+      max-width: 120px;
+      margin-bottom: 1.25rem;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #6b3fa0 0%, #f5843a 50%, #f05a5a 100%);
+    }
+
+    .hero-lead {
+      margin: 0;
+      font-size: clamp(1rem, 2vw, 1.15rem);
+      line-height: 1.6;
+      color: #64748b;
+      max-width: 32rem;
+    }
+
+    @media (max-width: 900px) {
+      .login-layout {
+        grid-template-columns: 1fr;
+        max-width: 420px;
+      }
+
+      .hero-section {
+        text-align: center;
+      }
+
+      .hero-content {
+        max-width: none;
+        margin: 0 auto;
+      }
+
+      .hero-accent-line {
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .hero-lead {
+        max-width: none;
+      }
     }
 
     .login-about-anchor {
@@ -218,8 +302,9 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
     }
 
     .login-container {
+      position: relative;
+      z-index: 1;
       width: 100%;
-      max-width: 420px;
       animation: loginFadeIn 0.5s ease-out;
     }
 
@@ -235,6 +320,8 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
     }
 
     .login-card {
+      position: relative;
+      z-index: 1;
       background: rgba(255, 255, 255, 0.95);
       border-radius: 28px;
       padding: 40px 36px;
@@ -500,6 +587,14 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
 
     :host-context(html.app-dark-theme) .login-title {
       color: var(--app-text-primary);
+    }
+
+    :host-context(html.app-dark-theme) .hero-headline {
+      color: var(--app-text-primary);
+    }
+
+    :host-context(html.app-dark-theme) .hero-lead {
+      color: var(--app-text-secondary);
     }
 
     :host-context(html.app-dark-theme) .login-tagline {

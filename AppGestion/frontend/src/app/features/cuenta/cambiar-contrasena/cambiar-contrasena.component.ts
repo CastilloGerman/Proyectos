@@ -13,7 +13,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { passwordMatchValidator } from '../../../shared/validators/password-match.validator';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-cambiar-contrasena',
@@ -29,6 +29,7 @@ import { TranslateService } from '@ngx-translate/core';
         MatProgressSpinnerModule,
         MatSnackBarModule,
         MatDividerModule,
+        TranslateModule,
     ],
     templateUrl: './cambiar-contrasena.component.html',
     styleUrl: './cambiar-contrasena.component.scss'

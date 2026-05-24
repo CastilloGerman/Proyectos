@@ -1,0 +1,24 @@
+<!--
+  Uso:
+    <app-animated-background [opacity]="0.45" />
+
+  El componente se posiciona como capa absoluta.
+  El padre debe tener position: relative y un z-index mayor en su contenido.
+-->
+<svg
+  class="noemi-bg"
+  [attr.viewBox]="viewBox"
+  [style.opacity]="opacity"
+  preserveAspectRatio="xMidYMid slice"
+  aria-hidden="true"
+  focusable="false"
+>
+  <polyline
+    *ngFor="let line of lines"
+    class="noemi-line"
+    [attr.points]="line.points"
+    [attr.stroke]="line.stroke"
+    [attr.stroke-width]="line.strokeWidth"
+    [ngStyle]="lineStyle(line)"
+  />
+</svg>

@@ -26,7 +26,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { Cliente } from '../../../core/models/cliente.model';
 import { Material } from '../../../core/models/material.model';
 import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-presupuesto-rapido',
@@ -45,32 +45,31 @@ import { TranslateService } from '@ngx-translate/core';
         MatTooltipModule,
         MatRadioModule,
         FormsModule,
+        TranslateModule,
     ],
     template: `
     <div class="rapido-wrap">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>Rápido en obra</mat-card-title>
-          <mat-card-subtitle
-            >Cliente, líneas de material y/o tareas manuales y PDF en pocos segundos. Ideal desde el móvil.</mat-card-subtitle
-          >
+          <mat-card-title>{{ 'budQuick.title' | translate }}</mat-card-title>
+          <mat-card-subtitle>{{ 'budQuick.subtitle' | translate }}</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
           <form [formGroup]="form" (ngSubmit)="crearYpdf()">
             <div class="cliente-block">
-              <span class="modo-label">Cliente</span>
+              <span class="modo-label">{{ 'budQuick.clientLabel' | translate }}</span>
               <mat-radio-group
                 [(ngModel)]="clienteModo"
                 [ngModelOptions]="{standalone: true}"
                 (ngModelChange)="onClienteModoChange($event)"
                 class="modo-radios"
               >
-                <mat-radio-button value="existente">Existente</mat-radio-button>
-                <mat-radio-button value="nuevo">Nuevo rápido (solo nombre)</mat-radio-button>
+                <mat-radio-button value="existente">{{ 'budQuick.modeExisting' | translate }}</mat-radio-button>
+                <mat-radio-button value="nuevo">{{ 'budQuick.modeNewQuick' | translate }}</mat-radio-button>
               </mat-radio-group>
               @if (clienteModo === 'existente') {
                 <mat-form-field appearance="outline" class="full" subscriptSizing="fixed">
-                  <mat-label>Cliente</mat-label>
+                  <mat-label>{{ 'budQuick.clientSelect' | translate }}</mat-label>
                   <mat-select formControlName="clienteId" required>
                     <mat-select-trigger>
                       {{ nombreClienteSeleccionado() }}
@@ -80,7 +79,7 @@ import { TranslateService } from '@ngx-translate/core';
                         <span class="opt-line">
                           <span>{{ c.nombre }}</span>
                           @if (c.estadoCliente === 'PROVISIONAL') {
-                            <span class="badge-fiscal">Sin datos fiscales</span>
+                            <span class="badge-fiscal">{{ 'budQuick.provisionalBadge' | translate }}</span>
                           }
                         </span>
                       </mat-option>
@@ -90,8 +89,8 @@ import { TranslateService } from '@ngx-translate/core';
               } @else {
                 <div class="nuevo-rapido">
                   <mat-form-field appearance="outline" class="nombre-nuevo" subscriptSizing="fixed">
-                    <mat-label>Nombre del cliente</mat-label>
-                    <input matInput [(ngModel)]="nombreClienteNuevo" [ngModelOptions]="{standalone: true}" placeholder="Ej. Juan García" autocomplete="name" />
+                    <mat-label>{{ 'budQuick.quickClientName' | translate }}</mat-label>
+                    <input matInput [(ngModel)]="nombreClienteNuevo" [ngModelOptions]="{standalone: true}" [placeholder]="'budQuick.quickClientPh' | translate" autocomplete="name" />
                   </mat-form-field>
                   <button
                     type="button"
@@ -100,37 +99,37 @@ import { TranslateService } from '@ngx-translate/core';
                     (click)="crearClienteRapido()"
                     [disabled]="!auth.canMutate() || !nombreClienteNuevo.trim()"
                   >
-                    Crear y usar
+                    {{ 'budQuick.createUse' | translate }}
                   </button>
                 </div>
               }
             </div>
 
             <div class="section materiales-section">
-              <h3 class="section-title">Materiales</h3>
-              <p class="section-hint">Elige artículos del catálogo (mismo flujo que en presupuesto normal).</p>
+              <h3 class="section-title">{{ 'budQuick.materialsTitle' | translate }}</h3>
+              <p class="section-hint">{{ 'budQuick.materialsHint' | translate }}</p>
               <div formArrayName="materialItems" class="lines-block">
                 @for (line of materialItems.controls; track line; let i = $index) {
                   <div [formGroupName]="i" class="line-row">
                     <mat-form-field appearance="outline" class="fg-mat" subscriptSizing="fixed">
-                      <mat-label>Material</mat-label>
+                      <mat-label>{{ 'budQuick.material' | translate }}</mat-label>
                       <mat-select formControlName="materialId" (selectionChange)="onMaterial(i, $event.value)">
-                        <mat-option [value]="null">Seleccionar…</mat-option>
+                        <mat-option [value]="null">{{ 'budQuick.selectMat' | translate }}</mat-option>
                         @for (m of materiales; track m.id) {
                           <mat-option [value]="m.id">{{ m.nombre }}</mat-option>
                         }
                       </mat-select>
                     </mat-form-field>
                     <mat-form-field appearance="outline" class="fg-desc" subscriptSizing="fixed">
-                      <mat-label>Descripción</mat-label>
+                      <mat-label>{{ 'budQuick.description' | translate }}</mat-label>
                       <input matInput formControlName="descripcion" autocomplete="off" />
                     </mat-form-field>
                     <mat-form-field appearance="outline" class="fg-qty" subscriptSizing="fixed">
-                      <mat-label>Cant.</mat-label>
+                      <mat-label>{{ 'budQuick.qtyShort' | translate }}</mat-label>
                       <input matInput type="number" formControlName="cantidad" min="0.001" step="0.01" />
                     </mat-form-field>
                     <mat-form-field appearance="outline" class="fg-pu" subscriptSizing="fixed">
-                      <mat-label>P. unit.</mat-label>
+                      <mat-label>{{ 'budQuick.unitShort' | translate }}</mat-label>
                       <input matInput type="number" formControlName="precioUnitario" min="0" step="0.01" />
                     </mat-form-field>
                     <div class="line-actions">
@@ -140,7 +139,7 @@ import { TranslateService } from '@ngx-translate/core';
                         class="btn-remove"
                         (click)="removeMaterialLine(i)"
                         [disabled]="totalLineCount() <= 1"
-                        matTooltip="Quitar línea">
+                        [matTooltip]="'budQuick.removeLine' | translate">
                         <mat-icon>delete_outline</mat-icon>
                       </button>
                     </div>
@@ -149,26 +148,26 @@ import { TranslateService } from '@ngx-translate/core';
               </div>
               <button mat-stroked-button type="button" class="add-line" (click)="addMaterialLine()">
                 <mat-icon>add</mat-icon>
-                Añadir material
+                {{ 'budQuick.addMaterial' | translate }}
               </button>
             </div>
 
             <div class="section tareas-section">
-              <h3 class="section-title">Tareas manuales</h3>
-              <p class="section-hint">Trabajos sin artículo de catálogo (igual que en el presupuesto completo).</p>
+              <h3 class="section-title">{{ 'budQuick.manualTitle' | translate }}</h3>
+              <p class="section-hint">{{ 'budQuick.manualHint' | translate }}</p>
               <div formArrayName="manualItems" class="lines-block">
                 @for (line of manualItems.controls; track line; let i = $index) {
                   <div [formGroupName]="i" class="line-row manual-row">
                     <mat-form-field appearance="outline" class="fg-desc-manual" subscriptSizing="fixed">
-                      <mat-label>Descripción</mat-label>
-                      <input matInput formControlName="tareaManual" placeholder="Trabajo o concepto" autocomplete="off" />
+                      <mat-label>{{ 'budQuick.description' | translate }}</mat-label>
+                      <input matInput formControlName="tareaManual" [placeholder]="'budQuick.taskPh' | translate" autocomplete="off" />
                     </mat-form-field>
                     <mat-form-field appearance="outline" class="fg-qty" subscriptSizing="fixed">
-                      <mat-label>Cant.</mat-label>
+                      <mat-label>{{ 'budQuick.qtyShort' | translate }}</mat-label>
                       <input matInput type="number" formControlName="cantidad" min="0.001" step="0.01" />
                     </mat-form-field>
                     <mat-form-field appearance="outline" class="fg-pu" subscriptSizing="fixed">
-                      <mat-label>P. unit.</mat-label>
+                      <mat-label>{{ 'budQuick.unitShort' | translate }}</mat-label>
                       <input matInput type="number" formControlName="precioUnitario" min="0" step="0.01" />
                     </mat-form-field>
                     <div class="line-actions">
@@ -178,7 +177,7 @@ import { TranslateService } from '@ngx-translate/core';
                         class="btn-remove"
                         (click)="removeManualLine(i)"
                         [disabled]="totalLineCount() <= 1"
-                        matTooltip="Quitar línea">
+                        [matTooltip]="'budQuick.removeLine' | translate">
                         <mat-icon>delete_outline</mat-icon>
                       </button>
                     </div>
@@ -187,16 +186,16 @@ import { TranslateService } from '@ngx-translate/core';
               </div>
               <button mat-stroked-button type="button" class="add-line" (click)="addManualLine()">
                 <mat-icon>add</mat-icon>
-                Añadir tarea manual
+                {{ 'budQuick.addManual' | translate }}
               </button>
             </div>
 
-            <mat-checkbox formControlName="ivaHabilitado">IVA 21%</mat-checkbox>
+            <mat-checkbox formControlName="ivaHabilitado">{{ 'budQuick.vatCheck' | translate }}</mat-checkbox>
             <div class="actions">
-              <button mat-button type="button" routerLink="/presupuestos">Cancelar</button>
+              <button mat-button type="button" routerLink="/presupuestos">{{ 'common.cancel' | translate }}</button>
               <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || loading">
                 <mat-icon>picture_as_pdf</mat-icon>
-                Crear y abrir PDF
+                {{ 'budQuick.createPdf' | translate }}
               </button>
             </div>
           </form>
@@ -207,15 +206,12 @@ import { TranslateService } from '@ngx-translate/core';
                 [href]="ultimoClienteWa"
                 target="_blank"
                 rel="noopener"
-                aria-label="Abrir WhatsApp al cliente con un texto sugerido"
+                [attr.aria-label]="'budQuick.waAria' | translate"
               >
                 <img src="assets/whatsapp-logo.png" alt="" class="wa-logo" width="22" height="22" />
-                <span class="wa-link-text">WhatsApp al cliente</span>
+                <span class="wa-link-text">{{ 'budQuick.waLink' | translate }}</span>
               </a>
-              <span class="wa-hint">
-                En muchos móviles el PDF se ofrece al compartir con WhatsApp; si no, abre el PDF en la otra pestaña y usa este
-                enlace (texto sugerido, sin adjunto automático).
-              </span>
+              <span class="wa-hint">{{ 'budQuick.waHint' | translate }}</span>
             </div>
           }
         </mat-card-content>
@@ -597,7 +593,10 @@ export class PresupuestoRapidoComponent implements OnInit {
   }
 
   private waMessageText(cli: Cliente | undefined, presupuestoId: number): string {
-    return `Hola${cli?.nombre ? ' ' + cli.nombre : ''}, te envío el presupuesto #${presupuestoId}. ¿Te encaja?`;
+    return this.translate.instant('budQuick.waMsg', {
+      nameSuffix: cli?.nombre ? ' ' + cli.nombre : '',
+      id: presupuestoId,
+    });
   }
 
   private openPdfBlobInTab(blob: Blob): void {

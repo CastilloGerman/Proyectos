@@ -2,12 +2,12 @@
   <div class="sub-page__head">
     <a mat-button routerLink="/dashboard" class="sub-back">
       <mat-icon>arrow_back</mat-icon>
-      Volver
+      {{ 'common.back' | translate }}
     </a>
     <div>
-      <h1 class="sub-page__title">Suscripción y plan actual</h1>
+      <h1 class="sub-page__title">{{ 'acctSub.title' | translate }}</h1>
       <p class="sub-page__subtitle">
-        Consulta el estado de tu cuenta, fechas importantes y enlaces seguros para pagar o gestionar la facturación (Stripe).
+        {{ 'acctSub.subtitle' | translate }}
       </p>
     </div>
   </div>
@@ -15,13 +15,13 @@
   @if (loading()) {
     <div class="sub-state">
       <mat-progress-spinner diameter="40" mode="indeterminate" />
-      <span>Cargando información del plan…</span>
+      <span>{{ 'acctSub.loading' | translate }}</span>
     </div>
   } @else if (loadError()) {
     <mat-card class="sub-card">
       <mat-card-content>
-        <p>No pudimos cargar los datos. Comprueba la conexión.</p>
-        <button mat-stroked-button type="button" color="primary" (click)="refrescar()">Reintentar</button>
+        <p>{{ 'acctSub.loadErr' | translate }}</p>
+        <button mat-stroked-button type="button" color="primary" (click)="refrescar()">{{ 'acctSub.retry' | translate }}</button>
       </mat-card-content>
     </mat-card>
   } @else {
@@ -29,68 +29,72 @@
       <div class="sub-banner sub-banner--readonly" role="status">
         <mat-icon>lock</mat-icon>
         <div>
-          <strong>Modo solo lectura</strong>
-          <p class="sub-banner__text">No puedes crear ni editar documentos hasta activar un plan o resolver el pago.</p>
+          <strong>{{ 'acctSub.bannerROTitle' | translate }}</strong>
+          <p class="sub-banner__text">{{ 'acctSub.bannerROText' | translate }}</p>
         </div>
       </div>
     }
 
     <mat-card class="sub-card">
       <mat-card-header>
-        <mat-card-title>Resumen</mat-card-title>
-        <mat-card-subtitle>Datos según nuestro sistema (se actualizan al iniciar sesión y tras pagar)</mat-card-subtitle>
+        <mat-card-title>{{ 'acctSub.summaryTitle' | translate }}</mat-card-title>
+        <mat-card-subtitle>{{ 'acctSub.summarySub' | translate }}</mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
         <dl class="sub-dl">
           <div class="sub-dl__row">
-            <dt>Plan</dt>
-            <dd>{{ planLabel }}</dd>
+            <dt>{{ 'acctSub.planLbl' | translate }}</dt>
+            <dd>{{ planDisplayLabel() }}</dd>
           </div>
           <div class="sub-dl__row">
-            <dt>Precios (Noemi)</dt>
+            <dt>{{ 'acctSub.priceLbl' | translate }}</dt>
             <dd>
-              {{ precioMensualFmt() }} al mes · {{ precioAnualFmt() }} al año
+              {{ precioDosIntervalosLbl() }}
               @if (subscriptionDetails()?.billingInterval === 'MONTHLY') {
-                <span class="sub-dl__hint"> (intervalo actual: mensual)</span>
+                <span class="sub-dl__hint">{{ 'acctSub.intMo' | translate }}</span>
               } @else if (subscriptionDetails()?.billingInterval === 'YEARLY') {
-                <span class="sub-dl__hint"> (intervalo actual: anual)</span>
+                <span class="sub-dl__hint">{{ 'acctSub.intYr' | translate }}</span>
               }
             </dd>
           </div>
           @if (ahorroAnualResumen()) {
             <div class="sub-dl__row sub-dl__row--highlight">
-              <dt>Ahorro anual</dt>
+              <dt>{{ 'acctSub.saveYrLbl' | translate }}</dt>
               <dd>{{ ahorroAnualResumen() }}</dd>
             </div>
           }
           @if (cancelAlFinalDelPeriodo()) {
             <div class="sub-dl__row">
-              <dt>Renovación</dt>
-              <dd>La suscripción <strong>no se renovará</strong> automáticamente al terminar el periodo en curso.</dd>
+              <dt>{{ 'acctSub.renewStopTitle' | translate }}</dt>
+              <dd>{{ 'acctSub.renewStopDd' | translate }}</dd>
             </div>
           }
           @if (requiereAccionPago()) {
             <div class="sub-dl__row">
-              <dt>Pago</dt>
-              <dd>Hay un <strong>paso pendiente</strong> en Stripe para completar el cobro (p. ej. verificación del banco).</dd>
+              <dt>{{ 'acctSub.payPendingTitle' | translate }}</dt>
+              <dd>{{ 'acctSub.payPendingDd' | translate }}</dd>
             </div>
           }
           <div class="sub-dl__row">
-            <dt>Estado</dt>
+            <dt>{{ 'acctSub.statusLbl' | translate }}</dt>
             <dd>
               <span [class]="estadoChipClass()">{{ estadoEtiqueta() }}</span>
             </dd>
           </div>
           <div class="sub-dl__row">
-            <dt>Acceso a la aplicación</dt>
-            <dd>{{ puedeEscribir() ? 'Edición y creación de datos' : 'Solo lectura' }}</dd>
+            <dt>{{ 'acctSub.accessLbl' | translate }}</dt>
+            <dd>
+              {{
+                puedeEscribir() ? ('acctSub.accessWrite' | translate) : ('acctSub.accessReadOnly' | translate)
+              }}
+            </dd>
           </div>
           <div class="sub-dl__row">
-            <dt>Fin de la prueba gratuita</dt>
+            <dt>{{ 'acctSub.trialEndsLbl' | translate }}</dt>
             <dd>{{ fechaFinPruebaFmt() }}</dd>
           </div>
           <div class="sub-dl__row">
-            <dt>Fin del periodo de facturación actual</dt>
+            <dt>{{ 'acctSub.billPeriodEndsLbl' | translate }}</dt>
             <dd>
               {{ finPeriodoFmt() }}
               @if (
@@ -98,7 +102,7 @@
                 estadoSuscripcion() !== 'PAST_DUE' &&
                 estadoSuscripcion() !== 'TRIALING'
               ) {
-                <span class="sub-dl__hint"> (aplica cuando hay suscripción de pago activa)</span>
+                <span class="sub-dl__hint">{{ 'acctSub.billPeriodHint' | translate }}</span>
               }
             </dd>
           </div>
@@ -112,20 +116,9 @@
 
         <div class="sub-actions">
           @if (mostrarCheckout()) {
-            <div class="sub-billing" role="group" aria-labelledby="sub-billing-label">
-              <div class="sub-billing__heading" id="sub-billing-label">Facturación</div>
-              <mat-button-toggle-group
-                [value]="checkoutBillingPeriod()"
-                (change)="onBillingChange($event)"
-                hideSingleSelectionIndicator
-              >
-                <mat-button-toggle value="MONTHLY">Mensual</mat-button-toggle>
-                <mat-button-toggle value="YEARLY">Anual</mat-button-toggle>
-              </mat-button-toggle-group>
-              <p class="sub-billing__hint">
-                Elige el ciclo de facturación; si en el servidor está activado Stripe Tax, el IVA u otros impuestos se calculan en el checkout.
-              </p>
-            </div>
+            <p class="sub-billing__hint">
+              {{ stripeCheckoutCopy() }}
+            </p>
             <button
               mat-raised-button
               color="primary"
@@ -138,7 +131,7 @@
               } @else {
                 <mat-icon>workspace_premium</mat-icon>
               }
-              Contratar plan
+              {{ 'acctSub.checkoutBtn' | translate }}
             </button>
           }
           @if (portalDisponible()) {
@@ -154,12 +147,12 @@
               } @else {
                 <mat-icon>open_in_new</mat-icon>
               }
-              Facturación y método de pago
+              {{ 'acctSub.portalBtn' | translate }}
             </button>
           }
         </div>
         <p class="sub-footnote">
-          Los pagos y datos bancarios se gestionan en Stripe; no almacenamos tu tarjeta en nuestros servidores.
+          {{ 'acctSub.stripeFoot' | translate }}
         </p>
       </mat-card-content>
     </mat-card>
@@ -167,8 +160,8 @@
     @if (!environment.production) {
       <mat-card class="sub-card sub-card--dev">
         <mat-card-content>
-          <p class="sub-dev-label">Solo desarrollo</p>
-          <button mat-stroked-button type="button" (click)="grantPremiumDev()">Marcar suscripción activa (sin Stripe)</button>
+          <p class="sub-dev-label">{{ 'acctSub.devOnlyLbl' | translate }}</p>
+          <button mat-stroked-button type="button" (click)="grantPremiumDev()">{{ 'acctSub.devPremiumBtn' | translate }}</button>
         </mat-card-content>
       </mat-card>
     }

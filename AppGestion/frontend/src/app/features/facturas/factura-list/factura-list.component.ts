@@ -1,4 +1,11 @@
-import { Component, DestroyRef, OnInit, ViewChild, inject } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  OnInit,
+  ViewChild,
+  inject,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { trigger, transition, query, stagger, animate, style } from '@angular/animations';
@@ -29,7 +36,7 @@ import { ConfigEmpresaDialogComponent } from '../../../shared/config-empresa-dia
 import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/enviar-email-dialog.component';
 import { AnularFacturaDialogComponent } from '../../../shared/anular-factura-dialog/anular-factura-dialog.component';
 import { FacturaParcialImporteDialogComponent } from '../../../shared/factura-parcial-importe-dialog/factura-parcial-importe-dialog.component';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-factura-list',
@@ -51,6 +58,7 @@ import { TranslateService } from '@ngx-translate/core';
         MatCheckboxModule,
         EstadoBadgeComponent,
         SkeletonComponent,
+        TranslateModule,
     ],
     animations: [
         trigger('listAnimation', [
@@ -67,61 +75,61 @@ import { TranslateService } from '@ngx-translate/core';
     template: `
     <div class="factura-list">
       <div class="header">
-        <h1>Facturas</h1>
+        <h1>{{ 'invList.title' | translate }}</h1>
         <div class="header-actions">
-          <button mat-icon-button (click)="openConfig()" matTooltip="Textos al final del PDF">
+          <button mat-icon-button (click)="openConfig()" [matTooltip]="'invList.tooltipPdfTexts' | translate">
             <mat-icon>settings</mat-icon>
           </button>
           @if (auth.canMutate()) {
           <button mat-stroked-button (click)="openImportarPresupuesto()">
             <mat-icon>file_download</mat-icon>
-            Importar presupuesto
+            {{ 'invList.importBudget' | translate }}
           </button>
           <a mat-raised-button color="primary" routerLink="/facturas/nuevo">
             <mat-icon>add</mat-icon>
-            Nueva factura
+            {{ 'invList.newInvoice' | translate }}
           </a>
           }
         </div>
       </div>
       <div class="filters-bar">
         <mat-form-field appearance="outline" class="filter-text">
-          <mat-label>Buscar</mat-label>
+          <mat-label>{{ 'invList.filterSearch' | translate }}</mat-label>
           <mat-icon matPrefix>search</mat-icon>
-          <input matInput (input)="applyTextFilter($event)" placeholder="Nº factura, cliente…">
+          <input matInput (input)="applyTextFilter($event)" [placeholder]="'invList.filterSearchPlaceholder' | translate">
         </mat-form-field>
         <mat-form-field appearance="outline" class="filter-estado">
-          <mat-label>Estado pago</mat-label>
+          <mat-label>{{ 'invList.filterPaymentStatus' | translate }}</mat-label>
           <mat-select [value]="estadoFilter" (selectionChange)="applyEstadoFilter($event.value)">
-            <mat-option value="">Todos</mat-option>
-            <mat-option value="No Pagada">No Pagada</mat-option>
-            <mat-option value="Parcial">Parcial</mat-option>
-            <mat-option value="Pagada">Pagada</mat-option>
+            <mat-option value="">{{ 'invList.all' | translate }}</mat-option>
+            <mat-option value="No Pagada">{{ 'est.lbl.payUnpaid' | translate }}</mat-option>
+            <mat-option value="Parcial">{{ 'est.lbl.payPartial' | translate }}</mat-option>
+            <mat-option value="Pagada">{{ 'est.lbl.payPaid' | translate }}</mat-option>
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline" class="filter-venc">
-          <mat-label>Vencimiento</mat-label>
+          <mat-label>{{ 'invList.filterDue' | translate }}</mat-label>
           <mat-select [value]="vencimientoFilter" (selectionChange)="applyVencimientoFilter($event.value)">
-            <mat-option value="">Todos</mat-option>
-            <mat-option value="vencidas">Vencidas (no cobradas)</mat-option>
-            <mat-option value="proximas7">Próximos 7 días</mat-option>
+            <mat-option value="">{{ 'invList.all' | translate }}</mat-option>
+            <mat-option value="vencidas">{{ 'invList.dueOverdue' | translate }}</mat-option>
+            <mat-option value="proximas7">{{ 'invList.dueNext7' | translate }}</mat-option>
           </mat-select>
         </mat-form-field>
-        <mat-form-field appearance="outline" class="filter-emision-anio" matTooltip="Filtra por fecha de emisión de la factura">
-          <mat-label>Año emisión</mat-label>
+        <mat-form-field appearance="outline" class="filter-emision-anio" [matTooltip]="'invList.tooltipYearIssued' | translate">
+          <mat-label>{{ 'invList.yearIssued' | translate }}</mat-label>
           <mat-select [value]="emisionYear" (selectionChange)="onEmisionYearChange($event.value)">
-            <mat-option value="">Todos</mat-option>
+            <mat-option value="">{{ 'invList.all' | translate }}</mat-option>
             @for (y of emisionYearOptions; track y) {
               <mat-option [value]="'' + y">{{ y }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
-        <mat-form-field appearance="outline" class="filter-emision-mes" matTooltip="Requiere elegir un año">
-          <mat-label>Mes emisión</mat-label>
+        <mat-form-field appearance="outline" class="filter-emision-mes" [matTooltip]="'invList.tooltipMonthNeedsYear' | translate">
+          <mat-label>{{ 'invList.monthIssued' | translate }}</mat-label>
           <mat-select [value]="emisionMonth" [disabled]="!emisionYear" (selectionChange)="onEmisionMonthChange($event.value)">
-            <mat-option value="">Todo el año</mat-option>
-            @for (m of mesesEmisionCatalogo; track m.value) {
-              <mat-option [value]="m.value">{{ m.label }}</mat-option>
+            <mat-option value="">{{ 'invList.wholeYear' | translate }}</mat-option>
+            @for (mo of mesEmisionValues; track mo) {
+              <mat-option [value]="mo">{{ mesEmisionLabel(mo) }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
@@ -130,14 +138,14 @@ import { TranslateService } from '@ngx-translate/core';
           [checked]="pendienteCobroOnly"
           (change)="applyPendienteCobroFilter($event.checked)"
         >
-          Solo pendientes de cobro
+          {{ 'invList.pendingPaymentOnly' | translate }}
         </mat-checkbox>
         <mat-checkbox
           class="filter-anuladas"
           [checked]="incluirAnuladas"
           (change)="applyIncluirAnuladas($event.checked)"
         >
-          Mostrar anuladas
+          {{ 'invList.showVoided' | translate }}
         </mat-checkbox>
       </div>
 
@@ -148,16 +156,16 @@ import { TranslateService } from '@ngx-translate/core';
         <div class="table-container">
         <table mat-table [dataSource]="dataSource" matSort class="full-width">
           <ng-container matColumnDef="numeroFactura">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Nº Factura</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'invList.colInvoiceNo' | translate }}</th>
             <td mat-cell *matCellDef="let row">
               @if (row.anulada) {
-                <mat-chip class="anulada-chip">Anulada</mat-chip>
+                <mat-chip class="anulada-chip">{{ 'invList.voidedChip' | translate }}</mat-chip>
               }
               {{ row.numeroFactura }}
             </td>
           </ng-container>
           <ng-container matColumnDef="tipoFactura">
-            <th mat-header-cell *matHeaderCellDef>Tipo</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'invList.colType' | translate }}</th>
             <td mat-cell *matCellDef="let row">
               @if (row.tipoFactura && row.tipoFactura !== 'NORMAL') {
                 <mat-chip class="tipo-chip" [class.tipo-anticipo]="row.tipoFactura === 'ANTICIPO'" [class.tipo-final]="row.tipoFactura === 'FINAL_CON_ANTICIPO'">
@@ -169,15 +177,15 @@ import { TranslateService } from '@ngx-translate/core';
             </td>
           </ng-container>
           <ng-container matColumnDef="clienteNombre">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Cliente</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'invList.colCustomer' | translate }}</th>
             <td mat-cell *matCellDef="let row">{{ row.clienteNombre }}</td>
           </ng-container>
           <ng-container matColumnDef="fechaCreacion">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'invList.colDate' | translate }}</th>
             <td mat-cell *matCellDef="let row">{{ row.fechaCreacion | date:'dd/MM/yyyy' }}</td>
           </ng-container>
           <ng-container matColumnDef="fechaVencimiento">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Vencimiento</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'invList.colDue' | translate }}</th>
             <td mat-cell *matCellDef="let row">
               @if (row.fechaVencimiento) {
                 <span [class]="getVencimientoClass(row)">{{ row.fechaVencimiento | date:'dd/MM/yyyy' }}</span>
@@ -187,7 +195,7 @@ import { TranslateService } from '@ngx-translate/core';
             </td>
           </ng-container>
           <ng-container matColumnDef="estadoPago">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'invList.colStatus' | translate }}</th>
             <td mat-cell *matCellDef="let row">
               @if (auth.canMutate() && !row.anulada) {
                 <app-estado-badge
@@ -202,16 +210,16 @@ import { TranslateService } from '@ngx-translate/core';
             </td>
           </ng-container>
           <ng-container matColumnDef="total">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Total</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'invList.colTotal' | translate }}</th>
             <td mat-cell *matCellDef="let row" class="text-right">{{ row.total | number:'1.2-2' }} €</td>
           </ng-container>
           <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'invList.colActions' | translate }}</th>
             <td mat-cell *matCellDef="let row" class="actions-cell">
               @if (auth.canMutate() && !row.anulada) {
-              <a mat-stroked-button [routerLink]="['/facturas', row.id]" matTooltip="Editar factura y estado de pago (pendiente, parcial, pagada)" class="action-edit">
+              <a mat-stroked-button [routerLink]="['/facturas', row.id]" [matTooltip]="'invList.editInvoiceTooltip' | translate" class="action-edit">
                 <mat-icon>edit</mat-icon>
-                Editar
+                {{ 'invList.edit' | translate }}
               </a>
               }
               @if (auth.canMutate() && mostrarRecordatorioManual(row)) {
@@ -220,7 +228,7 @@ import { TranslateService } from '@ngx-translate/core';
                   color="primary"
                   (click)="enviarRecordatorioCliente(row)"
                   [disabled]="loadingRecordatorioId === row.id"
-                  matTooltip="Enviar recordatorio de cobro al cliente (email)"
+                  [matTooltip]="'invList.reminderTooltip' | translate"
                 >
                   @if (loadingRecordatorioId === row.id) {
                     <mat-progress-spinner diameter="22" mode="indeterminate" />
@@ -230,15 +238,15 @@ import { TranslateService } from '@ngx-translate/core';
                 </button>
               }
               @if (!row.anulada) {
-              <button mat-icon-button (click)="enviarEmail(row)" matTooltip="Enviar por email">
+              <button mat-icon-button (click)="enviarEmail(row)" [matTooltip]="'invList.sendEmailTooltip' | translate">
                 <mat-icon>email</mat-icon>
               </button>
               }
-              <button mat-icon-button (click)="downloadPdf(row)" matTooltip="Descargar PDF">
+              <button mat-icon-button (click)="downloadPdf(row)" [matTooltip]="'invList.downloadPdfTooltip' | translate">
                 <mat-icon>picture_as_pdf</mat-icon>
               </button>
               @if (auth.canMutate() && !row.anulada) {
-              <button mat-icon-button color="warn" (click)="anular(row)" matTooltip="Anular factura">
+              <button mat-icon-button color="warn" (click)="anular(row)" [matTooltip]="'invList.voidInvoiceTooltip' | translate">
                 <mat-icon>cancel</mat-icon>
               </button>
               }
@@ -247,7 +255,7 @@ import { TranslateService } from '@ngx-translate/core';
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
           <tr class="mat-row" *matNoDataRow>
-            <td class="mat-cell" colspan="8">No hay facturas que coincidan con el filtro</td>
+            <td class="mat-cell" colspan="8">{{ 'invList.emptyFilter' | translate }}</td>
           </tr>
         </table>
         <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons></mat-paginator>
@@ -397,6 +405,7 @@ import { TranslateService } from '@ngx-translate/core';
 export class FacturaListComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly translate = inject(TranslateService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   private snackClose(): string {
     return this.translate.instant('common.close');
@@ -444,25 +453,17 @@ export class FacturaListComponent implements OnInit {
   emisionYear = '';
   emisionMonth = '';
 
-  readonly mesesEmisionCatalogo = [
-    { value: '01', label: 'Enero' },
-    { value: '02', label: 'Febrero' },
-    { value: '03', label: 'Marzo' },
-    { value: '04', label: 'Abril' },
-    { value: '05', label: 'Mayo' },
-    { value: '06', label: 'Junio' },
-    { value: '07', label: 'Julio' },
-    { value: '08', label: 'Agosto' },
-    { value: '09', label: 'Septiembre' },
-    { value: '10', label: 'Octubre' },
-    { value: '11', label: 'Noviembre' },
-    { value: '12', label: 'Diciembre' },
-  ];
+  readonly mesEmisionValues = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+
+  mesEmisionLabel(mo: string): string {
+    return this.translate.instant(`cal.m${mo}`);
+  }
 
   tipoFacturaLabel(t: string): string {
-    if (t === 'ANTICIPO') return 'Anticipo';
-    if (t === 'FINAL_CON_ANTICIPO') return 'Final';
-    return t;
+    if (t === 'ANTICIPO' || t === 'FINAL_CON_ANTICIPO' || t === 'NORMAL') {
+      return this.translate.instant(`invType.${t}`);
+    }
+    return t ?? '';
   }
 
   get emisionYearOptions(): number[] {
@@ -529,6 +530,8 @@ export class FacturaListComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.translate.onLangChange.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.cdr.markForCheck());
+
     this.route.queryParams.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const ep = params['estadoPago'];
       if (ep === 'No Pagada' || ep === 'Parcial' || ep === 'Pagada') {

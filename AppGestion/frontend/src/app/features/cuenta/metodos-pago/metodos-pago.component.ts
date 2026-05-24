@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -16,7 +17,8 @@ import { ConfigService } from '../../../core/services/config.service';
 import { Empresa } from '../../../core/models/empresa.model';
 import { formatIbanDisplay, ibanValidator, normalizarIbanParaValidar } from '../../../shared/validators/iban.validator';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { map } from 'rxjs';
 
 const BIZUM_MOVIL_ES = /^[6-9]\d{8}$/;
 
@@ -55,6 +57,7 @@ function bizumOpcionalValidator(): ValidatorFn {
         MatDividerModule,
         MatSlideToggleModule,
         MatCheckboxModule,
+        TranslateModule,
     ],
     templateUrl: './metodos-pago.component.html',
     styleUrl: './metodos-pago.component.scss'
@@ -64,6 +67,10 @@ export class MetodosPagoComponent implements OnInit {
   private readonly config = inject(ConfigService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly translate = inject(TranslateService);
+
+  private readonly localeTick = toSignal(this.translate.onLangChange.pipe(map(() => Date.now())), {
+    initialValue: 0,
+  });
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -87,20 +94,29 @@ export class MetodosPagoComponent implements OnInit {
   });
 
   readonly vistaPdf = computed(() => {
+    void this.localeTick();
     const v = this.form.getRawValue();
-    const metodo = v.defaultMetodoPago || 'Transferencia';
+    const metodoRaw = v.defaultMetodoPago || 'Transferencia';
+    const metodo = this.metodoPagoLabel(metodoRaw);
     const ibanFmt = formatIbanDisplay(v.ibanCuenta || '');
     const parts: string[] = [metodo];
-    if (metodo === 'Transferencia') {
-      if (ibanFmt) parts.push(`IBAN ${ibanFmt}`);
-      if (v.titularCuenta?.trim()) parts.push(`Titular ${v.titularCuenta.trim()}`);
+    if (metodoRaw === 'Transferencia') {
+      if (ibanFmt) {
+        parts.push(this.translate.instant('acctPay.previewIbanFmt', { iban: ibanFmt }));
+      }
+      if (v.titularCuenta?.trim()) {
+        parts.push(this.translate.instant('acctPay.previewHolderFmt', { name: v.titularCuenta.trim() }));
+      }
       if (v.nombreBanco?.trim()) parts.push(v.nombreBanco.trim());
-      if (!ibanFmt && !v.titularCuenta?.trim() && !v.nombreBanco?.trim()) {
-        parts.push('sin datos bancarios');
+      const hasBank = !!(ibanFmt || v.titularCuenta?.trim() || v.nombreBanco?.trim());
+      if (!hasBank) {
+        parts.push(this.translate.instant('acctPay.previewNoBank'));
       }
     }
-    if (metodo === 'Bizum' && v.bizumTelefono?.trim()) parts.push(`Bizum ${v.bizumTelefono.trim()}`);
-    return parts.join(' · ');
+    if (metodoRaw === 'Bizum' && v.bizumTelefono?.trim()) {
+      parts.push(this.translate.instant('acctPay.previewBizumFmt', { phone: v.bizumTelefono.trim() }));
+    }
+    return parts.filter(Boolean).join(' · ');
   });
 
   ngOnInit(): void {
@@ -245,5 +261,16 @@ export class MetodosPagoComponent implements OnInit {
           this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
         },
       });
+  }
+
+  private metodoPagoLabel(api: string): string {
+    const key: Record<string, string> = {
+      Transferencia: 'acctPay.mTransfer',
+      Bizum: 'acctPay.mBizum',
+      Tarjeta: 'acctPay.mCard',
+      Efectivo: 'acctPay.mCash',
+    };
+    const k = key[api];
+    return k ? this.translate.instant(k) : api;
   }
 }

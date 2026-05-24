@@ -8,7 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ClienteService } from '../../../core/services/cliente.service';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-cliente-form',
@@ -20,56 +20,57 @@ import { TranslateService } from '@ngx-translate/core';
         MatInputModule,
         MatButtonModule,
         MatSnackBarModule,
+        TranslateModule,
     ],
     template: `
     <div class="cliente-form">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>{{ isEdit ? 'Editar cliente' : 'Nuevo cliente' }}</mat-card-title>
+          <mat-card-title>{{ isEdit ? ('cliForm.edit' | translate) : ('cliForm.new' | translate) }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <form [formGroup]="form" (ngSubmit)="onSubmit()">
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Nombre</mat-label>
-              <input matInput formControlName="nombre" placeholder="Nombre del cliente">
-              <mat-error>El nombre es obligatorio</mat-error>
+              <mat-label>{{ 'cliForm.name' | translate }}</mat-label>
+              <input matInput formControlName="nombre" [placeholder]="'cliForm.namePh' | translate">
+              <mat-error>{{ 'cliForm.nameRequired' | translate }}</mat-error>
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Email</mat-label>
-              <input matInput formControlName="email" type="email" placeholder="email@ejemplo.com">
+              <mat-label>{{ 'cliForm.email' | translate }}</mat-label>
+              <input matInput formControlName="email" type="email" [placeholder]="'cliForm.emailPh' | translate">
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Teléfono</mat-label>
-              <input matInput formControlName="telefono" placeholder="+34 600 000 000">
+              <mat-label>{{ 'cliForm.phone' | translate }}</mat-label>
+              <input matInput formControlName="telefono" [placeholder]="'cliForm.phonePh' | translate">
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Dirección</mat-label>
-              <input matInput formControlName="direccion" placeholder="Dirección">
+              <mat-label>{{ 'cliForm.address' | translate }}</mat-label>
+              <input matInput formControlName="direccion" [placeholder]="'cliForm.addressPh' | translate">
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Código postal</mat-label>
-              <input matInput formControlName="codigoPostal" placeholder="28001">
-              <mat-error>Código postal obligatorio para facturación</mat-error>
+              <mat-label>{{ 'cliForm.postal' | translate }}</mat-label>
+              <input matInput formControlName="codigoPostal" [placeholder]="'cliForm.postalPh' | translate">
+              <mat-error>{{ 'cliForm.postalRequired' | translate }}</mat-error>
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Provincia</mat-label>
-              <input matInput formControlName="provincia" placeholder="Madrid">
-              <mat-error>Provincia obligatoria para facturación</mat-error>
+              <mat-label>{{ 'cliForm.province' | translate }}</mat-label>
+              <input matInput formControlName="provincia" [placeholder]="'cliForm.provincePh' | translate">
+              <mat-error>{{ 'cliForm.provinceRequired' | translate }}</mat-error>
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>País</mat-label>
-              <input matInput formControlName="pais" placeholder="España">
-              <mat-error>País obligatorio para facturación</mat-error>
+              <mat-label>{{ 'cliForm.country' | translate }}</mat-label>
+              <input matInput formControlName="pais" [placeholder]="'cliForm.countryPh' | translate">
+              <mat-error>{{ 'cliForm.countryRequired' | translate }}</mat-error>
             </mat-form-field>
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>NIF/CIF</mat-label>
-              <input matInput formControlName="dni" placeholder="12345678A o B12345678">
-              <mat-error>NIF/CIF no válido</mat-error>
+              <mat-label>{{ 'cliForm.taxId' | translate }}</mat-label>
+              <input matInput formControlName="dni" [placeholder]="'cliForm.taxIdPh' | translate">
+              <mat-error>{{ 'cliForm.taxIdInvalid' | translate }}</mat-error>
             </mat-form-field>
             <div class="actions">
-              <button mat-button type="button" routerLink="/clientes">Cancelar</button>
+              <button mat-button type="button" routerLink="/clientes">{{ 'common.cancel' | translate }}</button>
               <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid">
-                {{ isEdit ? 'Guardar' : 'Crear' }}
+                {{ isEdit ? ('common.save' | translate) : ('common.create' | translate) }}
               </button>
             </div>
           </form>

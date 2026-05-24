@@ -68,20 +68,7 @@ public class StripeService {
     private String createCheckoutSession(
             Usuario usuario, SubscriptionBillingPeriod billingPeriod, boolean staleRecoveryAttempt)
             throws StripeException {
-        SubscriptionBillingPeriod period =
-                billingPeriod != null ? billingPeriod : SubscriptionBillingPeriod.MONTHLY;
-        final String priceId;
-        if (period == SubscriptionBillingPeriod.YEARLY) {
-            priceId = priceIdYearly;
-        } else {
-            priceId = priceIdMonthly;
-        }
-        if (priceId == null || priceId.isBlank()) {
-            throw new IllegalStateException(
-                    period == SubscriptionBillingPeriod.YEARLY
-                            ? "Falta STRIPE_PRICE_YEARLY en la configuración del servidor (precio anual Stripe)."
-                            : "Falta STRIPE_PRICE_MONTHLY en la configuración del servidor (precio recurrente Stripe).");
-        }
+        final String priceId = resolveCheckoutPriceId(billingPeriod);
         if (successUrl == null
                 || successUrl.isBlank()
                 || subscriptionCancelUrl == null
@@ -225,6 +212,42 @@ public class StripeService {
 
         Session facturaCheckoutSession = Session.create(params);
         return new PaymentLinkResult(facturaCheckoutSession.getId(), facturaCheckoutSession.getUrl());
+    }
+
+    /**
+     * Precio único del Checkout (modo suscripción, una sola línea recurrente).
+     * <p>
+     * Si existen mensual y anual, siempre se usa el mensual: Stripe Checkout subscription upsells
+     * muestra en la pasarela un toggle mensual/anual (upsell anual configurado en Dashboard sobre el
+     * precio mensual). Ver {@code https://docs.stripe.com/payments/checkout/upsells}.
+     */
+    private String resolveCheckoutPriceId(SubscriptionBillingPeriod billingPeriod) {
+        SubscriptionBillingPeriod period =
+                billingPeriod != null ? billingPeriod : SubscriptionBillingPeriod.MONTHLY;
+        String monthly = blankToNull(priceIdMonthly);
+        String yearly = blankToNull(priceIdYearly);
+        if (monthly != null && yearly != null) {
+            return monthly;
+        }
+        if (period == SubscriptionBillingPeriod.YEARLY) {
+            if (yearly == null) {
+                throw new IllegalStateException(
+                        "Falta STRIPE_PRICE_YEARLY en la configuración del servidor (precio anual Stripe).");
+            }
+            return yearly;
+        }
+        if (monthly == null) {
+            throw new IllegalStateException(
+                    "Falta STRIPE_PRICE_MONTHLY en la configuración del servidor (precio recurrente Stripe).");
+        }
+        return monthly;
+    }
+
+    private static String blankToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 
     private String createStripeCustomer(Usuario usuario) throws StripeException {
