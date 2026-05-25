@@ -1121,6 +1121,7 @@
     "loadRows": "Loading events…",
     "loadFail": "Couldn’t load history.",
     "retry": "Retry",
+    "colWhen": "Date (UTC)",
     "colUser": "User",
     "colEvent": "Event",
     "colIp": "IP",
@@ -1152,7 +1153,9 @@
     "ev_TOTP_SETUP_CANCELLED": "2FA setup cancelled",
     "ev_AUDIT_EXPORT_JSON": "Audit export (JSON)",
     "ev_AUDIT_EXPORT_CSV": "Audit export (CSV)",
-    "foot": "Audit rows are append‑only; retention is server‑policy. IPs may appear masked."
+    "foot": "Audit rows are append‑only; retention is server‑policy. IPs may appear masked.",
+    "exportCsv": "CSV",
+    "exportJson": "JSON"
   },
   "acctHelp": {
     "back": "Back to dashboard",

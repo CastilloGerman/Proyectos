@@ -1094,6 +1094,7 @@
     "ph_total": "Total a pagar"
   },
   "acctAudit": {
+    "back": "",
     "title": "Historial de accesos",
     "subUser": "Registro de sesiones y acciones sensibles. Solo ves tu usuario.",
     "subAdmin": "Como administrador ves eventos de toda la organización.",
@@ -1199,6 +1200,7 @@
     "faq_iva_a": "Activar/desactivar por documento; dudas fiscales a tu gestor."
   },
   "acctSess": {
+    "back": "",
     "title": "Sesiones activas",
     "lead": "Cada inicio de sesión registra navegador, sistema e IP vistas por el servidor. Puedes cerrar otras sesiones sin afectar a este navegador.",
     "tokenHint": "El token de este navegador caduca aproximadamente el",
@@ -1282,6 +1284,8 @@
     "hUnpaid": "Hay pagos adeudados tras varios intentos. Regulariza en Stripe.",
     "hCanceled": "La suscripción está cancelada; puedes volver a contratar o revisar el portal.",
     "hTrialExpiredRo": "La prueba ha terminado. La cuenta queda en solo lectura hasta contratar.",
+    "remDaysOne": "{{days}} días",
+    "remDaysOther": "{{days}} días",
     "perMonthLbl": "{{v}} al mes",
     "perYearLbl": "{{y}} al año"
   },
