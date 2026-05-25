@@ -10,7 +10,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { map } from 'rxjs';
 import { AuthService, UsuarioResponse } from '../../../core/auth/auth.service';
-import { SubscriptionService } from '../../../core/services/subscription.service';
+import { SubscriptionService, CheckoutBillingPeriod } from '../../../core/services/subscription.service';
 import { SubscriptionDetails } from '../../../core/models/subscription-details.model';
 import { environment } from '../../../../environments/environment';
 import { DevApiService } from '../../../core/services/dev-api.service';
@@ -19,6 +19,7 @@ import { finalize } from 'rxjs/operators';
 import { forkJoin } from 'rxjs';
 import { messageFromHttpError } from '../../../shared/utils/http-error-message.util';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { MatButtonToggleChange, MatButtonToggleModule } from '@angular/material/button-toggle';
 
 @Component({
     selector: 'app-suscripcion-plan',
@@ -31,6 +32,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
         MatProgressSpinnerModule,
         MatSnackBarModule,
         MatDividerModule,
+        MatButtonToggleModule,
         TranslateModule,
     ],
     templateUrl: './suscripcion-plan.component.html',
@@ -49,6 +51,7 @@ export class SuscripcionPlanComponent implements OnInit {
   readonly subscriptionDetails = signal<SubscriptionDetails | null>(null);
   readonly openingCheckout = signal(false);
   readonly openingPortal = signal(false);
+  readonly checkoutBillingPeriod = signal<CheckoutBillingPeriod>('MONTHLY');
 
   private readonly localeTick = toSignal(this.translate.onLangChange.pipe(map(() => Date.now())), {
     initialValue: 0,
@@ -103,14 +106,6 @@ export class SuscripcionPlanComponent implements OnInit {
     return this.translate.instant('acctSub.perMo', {
       v: this.precioMensualFmt(),
       y: this.precioAnualFmt(),
-    });
-  });
-
-  readonly stripeCheckoutCopy = computed(() => {
-    void this.localeTick();
-    return this.translate.instant('acctSub.stripeCheckoutDetailed', {
-      mo: this.precioMensualFmt(),
-      yr: this.precioAnualFmt(),
     });
   });
 
@@ -195,6 +190,13 @@ export class SuscripcionPlanComponent implements OnInit {
     this.refrescar();
   }
 
+  onBillingChange(event: MatButtonToggleChange): void {
+    const v = event.value;
+    if (v === 'MONTHLY' || v === 'YEARLY') {
+      this.checkoutBillingPeriod.set(v);
+    }
+  }
+
   refrescar(): void {
     this.loadError.set(false);
     this.loading.set(true);
@@ -222,7 +224,7 @@ export class SuscripcionPlanComponent implements OnInit {
     this.openingCheckout.set(true);
     const presets = this.snackHttpPresets();
     this.subscriptionApi
-      .createCheckoutSession()
+      .createCheckoutSession(this.checkoutBillingPeriod())
       .pipe(finalize(() => this.openingCheckout.set(false)))
       .subscribe({
         next: (res) => {

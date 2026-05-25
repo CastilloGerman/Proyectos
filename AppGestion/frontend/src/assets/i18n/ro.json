@@ -1254,7 +1254,7 @@
     "trialEndsLbl": "Free trial ends",
     "billPeriodEndsLbl": "Current billing period ends",
     "billPeriodHint": "(only when billing is active)",
-    "stripeHint": "Stripe lets you switch monthly vs annual. Tax may calculate there.",
+    "stripeHint": "Alege ciclul de facturare; dacă Stripe Tax este activat, TVA-ul sau alte taxe sunt calculate la checkout.",
     "stripeCheckoutDetailed": "In Stripe checkout you can choose monthly billing ({{mo}}) or yearly ({{yr}}). With Stripe Tax on, VAT is calculated there.",
     "checkoutBtn": "Choose plan",
     "portalBtn": "Billing & payment method",

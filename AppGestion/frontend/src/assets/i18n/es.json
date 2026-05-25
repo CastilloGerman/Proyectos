@@ -1252,7 +1252,7 @@
     "trialEndsLbl": "Fin de la prueba gratuita",
     "billPeriodEndsLbl": "Fin del periodo de facturación actual",
     "billPeriodHint": "(aplica cuando hay suscripción de pago activa)",
-    "stripeHint": "En Stripe podrás elegir mensual vs anual. Si hay Stripe Tax el IVA se calcula ahí.",
+    "stripeHint": "Elige el ciclo de facturación; si Stripe Tax está activado, el IVA u otros impuestos se calculan en el checkout.",
     "stripeCheckoutDetailed": "En la pasarela de Stripe puedes elegir facturación mensual ({{mo}}) o anual ({{yr}}). Si está activado Stripe Tax, el IVA u otros impuestos se calculan allí.",
     "checkoutBtn": "Contratar plan",
     "portalBtn": "Facturación y método de pago",
