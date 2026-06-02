@@ -27,6 +27,7 @@ import { AnticipoResumen, PresupuestoItemRequest } from '../../../core/models/pr
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { CondicionesPresupuestoFormValue, PresupuestoCondicionDisponible } from '../../../core/models/presupuesto-condiciones.model';
 import { CondicionesPresupuestoComponent } from '../condiciones-presupuesto/condiciones-presupuesto.component';
+import { CalculadoraM2Component, CalculadoraResult } from '../calculadora-m2/calculadora-m2.component';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 const IVA_RATE = 0.21;
@@ -159,9 +160,19 @@ const IVA_RATE = 0.21;
                       <mat-label>{{ 'factForm.description' | translate }}</mat-label>
                       <input matInput formControlName="tareaManual" [placeholder]="'budgetForm.materialDescPh' | translate">
                     </mat-form-field>
-                    <mat-form-field appearance="outline">
+                    <mat-form-field appearance="outline" class="qty-with-calc">
                       <mat-label>{{ 'factForm.qty' | translate }}</mat-label>
                       <input matInput type="number" formControlName="cantidad" min="0.001" step="0.01">
+                      <button
+                        matSuffix
+                        mat-icon-button
+                        type="button"
+                        (click)="openCalculadora(materialItems, i)"
+                        [matTooltip]="'budgetForm.calcM2Tooltip' | translate"
+                        [attr.aria-label]="'budgetForm.calcM2Tooltip' | translate"
+                      >
+                        <mat-icon>calculate</mat-icon>
+                      </button>
                     </mat-form-field>
                     <mat-form-field appearance="outline">
                       <mat-label>{{ 'factForm.unitPrice' | translate }}</mat-label>
@@ -193,9 +204,19 @@ const IVA_RATE = 0.21;
                       <mat-label>{{ 'factForm.description' | translate }}</mat-label>
                       <input matInput formControlName="tareaManual" [placeholder]="'budgetForm.manualDescPh' | translate">
                     </mat-form-field>
-                    <mat-form-field appearance="outline">
+                    <mat-form-field appearance="outline" class="qty-with-calc">
                       <mat-label>{{ 'factForm.qty' | translate }}</mat-label>
                       <input matInput type="number" formControlName="cantidad" min="0.001" step="0.01">
+                      <button
+                        matSuffix
+                        mat-icon-button
+                        type="button"
+                        (click)="openCalculadora(manualItems, i)"
+                        [matTooltip]="'budgetForm.calcM2Tooltip' | translate"
+                        [attr.aria-label]="'budgetForm.calcM2Tooltip' | translate"
+                      >
+                        <mat-icon>calculate</mat-icon>
+                      </button>
                     </mat-form-field>
                     <mat-form-field appearance="outline">
                       <mat-label>{{ 'factForm.unitPrice' | translate }}</mat-label>
@@ -962,6 +983,23 @@ export class PresupuestoFormComponent implements OnInit {
 
   removeManualItem(index: number): void {
     this.manualItems.removeAt(index);
+  }
+
+  openCalculadora(items: FormArray, index: number): void {
+    const dialogRef = this.dialog.open(CalculadoraM2Component, {
+      width: '520px',
+      disableClose: false,
+      autoFocus: true,
+    });
+    dialogRef.afterClosed().subscribe((result: CalculadoraResult | null) => {
+      if (!result) return;
+      const row = items.at(index) as FormGroup;
+      row.patchValue({ cantidad: result.area });
+      const desc = String(row.get('tareaManual')?.value ?? '').trim();
+      if (!desc && result.descripcion) {
+        row.patchValue({ tareaManual: result.descripcion });
+      }
+    });
   }
 
   addMaterialFromTop(material: Material): void {

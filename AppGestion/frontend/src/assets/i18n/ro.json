@@ -542,6 +542,7 @@
     "manualTasksTitle": "Lucrări manuale",
     "manualDescPh": "Descrierea lucrării",
     "addManualTask": "Adaugă sarcină",
+    "calcM2Tooltip": "Calculator m²",
     "showVisibilityToggle": "Arată opțiuni vizibilitate PDF",
     "depositFiscalTitle": "Avans (fiscal)",
     "depositFiscalHint": "Înregistrează avansul, emite factura de avans, apoi la final factura cu reducerea avansului facturat.",

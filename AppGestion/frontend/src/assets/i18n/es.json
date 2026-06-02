@@ -682,6 +682,7 @@
     "manualTasksTitle": "Tareas manuales",
     "manualDescPh": "Descripción del trabajo específico",
     "addManualTask": "Añadir tarea manual",
+    "calcM2Tooltip": "Calculadora m²",
     "showVisibilityToggle": "Mostrar opciones de visibilidad",
     "depositFiscalTitle": "Anticipo / seña (fiscal)",
     "depositFiscalHint": "Registra el cobro del anticipo (seña), emite la factura de anticipo y, al finalizar el trabajo, la factura final con descuento del anticipo ya facturado.",

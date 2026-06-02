@@ -542,6 +542,7 @@
     "manualTasksTitle": "Travaux manuels",
     "manualDescPh": "Libellé de la tâche",
     "addManualTask": "Ajouter une tâche",
+    "calcM2Tooltip": "Calculatrice m²",
     "showVisibilityToggle": "Afficher les options de visibilité PDF",
     "depositFiscalTitle": "Acompte / arrhes (fiscal)",
     "depositFiscalHint": "Enregistrez le montant versé, la facture d’acompte puis la finale avec déduction de l’acompte facturé.",

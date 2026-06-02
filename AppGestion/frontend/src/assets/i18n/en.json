@@ -542,6 +542,7 @@
     "manualTasksTitle": "Manual tasks",
     "manualDescPh": "Description for this task",
     "addManualTask": "Add manual task",
+    "calcM2Tooltip": "m² calculator",
     "showVisibilityToggle": "Show PDF visibility controls",
     "depositFiscalTitle": "Deposit / advance (tax)",
     "depositFiscalHint": "Register the deposit, issue the deposit invoice and, when finished, the final invoice discounting invoiced deposits.",
