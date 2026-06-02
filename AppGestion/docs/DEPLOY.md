@@ -100,7 +100,8 @@ Secuencia orientativa para el **primer go-live**. Los detalles de cada variable 
 
 ### CORS
 
-- **`CORS_ALLOWED_ORIGINS`**: dominios del frontend, **separados por coma** (ej. `https://tudominio.com`).
+- **`CORS_ALLOWED_ORIGINS`**: dominio canónico del SPA **`https://noemiweb.com`** (opcionalmente `https://www.noemiweb.com` si usas `www`). No hace falta incluir `app.noemiweb.com` si rediriges ese subdominio al apex (véase § DNS).
+- En perfil **`prod`**, si `CORS_ALLOWED_ORIGINS` está vacío, la API acepta por defecto `https://noemiweb.com` y `https://www.noemiweb.com` vía `CORS_ALLOWED_ORIGIN_PATTERNS`.
 - Con credenciales en CORS no puede usarse `*`; debe ser una lista explícita.
 
 ### Correo (envío transaccional y cola)
@@ -126,6 +127,24 @@ La API encola el correo en base de datos y un worker envía según la configurac
 ### Otros
 
 - `FRONTEND_URL` — base del SPA para enlaces en emails (reset password, etc.) y redirecciones tras OAuth de correo
+
+### Premium de prueba (solo para tus pruebas en la web desplegada)
+
+Para activar premium **sin Stripe**, edita el usuario directamente en PostgreSQL. Evita exponer botones o endpoints de activación gratuita en la UI.
+
+```sql
+UPDATE usuarios
+SET subscription_status = 'ACTIVE',
+    stripe_customer_id = NULL,
+    stripe_subscription_id = NULL,
+    stripe_price_id = NULL,
+    subscription_current_period_end = NULL,
+    subscription_cancel_at_period_end = false,
+    subscription_requires_payment_action = false
+WHERE lower(email) = lower('tu@email.com');
+```
+
+Después, cierra sesión y vuelve a iniciar sesión con ese usuario para que el frontend recargue el estado de suscripción.
 
 ### Sesiones por dispositivo (tabla `usuario_sesion`)
 
@@ -198,6 +217,7 @@ Revisión orientativa antes del go-live (complementa §1–2). No sustituye un p
 ## 6. Infraestructura recomendable
 
 - **HTTPS** en API y frontend.
+- **Dominio canónico del SPA:** `https://noemiweb.com`. La API (`api.noemiweb.com`) solo autoriza CORS desde ese origen (y opcionalmente `www`). Si existe **`app.noemiweb.com`**, configura en Cloudflare una **Redirect Rule 301** a `https://noemiweb.com` — no sirvas la misma SPA en `app`, o el login con Google fallará con error de red (CORS). Script de referencia: `scripts/configure-cloudflare-noemiweb.ps1`.
 - **Rate limiting** en rutas de autenticación (login, registro, recuperación, etc.) vía API Gateway, reverse proxy o la propia API.
 - Logs centralizados y alertas básicas (errores 5xx, fallos de pago/webhook).
 - Tras proxy: **IP del cliente** correcta para `usuario_sesion` (ver sección de variables “Sesiones por dispositivo”).

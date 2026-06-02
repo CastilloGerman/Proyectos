@@ -157,13 +157,5 @@
       </mat-card-content>
     </mat-card>
 
-    @if (!environment.production) {
-      <mat-card class="sub-card sub-card--dev">
-        <mat-card-content>
-          <p class="sub-dev-label">{{ 'acctSub.devOnlyLbl' | translate }}</p>
-          <button mat-stroked-button type="button" (click)="grantPremiumDev()">{{ 'acctSub.devPremiumBtn' | translate }}</button>
-        </mat-card-content>
-      </mat-card>
-    }
   }
 </div>

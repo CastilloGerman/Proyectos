@@ -1,6 +1,7 @@
 import { AfterViewInit, Component, OnInit, ViewChild, ElementRef, signal, computed, inject, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AboutComponent } from '../about/about.component';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -228,9 +229,25 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
     }
 
     @media (max-width: 900px) {
+      .login-wrapper {
+        align-items: center;
+        padding-inline: 16px;
+      }
+
       .login-layout {
-        grid-template-columns: 1fr;
-        max-width: 420px;
+        grid-template-columns: minmax(0, 1fr);
+        width: 100%;
+        max-width: min(420px, 100%);
+        margin-inline: auto;
+        justify-items: center;
+      }
+
+      .hero-section,
+      .login-container {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        justify-self: stretch;
       }
 
       .hero-section {
@@ -249,6 +266,32 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
 
       .hero-lead {
         max-width: none;
+      }
+
+      .login-container {
+        display: flex;
+        justify-content: center;
+      }
+
+      .login-card {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        padding: 32px 20px;
+      }
+
+      .google-button-wrap,
+      .google-button-inner {
+        width: 100%;
+        max-width: 100%;
+      }
+
+      .google-button-inner ::ng-deep iframe {
+        max-width: 100%;
+      }
+
+      .google-fallback-btn {
+        max-width: 100%;
       }
     }
 
@@ -305,6 +348,7 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
       position: relative;
       z-index: 1;
       width: 100%;
+      min-width: 0;
       animation: loginFadeIn 0.5s ease-out;
     }
 
@@ -405,10 +449,15 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
       align-items: center;
       margin-bottom: 8px;
       min-height: 44px;
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
     }
 
     .google-button-inner {
       min-height: 44px;
+      width: 100%;
+      max-width: 320px;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -773,9 +822,22 @@ export class LoginComponent implements OnInit, AfterViewInit {
       theme: 'outline',
       size: 'large',
       text: 'continue_with',
-      width: 320,
+      width: this.googleButtonPixelWidth(),
       locale: this.googleButtonLocale(),
     });
+  }
+
+  /** Ancho del botón GSI: en móvil no supera el contenedor (evita desplazar el formulario). */
+  private googleButtonPixelWidth(): number {
+    const el = this.googleButtonRef?.nativeElement;
+    if (!el || typeof el.getBoundingClientRect !== 'function') {
+      return 320;
+    }
+    const w = Math.floor(el.getBoundingClientRect().width);
+    if (!w || w < 1) {
+      return 320;
+    }
+    return Math.max(200, Math.min(320, w));
   }
 
   onGoogleFallback(): void {
@@ -812,14 +874,23 @@ export class LoginComponent implements OnInit, AfterViewInit {
           this.googleTotpStep.set(true);
           return;
         }
-        const msg =
-          err?.error?.message ??
-          err?.error?.detail ??
-          err?.message ??
-          this.translate.instant('auth.login.googleLoginError');
+        const msg = this.googleLoginErrorMessage(err);
         this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
       },
     });
+  }
+
+  private googleLoginErrorMessage(err: unknown): string {
+    const httpErr = err as HttpErrorResponse;
+    if (httpErr?.status === 0) {
+      return this.translate.instant('auth.login.googleNetworkError');
+    }
+    return (
+      httpErr?.error?.message ??
+      httpErr?.error?.detail ??
+      httpErr?.message ??
+      this.translate.instant('auth.login.googleLoginError')
+    );
   }
 
   submitGoogleTotp(): void {

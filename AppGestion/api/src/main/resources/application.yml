@@ -131,6 +131,12 @@ app:
       client-secret: ${MICROSOFT_OAUTH_CLIENT_SECRET:}
       redirect-uri: ${MICROSOFT_OAUTH_REDIRECT_URI:http://localhost:8081/auth/email/oauth/microsoft/callback}
       tenant: ${MICROSOFT_OAUTH_TENANT:common}
+  dev:
+    # Endpoint de pruebas para activar premium sin Stripe. Desactivado por defecto.
+    # Recomendado: usar SQL sobre la BD para usuarios de test y no exponer controles en la UI.
+    grant-premium-enabled: ${APP_DEV_GRANT_PREMIUM_ENABLED:false}
+    # Opcional: solo estos emails (coma). Vacío = cualquier usuario autenticado si la función está activa.
+    grant-premium-email-allowlist: ${APP_DEV_GRANT_PREMIUM_EMAIL_ALLOWLIST:}
   audit:
     access:
       # Último octeto IPv4 a 0 (o equivalente IPv6); recomendado en UE.
@@ -154,6 +160,8 @@ spring:
     hibernate:
       ddl-auto: update
 app:
+  dev:
+    grant-premium-enabled: false
   subscription:
     skip-check: true
   # Pruebas desde el móvil vía http://<IP-LAN>:4200 (Angular ya escucha en 0.0.0.0)
@@ -201,7 +209,9 @@ app:
     skip-check: false
   frontend-url: ${FRONTEND_URL:https://noemiweb.com}
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://noemiweb.com,https://www.noemiweb.com}
+    # Si CORS_ALLOWED_ORIGINS está vacío, se usan patrones (apex + subdominios www, app, etc.).
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+    allowed-origin-patterns: ${CORS_ALLOWED_ORIGIN_PATTERNS:https://noemiweb.com,https://www.noemiweb.com}
 stripe:
   success-url: ${STRIPE_SUCCESS_URL:https://noemiweb.com/subscription/success}
   cancel-url: ${STRIPE_CANCEL_URL:https://noemiweb.com/subscription/cancel}

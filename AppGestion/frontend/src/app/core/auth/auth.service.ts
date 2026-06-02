@@ -69,7 +69,6 @@ export class AuthService {
   businessRole = computed(() => (this.userSignal()?.rol ?? 'USER').toUpperCase());
   /** Puede crear/editar/borrar datos: solo si la suscripción / prueba lo permiten (canWrite). */
   canMutate = computed(() => this.canWrite());
-
   constructor(
     private http: HttpClient,
     private router: Router

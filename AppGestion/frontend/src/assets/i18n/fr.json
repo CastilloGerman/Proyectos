@@ -27,23 +27,17 @@
     "notifViewAll": "Voir toutes les notifications",
     "readonlyBanner": "Vous ne pouvez que consulter. Activez votre offre pour créer ou modifier.",
     "activateSubscription": "Activer l’abonnement",
-    "activatePremiumDev": "Activer premium (dev)",
-    "activatePremiumDevTooltip": "Réservé aux tests : activer l’accès premium sans paiement habituel",
     "trialEndsIn": "Votre essai se termine dans {{days}} jours.",
     "snackbarNotifMarkedRead": "Notifications marquées comme lues",
     "snackbarNotifMarkFailed": "Impossible de marquer comme lues",
     "snackbarReferSent": "Lien d’invitation envoyé. Vérifiez votre boîte mail.",
     "snackbarNoCheckoutUrl": "Impossible d’ouvrir la page de paiement. Réessayez dans quelques minutes.",
-    "snackbarPremiumActivated": "Votre offre est active. Vous pouvez créer et modifier normalement.",
     "snackbarPaymentErrorFallback": "Impossible de démarrer le paiement. Réessayez.",
-    "snackbarGrantPremiumFallback": "Impossible d’activer l’offre. Réessayez plus tard ou contactez-nous depuis Aide.",
     "snackbarNoPortalUrl": "Impossible d’ouvrir votre espace de facturation. Réessayez plus tard.",
     "snackbarPortalErrorFallback": "Impossible d’ouvrir votre espace de facturation. Réessayez plus tard.",
     "snackbarOffline": "Pas de connexion internet. Vérifiez votre réseau.",
     "snackbarServerError": "Un problème est survenu de notre côté. Réessayez dans quelques minutes.",
-    "snackbarSessionExpired": "Votre session est terminée. Reconnectez-vous.",
-    "snackbarDevPremiumOk": "C’est fait (mode test) : votre compte a l’accès premium.",
-    "snackbarDevPremiumUnavailable": "Cette action n’est pas disponible dans cet environnement."
+    "snackbarSessionExpired": "Votre session est terminée. Reconnectez-vous."
   },
   "common": {
     "close": "Fermer",
@@ -122,6 +116,7 @@
       "snackbarTotpApp": "Saisissez le code de votre app d’authentification",
       "invalidCredentials": "Identifiants incorrects",
       "googleLoginError": "Échec de la connexion avec Google",
+      "googleNetworkError": "Impossible de joindre le serveur. Vérifiez votre connexion, désactivez les bloqueurs de publicité et réessayez depuis https://noemiweb.com.",
       "referralBanner": "Vous arrivez depuis un lien de parrainage. Si vous n’avez pas encore de compte, inscrivez-vous ci-dessous avec l’e-mail de votre choix."
     },
     "register": {
@@ -1259,8 +1254,6 @@
     "checkoutBtn": "Choose plan",
     "portalBtn": "Billing & payment method",
     "stripeFoot": "Payments & cards handled by Stripe; we don’t store card data.",
-    "devOnlyLbl": "Dev only",
-    "devPremiumBtn": "Activate subscription (tests, no Stripe)",
     "lblDefaultPlan": "Professional plan",
     "stTrialActiveFull": "Free trial active",
     "stTrialEnded": "Trial ended",

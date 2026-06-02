@@ -26,7 +26,6 @@ import { UserDropdownComponent } from '../shared/user-dropdown/user-dropdown.com
 import { NotificacionesService, NotificacionDto } from '../core/services/notificaciones.service';
 import { environment } from '../../environments/environment';
 import { ThemeService } from '../core/theme/theme.service';
-import { DevApiService } from '../core/services/dev-api.service';
 import { daysFromTodayToDateEnd } from '../shared/utils/trial-days.util';
 import { TRIAL_BANNER_WARNING_DAYS, TRIAL_DAYS_LEFT_FALLBACK } from '../app-layout.constants';
 import { messageFromHttpError } from '../shared/utils/http-error-message.util';
@@ -73,7 +72,6 @@ export class AppAuthenticatedShellComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly subscriptionService = inject(SubscriptionService);
   private readonly snackBar = inject(MatSnackBar);
-  private readonly devApi = inject(DevApiService);
   private readonly dialog = inject(MatDialog);
   private readonly translate = inject(TranslateService);
 
@@ -241,25 +239,4 @@ export class AppAuthenticatedShellComponent implements OnInit {
     });
   }
 
-  grantPremiumDev(): void {
-    this.devApi.grantPremium().subscribe({
-      next: () => {
-        this.auth.refreshUser().subscribe(() => {
-          this.snackBar.open(
-            this.translate.instant('shell.snackbarPremiumActivated'),
-            this.translate.instant('common.close'),
-            { duration: 4000 },
-          );
-        });
-      },
-      error: (err) => {
-        const msg = messageFromHttpError(
-          err,
-          this.translate.instant('shell.snackbarGrantPremiumFallback'),
-          this.snackHttpPresets(),
-        );
-        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
-      },
-    });
-  }
 }

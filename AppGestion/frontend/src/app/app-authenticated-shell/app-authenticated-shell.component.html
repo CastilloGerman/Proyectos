@@ -161,15 +161,6 @@
         <button mat-stroked-button color="warn" (click)="activarSuscripcion()">
           {{ 'shell.activateSubscription' | translate }}
         </button>
-        @if (!environment.production) {
-          <button
-            mat-stroked-button
-            (click)="grantPremiumDev()"
-            [matTooltip]="'shell.activatePremiumDevTooltip' | translate"
-          >
-            {{ 'shell.activatePremiumDev' | translate }}
-          </button>
-        }
       </div>
     }
     @if (

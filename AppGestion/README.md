@@ -14,7 +14,7 @@ En el código se apoya en:
 - **Negocio:** CRUD de clientes, materiales, presupuestos (con ítems y PDF) y facturas (ítems, PDF, cobros parciales, enlaces de pago, recordatorios, envío por correo).
 - **Empresa / fiscal:** datos de empresa, métodos de cobro, recordatorios, plantillas de PDF, datos fiscales, vista previa de plantillas.
 - **Panel cliente:** resumen de presupuestos y facturas por cliente (endpoint dedicado).
-- **Suscripción:** integración **Stripe** (checkout, portal de cliente, facturas, webhook); en desarrollo local existe además un endpoint para simular premium (`/dev/grant-premium`, solo perfil `local`).
+- **Suscripción:** integración **Stripe** (checkout, portal de cliente, facturas, webhook). Para usuarios de prueba, se recomienda activar premium editando directamente el estado del usuario en PostgreSQL.
 - **Soporte y avisos:** contacto a buzón interno (multipart), notificaciones in-app.
 - **Tareas programadas:** recordatorios de factura, caducidad de trial, limpieza de sesiones y de auditoría.
 
@@ -306,11 +306,23 @@ Prefijos **tal como los expone el backend** (sin `/api`; el front añade `/api` 
 
 En producción, configura **`RESEND_WEBHOOK_SECRET`** con el signing secret del webhook en el dashboard de Resend. Si está vacío, el endpoint no verifica firma (útil solo en desarrollo aislado).
 
-### Desarrollo local (`/dev`, perfil `local`)
+### Premium de prueba por base de datos
 
-| Método | Ruta | Descripción breve |
-|--------|------|-------------------|
-| POST | `/dev/grant-premium` | Marcar usuario actual como premium (pruebas) |
+Para activar premium sin pasar por Stripe en un usuario concreto, actualiza su estado en PostgreSQL:
+
+```sql
+UPDATE usuarios
+SET subscription_status = 'ACTIVE',
+    stripe_customer_id = NULL,
+    stripe_subscription_id = NULL,
+    stripe_price_id = NULL,
+    subscription_current_period_end = NULL,
+    subscription_cancel_at_period_end = false,
+    subscription_requires_payment_action = false
+WHERE lower(email) = lower('tu@email.com');
+```
+
+Luego cierra sesión y vuelve a entrar, o refresca `/auth/me`, para que el frontend reciba `canWrite=true`.
 
 **Nota de seguridad:** En `SecurityConfig` existe regla para **`/usuarios/**`** (rol `ADMIN`). En el código actual **no hay** un `@RestController` bajo ese prefijo; si el front u otra herramienta llaman a esa ruta, el comportamiento dependerá de la configuración de seguridad y de que exista o no un controlador añadido más adelante.
 

@@ -27,23 +27,17 @@
     "notifViewAll": "Vezi toate notificările",
     "readonlyBanner": "Poți doar vizualiza datele. Activează planul pentru a crea sau modifica.",
     "activateSubscription": "Activează abonamentul",
-    "activatePremiumDev": "Activează premium (dev)",
-    "activatePremiumDevTooltip": "Doar în teste: acces premium fără fluxul obișnuit de plată",
     "trialEndsIn": "Perioada de probă se încheie în {{days}} zile.",
     "snackbarNotifMarkedRead": "Notificări marcate ca citite",
     "snackbarNotifMarkFailed": "Nu s-au putut marca ca citite",
     "snackbarReferSent": "Linkul de invitație a fost trimis. Verifică e-mailul.",
     "snackbarNoCheckoutUrl": "Nu am putut deschide pagina de plată. Încearcă din nou în câteva minute.",
-    "snackbarPremiumActivated": "Planul este activ. Poți crea și edita în mod normal.",
     "snackbarPaymentErrorFallback": "Nu am putut porni plata. Încearcă din nou.",
-    "snackbarGrantPremiumFallback": "Nu am putut activa planul premium. Încearcă mai târziu sau scrie-ne din Ajutor.",
     "snackbarNoPortalUrl": "Nu am putut deschide zona de facturare. Încearcă mai târziu.",
     "snackbarPortalErrorFallback": "Nu am putut deschide zona de facturare. Încearcă mai târziu.",
     "snackbarOffline": "Fără conexiune la internet. Verifică rețeaua.",
     "snackbarServerError": "A apărut o problemă la noi. Încearcă din nou în câteva minute.",
-    "snackbarSessionExpired": "Sesiunea s-a încheiat. Conectează-te din nou.",
-    "snackbarDevPremiumOk": "Gata (doar mod test): contul are acces premium.",
-    "snackbarDevPremiumUnavailable": "Această acțiune nu este disponibilă în acest mediu."
+    "snackbarSessionExpired": "Sesiunea s-a încheiat. Conectează-te din nou."
   },
   "common": {
     "close": "Închide",
@@ -122,6 +116,7 @@
       "snackbarTotpApp": "Introdu codul din aplicația de autentificare",
       "invalidCredentials": "Date de autentificare incorecte",
       "googleLoginError": "Nu s-a putut conecta cu Google",
+      "googleNetworkError": "Nu am putut contacta serverul. Verifică conexiunea, dezactivează blocatoarele de reclame și încearcă din nou de pe https://noemiweb.com.",
       "referralBanner": "Ai ajuns printr-un link de recomandare. Dacă nu ai cont, înregistrează-te mai jos cu adresa de email pe care vrei contul."
     },
     "register": {
@@ -1259,8 +1254,6 @@
     "checkoutBtn": "Choose plan",
     "portalBtn": "Billing & payment method",
     "stripeFoot": "Payments & cards handled by Stripe; we don’t store card data.",
-    "devOnlyLbl": "Dev only",
-    "devPremiumBtn": "Activate subscription (tests, no Stripe)",
     "lblDefaultPlan": "Professional plan",
     "stTrialActiveFull": "Free trial active",
     "stTrialEnded": "Trial ended",

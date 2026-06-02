@@ -14,9 +14,9 @@ public record UsuarioResponse(
         LocalDateTime fechaCreacion,
         String subscriptionStatus,
         LocalDate trialEndDate,
-        /** Fin del periodo de facturación actual (Stripe), si aplica. */
+        /** Current Stripe billing period end, when applicable. */
         LocalDateTime subscriptionCurrentPeriodEnd,
-        /** True si el usuario tiene cliente Stripe y puede abrir el portal de facturación. */
+        /** True when the user has a Stripe customer and can open the billing portal. */
         boolean billingPortalAvailable,
         String locale,
         String timeZone,
@@ -26,12 +26,12 @@ public record UsuarioResponse(
         boolean emailNotifyMarketing,
         boolean canWrite,
         boolean totpEnabled,
-        /** True si hay un enrolamiento TOTP pendiente (código de confirmación no enviado aún). */
+        /** True when a TOTP enrollment has been started but not confirmed yet. */
         boolean totpEnrollmentPending,
         LocalDate fechaNacimiento,
         String genero,
         String nacionalidadIso,
         String paisResidenciaIso,
-        /** Claves de condiciones marcadas por defecto en presupuestos nuevos (catálogo servidor). */
+        /** Default budget condition keys selected from the server catalog. */
         List<String> condicionesPresupuestoPredeterminadas
 ) {}

@@ -13,7 +13,6 @@ import { AuthService, UsuarioResponse } from '../../../core/auth/auth.service';
 import { SubscriptionService } from '../../../core/services/subscription.service';
 import { SubscriptionDetails } from '../../../core/models/subscription-details.model';
 import { environment } from '../../../../environments/environment';
-import { DevApiService } from '../../../core/services/dev-api.service';
 import { daysFromTodayToDateEnd } from '../../../shared/utils/trial-days.util';
 import { finalize } from 'rxjs/operators';
 import { forkJoin } from 'rxjs';
@@ -41,7 +40,6 @@ export class SuscripcionPlanComponent implements OnInit {
   private readonly subscriptionApi = inject(SubscriptionService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly translate = inject(TranslateService);
-  private readonly devApi = inject(DevApiService);
 
   readonly loading = signal(true);
   readonly loadError = signal(false);
@@ -276,31 +274,6 @@ export class SuscripcionPlanComponent implements OnInit {
           this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 6500 });
         },
       });
-  }
-
-  /** Solo desarrollo: alinear con banner del layout. */
-  grantPremiumDev(): void {
-    const presets = this.snackHttpPresets();
-    this.devApi.grantPremium().subscribe({
-      next: () => {
-        this.auth.refreshUser().subscribe((data) => {
-          if (data) this.me.set(data);
-          this.snackBar.open(
-            this.translate.instant('shell.snackbarDevPremiumOk'),
-            this.translate.instant('common.close'),
-            { duration: 3000 },
-          );
-        });
-      },
-      error: (err) => {
-        const msg = messageFromHttpError(
-          err,
-          this.translate.instant('shell.snackbarDevPremiumUnavailable'),
-          presets,
-        );
-        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 4000 });
-      },
-    });
   }
 
   private snackHttpPresets() {

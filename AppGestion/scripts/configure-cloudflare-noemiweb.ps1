@@ -17,7 +17,10 @@
   Target que muestra Railway para api.noemiweb.com (ej. xxxxx.up.railway.app).
 
 .PARAMETER AppCnameTarget
-  Target que muestra Railway para el frontend (noemiweb.com). Se usa tambien para app.noemiweb.com como alias de compatibilidad.
+  Target CNAME de Railway para el frontend en el dominio raíz (@ → noemiweb.com).
+
+.PARAMETER RedirectAppSubdomain
+  Si es $true (por defecto), no crea CNAME para app y muestra cómo redirigir app.noemiweb.com → https://noemiweb.com en Cloudflare.
 
 .PARAMETER ZoneName
   Dominio raíz en Cloudflare (por defecto noemiweb.com).
@@ -35,6 +38,8 @@ param(
 
     [Parameter(Mandatory = $true)]
     [string] $AppCnameTarget,
+
+    [switch] $RedirectAppSubdomain = $true,
 
     [string] $ZoneName = 'noemiweb.com',
 
@@ -208,7 +213,20 @@ function Ensure-Cname {
 
 Ensure-Cname -RecordName 'api' -Target $ApiCnameTarget
 Ensure-Cname -RecordName '@' -Target $AppCnameTarget
-Ensure-Cname -RecordName 'app' -Target $AppCnameTarget
+
+if ($RedirectAppSubdomain) {
+    Write-Host ''
+    Write-Host 'Dominio canónico del SPA: https://noemiweb.com'
+    Write-Host 'No se crea CNAME para app — configura redirección 301 en Cloudflare:'
+    Write-Host '  Rules → Redirect Rules → Create rule'
+    Write-Host "  When: Hostname equals app.$ZoneName"
+    Write-Host "  Then: Static redirect → https://$ZoneName/`${uri.path}` (301, preserve query string)"
+    Write-Host '  (Así app.noemiweb.com no sirve la app ni choca con CORS de la API.)'
+    Write-Host ''
+} else {
+    Ensure-Cname -RecordName 'app' -Target $AppCnameTarget
+    Write-Host '(Aviso) app apunta al mismo target que @; la API solo autoriza CORS desde https://noemiweb.com'
+}
 
 Write-Host 'SSL/TLS -> Full (strict)'
 Invoke-CfApi -Method Patch -Uri "$base/zones/$zoneId/settings/ssl" -Body @{ value = 'strict' } | Out-Null
@@ -219,4 +237,4 @@ Invoke-CfApi -Method Patch -Uri "$base/zones/$zoneId/settings/always_use_https" 
 Write-Host 'Listo. Espera propagación DNS/TLS y verifica:'
 Write-Host '  curl.exe -I https://api.noemiweb.com/actuator/health'
 Write-Host '  curl.exe -I https://noemiweb.com'
-Write-Host '  curl.exe -I https://app.noemiweb.com'
+Write-Host '  (app.noemiweb.com debe redirigir a https://noemiweb.com, no servir la SPA)'

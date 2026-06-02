@@ -27,23 +27,17 @@
     "notifViewAll": "Ver todas las notificaciones",
     "readonlyBanner": "Solo puedes ver la información. Activa tu plan para crear o modificar datos.",
     "activateSubscription": "Activar suscripción",
-    "activatePremiumDev": "Activar premium (dev)",
-    "activatePremiumDevTooltip": "Solo en pruebas: activar cuenta premium sin pasar por el cobro habitual",
     "trialEndsIn": "Tu prueba termina en {{days}} días.",
     "snackbarNotifMarkedRead": "Notificaciones marcadas como leídas",
     "snackbarNotifMarkFailed": "No se pudieron marcar como leídas",
     "snackbarReferSent": "Enlace de invitación enviado. Revisa tu correo.",
     "snackbarNoCheckoutUrl": "No pudimos abrir la página de pago. Inténtalo de nuevo en unos minutos.",
-    "snackbarPremiumActivated": "Tu plan está activado. Ya puedes crear y editar con normalidad.",
     "snackbarPaymentErrorFallback": "No pudimos iniciar el pago. Inténtalo de nuevo.",
-    "snackbarGrantPremiumFallback": "No pudimos activar el plan. Inténtalo más tarde o escríbenos desde Ayuda.",
     "snackbarNoPortalUrl": "No pudimos abrir tu espacio de facturación. Inténtalo más tarde.",
     "snackbarPortalErrorFallback": "No pudimos abrir tu espacio de facturación. Inténtalo más tarde.",
     "snackbarOffline": "Sin conexión a internet. Comprueba tu red.",
     "snackbarServerError": "Algo falló por nuestra parte. Inténtalo de nuevo dentro de unos minutos.",
-    "snackbarSessionExpired": "Tu sesión ha cerrado. Vuelve a iniciar sesión.",
-    "snackbarDevPremiumOk": "Listo (solo modo prueba): tu cuenta tiene acceso premium.",
-    "snackbarDevPremiumUnavailable": "Esta función no está disponible en este entorno."
+    "snackbarSessionExpired": "Tu sesión ha cerrado. Vuelve a iniciar sesión."
   },
   "common": {
     "close": "Cerrar",
@@ -262,6 +256,7 @@
       "snackbarTotpApp": "Introduce el código de tu app de autenticación",
       "invalidCredentials": "Credenciales inválidas",
       "googleLoginError": "Error al iniciar sesión con Google",
+      "googleNetworkError": "No pudimos contactar con el servidor. Comprueba tu conexión, desactiva bloqueadores de anuncios e inténtalo desde https://noemiweb.com.",
       "referralBanner": "Vienes por un enlace de referido. Si aún no tienes cuenta, regístrate más abajo con el correo con el que quieras crear la cuenta."
     },
     "register": {
@@ -1257,8 +1252,6 @@
     "checkoutBtn": "Contratar plan",
     "portalBtn": "Facturación y método de pago",
     "stripeFoot": "Pagos en Stripe; no almacenamos la tarjeta en nuestros servidores.",
-    "devOnlyLbl": "Solo desarrollo",
-    "devPremiumBtn": "Marcar suscripción activa (sin Stripe)",
     "lblDefaultPlan": "Plan profesional",
     "stTrialActiveFull": "Prueba gratuita activa",
     "stTrialEnded": "Prueba finalizada",
