@@ -11,6 +11,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { MaterialService } from '../../../core/services/material.service';
 import { Material } from '../../../core/models/material.model';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
+import { HintBannerComponent } from '../../../shared/hint-banner/hint-banner.component';
 import { TranslateService } from '@ngx-translate/core';
 
 @Component({
@@ -23,9 +24,19 @@ import { TranslateService } from '@ngx-translate/core';
         MatIconModule,
         MatSnackBarModule,
         MatTooltipModule,
+        HintBannerComponent,
     ],
     template: `
     <div class="material-list">
+      <app-hint-banner
+        storageKey="hint_materiales_v1"
+        title="¿Para qué sirven los materiales?"
+        [steps]="[
+          { icon: 'add_circle', text: 'Crea aquí tus materiales con nombre, precio y unidad de medida.' },
+          { icon: 'description', text: 'Al crear un presupuesto, selecciónalos desde el desplegable — el precio se rellena solo.' },
+          { icon: 'bolt', text: 'Los más usados aparecen como accesos rápidos para añadirlos con un solo clic.' }
+        ]"
+      />
       <div class="header">
         <h1>Materiales</h1>
         @if (auth.canMutate()) {

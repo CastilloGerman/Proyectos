@@ -28,6 +28,7 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
 import { CondicionesPresupuestoFormValue, PresupuestoCondicionDisponible } from '../../../core/models/presupuesto-condiciones.model';
 import { CondicionesPresupuestoComponent } from '../condiciones-presupuesto/condiciones-presupuesto.component';
 import { CalculadoraM2Component, CalculadoraResult } from '../calculadora-m2/calculadora-m2.component';
+import { HintBannerComponent } from '../../../shared/hint-banner/hint-banner.component';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 const IVA_RATE = 0.21;
@@ -53,6 +54,7 @@ const IVA_RATE = 0.21;
         FormsModule,
         CondicionesPresupuestoComponent,
         TranslateModule,
+        HintBannerComponent,
     ],
     template: `
     <div class="presupuesto-form">
@@ -61,6 +63,17 @@ const IVA_RATE = 0.21;
           <mat-card-title>{{ isEdit ? ('budgetForm.edit' | translate) : ('budgetForm.new' | translate) }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
+          @if (!isEdit) {
+            <app-hint-banner
+              storageKey="hint_presupuesto_form_v1"
+              title="¿Cómo crear un presupuesto?"
+              [steps]="[
+                { icon: 'person', text: 'Elige o crea el cliente. Si ya lo tienes guardado, selecciónalo directamente.' },
+                { icon: 'inventory_2', text: 'Añade materiales desde el catálogo — el precio se rellena solo. Para trabajos sin material, usa «Tarea manual».' },
+                { icon: 'picture_as_pdf', text: 'Al guardar se genera el PDF automáticamente. Cuando el cliente acepte, cambia el estado a «Aceptado» para activar el flujo de anticipo y factura.' }
+              ]"
+            />
+          }
           @if (!isEdit) {
             <div class="section anticipo-section anticipo-cartel-solo">
               <h3>{{ 'budgetForm.depositCartelEditTitle' | translate }}</h3>

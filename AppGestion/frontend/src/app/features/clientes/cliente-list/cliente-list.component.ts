@@ -11,6 +11,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { ClienteService } from '../../../core/services/cliente.service';
 import { Cliente } from '../../../core/models/cliente.model';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
+import { HintBannerComponent } from '../../../shared/hint-banner/hint-banner.component';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
@@ -23,6 +24,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
         MatSnackBarModule,
         MatTooltipModule,
         TranslateModule,
+        HintBannerComponent,
     ],
     template: `
     <div class="cliente-list">
@@ -31,6 +33,17 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
           {{ 'cliList.provisionalBanner' | translate: { count: provisionalesCount } }}
         </div>
       }
+
+      <app-hint-banner
+        storageKey="hint_clientes_v1"
+        title="¿Cómo usar los clientes?"
+        [steps]="[
+          { icon: 'person_add', text: 'Añade tus clientes aquí con su nombre, email y teléfono.' },
+          { icon: 'description', text: 'Al crear un presupuesto, selecciona el cliente directamente — no hace falta escribir sus datos cada vez.' },
+          { icon: 'insights', text: 'Desde «Ver estado» accedes a todos sus presupuestos, facturas y cobros pendientes.' }
+        ]"
+      />
+
       <div class="header">
         <h1>{{ 'cliList.title' | translate }}</h1>
         @if (auth.canMutate()) {
