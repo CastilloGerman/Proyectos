@@ -39,7 +39,7 @@ public class DevGrantPremiumService {
         }
         Set<String> allowlist = devProperties.grantPremiumAllowlistEmailsNormalized();
         if (allowlist.isEmpty()) {
-            return true;
+            return false;
         }
         return allowlist.contains(usuario.getEmail().trim().toLowerCase(Locale.ROOT));
     }
