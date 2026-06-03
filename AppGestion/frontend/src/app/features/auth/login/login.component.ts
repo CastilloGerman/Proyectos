@@ -12,6 +12,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AuthService } from '../../../core/auth/auth.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AnimatedBackgroundComponent } from '../../../shared/animated-background/animated-background.component';
+import { LegalFooterComponent } from '../../../legal/legal-footer/legal-footer.component';
 
 /** Client ID de Google para el botón "Iniciar con Google" (mismo que en environment). */
 const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.apps.googleusercontent.com';
@@ -30,6 +31,7 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
         AboutComponent,
         TranslateModule,
         AnimatedBackgroundComponent,
+        LegalFooterComponent,
     ],
     template: `
     <div class="login-page" id="login-page-top">
@@ -157,6 +159,7 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
     <div #aboutAnchor class="login-about-anchor">
       <app-about />
     </div>
+    <app-legal-footer />
     </div>
   `,
     styles: [`

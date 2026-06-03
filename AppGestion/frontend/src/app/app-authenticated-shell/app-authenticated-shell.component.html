@@ -56,43 +56,72 @@
       <button
         mat-icon-button
         type="button"
+        class="saas-topbar__menu"
         (click)="toggleSidenavMenu()"
         [matTooltip]="sidenavMenuTooltipKey() | translate"
         [attr.aria-label]="'shell.sidenavButtonAria' | translate"
       >
         <mat-icon>menu</mat-icon>
       </button>
-      <app-search-bar></app-search-bar>
-      <span class="spacer"></span>
-      @if (auth.canMutate()) {
-        <button mat-stroked-button (click)="openInvitar()" [matTooltip]="'shell.referTooltip' | translate">
-          {{ 'shell.refer' | translate }}
+      <app-search-bar class="saas-topbar__search"></app-search-bar>
+      <div class="saas-topbar__actions">
+        @if (auth.canMutate()) {
+          @if (isMobileLayout()) {
+            <button
+              mat-icon-button
+              type="button"
+              class="saas-topbar__action-icon"
+              (click)="openInvitar()"
+              [matTooltip]="'shell.referTooltip' | translate"
+              [attr.aria-label]="'shell.refer' | translate"
+            >
+              <mat-icon>person_add</mat-icon>
+            </button>
+          } @else {
+            <button mat-stroked-button (click)="openInvitar()" [matTooltip]="'shell.referTooltip' | translate">
+              {{ 'shell.refer' | translate }}
+            </button>
+          }
+        }
+        @if (isMobileLayout()) {
+          <a
+            mat-icon-button
+            routerLink="/cuenta/suscripcion"
+            class="saas-topbar__action-icon"
+            [matTooltip]="'shell.subscriptionTooltip' | translate"
+            [attr.aria-label]="'shell.subscription' | translate"
+          >
+            <mat-icon>subscriptions</mat-icon>
+          </a>
+        } @else {
+          <a
+            mat-stroked-button
+            routerLink="/cuenta/suscripcion"
+            [matTooltip]="'shell.subscriptionTooltip' | translate"
+          >
+            <mat-icon class="saas-topbar__inline-icon">subscriptions</mat-icon>
+            {{ 'shell.subscription' | translate }}
+          </a>
+        }
+        <button
+          type="button"
+          mat-icon-button
+          class="saas-topbar__action-icon saas-topbar__notif"
+          #notifMenuTrigger="matMenuTrigger"
+          [matMenuTriggerFor]="notifMenu"
+          (menuOpened)="onNotifMenuOpened()"
+          [matTooltip]="'shell.notifications' | translate"
+          [matBadge]="notifBadge()"
+          [matBadgeHidden]="notificaciones.unreadCount() === 0"
+          matBadgeColor="warn"
+          matBadgeSize="small"
+          [attr.aria-label]="'shell.notificationsAria' | translate"
+          aria-haspopup="menu"
+        >
+          <mat-icon>notifications</mat-icon>
         </button>
-      }
-      <a
-        mat-stroked-button
-        routerLink="/cuenta/suscripcion"
-        [matTooltip]="'shell.subscriptionTooltip' | translate"
-      >
-        <mat-icon class="saas-topbar__inline-icon">subscriptions</mat-icon>
-        {{ 'shell.subscription' | translate }}
-      </a>
-      <button
-        type="button"
-        mat-icon-button
-        #notifMenuTrigger="matMenuTrigger"
-        [matMenuTriggerFor]="notifMenu"
-        (menuOpened)="onNotifMenuOpened()"
-        [matTooltip]="'shell.notifications' | translate"
-        [matBadge]="notifBadge()"
-        [matBadgeHidden]="notificaciones.unreadCount() === 0"
-        matBadgeColor="warn"
-        matBadgeSize="small"
-        [attr.aria-label]="'shell.notificationsAria' | translate"
-        aria-haspopup="menu"
-      >
-        <mat-icon>notifications</mat-icon>
-      </button>
+        <app-user-dropdown />
+      </div>
       <mat-menu #notifMenu="matMenu" class="notif-bell-menu" xPosition="before">
         <div class="notif-bell-panel" (click)="$event.stopPropagation()">
           <div class="notif-bell-head">
@@ -152,7 +181,6 @@
           <span>{{ 'shell.notifViewAll' | translate }}</span>
         </button>
       </mat-menu>
-      <app-user-dropdown />
     </header>
     @if (!auth.canWrite()) {
       <div class="banner-readonly">

@@ -10,6 +10,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../core/auth/auth.service';
 import { RegisterRequest } from '../../../core/auth/models/auth.model';
+import { LegalFooterComponent } from '../../../legal/legal-footer/legal-footer.component';
 
 @Component({
     selector: 'app-register',
@@ -22,6 +23,7 @@ import { RegisterRequest } from '../../../core/auth/models/auth.model';
         MatProgressSpinnerModule,
         MatSnackBarModule,
         TranslateModule,
+        LegalFooterComponent,
     ],
     template: `
     <div class="register-wrapper">
@@ -90,6 +92,7 @@ import { RegisterRequest } from '../../../core/auth/models/auth.model';
           }}</a>
         </div>
       </div>
+      <app-legal-footer />
     </div>
   `,
     styles: [`

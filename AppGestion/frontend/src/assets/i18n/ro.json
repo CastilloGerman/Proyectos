@@ -579,6 +579,13 @@
     "finalConfirmQuestion": "Emiti factura finală cu deductibilitate pentru avansele facturate?",
     "finalConfirmBtn": "Emite factura finală"
   },
+  "calcM2": {
+    "includeDetailToggle": "Include detaliul zonelor în descriere",
+    "includeDetailHint": "Apare pe linia devizului (vizibil și în PDF)",
+    "totalZones": "Total {{count}} zone",
+    "zoneLine": "{{name}}: {{area}} m² ({{formula}})",
+    "totalLine": "— Total: {{area}} m²"
+  },
   "cliForm": {
     "edit": "Editează clientul",
     "new": "Client nou",

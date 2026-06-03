@@ -995,6 +995,10 @@ export class PresupuestoFormComponent implements OnInit {
       if (!result) return;
       const row = items.at(index) as FormGroup;
       row.patchValue({ cantidad: result.area });
+      if (result.incluirDetalle && result.descripcion) {
+        row.patchValue({ tareaManual: result.descripcion });
+        return;
+      }
       const desc = String(row.get('tareaManual')?.value ?? '').trim();
       if (!desc && result.descripcion) {
         row.patchValue({ tareaManual: result.descripcion });

@@ -579,6 +579,13 @@
     "finalConfirmQuestion": "Виставити фінальний рахунок з урахуванням авансів уже виставлених?",
     "finalConfirmBtn": "Створити фінальний рахунок"
   },
+  "calcM2": {
+    "includeDetailToggle": "Додати деталі зон до опису",
+    "includeDetailHint": "З'явиться в рядку кошторису (також у PDF)",
+    "totalZones": "Разом {{count}} зон",
+    "zoneLine": "{{name}}: {{area}} м² ({{formula}})",
+    "totalLine": "— Разом: {{area}} м²"
+  },
   "cliForm": {
     "edit": "Редагувати клієнта",
     "new": "Новий клієнт",

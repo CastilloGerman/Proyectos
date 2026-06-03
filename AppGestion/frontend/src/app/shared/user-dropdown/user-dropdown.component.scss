@@ -238,13 +238,23 @@
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .user-dropdown__trigger {
-    max-width: min(220px, 55vw);
-    padding: 4px 8px 4px 4px;
+    max-width: none;
+    padding: 4px;
+    gap: 0;
+    border: none;
+    background: transparent;
   }
 
-  .user-dropdown__email {
+  .user-dropdown__meta,
+  .user-dropdown__chevron {
     display: none;
+  }
+
+  .user-dropdown__avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
   }
 }

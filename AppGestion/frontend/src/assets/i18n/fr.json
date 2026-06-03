@@ -579,6 +579,13 @@
     "finalConfirmQuestion": "Émettre la facture finale en déduction des factures d’acompte ?",
     "finalConfirmBtn": "Émettre la facture finale"
   },
+  "calcM2": {
+    "includeDetailToggle": "Inclure le détail des zones dans la description",
+    "includeDetailHint": "Apparaît sur la ligne du devis (visible aussi dans le PDF)",
+    "totalZones": "Total {{count}} zones",
+    "zoneLine": "{{name}} : {{area}} m² ({{formula}})",
+    "totalLine": "— Total : {{area}} m²"
+  },
   "cliForm": {
     "edit": "Modifier le client",
     "new": "Nouveau client",

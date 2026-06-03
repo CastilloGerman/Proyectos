@@ -90,15 +90,30 @@
   box-shadow: var(--app-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.04));
 }
 
-.saas-topbar app-search-bar {
+.saas-topbar__menu {
+  flex-shrink: 0;
+}
+
+.saas-topbar__search {
   flex: 1 1 auto;
   min-width: 0;
   display: block;
 }
 
-.saas-topbar .spacer {
-  flex: 1 1 auto;
-  min-width: 0;
+.saas-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.saas-topbar__action-icon {
+  flex-shrink: 0;
+}
+
+.saas-topbar__notif {
+  margin-right: 2px;
 }
 
 .saas-topbar__inline-icon {
@@ -122,8 +137,24 @@
 
 @media (max-width: 768px) {
   .saas-topbar {
-    padding: 0 var(--app-space-sm, 8px);
-    gap: 4px;
+    padding: 0 4px 0 2px;
+    gap: 0;
+    min-height: 52px;
+  }
+
+  .saas-topbar__actions {
+    gap: 0;
+  }
+
+  .saas-topbar__action-icon {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+  }
+
+  .saas-topbar__notif ::ng-deep .mat-badge-content {
+    top: 6px;
+    right: 6px;
   }
 
   .saas-content {
@@ -138,10 +169,13 @@
     box-sizing: border-box;
     flex-wrap: wrap;
   }
+}
 
-  .saas-topbar .mat-mdc-outlined-button {
-    padding: 0 8px;
-    font-size: 12px;
+@media (max-width: 480px) {
+  .saas-topbar__search {
+    flex: 1 1 0;
+    min-width: 48px;
+    max-width: calc(100vw - 220px);
   }
 }
 

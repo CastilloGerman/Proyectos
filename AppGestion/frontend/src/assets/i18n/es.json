@@ -719,6 +719,13 @@
     "finalConfirmQuestion": "¿Emitir la factura final con descuento del anticipo ya facturado?",
     "finalConfirmBtn": "Generar factura final"
   },
+  "calcM2": {
+    "includeDetailToggle": "Incluir detalle de zonas en la descripción",
+    "includeDetailHint": "Aparecerá en la línea del presupuesto (visible también en el PDF)",
+    "totalZones": "Total {{count}} zonas",
+    "zoneLine": "{{name}}: {{area}} m² ({{formula}})",
+    "totalLine": "— Total: {{area}} m²"
+  },
   "cliForm": {
     "edit": "Editar cliente",
     "new": "Nuevo cliente",

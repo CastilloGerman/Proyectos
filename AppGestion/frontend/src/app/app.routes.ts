@@ -10,6 +10,26 @@ export const routes: Routes = [
   { path: 'forgot-password', loadComponent: () => import('./features/auth/forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent) },
   { path: 'reset-password', loadComponent: () => import('./features/auth/reset-password/reset-password.component').then(m => m.ResetPasswordComponent) },
   {
+    path: 'privacidad',
+    loadComponent: () => import('./legal/privacy/privacy.component').then((m) => m.PrivacyComponent),
+  },
+  {
+    path: 'terminos',
+    loadComponent: () => import('./legal/terms/terms.component').then((m) => m.TermsComponent),
+  },
+  {
+    path: 'cookies',
+    loadComponent: () => import('./legal/cookies/cookies.component').then((m) => m.CookiesComponent),
+  },
+  {
+    path: 'aviso-legal',
+    loadComponent: () => import('./legal/legal-notice/legal-notice.component').then((m) => m.LegalNoticeComponent),
+  },
+  {
+    path: 'reembolsos',
+    loadComponent: () => import('./legal/refund/refund.component').then((m) => m.RefundComponent),
+  },
+  {
     path: '',
     canActivate: [authGuard],
     children: [

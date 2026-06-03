@@ -156,6 +156,36 @@ export interface SearchResult {
       color: rgba(0, 0, 0, 0.55);
       margin-left: 8px;
     }
+
+    @media (max-width: 768px) {
+      .search-box {
+        max-width: none;
+        border-radius: 8px;
+      }
+
+      .search-icon {
+        padding: 0 4px;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      .search-field ::ng-deep .mat-mdc-form-field-infix {
+        padding-top: 8px;
+        padding-bottom: 8px;
+        min-height: 40px;
+      }
+
+      .search-field ::ng-deep input::placeholder {
+        font-size: 13px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .search-field ::ng-deep input::placeholder {
+        color: transparent;
+      }
+    }
   `]
 })
 export class SearchBarComponent implements OnDestroy {

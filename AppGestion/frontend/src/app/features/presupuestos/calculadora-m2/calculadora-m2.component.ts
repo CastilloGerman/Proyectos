@@ -7,10 +7,20 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+
+export interface CalculadoraZona {
+  area: number;
+  descripcion: string;
+  formula: string;
+}
 
 export interface CalculadoraResult {
   area: number;
   descripcion: string;
+  incluirDetalle?: boolean;
+  zonas?: CalculadoraZona[];
 }
 
 export interface Shape {
@@ -33,6 +43,8 @@ export interface Shape {
     MatFormFieldModule,
     MatIconModule,
     MatTooltipModule,
+    MatCheckboxModule,
+    TranslateModule,
   ],
   template: `
     <div class="calc-wrapper">
@@ -109,6 +121,14 @@ export interface Shape {
           <span>Total acumulado</span>
           <strong>{{ totalAcumulado | number: '1.2-2' }} m²</strong>
         </div>
+        @if (history.length > 1) {
+          <div class="detail-option">
+            <mat-checkbox [(ngModel)]="incluirDetalleZonas">
+              {{ 'calcM2.includeDetailToggle' | translate }}
+            </mat-checkbox>
+            <span class="detail-hint">{{ 'calcM2.includeDetailHint' | translate }}</span>
+          </div>
+        }
       </div>
 
       <div class="actions">
@@ -284,6 +304,20 @@ export interface Shape {
         border-top: 1px solid #e0e0e0;
       }
 
+      .detail-option {
+        padding: 10px 16px 12px;
+        border-top: 1px solid #e0e0e0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .detail-hint {
+        font-size: 11px;
+        color: #888;
+        padding-left: 32px;
+      }
+
       .actions {
         display: flex;
         justify-content: space-between;
@@ -351,7 +385,8 @@ export class CalculadoraM2Component {
   result: number | null = null;
   formulaDisplay = '';
 
-  history: { area: number; descripcion: string; formula: string }[] = [];
+  history: CalculadoraZona[] = [];
+  incluirDetalleZonas = false;
 
   get totalAcumulado(): number {
     return this.history.reduce((s, h) => s + h.area, 0);
@@ -365,6 +400,7 @@ export class CalculadoraM2Component {
   constructor(
     public dialogRef: MatDialogRef<CalculadoraM2Component>,
     @Inject(MAT_DIALOG_DATA) public data: Record<string, never>,
+    private translate: TranslateService,
   ) {}
 
   selectShape(s: Shape): void {
@@ -409,11 +445,48 @@ export class CalculadoraM2Component {
 
   insert(): void {
     const area = this.history.length > 0 ? this.totalAcumulado : this.result!;
-    const desc =
-      this.history.length > 1
-        ? `Total ${this.history.length} zonas`
-        : (this.history[0]?.descripcion ?? this.descripcion ?? '');
-    this.dialogRef.close({ area: parseFloat(area.toFixed(4)), descripcion: desc } as CalculadoraResult);
+    const zonas = this.history.length > 0 ? [...this.history] : undefined;
+    let descripcion = '';
+    let incluirDetalle = false;
+
+    if (this.history.length > 1) {
+      incluirDetalle = this.incluirDetalleZonas;
+      descripcion = incluirDetalle
+        ? this.buildDetailedDescription(area)
+        : this.translate.instant('calcM2.totalZones', { count: this.history.length });
+    } else if (this.history.length === 1) {
+      descripcion = this.history[0].descripcion;
+    } else {
+      descripcion = this.descripcion ?? '';
+    }
+
+    this.dialogRef.close({
+      area: parseFloat(area.toFixed(4)),
+      descripcion: this.truncateDescription(descripcion),
+      incluirDetalle,
+      zonas,
+    } satisfies CalculadoraResult);
+  }
+
+  private buildDetailedDescription(totalArea: number): string {
+    const lines = this.history.map((z) =>
+      this.translate.instant('calcM2.zoneLine', {
+        name: z.descripcion,
+        area: z.area.toFixed(2),
+        formula: z.formula,
+      }),
+    );
+    lines.push(
+      this.translate.instant('calcM2.totalLine', {
+        area: totalArea.toFixed(2),
+      }),
+    );
+    return lines.join('\n');
+  }
+
+  private truncateDescription(text: string, max = 500): string {
+    if (text.length <= max) return text;
+    return text.slice(0, max - 1) + '…';
   }
 
   cancel(): void {

@@ -1,19 +1,32 @@
-import { Component, DestroyRef, NgZone, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, NgZone, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
+import { RouterOutlet, Router, NavigationEnd, RouterLink } from '@angular/router';
 import { filter } from 'rxjs/operators';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from './core/auth/auth.service';
 import { NotificacionesService } from './core/services/notificaciones.service';
 import { AppAuthenticatedShellComponent } from './app-authenticated-shell/app-authenticated-shell.component';
 import { LanguageSwitcherComponent } from './shared/language-switcher/language-switcher.component';
+import { CookieBannerComponent } from './legal/cookie-banner/cookie-banner.component';
+import { isLegalPath } from './legal/legal-paths';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, AppAuthenticatedShellComponent, LanguageSwitcherComponent],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    MatButtonModule,
+    MatIconModule,
+    AppAuthenticatedShellComponent,
+    LanguageSwitcherComponent,
+    CookieBannerComponent,
+  ],
   template: `
-    @if (auth.isAuthenticated()) {
+    @if (auth.isAuthenticated() && !isLegalRoute()) {
       <app-authenticated-shell />
-    } @else {
+    }
+    @if (!auth.isAuthenticated()) {
       <div class="app-public-shell">
         <header class="app-public-topbar">
           <span class="app-public-topbar__spacer"></span>
@@ -22,15 +35,35 @@ import { LanguageSwitcherComponent } from './shared/language-switcher/language-s
         <router-outlet></router-outlet>
       </div>
     }
+    @if (auth.isAuthenticated() && isLegalRoute()) {
+      <div class="app-legal-shell">
+        <header class="app-legal-topbar">
+          <a mat-stroked-button routerLink="/dashboard" class="app-legal-back">
+            <mat-icon>arrow_back</mat-icon>
+            Volver a la app
+          </a>
+          <span class="app-public-topbar__spacer"></span>
+          <app-language-switcher />
+        </header>
+        <main class="app-legal-main">
+          <router-outlet></router-outlet>
+        </main>
+      </div>
+    }
+    <app-cookie-banner />
   `,
   styles: [
     `
-      .app-public-shell {
+      .app-public-shell,
+      .app-legal-shell {
         min-height: 100vh;
+        min-height: 100dvh;
         display: flex;
         flex-direction: column;
+        background: var(--app-bg-page, #f8fafc);
       }
-      .app-public-topbar {
+      .app-public-topbar,
+      .app-legal-topbar {
         position: sticky;
         top: 0;
         z-index: 20;
@@ -46,6 +79,13 @@ import { LanguageSwitcherComponent } from './shared/language-switcher/language-s
       .app-public-topbar__spacer {
         flex: 1;
       }
+      .app-legal-main {
+        flex: 1;
+        min-width: 0;
+      }
+      .app-legal-back mat-icon {
+        margin-right: 4px;
+      }
     `,
   ],
 })
@@ -55,6 +95,9 @@ export class AppComponent implements OnInit {
   private readonly ngZone = inject(NgZone);
   private readonly destroyRef = inject(DestroyRef);
   private readonly notificaciones = inject(NotificacionesService);
+
+  private readonly currentUrl = signal(this.router.url);
+  readonly isLegalRoute = computed(() => isLegalPath(this.currentUrl()));
 
   ngOnInit(): void {
     if (this.auth.isAuthenticated()) {
@@ -66,7 +109,8 @@ export class AppComponent implements OnInit {
         filter((e): e is NavigationEnd => e instanceof NavigationEnd),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe(() => {
+      .subscribe((e) => {
+        this.currentUrl.set(e.urlAfterRedirects);
         if (this.auth.isAuthenticated()) {
           this.notificaciones.refreshUnreadCount();
           this.ngZone.runOutsideAngular(() => {
