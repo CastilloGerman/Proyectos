@@ -21,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -143,5 +145,62 @@ class PresupuestoFlujosTest {
                         .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.tipoFactura").value(TipoFactura.NORMAL.name()));
+    }
+
+    @Test
+    void actualizarEstado_noRecalculaNiPierdeDescuentosDeItems() throws Exception {
+        String body = """
+                {
+                  "clienteId": %d,
+                  "items": [{
+                    "materialId": null,
+                    "tareaManual": "Línea sin IVA con descuento",
+                    "cantidad": 1.0,
+                    "precioUnitario": 100.0,
+                    "aplicaIva": false,
+                    "descuentoPorcentaje": 10.0,
+                    "descuentoFijo": 5.0
+                  }],
+                  "ivaHabilitado": true,
+                  "estado": "Pendiente",
+                  "descuentoGlobalPorcentaje": 0.0,
+                  "descuentoGlobalFijo": 0.0,
+                  "descuentoAntesIva": true,
+                  "condicionesActivas": [],
+                  "notaAdicional": null
+                }
+                """.formatted(scenario.clienteCompletoId());
+
+        String res = mockMvc.perform(post("/presupuestos")
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.subtotal").value(85.0))
+                .andExpect(jsonPath("$.iva").value(0.0))
+                .andExpect(jsonPath("$.total").value(85.0))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long presId = objectMapper.readTree(res).get("id").asLong();
+
+        mockMvc.perform(patch("/presupuestos/{id}/estado", presId)
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"estado\":\"Aceptado\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value(PresupuestoEstado.ACEPTADO))
+                .andExpect(jsonPath("$.subtotal").value(85.0))
+                .andExpect(jsonPath("$.iva").value(0.0))
+                .andExpect(jsonPath("$.total").value(85.0));
+
+        mockMvc.perform(get("/presupuestos/{id}", presId)
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value(PresupuestoEstado.ACEPTADO))
+                .andExpect(jsonPath("$.subtotal").value(85.0))
+                .andExpect(jsonPath("$.iva").value(0.0))
+                .andExpect(jsonPath("$.total").value(85.0));
     }
 }

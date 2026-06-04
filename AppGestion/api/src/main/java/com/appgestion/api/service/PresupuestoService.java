@@ -164,6 +164,18 @@ public class PresupuestoService {
     }
 
     @Transactional
+    public PresupuestoResponse actualizarEstado(Long id, String estado, Long usuarioId) {
+        if (estado == null || estado.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El estado es obligatorio");
+        }
+        Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
+        presupuesto.setEstado(estado.trim());
+        presupuesto = presupuestoRepository.save(presupuesto);
+        return toResponse(presupuesto);
+    }
+
+    @Transactional
     public void eliminar(Long id, Long usuarioId) {
         if (!presupuestoRepository.existsByIdAndUsuarioId(Objects.requireNonNull(id), Objects.requireNonNull(usuarioId))) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado");
