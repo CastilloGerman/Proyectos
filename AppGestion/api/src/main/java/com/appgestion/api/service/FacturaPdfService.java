@@ -358,19 +358,19 @@ public class FacturaPdfService {
             totalesTable.addCell(new Phrase(String.format("%.2f €", iva), cellFont));
         }
         Font boldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.DARK_GRAY);
-        Font redFont = FontFactory.getFont(FontFactory.HELVETICA, 9, new Color(120, 53, 15));
+        Font noteFont = FontFactory.getFont(FontFactory.HELVETICA, 9, new Color(120, 53, 15));
 
         if (factura.getTipoFactura() == TipoFactura.FINAL_CON_ANTICIPO
                 && factura.getImporteAnticipoDescontado() != null
                 && factura.getFacturaAnticipoReferencia() != null) {
             double brutoRemanente = subtotal + iva;
-            totalesTable.addCell(new Phrase("Subtotal (remanente):", cellFont));
+            totalesTable.addCell(new Phrase("Total remanente:", cellFont));
             totalesTable.addCell(new Phrase(String.format("%.2f €", brutoRemanente), cellFont));
             Factura fa = factura.getFacturaAnticipoReferencia();
             String ref = fa.getNumeroFactura() != null ? fa.getNumeroFactura() : "";
             double desc = factura.getImporteAnticipoDescontado().doubleValue();
-            totalesTable.addCell(new Phrase("(-) Anticipo facturado " + ref + ":", redFont));
-            totalesTable.addCell(new Phrase(String.format("- %.2f €", desc), redFont));
+            totalesTable.addCell(new Phrase("Anticipo ya facturado " + ref + ":", noteFont));
+            totalesTable.addCell(new Phrase(String.format("%.2f €", desc), noteFont));
             Font totalPagarFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.DARK_GRAY);
             totalesTable.addCell(new Phrase("Total a pagar:", totalPagarFont));
             totalesTable.addCell(new Phrase(String.format("%.2f €", total), totalPagarFont));
