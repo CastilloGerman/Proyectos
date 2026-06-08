@@ -34,6 +34,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -103,8 +104,8 @@ public class AuthService {
             referralInv = invitacionService.assertValidInvitationForRegistration(refTok.trim());
         }
 
-        String emailNormalized = request.email().trim().toLowerCase();
-        if (usuarioRepository.existsByEmail(emailNormalized)) {
+        String emailNormalized = request.email().trim().toLowerCase(Locale.ROOT);
+        if (usuarioRepository.existsByEmailIgnoreCase(emailNormalized)) {
             throw new IllegalArgumentException("Ya existe un usuario con ese email");
         }
 
@@ -147,7 +148,7 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
-        Optional<Usuario> opt = usuarioRepository.findByEmail(request.email());
+        Optional<Usuario> opt = usuarioRepository.findByEmailIgnoreCase(request.email().trim());
         if (opt.isEmpty()) {
             throw new IllegalArgumentException("Credenciales inválidas");
         }

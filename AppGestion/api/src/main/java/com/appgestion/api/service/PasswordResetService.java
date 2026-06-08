@@ -61,7 +61,7 @@ public class PasswordResetService {
      */
     @Transactional
     public void requestPasswordReset(ForgotPasswordRequest request, HttpServletRequest httpRequest) {
-        Optional<Usuario> opt = usuarioRepository.findByEmail(request.email().trim());
+        Optional<Usuario> opt = usuarioRepository.findByEmailIgnoreCase(request.email().trim());
         if (opt.isEmpty()) {
             return;
         }
