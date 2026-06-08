@@ -12,6 +12,7 @@ import com.stripe.model.EventDataObjectDeserializer;
 import com.stripe.model.Invoice;
 import com.stripe.model.StripeObject;
 import com.stripe.model.Subscription;
+import com.stripe.model.checkout.Session;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -108,6 +109,27 @@ class StripeWebhookEventosTest {
         stripeWebhookService.processWebhook("{}", "sig");
 
         verify(subscriptionService).recordInvoicePaid(any(Invoice.class));
+    }
+
+    @Test
+    void checkoutSessionCompleted_siNoPuedeCargarSuscripcion_noMarcaEventoProcesado() throws Exception {
+        Session session = org.mockito.Mockito.mock(Session.class);
+        when(session.getMetadata()).thenReturn(java.util.Map.of("usuario_id", "42"));
+        when(session.getCustomer()).thenReturn("cus_123");
+        when(session.getSubscription()).thenReturn("sub_missing");
+
+        Event event = eventWith("evt_checkout_fetch_fail", "checkout.session.completed", session);
+
+        when(webhookEventParser.parse(any(), any(), eq(SECRET))).thenReturn(event);
+        when(processedEventRepository.existsByEventId("evt_checkout_fetch_fail")).thenReturn(false);
+        when(subscriptionFetcher.fetch("sub_missing")).thenThrow(org.mockito.Mockito.mock(com.stripe.exception.StripeException.class));
+
+        StripeWebhookProcessingResult r = stripeWebhookService.processWebhook("{}", "sig");
+
+        assertThat(r.signatureInvalid()).isFalse();
+        assertThat(r.processingFailed()).isTrue();
+        verify(subscriptionService, never()).syncFromStripeSubscription(any(), any(), any());
+        verify(processedEventRepository, never()).save(any());
     }
 
     @Test

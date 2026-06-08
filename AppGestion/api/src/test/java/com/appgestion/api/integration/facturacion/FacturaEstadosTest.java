@@ -2,6 +2,7 @@ package com.appgestion.api.integration.facturacion;
 
 import com.appgestion.api.AppGestionApiApplication;
 import com.appgestion.api.constant.FacturaEstadoPago;
+import com.appgestion.api.constant.PresupuestoEstado;
 import com.appgestion.api.repository.ClienteRepository;
 import com.appgestion.api.repository.EmpresaRepository;
 import com.appgestion.api.repository.OrganizationRepository;
@@ -23,6 +24,8 @@ import org.springframework.web.context.WebApplicationContext;
 import java.time.LocalDate;
 
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -125,6 +128,47 @@ class FacturaEstadosTest {
                 .andExpect(jsonPath("$.estadoPago").value(FacturaEstadoPago.PARCIAL));
     }
 
+    @Test
+    void actualizarEstadoPago_noModificaEstadoDelPresupuestoVinculado() throws Exception {
+        String pres = presupuestoJson(scenario.clienteCompletoId(), PresupuestoEstado.PENDIENTE);
+        String presContent = mockMvc.perform(post("/presupuestos")
+                        .with(FacturacionAuth.asUsuarioFacturacion(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(pres))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long presId = objectMapper.readTree(presContent).get("id").asLong();
+        String facturaContent = mockMvc.perform(post("/presupuestos/{id}/factura", presId)
+                        .with(FacturacionAuth.asUsuarioFacturacion(userDetailsService)))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        long facturaId = objectMapper.readTree(facturaContent).get("id").asLong();
+
+        mockMvc.perform(patch("/presupuestos/{id}/estado", presId)
+                        .with(FacturacionAuth.asUsuarioFacturacion(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"estado\":\"" + PresupuestoEstado.EN_EJECUCION + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value(PresupuestoEstado.EN_EJECUCION));
+
+        mockMvc.perform(patch("/facturas/{id}/estado-pago", facturaId)
+                        .with(FacturacionAuth.asUsuarioFacturacion(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"estadoPago\":\"" + FacturaEstadoPago.PAGADA + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estadoPago").value(FacturaEstadoPago.PAGADA));
+
+        mockMvc.perform(get("/presupuestos/{id}", presId)
+                        .with(FacturacionAuth.asUsuarioFacturacion(userDetailsService)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value(PresupuestoEstado.EN_EJECUCION));
+    }
+
     private static String facturaJson(long clienteId, double precioUnitario) {
         return """
                 {
@@ -143,5 +187,21 @@ class FacturaEstadosTest {
                   "ivaHabilitado": true
                 }
                 """.formatted(clienteId, precioUnitario, LocalDate.now());
+    }
+
+    private static String presupuestoJson(long clienteId, String estado) {
+        return """
+                {
+                  "clienteId": %d,
+                  "items": [{"materialId": null, "tareaManual": "Línea presupuesto", "cantidad": 1.0, "precioUnitario": 100.0, "aplicaIva": true}],
+                  "ivaHabilitado": true,
+                  "estado": "%s",
+                  "descuentoGlobalPorcentaje": 0.0,
+                  "descuentoGlobalFijo": 0.0,
+                  "descuentoAntesIva": true,
+                  "condicionesActivas": [],
+                  "notaAdicional": null
+                }
+                """.formatted(clienteId, estado);
     }
 }

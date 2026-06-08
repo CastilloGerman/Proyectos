@@ -147,7 +147,7 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
-        Optional<Usuario> opt = usuarioRepository.findByEmail(request.email());
+        Optional<Usuario> opt = usuarioRepository.findByEmailIgnoreCase(request.email().trim());
         if (opt.isEmpty()) {
             throw new IllegalArgumentException("Credenciales inválidas");
         }

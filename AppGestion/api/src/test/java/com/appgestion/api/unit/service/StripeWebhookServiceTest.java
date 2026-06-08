@@ -90,4 +90,24 @@ class StripeWebhookServiceTest {
         verify(processedEventRepository).save(cap.capture());
         assertThat(cap.getValue().getEventId()).isEqualTo("evt_new");
     }
+
+    @Test
+    void processWebhook_knownEventWithoutDataObject_returnsFailureAndDoesNotMarkProcessed() throws Exception {
+        Event event = mock(Event.class);
+        when(event.getId()).thenReturn("evt_missing_object");
+        when(event.getType()).thenReturn("invoice.paid");
+        when(webhookEventParser.parse(any(), any(), eq("whsec_test_secret"))).thenReturn(event);
+        when(processedEventRepository.existsByEventId("evt_missing_object")).thenReturn(false);
+
+        var deser = mock(com.stripe.model.EventDataObjectDeserializer.class);
+        when(event.getDataObjectDeserializer()).thenReturn(deser);
+        when(deser.getObject()).thenReturn(java.util.Optional.empty());
+
+        StripeWebhookProcessingResult r = stripeWebhookService.processWebhook("{}", "sig");
+
+        assertThat(r.signatureInvalid()).isFalse();
+        assertThat(r.processingFailed()).isTrue();
+        verify(subscriptionService, never()).recordInvoicePaid(any());
+        verify(processedEventRepository, never()).save(any());
+    }
 }
