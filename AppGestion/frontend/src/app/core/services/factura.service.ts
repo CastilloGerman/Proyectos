@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Factura, FacturaRequest, FacturaCobroRequest } from '../models/factura.model';
+import { Factura, FacturaRequest, FacturaCobroRequest, FacturaEstadoPagoRequest } from '../models/factura.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -28,6 +28,10 @@ export class FacturaService {
 
   update(id: number, data: FacturaRequest): Observable<Factura> {
     return this.http.put<Factura>(`${this.apiUrl}/${id}`, data);
+  }
+
+  updateEstadoPago(id: number, data: FacturaEstadoPagoRequest): Observable<Factura> {
+    return this.http.patch<Factura>(`${this.apiUrl}/${id}/estado-pago`, data);
   }
 
   anular(id: number, motivo?: string | null): Observable<void> {

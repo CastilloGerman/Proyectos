@@ -62,6 +62,10 @@ export interface PresupuestoRequest {
   notaAdicional?: string;
 }
 
+export interface PresupuestoEstadoRequest {
+  estado: string;
+}
+
 /** Registro de anticipo (POST /presupuestos/:id/anticipo). */
 export interface AnticipoRegistroRequest {
   importeAnticipo: number;

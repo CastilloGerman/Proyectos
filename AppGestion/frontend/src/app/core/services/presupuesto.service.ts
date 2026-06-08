@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { PresupuestoCondicionDisponible } from '../models/presupuesto-condiciones.model';
-import { AnticipoRegistroRequest, AnticipoResumen, Presupuesto, PresupuestoRequest } from '../models/presupuesto.model';
+import { AnticipoRegistroRequest, AnticipoResumen, Presupuesto, PresupuestoEstadoRequest, PresupuestoRequest } from '../models/presupuesto.model';
 import { Factura } from '../models/factura.model';
 import { environment } from '../../../environments/environment';
 
@@ -48,6 +48,10 @@ export class PresupuestoService {
 
   update(id: number, data: PresupuestoRequest): Observable<Presupuesto> {
     return this.http.put<Presupuesto>(`${this.apiUrl}/${id}`, data);
+  }
+
+  updateEstado(id: number, data: PresupuestoEstadoRequest): Observable<Presupuesto> {
+    return this.http.patch<Presupuesto>(`${this.apiUrl}/${id}/estado`, data);
   }
 
   delete(id: number): Observable<void> {
