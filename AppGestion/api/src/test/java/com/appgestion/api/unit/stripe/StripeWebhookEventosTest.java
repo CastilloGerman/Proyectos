@@ -7,11 +7,13 @@ import com.appgestion.api.service.SubscriptionService;
 import com.appgestion.api.service.stripe.StripeSubscriptionFetcher;
 import com.appgestion.api.service.stripe.StripeWebhookEventParser;
 import com.appgestion.api.service.stripe.StripeWebhookProcessingResult;
+import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
 import com.stripe.model.EventDataObjectDeserializer;
 import com.stripe.model.Invoice;
 import com.stripe.model.StripeObject;
 import com.stripe.model.Subscription;
+import com.stripe.model.checkout.Session;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -21,6 +23,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.util.Optional;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -108,6 +111,27 @@ class StripeWebhookEventosTest {
         stripeWebhookService.processWebhook("{}", "sig");
 
         verify(subscriptionService).recordInvoicePaid(any(Invoice.class));
+    }
+
+    @Test
+    void checkoutSessionCompleted_siNoPuedeCargarSubscription_noMarcaProcessedParaReintento() throws Exception {
+        Session session = org.mockito.Mockito.mock(Session.class);
+        when(session.getMetadata()).thenReturn(Map.of("usuario_id", "10"));
+        when(session.getSubscription()).thenReturn("sub_retry");
+        when(session.getCustomer()).thenReturn("cus_retry");
+
+        Event event = eventWith("evt_checkout_retry", "checkout.session.completed", session);
+
+        when(webhookEventParser.parse(any(), any(), eq(SECRET))).thenReturn(event);
+        when(processedEventRepository.existsByEventId("evt_checkout_retry")).thenReturn(false);
+        when(subscriptionFetcher.fetch("sub_retry")).thenThrow(org.mockito.Mockito.mock(StripeException.class));
+
+        StripeWebhookProcessingResult r = stripeWebhookService.processWebhook("{}", "sig");
+
+        assertThat(r.signatureInvalid()).isFalse();
+        assertThat(r.processingFailed()).isTrue();
+        verify(subscriptionService, never()).syncFromStripeSubscription(any(), any(), any());
+        verify(processedEventRepository, never()).save(any());
     }
 
     @Test
