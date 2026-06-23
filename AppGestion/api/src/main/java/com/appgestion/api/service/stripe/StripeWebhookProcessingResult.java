@@ -13,7 +13,7 @@ public record StripeWebhookProcessingResult(boolean signatureInvalid, boolean pr
         return new StripeWebhookProcessingResult(true, false);
     }
 
-    public static StripeWebhookProcessingResult processingFailed() {
+    public static StripeWebhookProcessingResult failed() {
         return new StripeWebhookProcessingResult(false, true);
     }
 }

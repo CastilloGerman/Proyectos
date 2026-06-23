@@ -56,7 +56,7 @@ class StripeWebhookSeguridadTest {
 
     @Test
     void webhookConFalloProcesamiento_devuelve500ParaReintentoStripe() throws Exception {
-        when(stripeWebhookService.processWebhook(any(), any())).thenReturn(StripeWebhookProcessingResult.processingFailed());
+        when(stripeWebhookService.processWebhook(any(), any())).thenReturn(StripeWebhookProcessingResult.failed());
 
         mockMvc.perform(post("/webhook/stripe")
                         .contentType(MediaType.APPLICATION_JSON)

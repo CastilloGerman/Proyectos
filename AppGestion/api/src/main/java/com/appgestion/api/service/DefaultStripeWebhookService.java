@@ -71,11 +71,11 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
         StripeObject dataObject = event.getDataObjectDeserializer().getObject().orElse(null);
         if (dataObject == null && isHandledEvent(event.getType())) {
             log.warn("Stripe webhook {} sin data.object deserializable; se solicitará reintento", event.getType());
-            return StripeWebhookProcessingResult.processingFailed();
+            return StripeWebhookProcessingResult.failed();
         }
 
         if (dataObject != null && !dispatch(event.getType(), dataObject)) {
-            return StripeWebhookProcessingResult.processingFailed();
+            return StripeWebhookProcessingResult.failed();
         }
 
         ProcessedStripeEvent processed = new ProcessedStripeEvent();
