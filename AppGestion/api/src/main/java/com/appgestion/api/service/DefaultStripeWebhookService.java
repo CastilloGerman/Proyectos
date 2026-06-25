@@ -68,9 +68,17 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
             return StripeWebhookProcessingResult.ok();
         }
 
+        String eventType = event.getType();
         StripeObject dataObject = event.getDataObjectDeserializer().getObject().orElse(null);
         if (dataObject != null) {
-            dispatch(event.getType(), dataObject);
+            boolean processed = dispatch(eventType, dataObject);
+            if (!processed) {
+                return StripeWebhookProcessingResult.processingFailed();
+            }
+        } else if (isKnownEvent(eventType)) {
+            log.warn("Stripe webhook {} sin data.object deserializable; se devolverá error para reintento",
+                    eventType);
+            return StripeWebhookProcessingResult.processingFailed();
         }
 
         ProcessedStripeEvent processed = new ProcessedStripeEvent();
@@ -80,8 +88,12 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
         return StripeWebhookProcessingResult.ok();
     }
 
-    private void dispatch(String type, StripeObject dataObject) {
-        switch (type) {
+    private boolean dispatch(String type, StripeObject dataObject) {
+        if (type == null) {
+            log.debug("Stripe webhook ignorado sin tipo de evento");
+            return true;
+        }
+        return switch (type) {
             case EVENT_CHECKOUT_SESSION_COMPLETED -> handleCheckoutSessionCompleted((Session) dataObject);
             case EVENT_CUSTOMER_SUBSCRIPTION_CREATED, EVENT_CUSTOMER_SUBSCRIPTION_UPDATED ->
                     handleSubscriptionUpsert((Subscription) dataObject);
@@ -89,14 +101,33 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
             case EVENT_INVOICE_PAID -> handleInvoicePaid((Invoice) dataObject);
             case EVENT_INVOICE_PAYMENT_FAILED -> handleInvoicePaymentFailed((Invoice) dataObject);
             case EVENT_INVOICE_PAYMENT_ACTION_REQUIRED -> handleInvoicePaymentActionRequired((Invoice) dataObject);
-            default -> log.debug("Stripe webhook ignorado: {}", type);
-        }
+            default -> {
+                log.debug("Stripe webhook ignorado: {}", type);
+                yield true;
+            }
+        };
     }
 
-    private void handleCheckoutSessionCompleted(Session session) {
+    private boolean isKnownEvent(String type) {
+        if (type == null) {
+            return false;
+        }
+        return switch (type) {
+            case EVENT_CHECKOUT_SESSION_COMPLETED,
+                 EVENT_CUSTOMER_SUBSCRIPTION_CREATED,
+                 EVENT_CUSTOMER_SUBSCRIPTION_UPDATED,
+                 EVENT_CUSTOMER_SUBSCRIPTION_DELETED,
+                 EVENT_INVOICE_PAID,
+                 EVENT_INVOICE_PAYMENT_FAILED,
+                 EVENT_INVOICE_PAYMENT_ACTION_REQUIRED -> true;
+            default -> false;
+        };
+    }
+
+    private boolean handleCheckoutSessionCompleted(Session session) {
         String usuarioIdStr = session.getMetadata() != null ? session.getMetadata().get(METADATA_USUARIO_ID) : null;
         if (usuarioIdStr == null) {
-            return;
+            return true;
         }
 
         Long usuarioId = Long.valueOf(usuarioIdStr);
@@ -104,7 +135,7 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
         String subscriptionId = session.getSubscription();
 
         if (subscriptionId == null || subscriptionId.isBlank()) {
-            return;
+            return true;
         }
 
         Subscription subscription;
@@ -112,37 +143,43 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
             subscription = subscriptionFetcher.fetch(subscriptionId);
         } catch (StripeException e) {
             log.warn("checkout.session.completed: no se pudo cargar suscripción {}: {}", subscriptionId, e.getMessage());
-            return;
+            return false;
         }
 
         subscriptionService.syncFromStripeSubscription(subscription, usuarioId, customerId);
+        return true;
     }
 
-    private void handleSubscriptionUpsert(Subscription subscription) {
+    private boolean handleSubscriptionUpsert(Subscription subscription) {
         subscriptionService.syncFromStripeSubscription(subscription, null, null);
+        return true;
     }
 
-    private void handleSubscriptionDeleted(Subscription subscription) {
+    private boolean handleSubscriptionDeleted(Subscription subscription) {
         subscriptionService.cancelSubscription(subscription.getId());
+        return true;
     }
 
-    private void handleInvoicePaid(Invoice invoice) {
+    private boolean handleInvoicePaid(Invoice invoice) {
         subscriptionService.recordInvoicePaid(invoice);
+        return true;
     }
 
-    private void handleInvoicePaymentFailed(Invoice invoice) {
+    private boolean handleInvoicePaymentFailed(Invoice invoice) {
         String subscriptionId = invoice.getSubscription();
         if (subscriptionId == null || subscriptionId.isBlank()) {
-            return;
+            return true;
         }
         subscriptionService.updateSubscription(subscriptionId, STRIPE_SUBSCRIPTION_PAST_DUE, null);
+        return true;
     }
 
-    private void handleInvoicePaymentActionRequired(Invoice invoice) {
+    private boolean handleInvoicePaymentActionRequired(Invoice invoice) {
         String subscriptionId = invoice.getSubscription();
         if (subscriptionId == null || subscriptionId.isBlank()) {
-            return;
+            return true;
         }
         subscriptionService.markRequiresPaymentAction(subscriptionId);
+        return true;
     }
 }

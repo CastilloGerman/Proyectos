@@ -7,11 +7,13 @@ import com.appgestion.api.service.SubscriptionService;
 import com.appgestion.api.service.stripe.StripeSubscriptionFetcher;
 import com.appgestion.api.service.stripe.StripeWebhookEventParser;
 import com.appgestion.api.service.stripe.StripeWebhookProcessingResult;
+import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
 import com.stripe.model.EventDataObjectDeserializer;
 import com.stripe.model.Invoice;
 import com.stripe.model.StripeObject;
 import com.stripe.model.Subscription;
+import com.stripe.model.checkout.Session;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -20,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -131,6 +134,41 @@ class StripeWebhookEventosTest {
         assertThat(cap.getValue().getEventId()).isEqualTo("evt_ping");
     }
 
+    @Test
+    void eventoConocidoSinDataObject_fallaParaQueStripeReintente_sinRegistrarProcessedEvent() throws Exception {
+        Event event = eventWithoutDataObject("evt_missing_data", "invoice.paid");
+
+        when(webhookEventParser.parse(any(), any(), eq(SECRET))).thenReturn(event);
+        when(processedEventRepository.existsByEventId("evt_missing_data")).thenReturn(false);
+
+        StripeWebhookProcessingResult r = stripeWebhookService.processWebhook("{}", "sig");
+
+        assertThat(r.signatureInvalid()).isFalse();
+        assertThat(r.processingFailed()).isTrue();
+        verify(subscriptionService, never()).recordInvoicePaid(any());
+        verify(processedEventRepository, never()).save(any(ProcessedStripeEvent.class));
+    }
+
+    @Test
+    void checkoutSessionCompleted_siNoPuedeCargarSuscripcion_fallaSinRegistrarProcessedEvent() throws Exception {
+        Session session = org.mockito.Mockito.mock(Session.class);
+        when(session.getMetadata()).thenReturn(Map.of("usuario_id", "42"));
+        when(session.getCustomer()).thenReturn("cus_123");
+        when(session.getSubscription()).thenReturn("sub_checkout");
+        Event event = eventWith("evt_checkout_fetch_fail", "checkout.session.completed", session);
+
+        when(webhookEventParser.parse(any(), any(), eq(SECRET))).thenReturn(event);
+        when(processedEventRepository.existsByEventId("evt_checkout_fetch_fail")).thenReturn(false);
+        when(subscriptionFetcher.fetch("sub_checkout")).thenThrow(org.mockito.Mockito.mock(StripeException.class));
+
+        StripeWebhookProcessingResult r = stripeWebhookService.processWebhook("{}", "sig");
+
+        assertThat(r.signatureInvalid()).isFalse();
+        assertThat(r.processingFailed()).isTrue();
+        verify(subscriptionService, never()).syncFromStripeSubscription(any(), any(), any());
+        verify(processedEventRepository, never()).save(any(ProcessedStripeEvent.class));
+    }
+
     private static Event eventWith(String id, String type, StripeObject dataObject) {
         Event event = org.mockito.Mockito.mock(Event.class);
         when(event.getId()).thenReturn(id);
@@ -138,6 +176,16 @@ class StripeWebhookEventosTest {
         EventDataObjectDeserializer deser = org.mockito.Mockito.mock(EventDataObjectDeserializer.class);
         when(event.getDataObjectDeserializer()).thenReturn(deser);
         when(deser.getObject()).thenReturn(Optional.of(dataObject));
+        return event;
+    }
+
+    private static Event eventWithoutDataObject(String id, String type) {
+        Event event = org.mockito.Mockito.mock(Event.class);
+        when(event.getId()).thenReturn(id);
+        when(event.getType()).thenReturn(type);
+        EventDataObjectDeserializer deser = org.mockito.Mockito.mock(EventDataObjectDeserializer.class);
+        when(event.getDataObjectDeserializer()).thenReturn(deser);
+        when(deser.getObject()).thenReturn(Optional.empty());
         return event;
     }
 }
