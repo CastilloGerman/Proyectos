@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, DestroyRef, NgZone, OnInit } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, DestroyRef, NgZone, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -10,13 +10,17 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { PresupuestoService } from '../../core/services/presupuesto.service';
 import { FacturaService } from '../../core/services/factura.service';
 import { MaterialService } from '../../core/services/material.service';
-import { Presupuesto } from '../../core/models/presupuesto.model';
-import { Factura } from '../../core/models/factura.model';
+import { AuthService } from '../../core/auth/auth.service';
+import { Presupuesto, PresupuestoItemRequest, PresupuestoRequest } from '../../core/models/presupuesto.model';
+import { Factura, FacturaItemRequest, FacturaRequest } from '../../core/models/factura.model';
 import { Material } from '../../core/models/material.model';
 import { EstadoBadgeComponent } from '../../shared/estado-badge/estado-badge.component';
+import { FacturaParcialImporteDialogComponent } from '../../shared/factura-parcial-importe-dialog/factura-parcial-importe-dialog.component';
 import { catchError, forkJoin, of } from 'rxjs';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
@@ -72,6 +76,8 @@ export interface TopCliente {
         MatButtonToggleModule,
         MatFormFieldModule,
         MatSelectModule,
+        MatDialogModule,
+        MatSnackBarModule,
         RouterLink,
         EstadoBadgeComponent,
         TranslateModule,
@@ -570,14 +576,21 @@ export interface TopCliente {
             } @else {
               <ul class="recent-list">
                 @for (p of recentPresupuestos; track p.id) {
-                  <li>
-                    <a [routerLink]="['/presupuestos', p.id]">
-                      <span class="recent-name">{{ p.clienteNombre }}</span>
-                      <span class="recent-meta">
+                  <li class="recent-row">
+                    <a [routerLink]="['/presupuestos', p.id]" class="recent-name-link">{{ p.clienteNombre }}</a>
+                    <span class="recent-meta">
+                      @if (auth.canMutate()) {
+                        <app-estado-badge
+                          [estado]="p.estado"
+                          [menuOptions]="otrosEstadosPresupuesto(p.estado)"
+                          [menuDisabled]="actualizandoPresupuestoId === p.id"
+                          (estadoSeleccionado)="cambiarEstadoPresupuesto(p, $event)"
+                        ></app-estado-badge>
+                      } @else {
                         <app-estado-badge [estado]="p.estado"></app-estado-badge>
-                        {{ p.total | number:'1.2-2' }} €
-                      </span>
-                    </a>
+                      }
+                      <span class="recent-amount">{{ p.total | number:'1.2-2' }} €</span>
+                    </span>
                   </li>
                 }
               </ul>
@@ -595,14 +608,21 @@ export interface TopCliente {
             } @else {
               <ul class="recent-list">
                 @for (f of recentFacturas; track f.id) {
-                  <li>
-                    <a [routerLink]="['/facturas', f.id]">
-                      <span class="recent-name">{{ f.numeroFactura }} · {{ f.clienteNombre }}</span>
-                      <span class="recent-meta">
+                  <li class="recent-row">
+                    <a [routerLink]="['/facturas', f.id]" class="recent-name-link">{{ f.numeroFactura }} · {{ f.clienteNombre }}</a>
+                    <span class="recent-meta">
+                      @if (auth.canMutate()) {
+                        <app-estado-badge
+                          [estado]="f.estadoPago"
+                          [menuOptions]="otrosEstadosPago(f.estadoPago)"
+                          [menuDisabled]="actualizandoFacturaId === f.id"
+                          (estadoSeleccionado)="cambiarEstadoFactura(f, $event)"
+                        ></app-estado-badge>
+                      } @else {
                         <app-estado-badge [estado]="f.estadoPago"></app-estado-badge>
-                        {{ f.total | number:'1.2-2' }} €
-                      </span>
-                    </a>
+                      }
+                      <span class="recent-amount">{{ f.total | number:'1.2-2' }} €</span>
+                    </span>
                   </li>
                 }
               </ul>
@@ -1089,6 +1109,27 @@ export interface TopCliente {
       border-bottom: none;
     }
 
+    .recent-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: var(--app-space-md, 16px) 0;
+    }
+
+    .recent-name-link {
+      font-weight: 600;
+      color: var(--app-text-primary);
+      text-decoration: none;
+      min-width: 0;
+      flex: 1;
+      transition: color var(--app-transition);
+    }
+
+    .recent-name-link:hover {
+      color: #4338ca;
+    }
+
     .recent-list a {
       display: flex;
       justify-content: space-between;
@@ -1117,6 +1158,13 @@ export interface TopCliente {
       display: flex;
       align-items: center;
       gap: 12px;
+      font-size: 0.875rem;
+      color: var(--app-text-secondary);
+      flex-shrink: 0;
+    }
+
+    .recent-amount {
+      white-space: nowrap;
       font-size: 0.875rem;
       color: var(--app-text-secondary);
     }
@@ -1310,6 +1358,14 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   private allPresupuestos: Presupuesto[] = [];
   private allFacturas: Factura[] = [];
 
+  actualizandoPresupuestoId: number | null = null;
+  actualizandoFacturaId: number | null = null;
+
+  readonly auth = inject(AuthService);
+
+  private readonly estadosPresupuestoCatalogo = ['Pendiente', 'Aceptado', 'Rechazado', 'En ejecución'];
+  private readonly estadosPagoFacturaCatalogo = ['No Pagada', 'Parcial', 'Pagada'];
+
   /** Origen X del gráfico (espacio para eje Y y etiquetas). */
   private readonly chartPadLeft = 70;
   private readonly chartPadRight = 42;
@@ -1453,6 +1509,8 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     private ngZone: NgZone,
     private translate: TranslateService,
     private destroyRef: DestroyRef,
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar,
   ) {}
 
   ngOnInit(): void {
@@ -1756,5 +1814,193 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       result.push({ name: this.monthShort(m), value: total, key });
     }
     return result;
+  }
+
+  otrosEstadosPresupuesto(actual: string): string[] {
+    const a = (actual ?? '').trim();
+    return this.estadosPresupuestoCatalogo.filter((e) => !this.equivalentesEstadoEjecucionUi(e, a));
+  }
+
+  otrosEstadosPago(actual: string): string[] {
+    const n = (x: string) => (x ?? '').trim().toLowerCase();
+    const a = n(actual);
+    return this.estadosPagoFacturaCatalogo.filter((e) => n(e) !== a);
+  }
+
+  cambiarEstadoPresupuesto(p: Presupuesto, nuevo: string): void {
+    const actual = (p.estado ?? '').trim();
+    if (this.equivalentesEstadoEjecucionUi(nuevo, actual)) return;
+
+    this.actualizandoPresupuestoId = p.id;
+    const payload = this.buildPresupuestoUpdateRequest(p, nuevo);
+    this.presupuestoService.update(p.id, payload).subscribe({
+      next: (updated) => {
+        this.actualizandoPresupuestoId = null;
+        this.patchPresupuestoReciente(updated);
+        this.snackBar.open(
+          this.translate.instant('snack.estimateStatus', { status: updated.estado }),
+          this.closeLbl(),
+          { duration: 2500 },
+        );
+      },
+      error: (err) => this.snackEstadoError(err, () => (this.actualizandoPresupuestoId = null)),
+    });
+  }
+
+  cambiarEstadoFactura(f: Factura, nuevo: string): void {
+    if (f.anulada) return;
+    const n = (x: string) => (x ?? '').trim().toLowerCase();
+    if (n(nuevo) === n(f.estadoPago ?? '')) return;
+
+    if (nuevo === 'Parcial') {
+      this.dialog
+        .open(FacturaParcialImporteDialogComponent, {
+          width: '440px',
+          maxWidth: '95vw',
+          data: {
+            totalFactura: f.total,
+            numeroFactura: f.numeroFactura,
+            clienteNombre: f.clienteNombre,
+            importeSugerido: f.montoCobrado,
+          },
+        })
+        .afterClosed()
+        .subscribe((importe: number | undefined) => {
+          if (importe == null) return;
+          this.ejecutarActualizacionEstadoFactura(f, nuevo, importe);
+        });
+      return;
+    }
+
+    this.ejecutarActualizacionEstadoFactura(f, nuevo);
+  }
+
+  private ejecutarActualizacionEstadoFactura(f: Factura, nuevo: string, montoParcial?: number): void {
+    this.actualizandoFacturaId = f.id;
+    const payload = this.buildFacturaUpdateRequest(f, nuevo, montoParcial);
+    this.facturaService.update(f.id, payload).subscribe({
+      next: (updated) => {
+        this.actualizandoFacturaId = null;
+        this.patchFacturaReciente(updated);
+        this.snackBar.open(
+          this.translate.instant('snack.paymentStatusUpdated', { status: updated.estadoPago }),
+          this.closeLbl(),
+          { duration: 2500 },
+        );
+      },
+      error: (err) => this.snackEstadoError(err, () => (this.actualizandoFacturaId = null)),
+    });
+  }
+
+  private equivalentesEstadoEjecucionUi(a: string, b: string): boolean {
+    const ej = ['en ejecución', 'en ejecucion'];
+    const la = a.trim().toLowerCase();
+    const lb = b.trim().toLowerCase();
+    if (ej.includes(la) && ej.includes(lb)) return true;
+    return la === lb;
+  }
+
+  private buildPresupuestoUpdateRequest(p: Presupuesto, estado: string): PresupuestoRequest {
+    const items: PresupuestoItemRequest[] = (p.items ?? []).map((it) => {
+      const manual = it.esTareaManual === true;
+      return {
+        materialId: manual ? undefined : it.materialId,
+        tareaManual: manual ? (it.descripcion?.trim() || undefined) : undefined,
+        cantidad: it.cantidad,
+        precioUnitario: it.precioUnitario,
+        visiblePdf: it.visiblePdf,
+      };
+    });
+    return {
+      clienteId: p.clienteId,
+      items,
+      ivaHabilitado: p.ivaHabilitado,
+      estado,
+      descuentoGlobalPorcentaje: p.descuentoGlobalPorcentaje,
+      descuentoGlobalFijo: p.descuentoGlobalFijo,
+      descuentoAntesIva: p.descuentoAntesIva ?? true,
+      condicionesActivas: p.condicionesActivas ?? [],
+      notaAdicional: p.notaAdicional ?? undefined,
+    };
+  }
+
+  private buildFacturaUpdateRequest(f: Factura, estadoPago: string, montoParcialExplicito?: number): FacturaRequest {
+    const items: FacturaItemRequest[] = (f.items ?? []).map((it) => {
+      const manual = it.esTareaManual === true;
+      return {
+        materialId: manual ? undefined : it.materialId,
+        tareaManual: manual ? (it.descripcion?.trim() || undefined) : undefined,
+        cantidad: it.cantidad,
+        precioUnitario: it.precioUnitario,
+        aplicaIva: it.aplicaIva,
+      };
+    });
+    const fechaCreacionIso = f.fechaCreacion ? f.fechaCreacion.split('T')[0] : '';
+    const fechaExp =
+      typeof f.fechaExpedicion === 'string' ? f.fechaExpedicion : f.fechaExpedicion ?? fechaCreacionIso;
+    return {
+      clienteId: f.clienteId,
+      items,
+      presupuestoId: f.presupuestoId,
+      numeroFactura: f.numeroFactura,
+      fechaExpedicion: fechaExp || new Date().toISOString().split('T')[0],
+      fechaOperacion: f.fechaOperacion,
+      fechaVencimiento: f.fechaVencimiento,
+      regimenFiscal: f.regimenFiscal,
+      condicionesPago: f.condicionesPago,
+      metodoPago: f.metodoPago,
+      estadoPago,
+      montoCobrado:
+        estadoPago === 'Parcial'
+          ? (montoParcialExplicito != null ? montoParcialExplicito : f.montoCobrado != null ? +f.montoCobrado : undefined)
+          : undefined,
+      notas: f.notas,
+      ivaHabilitado: f.ivaHabilitado,
+    };
+  }
+
+  private patchPresupuestoReciente(updated: Presupuesto): void {
+    const patch = (list: Presupuesto[]) => {
+      const idx = list.findIndex((x) => x.id === updated.id);
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], estado: updated.estado };
+      }
+    };
+    patch(this.allPresupuestos);
+    patch(this.recentPresupuestos);
+    this.recentPresupuestos = [...this.recentPresupuestos];
+    this.computePresupuestoStats(this.allPresupuestos);
+    this.cdr.markForCheck();
+  }
+
+  private patchFacturaReciente(updated: Factura): void {
+    const patch = (list: Factura[]) => {
+      const idx = list.findIndex((x) => x.id === updated.id);
+      if (idx >= 0) {
+        list[idx] = {
+          ...list[idx],
+          estadoPago: updated.estadoPago,
+          montoCobrado: updated.montoCobrado,
+        };
+      }
+    };
+    patch(this.allFacturas);
+    patch(this.recentFacturas);
+    this.recentFacturas = [...this.recentFacturas];
+    this.computeFacturaStats(this.allFacturas);
+    this.ingresosPorMes = this.computeIngresosChartData(this.allFacturas);
+    this.cdr.markForCheck();
+  }
+
+  private snackEstadoError(err: { error?: { message?: string; detail?: string } }, onDone: () => void): void {
+    onDone();
+    const msgRaw = err.error?.message ?? err.error?.detail ?? '';
+    const fb = this.translate.instant('snack.statusUpdateFail');
+    const msg = typeof msgRaw === 'string' && msgRaw.trim() ? msgRaw.trim() : fb;
+    this.snackBar.open(msg, this.closeLbl(), { duration: 5000 });
+  }
+
+  private closeLbl(): string {
+    return this.translate.instant('common.close');
   }
 }

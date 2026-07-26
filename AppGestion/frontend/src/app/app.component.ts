@@ -70,7 +70,8 @@ import { isLegalPath } from './legal/legal-paths';
         display: flex;
         align-items: center;
         gap: 12px;
-        padding: 8px 16px;
+        min-height: 56px;
+        padding: 4px 16px;
         background: color-mix(in srgb, var(--mat-sys-surface-container-low, #fafafa) 94%, transparent);
         backdrop-filter: blur(6px);
         border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant, #ccc) 55%, transparent);
@@ -86,8 +87,10 @@ import { isLegalPath } from './legal/legal-paths';
       .app-topbar-logo {
         display: inline-flex;
         align-items: center;
+        align-self: stretch;
         flex-shrink: 0;
         line-height: 0;
+        padding: 2px 0;
         border-radius: 8px;
         transition: opacity 0.2s ease;
       }
@@ -95,9 +98,11 @@ import { isLegalPath } from './legal/legal-paths';
         opacity: 0.85;
       }
       .app-topbar-logo img {
-        height: 36px;
+        height: 52px;
         width: auto;
+        max-height: 100%;
         object-fit: contain;
+        display: block;
       }
     `,
   ],
