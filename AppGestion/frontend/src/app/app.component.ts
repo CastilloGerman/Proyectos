@@ -2,8 +2,6 @@ import { Component, DestroyRef, NgZone, OnInit, computed, inject, signal } from 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterOutlet, Router, NavigationEnd, RouterLink } from '@angular/router';
 import { filter } from 'rxjs/operators';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from './core/auth/auth.service';
 import { NotificacionesService } from './core/services/notificaciones.service';
 import { AppAuthenticatedShellComponent } from './app-authenticated-shell/app-authenticated-shell.component';
@@ -16,8 +14,6 @@ import { isLegalPath } from './legal/legal-paths';
   imports: [
     RouterOutlet,
     RouterLink,
-    MatButtonModule,
-    MatIconModule,
     AppAuthenticatedShellComponent,
     LanguageSwitcherComponent,
     CookieBannerComponent,
@@ -29,6 +25,11 @@ import { isLegalPath } from './legal/legal-paths';
     @if (!auth.isAuthenticated()) {
       <div class="app-public-shell">
         <header class="app-public-topbar">
+          @if (isLegalRoute()) {
+            <a routerLink="/login" class="app-topbar-logo" aria-label="Volver al inicio de sesión">
+              <img src="assets/noemi-logo.png" alt="Noemi" />
+            </a>
+          }
           <span class="app-public-topbar__spacer"></span>
           <app-language-switcher />
         </header>
@@ -38,9 +39,8 @@ import { isLegalPath } from './legal/legal-paths';
     @if (auth.isAuthenticated() && isLegalRoute()) {
       <div class="app-legal-shell">
         <header class="app-legal-topbar">
-          <a mat-stroked-button routerLink="/dashboard" class="app-legal-back">
-            <mat-icon>arrow_back</mat-icon>
-            Volver a la app
+          <a routerLink="/dashboard" class="app-topbar-logo" aria-label="Volver a la aplicación">
+            <img src="assets/noemi-logo.png" alt="Noemi" />
           </a>
           <span class="app-public-topbar__spacer"></span>
           <app-language-switcher />
@@ -83,8 +83,21 @@ import { isLegalPath } from './legal/legal-paths';
         flex: 1;
         min-width: 0;
       }
-      .app-legal-back mat-icon {
-        margin-right: 4px;
+      .app-topbar-logo {
+        display: inline-flex;
+        align-items: center;
+        flex-shrink: 0;
+        line-height: 0;
+        border-radius: 8px;
+        transition: opacity 0.2s ease;
+      }
+      .app-topbar-logo:hover {
+        opacity: 0.85;
+      }
+      .app-topbar-logo img {
+        height: 36px;
+        width: auto;
+        object-fit: contain;
       }
     `,
   ],
