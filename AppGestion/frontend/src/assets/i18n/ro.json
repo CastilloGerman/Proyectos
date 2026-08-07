@@ -1124,6 +1124,7 @@
     "loadRows": "Loading events…",
     "loadFail": "Couldn’t load history.",
     "retry": "Retry",
+    "colWhen": "Date (UTC)",
     "colUser": "User",
     "colEvent": "Event",
     "colIp": "IP",
@@ -1155,7 +1156,9 @@
     "ev_TOTP_SETUP_CANCELLED": "2FA setup cancelled",
     "ev_AUDIT_EXPORT_JSON": "Audit export (JSON)",
     "ev_AUDIT_EXPORT_CSV": "Audit export (CSV)",
-    "foot": "Audit rows are append‑only; retention is server‑policy. IPs may appear masked."
+    "foot": "Audit rows are append‑only; retention is server‑policy. IPs may appear masked.",
+    "exportCsv": "CSV",
+    "exportJson": "JSON"
   },
   "acctHelp": {
     "back": "Back to dashboard",
@@ -1257,7 +1260,7 @@
     "trialEndsLbl": "Free trial ends",
     "billPeriodEndsLbl": "Current billing period ends",
     "billPeriodHint": "(only when billing is active)",
-    "stripeHint": "Stripe lets you switch monthly vs annual. Tax may calculate there.",
+    "stripeHint": "Alege ciclul de facturare; dacă Stripe Tax este activat, TVA-ul sau alte taxe sunt calculate la checkout.",
     "stripeCheckoutDetailed": "In Stripe checkout you can choose monthly billing ({{mo}}) or yearly ({{yr}}). With Stripe Tax on, VAT is calculated there.",
     "checkoutBtn": "Choose plan",
     "portalBtn": "Billing & payment method",

@@ -27,9 +27,8 @@ export class SubscriptionService {
   }
 
   /**
-   * Abre Checkout con precio mensual base; si hay plan anual configurado en Stripe,
-   * la pasarela muestra el toggle mensual/anual (subscription upsell).
-   * El parámetro `period` se ignora cuando existen ambos precios en el servidor.
+   * Abre Checkout con el ciclo solicitado. Si no se indica periodo, la API usa
+   * facturación mensual por defecto.
    */
   createCheckoutSession(period?: CheckoutBillingPeriod): Observable<{ checkoutUrl: string }> {
     const body = period === undefined || period === 'MONTHLY' ? {} : { billingPeriod: period };
