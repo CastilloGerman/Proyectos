@@ -16,7 +16,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.NoTransactionException;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
 @Service
 public class DefaultStripeWebhookService implements StripeWebhookService {
@@ -68,9 +70,22 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
             return StripeWebhookProcessingResult.ok();
         }
 
+        String eventType = event.getType();
         StripeObject dataObject = event.getDataObjectDeserializer().getObject().orElse(null);
-        if (dataObject != null) {
-            dispatch(event.getType(), dataObject);
+        if (dataObject == null) {
+            if (requiresDataObject(eventType)) {
+                log.warn("Stripe webhook {} ({}) sin data.object deserializable; se fuerza reintento", event.getId(), eventType);
+                return StripeWebhookProcessingResult.processingFailure();
+            }
+        } else {
+            try {
+                dispatch(eventType, dataObject);
+            } catch (RetryableStripeWebhookException e) {
+                markRollbackOnlyIfTransactionActive();
+                log.warn("Stripe webhook {} ({}) no procesado; se fuerza reintento: {}",
+                        event.getId(), eventType, e.getMessage());
+                return StripeWebhookProcessingResult.processingFailure();
+            }
         }
 
         ProcessedStripeEvent processed = new ProcessedStripeEvent();
@@ -78,6 +93,24 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
         processedEventRepository.save(processed);
 
         return StripeWebhookProcessingResult.ok();
+    }
+
+    private boolean requiresDataObject(String type) {
+        return EVENT_CHECKOUT_SESSION_COMPLETED.equals(type)
+                || EVENT_CUSTOMER_SUBSCRIPTION_CREATED.equals(type)
+                || EVENT_CUSTOMER_SUBSCRIPTION_UPDATED.equals(type)
+                || EVENT_CUSTOMER_SUBSCRIPTION_DELETED.equals(type)
+                || EVENT_INVOICE_PAID.equals(type)
+                || EVENT_INVOICE_PAYMENT_FAILED.equals(type)
+                || EVENT_INVOICE_PAYMENT_ACTION_REQUIRED.equals(type);
+    }
+
+    private void markRollbackOnlyIfTransactionActive() {
+        try {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+        } catch (NoTransactionException ignored) {
+            // Unit tests instantiate this service directly; production calls run through @Transactional.
+        }
     }
 
     private void dispatch(String type, StripeObject dataObject) {
@@ -111,8 +144,8 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
         try {
             subscription = subscriptionFetcher.fetch(subscriptionId);
         } catch (StripeException e) {
-            log.warn("checkout.session.completed: no se pudo cargar suscripción {}: {}", subscriptionId, e.getMessage());
-            return;
+            throw new RetryableStripeWebhookException(
+                    "checkout.session.completed: no se pudo cargar suscripción " + subscriptionId, e);
         }
 
         subscriptionService.syncFromStripeSubscription(subscription, usuarioId, customerId);
@@ -144,5 +177,12 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
             return;
         }
         subscriptionService.markRequiresPaymentAction(subscriptionId);
+    }
+
+    private static class RetryableStripeWebhookException extends RuntimeException {
+
+        RetryableStripeWebhookException(String message, Throwable cause) {
+            super(message, cause);
+        }
     }
 }
