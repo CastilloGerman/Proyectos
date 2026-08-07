@@ -6,8 +6,10 @@ import com.appgestion.api.domain.enums.TipoFactura;
 import com.appgestion.api.repository.ClienteRepository;
 import com.appgestion.api.repository.EmpresaRepository;
 import com.appgestion.api.repository.OrganizationRepository;
+import com.appgestion.api.repository.PresupuestoRepository;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,8 +22,11 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -43,6 +48,10 @@ class PresupuestoFlujosTest {
     private ClienteRepository clienteRepository;
     @Autowired
     private EmpresaRepository empresaRepository;
+    @Autowired
+    private PresupuestoRepository presupuestoRepository;
+    @Autowired
+    private EntityManager entityManager;
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -143,5 +152,60 @@ class PresupuestoFlujosTest {
                         .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.tipoFactura").value(TipoFactura.NORMAL.name()));
+    }
+
+    @Test
+    void actualizarEstado_preservaItemsDescuentosIvaYTotales() throws Exception {
+        String body = """
+                {
+                  "clienteId": %d,
+                  "items": [{
+                    "materialId": null,
+                    "tareaManual": "Concepto sin IVA",
+                    "cantidad": 2.0,
+                    "precioUnitario": 100.0,
+                    "aplicaIva": false,
+                    "descuentoPorcentaje": 10.0,
+                    "descuentoFijo": 5.0
+                  }],
+                  "ivaHabilitado": true,
+                  "estado": "%s",
+                  "descuentoGlobalPorcentaje": 0.0,
+                  "descuentoGlobalFijo": 0.0,
+                  "descuentoAntesIva": true,
+                  "condicionesActivas": [],
+                  "notaAdicional": null
+                }
+                """.formatted(scenario.clienteCompletoId(), PresupuestoEstado.PENDIENTE);
+        String res = mockMvc.perform(post("/presupuestos")
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.total").value(175.0))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long presId = objectMapper.readTree(res).get("id").asLong();
+
+        mockMvc.perform(patch("/presupuestos/{id}/estado", presId)
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"estado\":\"" + PresupuestoEstado.ACEPTADO + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value(PresupuestoEstado.ACEPTADO))
+                .andExpect(jsonPath("$.total").value(175.0))
+                .andExpect(jsonPath("$.items[0].subtotal").value(175.0));
+
+        entityManager.flush();
+        entityManager.clear();
+        var presupuesto = presupuestoRepository.findByIdAndUsuarioId(presId, scenario.usuarioId()).orElseThrow();
+        assertThat(presupuesto.getItems()).hasSize(1);
+        var item = presupuesto.getItems().get(0);
+        assertThat(item.getAplicaIva()).isFalse();
+        assertThat(item.getDescuentoPorcentaje()).isEqualTo(10.0);
+        assertThat(item.getDescuentoFijo()).isEqualTo(5.0);
     }
 }
