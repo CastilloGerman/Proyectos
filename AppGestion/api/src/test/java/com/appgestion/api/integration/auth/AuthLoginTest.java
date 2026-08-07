@@ -18,6 +18,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.util.Locale;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -71,6 +73,36 @@ class AuthLoginTest {
         String token = root.get("token").asText();
         assertThat(jwtService.validateToken(token)).isTrue();
         assertThat(root.path("type").asText()).isEqualTo("Bearer");
+    }
+
+    @Test
+    void login_emailConMayusculas_devuelve200() throws Exception {
+        String body = """
+                {"email":"%s","password":"%s","totpCode":null,"clientInfo":null}
+                """.formatted(
+                AuthLoginSeedSupport.LOGIN_USER_EMAIL.toUpperCase(Locale.ROOT),
+                AuthLoginSeedSupport.LOGIN_USER_PASSWORD);
+
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void forgotPassword_emailConMayusculas_generaTokenReset() throws Exception {
+        String body = """
+                {"email":"%s"}
+                """.formatted(AuthLoginSeedSupport.LOGIN_USER_EMAIL.toUpperCase(Locale.ROOT));
+
+        mockMvc.perform(post("/auth/forgot-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk());
+
+        var usuario = usuarioRepository.findByEmail(AuthLoginSeedSupport.LOGIN_USER_EMAIL).orElseThrow();
+        assertThat(usuario.getPasswordResetToken()).isNotBlank();
+        assertThat(usuario.getPasswordResetExpiresAt()).isNotNull();
     }
 
     @Test
