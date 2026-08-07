@@ -393,8 +393,7 @@ export class CalculadoraM2Component {
   }
 
   get insertValue(): number {
-    if (this.history.length > 0) return this.totalAcumulado;
-    return this.result ?? 0;
+    return this.totalAcumulado + (this.result ?? 0);
   }
 
   constructor(
@@ -444,18 +443,25 @@ export class CalculadoraM2Component {
   }
 
   insert(): void {
-    const area = this.history.length > 0 ? this.totalAcumulado : this.result!;
-    const zonas = this.history.length > 0 ? [...this.history] : undefined;
+    const currentZona = this.result !== null
+      ? {
+          area: this.result,
+          descripcion: this.descripcion || this.currentShape.label,
+          formula: this.formulaDisplay,
+        }
+      : null;
+    const zonas = currentZona ? [...this.history, currentZona] : [...this.history];
+    const area = zonas.length > 0 ? zonas.reduce((sum, z) => sum + z.area, 0) : this.result!;
     let descripcion = '';
     let incluirDetalle = false;
 
-    if (this.history.length > 1) {
+    if (zonas.length > 1) {
       incluirDetalle = this.incluirDetalleZonas;
       descripcion = incluirDetalle
-        ? this.buildDetailedDescription(area)
-        : this.translate.instant('calcM2.totalZones', { count: this.history.length });
-    } else if (this.history.length === 1) {
-      descripcion = this.history[0].descripcion;
+        ? this.buildDetailedDescription(zonas, area)
+        : this.translate.instant('calcM2.totalZones', { count: zonas.length });
+    } else if (zonas.length === 1) {
+      descripcion = zonas[0].descripcion;
     } else {
       descripcion = this.descripcion ?? '';
     }
@@ -464,12 +470,12 @@ export class CalculadoraM2Component {
       area: parseFloat(area.toFixed(4)),
       descripcion: this.truncateDescription(descripcion),
       incluirDetalle,
-      zonas,
+      zonas: zonas.length > 0 ? zonas : undefined,
     } satisfies CalculadoraResult);
   }
 
-  private buildDetailedDescription(totalArea: number): string {
-    const lines = this.history.map((z) =>
+  private buildDetailedDescription(zonas: CalculadoraZona[], totalArea: number): string {
+    const lines = zonas.map((z) =>
       this.translate.instant('calcM2.zoneLine', {
         name: z.descripcion,
         area: z.area.toFixed(2),
