@@ -135,7 +135,7 @@ app:
     # Endpoint de pruebas para activar premium sin Stripe. Desactivado por defecto.
     # Recomendado: usar SQL sobre la BD para usuarios de test y no exponer controles en la UI.
     grant-premium-enabled: ${APP_DEV_GRANT_PREMIUM_ENABLED:false}
-    # Opcional: solo estos emails (coma). Vacío = cualquier usuario autenticado si la función está activa.
+    # Obligatorio para usar el endpoint: solo estos emails (coma). Vacío = nadie puede activarlo.
     grant-premium-email-allowlist: ${APP_DEV_GRANT_PREMIUM_EMAIL_ALLOWLIST:}
   audit:
     access:

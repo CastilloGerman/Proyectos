@@ -17,7 +17,6 @@ import { ClienteFacturaResumen, ClienteHistorialItem, ClientePanel, ClientePresu
 import { EstadoBadgeComponent } from '../../../shared/estado-badge/estado-badge.component';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
 import { FacturaService } from '../../../core/services/factura.service';
-import { Presupuesto, PresupuestoItemRequest, PresupuestoRequest } from '../../../core/models/presupuesto.model';
 import { Factura, FacturaItemRequest, FacturaRequest } from '../../../core/models/factura.model';
 import { FacturaParcialImporteDialogComponent } from '../../../shared/factura-parcial-importe-dialog/factura-parcial-importe-dialog.component';
 
@@ -522,28 +521,19 @@ export class ClientePanelComponent implements OnInit {
     if (this.equivalentesEstadoEjecucionUi(nuevo, estadoActual)) return;
 
     this.actualizandoPresupuestoId = id;
-    this.presupuestoService.getById(id).subscribe({
-      next: (p) => {
-        const payload = this.buildPresupuestoUpdateRequest(p, nuevo);
-        this.presupuestoService.update(id, payload).subscribe({
-          next: (updated) => {
-            this.actualizandoPresupuestoId = null;
-            this.refrescarPanel();
-            this.snackBar.open(
-              this.translate.instant('snack.estimateStatus', { status: updated.estado }),
-              this.closeLbl(),
-              { duration: 2500 },
-            );
-          },
-          error: (err) => {
-            this.actualizandoPresupuestoId = null;
-            this.snackEstadoError(err);
-          },
-        });
-      },
-      error: () => {
+    this.presupuestoService.updateEstado(id, nuevo).subscribe({
+      next: (updated) => {
         this.actualizandoPresupuestoId = null;
-        this.snackBar.open(this.translate.instant('snack.estimatesLoadFail'), this.closeLbl(), { duration: 4000 });
+        this.refrescarPanel();
+        this.snackBar.open(
+          this.translate.instant('snack.estimateStatus', { status: updated.estado }),
+          this.closeLbl(),
+          { duration: 2500 },
+        );
+      },
+      error: (err) => {
+        this.actualizandoPresupuestoId = null;
+        this.snackEstadoError(err);
       },
     });
   }
@@ -616,30 +606,6 @@ export class ClientePanelComponent implements OnInit {
         this.snackBar.open(this.translate.instant('snack.invoiceLoadFail'), this.closeLbl(), { duration: 4000 });
       },
     });
-  }
-
-  private buildPresupuestoUpdateRequest(p: Presupuesto, estado: string): PresupuestoRequest {
-    const items: PresupuestoItemRequest[] = (p.items ?? []).map((it) => {
-      const manual = it.esTareaManual === true;
-      return {
-        materialId: manual ? undefined : it.materialId,
-        tareaManual: manual ? (it.descripcion?.trim() || undefined) : undefined,
-        cantidad: it.cantidad,
-        precioUnitario: it.precioUnitario,
-        visiblePdf: it.visiblePdf,
-      };
-    });
-    return {
-      clienteId: p.clienteId,
-      items,
-      ivaHabilitado: p.ivaHabilitado,
-      estado,
-      descuentoGlobalPorcentaje: p.descuentoGlobalPorcentaje,
-      descuentoGlobalFijo: p.descuentoGlobalFijo,
-      descuentoAntesIva: p.descuentoAntesIva ?? true,
-      condicionesActivas: p.condicionesActivas ?? [],
-      notaAdicional: p.notaAdicional ?? undefined,
-    };
   }
 
   private buildFacturaUpdateRequestFromRow(f: Factura, estadoPago: string, montoParcialExplicito?: number): FacturaRequest {

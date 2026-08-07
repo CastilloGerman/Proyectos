@@ -104,7 +104,7 @@ public class InvitacionService {
             emailService.enviarPdf(inviterUsuarioId, email, asunto, cuerpo, null, null);
             log.info("Invitación enviada a {}", email);
         } catch (Exception e) {
-            log.warn("Invitación creada pero no se pudo enviar email a {}: {}. Enlace (solo logs): {}", email, e.getMessage(), link);
+            log.warn("Invitación {} creada pero no se pudo enviar email a {}: {}", inv.getId(), email, e.getMessage());
         }
     }
 
