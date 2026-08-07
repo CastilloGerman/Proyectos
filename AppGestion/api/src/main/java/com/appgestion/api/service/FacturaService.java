@@ -9,6 +9,7 @@ import com.appgestion.api.domain.enums.TipoFactura;
 import com.appgestion.api.service.factura.FacturaNumeroManualParser;
 import com.appgestion.api.service.factura.FacturaNumeroResuelto;
 import com.appgestion.api.dto.request.FacturaCobroRequest;
+import com.appgestion.api.dto.request.FacturaEstadoPagoPatchRequest;
 import com.appgestion.api.dto.request.FacturaItemRequest;
 import com.appgestion.api.dto.request.FacturaRequest;
 import com.appgestion.api.dto.request.EnviarEmailRequest;
@@ -192,6 +193,36 @@ public class FacturaService {
     }
 
     @Transactional
+    public FacturaResponse actualizarEstadoPago(Long id, FacturaEstadoPagoPatchRequest request, Long usuarioId) {
+        Factura factura = facturaRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
+
+        if (Boolean.TRUE.equals(factura.getAnulada())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede editar una factura anulada");
+        }
+
+        String estadoPago = normalizarEstadoPago(request.estadoPago());
+        factura.setEstadoPago(estadoPago);
+        if (FacturaEstadoPago.PARCIAL.equals(estadoPago)) {
+            Double monto = request.montoCobrado();
+            double total = Optional.ofNullable(factura.getTotal()).orElse(0.0);
+            if (monto == null || monto <= 0 || monto >= total) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "El importe parcial debe ser mayor que cero y menor que el total");
+            }
+            factura.setMontoCobrado(monto);
+        } else if (FacturaEstadoPago.PAGADA.equals(estadoPago)) {
+            factura.setMontoCobrado(factura.getTotal());
+        } else {
+            factura.setMontoCobrado(null);
+        }
+
+        factura = facturaRepository.save(factura);
+        return facturaResponseMapper.toResponse(factura,
+                facturaCobroRepository.findByFacturaIdOrderByFechaDescCreatedAtDesc(factura.getId()));
+    }
+
+    @Transactional
     public FacturaResponse crearDesdePresupuesto(Long presupuestoId, Usuario usuario) {
         Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(presupuestoId, usuario.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
@@ -284,6 +315,20 @@ public class FacturaService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ya existe una factura con ese número en la serie.");
         }
         return new FacturaNumeroResuelto(numeroFactura, p.anio(), p.secuencial());
+    }
+
+    private static String normalizarEstadoPago(String estadoPago) {
+        String v = estadoPago != null ? estadoPago.trim() : "";
+        if (FacturaEstadoPago.NO_PAGADA.equalsIgnoreCase(v)) {
+            return FacturaEstadoPago.NO_PAGADA;
+        }
+        if (FacturaEstadoPago.PARCIAL.equalsIgnoreCase(v)) {
+            return FacturaEstadoPago.PARCIAL;
+        }
+        if (FacturaEstadoPago.PAGADA.equalsIgnoreCase(v)) {
+            return FacturaEstadoPago.PAGADA;
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado de pago no válido");
     }
 
     private void aplicarCambioNumeroEnActualizacion(Factura factura, FacturaRequest request, Long usuarioId) {

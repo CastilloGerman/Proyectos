@@ -4,6 +4,7 @@ import com.appgestion.api.AppGestionApiApplication;
 import com.appgestion.api.constant.FacturaEstadoPago;
 import com.appgestion.api.repository.ClienteRepository;
 import com.appgestion.api.repository.EmpresaRepository;
+import com.appgestion.api.repository.FacturaRepository;
 import com.appgestion.api.repository.OrganizationRepository;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -22,7 +23,9 @@ import org.springframework.web.context.WebApplicationContext;
 
 import java.time.LocalDate;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -44,6 +47,8 @@ class FacturaEstadosTest {
     private ClienteRepository clienteRepository;
     @Autowired
     private EmpresaRepository empresaRepository;
+    @Autowired
+    private FacturaRepository facturaRepository;
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -123,6 +128,37 @@ class FacturaEstadosTest {
                         .content(cobro))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estadoPago").value(FacturaEstadoPago.PARCIAL));
+    }
+
+    @Test
+    void actualizarEstadoPago_noReemplazaLineasNiRecalculaTotales() throws Exception {
+        String body = facturaJson(scenario.clienteCompletoId(), 100.0);
+        String content = mockMvc.perform(post("/facturas")
+                        .with(FacturacionAuth.asUsuarioFacturacion(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode root = objectMapper.readTree(content);
+        long id = root.get("id").asLong();
+        double totalAntes = root.get("total").asDouble();
+
+        mockMvc.perform(patch("/facturas/{id}/estado-pago", id)
+                        .with(FacturacionAuth.asUsuarioFacturacion(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"estadoPago\":\"Parcial\",\"montoCobrado\":40.0}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estadoPago").value(FacturaEstadoPago.PARCIAL))
+                .andExpect(jsonPath("$.montoCobrado").value(40.0))
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.total").value(totalAntes));
+
+        var factura = facturaRepository.findById(id).orElseThrow();
+        assertThat(factura.getItems()).hasSize(1);
+        assertThat(factura.getTotal()).isEqualTo(totalAntes);
     }
 
     private static String facturaJson(long clienteId, double precioUnitario) {

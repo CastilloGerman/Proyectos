@@ -30,6 +30,10 @@ export class FacturaService {
     return this.http.put<Factura>(`${this.apiUrl}/${id}`, data);
   }
 
+  updateEstadoPago(id: number, estadoPago: string, montoCobrado?: number): Observable<Factura> {
+    return this.http.patch<Factura>(`${this.apiUrl}/${id}/estado-pago`, { estadoPago, montoCobrado });
+  }
+
   anular(id: number, motivo?: string | null): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/${id}/anular`, { motivo: motivo ?? null });
   }
