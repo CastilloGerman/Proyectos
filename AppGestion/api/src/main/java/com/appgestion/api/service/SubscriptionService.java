@@ -8,6 +8,7 @@ import com.appgestion.api.dto.response.SubscriptionDetailsDto;
 import com.appgestion.api.repository.StripeInvoiceLedgerRepository;
 import com.appgestion.api.repository.StripeSubscriptionRepository;
 import com.appgestion.api.repository.UsuarioRepository;
+import com.appgestion.api.service.stripe.StripeSubscriptionFetcher;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Invoice;
 import com.stripe.model.Price;
@@ -37,6 +38,7 @@ public class SubscriptionService {
     private final UsuarioRepository usuarioRepository;
     private final StripeSubscriptionRepository stripeSubscriptionRepository;
     private final StripeInvoiceLedgerRepository stripeInvoiceLedgerRepository;
+    private final StripeSubscriptionFetcher subscriptionFetcher;
 
     @Value("${stripe.price-id-monthly}")
     private String configuredMonthlyPriceId;
@@ -53,10 +55,12 @@ public class SubscriptionService {
     public SubscriptionService(
             UsuarioRepository usuarioRepository,
             StripeSubscriptionRepository stripeSubscriptionRepository,
-            StripeInvoiceLedgerRepository stripeInvoiceLedgerRepository) {
+            StripeInvoiceLedgerRepository stripeInvoiceLedgerRepository,
+            StripeSubscriptionFetcher subscriptionFetcher) {
         this.usuarioRepository = usuarioRepository;
         this.stripeSubscriptionRepository = stripeSubscriptionRepository;
         this.stripeInvoiceLedgerRepository = stripeInvoiceLedgerRepository;
+        this.subscriptionFetcher = subscriptionFetcher;
     }
 
     /**
@@ -197,7 +201,7 @@ public class SubscriptionService {
             return;
         }
         try {
-            Subscription sub = Subscription.retrieve(stripeSubscriptionId);
+            Subscription sub = subscriptionFetcher.fetch(stripeSubscriptionId);
             syncFromStripeSubscription(sub, usuarioId, stripeCustomerId);
         } catch (StripeException e) {
             log.warn("activateSubscription: retrieve falló {}, aplicando snapshot mínimo", e.getMessage());
@@ -217,7 +221,7 @@ public class SubscriptionService {
             return;
         }
         try {
-            Subscription sub = Subscription.retrieve(stripeSubscriptionId);
+            Subscription sub = subscriptionFetcher.fetch(stripeSubscriptionId);
             syncFromStripeSubscription(sub, null, null);
         } catch (StripeException e) {
             log.warn("updateSubscription: retrieve falló para {}: {}", stripeSubscriptionId, e.getMessage());
@@ -271,9 +275,9 @@ public class SubscriptionService {
         if (usuario == null) {
             return;
         }
-        if (usuario.getStripeSubscriptionId() == null || usuario.getStripeSubscriptionId().isBlank()) {
-            usuario.setStripeSubscriptionId(subId);
-        }
+        String currentSubscriptionId = usuario.getStripeSubscriptionId();
+        boolean hasCurrentSubscription = currentSubscriptionId != null && !currentSubscriptionId.isBlank();
+        boolean invoiceMatchesCurrentSubscription = subId.equals(currentSubscriptionId);
         String invoiceId = invoice.getId();
         if (invoiceId != null && !invoiceId.isBlank()) {
             StripeInvoiceLedger row = stripeInvoiceLedgerRepository
@@ -292,13 +296,33 @@ public class SubscriptionService {
                     : LocalDateTime.now());
             stripeInvoiceLedgerRepository.save(row);
         }
-        usuario.setSubscriptionRequiresPaymentAction(false);
-        usuarioRepository.save(usuario);
         try {
-            Subscription sub = Subscription.retrieve(subId);
-            syncFromStripeSubscription(sub, null, null);
+            Subscription sub = subscriptionFetcher.fetch(subId);
+            if (hasCurrentSubscription && !invoiceMatchesCurrentSubscription) {
+                log.warn(
+                        "invoice.paid {} pertenece a suscripción {} pero usuario {} tiene suscripción actual {}; se registra la factura sin cambiar acceso",
+                        invoiceId,
+                        subId,
+                        usuario.getId(),
+                        currentSubscriptionId);
+                return;
+            }
+            if (!hasCurrentSubscription && !isEntitlingStripeStatus(sub.getStatus())) {
+                log.warn(
+                        "invoice.paid {} para usuario {} no reactiva suscripción terminal/no activa {} ({})",
+                        invoiceId,
+                        usuario.getId(),
+                        subId,
+                        sub.getStatus());
+                return;
+            }
+            syncFromStripeSubscription(sub, usuario.getId(), invoice.getCustomer());
         } catch (StripeException e) {
-            updateSubscription(subId, "active", null);
+            log.warn("invoice.paid: no se pudo sincronizar suscripción {}: {}", subId, e.getMessage());
+            if (invoiceMatchesCurrentSubscription) {
+                usuario.setSubscriptionRequiresPaymentAction(false);
+                usuarioRepository.save(usuario);
+            }
         }
     }
 
@@ -407,6 +431,14 @@ public class SubscriptionService {
             case "canceled", "cancelled" -> SubscriptionStatus.CANCELED;
             default -> SubscriptionStatus.CANCELED;
         };
+    }
+
+    private static boolean isEntitlingStripeStatus(String stripeStatus) {
+        if (stripeStatus == null || stripeStatus.isBlank()) {
+            return false;
+        }
+        String normalized = stripeStatus.toLowerCase();
+        return "active".equals(normalized) || "trialing".equals(normalized);
     }
 
     private static LocalDateTime toLocalDateTime(Instant instant) {
