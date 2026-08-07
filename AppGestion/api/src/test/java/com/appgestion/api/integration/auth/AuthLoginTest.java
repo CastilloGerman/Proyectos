@@ -74,6 +74,18 @@ class AuthLoginTest {
     }
 
     @Test
+    void login_emailConMayusculas_devuelve200() throws Exception {
+        String body = """
+                {"email":"%s","password":"%s","totpCode":null,"clientInfo":null}
+                """.formatted(AuthLoginSeedSupport.LOGIN_USER_EMAIL.toUpperCase(), AuthLoginSeedSupport.LOGIN_USER_PASSWORD);
+
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void login_passwordIncorrecta_devuelve400() throws Exception {
         String body = """
                 {"email":"%s","password":"wrong-password","totpCode":null,"clientInfo":null}

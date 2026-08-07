@@ -179,12 +179,8 @@ public class SubscriptionService {
         String priceId = extractPriceId(subscription);
         usuario.setStripePriceId(priceId);
         usuario.setSubscriptionCancelAtPeriodEnd(Boolean.TRUE.equals(subscription.getCancelAtPeriodEnd()));
-        usuario.setSubscriptionStatus(mapStripeStatusToEnum(subscription.getStatus()));
+        applyStripeStatus(usuario, mapStripeStatusToEnum(subscription.getStatus()));
         usuario.setSubscriptionCurrentPeriodEnd(toLocalDateTime(subscription.getCurrentPeriodEnd()));
-        if (usuario.getSubscriptionStatus() == SubscriptionStatus.ACTIVE
-                || usuario.getSubscriptionStatus() == SubscriptionStatus.TRIALING) {
-            usuario.setSubscriptionRequiresPaymentAction(false);
-        }
         usuarioRepository.save(usuario);
 
         upsertStripeSubscriptionRow(usuario, subscription, priceId);
@@ -205,7 +201,7 @@ public class SubscriptionService {
                     .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado: " + usuarioId));
             usuario.setStripeCustomerId(stripeCustomerId);
             usuario.setStripeSubscriptionId(stripeSubscriptionId);
-            usuario.setSubscriptionStatus(mapStripeStatusToEnum(stripeStatus));
+            applyStripeStatus(usuario, mapStripeStatusToEnum(stripeStatus));
             usuario.setSubscriptionCurrentPeriodEnd(toLocalDateTime(currentPeriodEnd));
             usuarioRepository.save(usuario);
         }
@@ -223,7 +219,7 @@ public class SubscriptionService {
             log.warn("updateSubscription: retrieve falló para {}: {}", stripeSubscriptionId, e.getMessage());
             Usuario usuario = usuarioRepository.findByStripeSubscriptionId(stripeSubscriptionId).orElse(null);
             if (usuario != null) {
-                usuario.setSubscriptionStatus(mapStripeStatusToEnum(stripeStatus));
+                applyStripeStatus(usuario, mapStripeStatusToEnum(stripeStatus));
                 if (currentPeriodEnd != null) {
                     usuario.setSubscriptionCurrentPeriodEnd(toLocalDateTime(currentPeriodEnd));
                 }
@@ -336,6 +332,29 @@ public class SubscriptionService {
         }
         Optional<StripeSubscription> row = stripeSubscriptionRepository.findByStripeSubscriptionId(subscription.getId());
         return row.map(StripeSubscription::getUsuario).orElse(null);
+    }
+
+    private void applyStripeStatus(Usuario usuario, SubscriptionStatus stripeStatus) {
+        if (shouldPreserveActiveAppTrial(usuario, stripeStatus)) {
+            usuario.setSubscriptionStatus(SubscriptionStatus.TRIAL_ACTIVE);
+            usuario.setSubscriptionRequiresPaymentAction(true);
+            return;
+        }
+        usuario.setSubscriptionStatus(stripeStatus);
+        if (stripeStatus == SubscriptionStatus.ACTIVE || stripeStatus == SubscriptionStatus.TRIALING) {
+            usuario.setSubscriptionRequiresPaymentAction(false);
+        }
+    }
+
+    private boolean shouldPreserveActiveAppTrial(Usuario usuario, SubscriptionStatus stripeStatus) {
+        if (usuario == null || usuario.getSubscriptionStatus() != SubscriptionStatus.TRIAL_ACTIVE) {
+            return false;
+        }
+        if (stripeStatus == SubscriptionStatus.ACTIVE || stripeStatus == SubscriptionStatus.TRIALING) {
+            return false;
+        }
+        LocalDate trialEnd = usuario.getTrialEndDate();
+        return trialEnd != null && !LocalDate.now().isAfter(trialEnd);
     }
 
     private void upsertStripeSubscriptionRow(Usuario usuario, Subscription subscription, String priceId) {

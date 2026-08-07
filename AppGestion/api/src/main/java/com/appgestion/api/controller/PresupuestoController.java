@@ -2,6 +2,7 @@ package com.appgestion.api.controller;
 
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.request.EnviarEmailRequest;
+import com.appgestion.api.dto.request.PresupuestoEstadoRequest;
 import com.appgestion.api.dto.request.PresupuestoCondicionesPredeterminadasRequest;
 import com.appgestion.api.dto.request.AnticipoRegistroRequest;
 import com.appgestion.api.dto.request.PresupuestoRequest;
@@ -168,6 +169,14 @@ public class PresupuestoController {
     public PresupuestoResponse actualizar(@PathVariable Long id, @Valid @RequestBody PresupuestoRequest request) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
         return presupuestoService.actualizar(id, request, usuarioId);
+    }
+
+    @PatchMapping("/{id}/estado")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public PresupuestoResponse actualizarEstado(@PathVariable Long id,
+                                                @Valid @RequestBody PresupuestoEstadoRequest request) {
+        Long usuarioId = currentUserService.getCurrentUsuario().getId();
+        return presupuestoService.actualizarEstado(id, request.estado(), usuarioId);
     }
 
     @DeleteMapping("/{id}")
