@@ -192,6 +192,30 @@ public class FacturaService {
     }
 
     @Transactional
+    public FacturaResponse actualizarEstadoPago(Long id, String estadoPago, Double montoCobrado, Long usuarioId) {
+        Factura factura = facturaRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
+
+        if (Boolean.TRUE.equals(factura.getAnulada())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede editar una factura anulada");
+        }
+
+        String normalized = estadoPago != null ? estadoPago.trim() : "";
+        if (!FacturaEstadoPago.NO_PAGADA.equals(normalized)
+                && !FacturaEstadoPago.PARCIAL.equals(normalized)
+                && !FacturaEstadoPago.PAGADA.equals(normalized)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado de pago no reconocido");
+        }
+
+        factura.setEstadoPago(normalized);
+        factura.setMontoCobrado(FacturaEstadoPago.PARCIAL.equals(normalized) ? montoCobrado : null);
+        factura = facturaRepository.save(factura);
+        return facturaResponseMapper.toResponse(
+                factura,
+                facturaCobroRepository.findByFacturaIdOrderByFechaDescCreatedAtDesc(factura.getId()));
+    }
+
+    @Transactional
     public FacturaResponse crearDesdePresupuesto(Long presupuestoId, Usuario usuario) {
         Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(presupuestoId, usuario.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));

@@ -22,6 +22,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -143,5 +144,32 @@ class PresupuestoFlujosTest {
                         .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.tipoFactura").value(TipoFactura.NORMAL.name()));
+    }
+
+    @Test
+    void actualizarEstado_noReescribeLineasNiTotales() throws Exception {
+        String body = PresupuestoIntegrationTestSupport.presupuestoJson(
+                scenario.clienteCompletoId(), PresupuestoEstado.PENDIENTE, 100.0, 1.0);
+        String res = mockMvc.perform(post("/presupuestos")
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.total").value(121.0))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long presId = objectMapper.readTree(res).get("id").asLong();
+
+        mockMvc.perform(patch("/presupuestos/{id}/estado", presId)
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"estado\":\"Aceptado\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value(PresupuestoEstado.ACEPTADO))
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.total").value(121.0));
     }
 }

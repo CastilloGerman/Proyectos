@@ -3,6 +3,7 @@ package com.appgestion.api.controller;
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.request.EnviarEmailRequest;
 import com.appgestion.api.dto.request.FacturaCobroRequest;
+import com.appgestion.api.dto.request.FacturaEstadoPagoPatchRequest;
 import com.appgestion.api.dto.request.FacturaAnularRequest;
 import com.appgestion.api.dto.request.FacturaRequest;
 import com.appgestion.api.dto.response.FacturaResponse;
@@ -123,6 +124,15 @@ public class FacturaController {
     public FacturaResponse actualizar(@PathVariable Long id, @Valid @RequestBody FacturaRequest request) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
         return facturaService.actualizar(id, request, usuarioId);
+    }
+
+    @PatchMapping("/{id}/estado-pago")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public FacturaResponse actualizarEstadoPago(
+            @PathVariable Long id,
+            @Valid @RequestBody FacturaEstadoPagoPatchRequest request) {
+        Long usuarioId = currentUserService.getCurrentUsuario().getId();
+        return facturaService.actualizarEstadoPago(id, request.estadoPago(), request.montoCobrado(), usuarioId);
     }
 
     @PostMapping("/{id}/cobros")

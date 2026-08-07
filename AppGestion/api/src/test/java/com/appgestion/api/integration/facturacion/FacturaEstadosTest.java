@@ -23,6 +23,7 @@ import org.springframework.web.context.WebApplicationContext;
 import java.time.LocalDate;
 
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -123,6 +124,32 @@ class FacturaEstadosTest {
                         .content(cobro))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estadoPago").value(FacturaEstadoPago.PARCIAL));
+    }
+
+    @Test
+    void actualizarEstadoPago_noReescribeLineasNiTotales() throws Exception {
+        String body = facturaJson(scenario.clienteCompletoId(), 100.0);
+        String content = mockMvc.perform(post("/facturas")
+                        .with(FacturacionAuth.asUsuarioFacturacion(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.total").value(121.0))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long id = objectMapper.readTree(content).get("id").asLong();
+
+        mockMvc.perform(patch("/facturas/{id}/estado-pago", id)
+                        .with(FacturacionAuth.asUsuarioFacturacion(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"estadoPago\":\"Pagada\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estadoPago").value(FacturaEstadoPago.PAGADA))
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.total").value(121.0));
     }
 
     private static String facturaJson(long clienteId, double precioUnitario) {
