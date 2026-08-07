@@ -87,8 +87,13 @@ public class SubscriptionService {
         if (status == null) {
             return false;
         }
-        return status == SubscriptionStatus.TRIAL_ACTIVE
-                || status == SubscriptionStatus.ACTIVE
+        if (status == SubscriptionStatus.TRIAL_ACTIVE) {
+            return true;
+        }
+        if (usuario.isSubscriptionRequiresPaymentAction()) {
+            return false;
+        }
+        return status == SubscriptionStatus.ACTIVE
                 || status == SubscriptionStatus.TRIALING;
     }
 
@@ -181,10 +186,6 @@ public class SubscriptionService {
         usuario.setSubscriptionCancelAtPeriodEnd(Boolean.TRUE.equals(subscription.getCancelAtPeriodEnd()));
         usuario.setSubscriptionStatus(mapStripeStatusToEnum(subscription.getStatus()));
         usuario.setSubscriptionCurrentPeriodEnd(toLocalDateTime(subscription.getCurrentPeriodEnd()));
-        if (usuario.getSubscriptionStatus() == SubscriptionStatus.ACTIVE
-                || usuario.getSubscriptionStatus() == SubscriptionStatus.TRIALING) {
-            usuario.setSubscriptionRequiresPaymentAction(false);
-        }
         usuarioRepository.save(usuario);
 
         upsertStripeSubscriptionRow(usuario, subscription, priceId);

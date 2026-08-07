@@ -69,8 +69,18 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
         }
 
         StripeObject dataObject = event.getDataObjectDeserializer().getObject().orElse(null);
+        if (dataObject == null && requiresDataObject(event.getType())) {
+            log.warn("Stripe webhook {} sin data.object deserializable; se reintentará", event.getType());
+            return StripeWebhookProcessingResult.failed();
+        }
+
         if (dataObject != null) {
-            dispatch(event.getType(), dataObject);
+            try {
+                dispatch(event.getType(), dataObject);
+            } catch (WebhookProcessingException e) {
+                log.warn("Stripe webhook {} no procesado: {}", event.getType(), e.getMessage());
+                return StripeWebhookProcessingResult.failed();
+            }
         }
 
         ProcessedStripeEvent processed = new ProcessedStripeEvent();
@@ -111,8 +121,8 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
         try {
             subscription = subscriptionFetcher.fetch(subscriptionId);
         } catch (StripeException e) {
-            log.warn("checkout.session.completed: no se pudo cargar suscripción {}: {}", subscriptionId, e.getMessage());
-            return;
+            throw new WebhookProcessingException(
+                    "checkout.session.completed: no se pudo cargar suscripción " + subscriptionId, e);
         }
 
         subscriptionService.syncFromStripeSubscription(subscription, usuarioId, customerId);
@@ -144,5 +154,27 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
             return;
         }
         subscriptionService.markRequiresPaymentAction(subscriptionId);
+    }
+
+    private static boolean requiresDataObject(String type) {
+        if (type == null) {
+            return false;
+        }
+        return switch (type) {
+            case EVENT_CHECKOUT_SESSION_COMPLETED,
+                    EVENT_CUSTOMER_SUBSCRIPTION_CREATED,
+                    EVENT_CUSTOMER_SUBSCRIPTION_UPDATED,
+                    EVENT_CUSTOMER_SUBSCRIPTION_DELETED,
+                    EVENT_INVOICE_PAID,
+                    EVENT_INVOICE_PAYMENT_FAILED,
+                    EVENT_INVOICE_PAYMENT_ACTION_REQUIRED -> true;
+            default -> false;
+        };
+    }
+
+    private static class WebhookProcessingException extends RuntimeException {
+        WebhookProcessingException(String message, Throwable cause) {
+            super(message, cause);
+        }
     }
 }
