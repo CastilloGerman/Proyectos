@@ -1124,6 +1124,7 @@
     "loadRows": "Loading events…",
     "loadFail": "Couldn’t load history.",
     "retry": "Retry",
+    "colWhen": "Date (UTC)",
     "colUser": "User",
     "colEvent": "Event",
     "colIp": "IP",
@@ -1155,7 +1156,9 @@
     "ev_TOTP_SETUP_CANCELLED": "2FA setup cancelled",
     "ev_AUDIT_EXPORT_JSON": "Audit export (JSON)",
     "ev_AUDIT_EXPORT_CSV": "Audit export (CSV)",
-    "foot": "Audit rows are append‑only; retention is server‑policy. IPs may appear masked."
+    "foot": "Audit rows are append‑only; retention is server‑policy. IPs may appear masked.",
+    "exportCsv": "CSV",
+    "exportJson": "JSON"
   },
   "acctHelp": {
     "back": "Back to dashboard",
@@ -1257,8 +1260,11 @@
     "trialEndsLbl": "Free trial ends",
     "billPeriodEndsLbl": "Current billing period ends",
     "billPeriodHint": "(only when billing is active)",
-    "stripeHint": "Stripe lets you switch monthly vs annual. Tax may calculate there.",
-    "stripeCheckoutDetailed": "In Stripe checkout you can choose monthly billing ({{mo}}) or yearly ({{yr}}). With Stripe Tax on, VAT is calculated there.",
+    "stripeHint": "Choose monthly or yearly before opening Stripe. Tax may calculate there.",
+    "stripeCheckoutDetailed": "We will open Stripe with the selected cycle: monthly ({{mo}}) or yearly ({{yr}}). With Stripe Tax on, VAT is calculated there.",
+    "billingTitle": "Billing",
+    "billingMonthly": "Monthly",
+    "billingYearly": "Yearly",
     "checkoutBtn": "Choose plan",
     "portalBtn": "Billing & payment method",
     "stripeFoot": "Payments & cards handled by Stripe; we don’t store card data.",

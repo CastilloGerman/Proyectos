@@ -215,20 +215,13 @@ public class StripeService {
     }
 
     /**
-     * Precio único del Checkout (modo suscripción, una sola línea recurrente).
-     * <p>
-     * Si existen mensual y anual, siempre se usa el mensual: Stripe Checkout subscription upsells
-     * muestra en la pasarela un toggle mensual/anual (upsell anual configurado en Dashboard sobre el
-     * precio mensual). Ver {@code https://docs.stripe.com/payments/checkout/upsells}.
+     * Precio del Checkout (modo suscripción, una sola línea recurrente) según el ciclo solicitado.
      */
     private String resolveCheckoutPriceId(SubscriptionBillingPeriod billingPeriod) {
         SubscriptionBillingPeriod period =
                 billingPeriod != null ? billingPeriod : SubscriptionBillingPeriod.MONTHLY;
         String monthly = blankToNull(priceIdMonthly);
         String yearly = blankToNull(priceIdYearly);
-        if (monthly != null && yearly != null) {
-            return monthly;
-        }
         if (period == SubscriptionBillingPeriod.YEARLY) {
             if (yearly == null) {
                 throw new IllegalStateException(

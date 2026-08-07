@@ -8,9 +8,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatButtonToggleChange, MatButtonToggleModule } from '@angular/material/button-toggle';
 import { map } from 'rxjs';
 import { AuthService, UsuarioResponse } from '../../../core/auth/auth.service';
-import { SubscriptionService } from '../../../core/services/subscription.service';
+import { CheckoutBillingPeriod, SubscriptionService } from '../../../core/services/subscription.service';
 import { SubscriptionDetails } from '../../../core/models/subscription-details.model';
 import { environment } from '../../../../environments/environment';
 import { daysFromTodayToDateEnd } from '../../../shared/utils/trial-days.util';
@@ -30,6 +31,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
         MatProgressSpinnerModule,
         MatSnackBarModule,
         MatDividerModule,
+        MatButtonToggleModule,
         TranslateModule,
     ],
     templateUrl: './suscripcion-plan.component.html',
@@ -47,6 +49,7 @@ export class SuscripcionPlanComponent implements OnInit {
   readonly subscriptionDetails = signal<SubscriptionDetails | null>(null);
   readonly openingCheckout = signal(false);
   readonly openingPortal = signal(false);
+  readonly checkoutBillingPeriod = signal<CheckoutBillingPeriod>('MONTHLY');
 
   private readonly localeTick = toSignal(this.translate.onLangChange.pipe(map(() => Date.now())), {
     initialValue: 0,
@@ -193,6 +196,13 @@ export class SuscripcionPlanComponent implements OnInit {
     this.refrescar();
   }
 
+  onBillingChange(event: MatButtonToggleChange): void {
+    const value = event.value;
+    if (value === 'MONTHLY' || value === 'YEARLY') {
+      this.checkoutBillingPeriod.set(value);
+    }
+  }
+
   refrescar(): void {
     this.loadError.set(false);
     this.loading.set(true);
@@ -220,7 +230,7 @@ export class SuscripcionPlanComponent implements OnInit {
     this.openingCheckout.set(true);
     const presets = this.snackHttpPresets();
     this.subscriptionApi
-      .createCheckoutSession()
+      .createCheckoutSession(this.checkoutBillingPeriod())
       .pipe(finalize(() => this.openingCheckout.set(false)))
       .subscribe({
         next: (res) => {

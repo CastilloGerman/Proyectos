@@ -1097,6 +1097,7 @@
     "ph_total": "Total a pagar"
   },
   "acctAudit": {
+    "back": "",
     "title": "Historial de accesos",
     "subUser": "Registro de sesiones y acciones sensibles. Solo ves tu usuario.",
     "subAdmin": "Como administrador ves eventos de toda la organización.",
@@ -1202,6 +1203,7 @@
     "faq_iva_a": "Activar/desactivar por documento; dudas fiscales a tu gestor."
   },
   "acctSess": {
+    "back": "",
     "title": "Sesiones activas",
     "lead": "Cada inicio de sesión registra navegador, sistema e IP vistas por el servidor. Puedes cerrar otras sesiones sin afectar a este navegador.",
     "tokenHint": "El token de este navegador caduca aproximadamente el",
@@ -1255,8 +1257,11 @@
     "trialEndsLbl": "Fin de la prueba gratuita",
     "billPeriodEndsLbl": "Fin del periodo de facturación actual",
     "billPeriodHint": "(aplica cuando hay suscripción de pago activa)",
-    "stripeHint": "En Stripe podrás elegir mensual vs anual. Si hay Stripe Tax el IVA se calcula ahí.",
-    "stripeCheckoutDetailed": "En la pasarela de Stripe puedes elegir facturación mensual ({{mo}}) o anual ({{yr}}). Si está activado Stripe Tax, el IVA u otros impuestos se calculan allí.",
+    "stripeHint": "Elige mensual o anual antes de abrir Stripe. Si hay Stripe Tax el IVA se calcula ahí.",
+    "stripeCheckoutDetailed": "Abriremos Stripe con el ciclo seleccionado: mensual ({{mo}}) o anual ({{yr}}). Si está activado Stripe Tax, el IVA u otros impuestos se calculan allí.",
+    "billingTitle": "Facturación",
+    "billingMonthly": "Mensual",
+    "billingYearly": "Anual",
     "checkoutBtn": "Contratar plan",
     "portalBtn": "Facturación y método de pago",
     "stripeFoot": "Pagos en Stripe; no almacenamos la tarjeta en nuestros servidores.",
@@ -1283,6 +1288,8 @@
     "hUnpaid": "Hay pagos adeudados tras varios intentos. Regulariza en Stripe.",
     "hCanceled": "La suscripción está cancelada; puedes volver a contratar o revisar el portal.",
     "hTrialExpiredRo": "La prueba ha terminado. La cuenta queda en solo lectura hasta contratar.",
+    "remDaysOne": "{{days}} días",
+    "remDaysOther": "{{days}} días",
     "perMonthLbl": "{{v}} al mes",
     "perYearLbl": "{{y}} al año"
   },

@@ -116,9 +116,20 @@
 
         <div class="sub-actions">
           @if (mostrarCheckout()) {
-            <p class="sub-billing__hint">
-              {{ stripeCheckoutCopy() }}
-            </p>
+            <div class="sub-billing" role="group" aria-labelledby="sub-billing-label">
+              <div class="sub-billing__heading" id="sub-billing-label">{{ 'acctSub.billingTitle' | translate }}</div>
+              <mat-button-toggle-group
+                [value]="checkoutBillingPeriod()"
+                (change)="onBillingChange($event)"
+                hideSingleSelectionIndicator
+              >
+                <mat-button-toggle value="MONTHLY">{{ 'acctSub.billingMonthly' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="YEARLY">{{ 'acctSub.billingYearly' | translate }}</mat-button-toggle>
+              </mat-button-toggle-group>
+              <p class="sub-billing__hint">
+                {{ stripeCheckoutCopy() }}
+              </p>
+            </div>
             <button
               mat-raised-button
               color="primary"
