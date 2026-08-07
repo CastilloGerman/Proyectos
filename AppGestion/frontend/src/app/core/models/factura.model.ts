@@ -87,3 +87,8 @@ export interface FacturaRequest {
   notas?: string;
   ivaHabilitado?: boolean;
 }
+
+export interface FacturaEstadoPagoRequest {
+  estadoPago: string;
+  montoCobrado?: number;
+}

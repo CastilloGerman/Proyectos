@@ -4,6 +4,7 @@ import com.appgestion.api.constant.TaxConstants;
 import com.appgestion.api.domain.entity.*;
 import com.appgestion.api.domain.enums.TipoFactura;
 import com.appgestion.api.dto.request.PresupuestoItemRequest;
+import com.appgestion.api.dto.request.PresupuestoEstadoRequest;
 import com.appgestion.api.dto.request.PresupuestoRequest;
 import com.appgestion.api.dto.request.EnviarEmailRequest;
 import com.appgestion.api.dto.response.PresupuestoItemResponse;
@@ -159,6 +160,15 @@ public class PresupuestoService {
         presupuesto.getItems().clear();
         mapItems(request.items(), presupuesto);
         calcularTotales(presupuesto);
+        presupuesto = presupuestoRepository.save(presupuesto);
+        return toResponse(presupuesto);
+    }
+
+    @Transactional
+    public PresupuestoResponse actualizarEstado(Long id, PresupuestoEstadoRequest request, Long usuarioId) {
+        Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
+        presupuesto.setEstado(request.estado().trim());
         presupuesto = presupuestoRepository.save(presupuesto);
         return toResponse(presupuesto);
     }
