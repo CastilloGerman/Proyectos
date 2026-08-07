@@ -24,7 +24,7 @@ import java.util.Optional;
 
 /**
  * Flujo contable de anticipos: registro, factura de anticipo (IVA en trimestre del cobro)
- * y factura final con base/IVA remanentes y descuento del anticipo ya facturado.
+ * y factura final con base/IVA remanentes del importe ya facturado como anticipo.
  */
 @Service
 public class AnticipoService {
@@ -247,7 +247,7 @@ public class AnticipoService {
             }
             basePend = baseTotal.subtract(baseAnt).max(BigDecimal.ZERO).setScale(SCALE, ROUNDING);
             ivaPend = ivaTotal.subtract(ivaAnt).max(BigDecimal.ZERO).setScale(SCALE, ROUNDING);
-            importePend = basePend.add(ivaPend).subtract(importeAnt).setScale(SCALE, ROUNDING);
+            importePend = basePend.add(ivaPend).setScale(SCALE, ROUNDING);
         } else {
             basePend = baseTotal.subtract(baseAnt).max(BigDecimal.ZERO).setScale(SCALE, ROUNDING);
             ivaPend = ivaTotal.subtract(ivaAnt).max(BigDecimal.ZERO).setScale(SCALE, ROUNDING);

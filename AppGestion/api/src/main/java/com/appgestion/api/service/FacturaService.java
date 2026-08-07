@@ -443,11 +443,7 @@ public class FacturaService {
                 : BigDecimal.ZERO;
         factura.setIva(cuotaIvaTotal.doubleValue());
         BigDecimal bruto = subtotal.add(cuotaIvaTotal).setScale(SCALE, ROUNDING);
-        if (factura.getTipoFactura() == TipoFactura.FINAL_CON_ANTICIPO && factura.getImporteAnticipoDescontado() != null) {
-            factura.setTotal(bruto.subtract(factura.getImporteAnticipoDescontado()).setScale(SCALE, ROUNDING).doubleValue());
-        } else {
-            factura.setTotal(bruto.doubleValue());
-        }
+        factura.setTotal(bruto.doubleValue());
 
         if (Boolean.TRUE.equals(factura.getIvaHabilitado()) && baseIva.compareTo(BigDecimal.ZERO) > 0) {
             for (FacturaItem item : factura.getItems()) {
@@ -460,7 +456,7 @@ public class FacturaService {
         }
     }
 
-    /** Recalcula subtotal, IVA y total (incluye factura final con anticipo descontado). Expuesto para {@link AnticipoService}. */
+    /** Recalcula subtotal, IVA y total. En facturas finales con anticipo, las líneas ya representan el remanente. */
     public void recalcularTotales(Factura factura) {
         calcularTotales(factura);
     }
