@@ -112,7 +112,7 @@ public class AuthService {
         usuario.setNombre(request.nombre());
         usuario.setEmail(emailNormalized);
         usuario.setPasswordHash(passwordEncoder.encode(request.password()));
-        usuario.setRol(request.getRol());
+        usuario.setRol("USER");
         usuario.setActivo(true);
         usuario.setReferredByUsuarioId(referralInv != null ? referralInv.getInviterUsuarioId() : null);
 

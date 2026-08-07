@@ -97,6 +97,26 @@ class AuthLoginTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    void register_ignoraRolAdminEnPayloadPublico() throws Exception {
+        String email = "role-injection@test.local";
+        String body = """
+                {"nombre":"Role Injection","email":"%s","password":"password123","rol":"ADMIN","clientInfo":null}
+                """.formatted(email);
+
+        String response = mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode root = objectMapper.readTree(response);
+        assertThat(root.path("rol").asText()).isEqualTo("USER");
+        assertThat(usuarioRepository.findByEmail(email).orElseThrow().getRol()).isEqualTo("USER");
+    }
+
     /**
      * Objeto JSON vacío: faltan email/contraseña obligatorios → 400.
      * Un cuerpo literalmente vacío ("") puede producir 500 por fallo de parseo; no es el caso de uso típico del cliente.
