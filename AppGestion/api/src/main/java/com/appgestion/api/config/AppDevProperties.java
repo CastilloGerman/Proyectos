@@ -18,7 +18,7 @@ public class AppDevProperties {
 
     /**
      * Emails permitidos (separados por coma, sin distinguir mayúsculas).
-     * Vacío = cualquier usuario autenticado puede usar la función si está habilitada.
+     * Vacío = nadie puede usar la función aunque esté habilitada.
      */
     private String grantPremiumEmailAllowlist = "";
 
