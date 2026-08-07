@@ -66,14 +66,26 @@ export class LanguageService {
 
     return Promise.all(
       SUPPORTED_UI_LANGUAGES.map((code) =>
-        firstValueFrom(this.http.get<TranslationObject>(i18nAsset(code))).then((data) => {
-          this.translate.setTranslation(code, data);
-        }),
+        firstValueFrom(this.http.get<TranslationObject>(i18nAsset(code)))
+          .then((data) => {
+            this.translate.setTranslation(code, data);
+            return code;
+          })
+          .catch((err: unknown) => {
+            console.warn('[i18n] Failed to preload translations for', code, err);
+            return null;
+          }),
       ),
     )
-      .then(() => {
+      .then((loadedCodes) => {
+        const loaded = new Set(loadedCodes.filter((code): code is SupportedUiLanguage => code !== null));
+        if (loaded.size === 0) {
+          throw new Error('No i18n translations could be loaded');
+        }
+        const firstLoaded = Array.from(loaded)[0] ?? 'es';
+        const active: SupportedUiLanguage = loaded.has(initial) ? initial : loaded.has('es') ? 'es' : firstLoaded;
         this.translate.setFallbackLang('es');
-        return firstValueFrom(this.translate.use(initial));
+        return firstValueFrom(this.translate.use(active));
       })
       .then(() => {
         this.ngZone.run(() => undefined);

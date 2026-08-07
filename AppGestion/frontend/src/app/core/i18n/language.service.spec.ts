@@ -35,6 +35,34 @@ describe('LanguageService', () => {
   });
 
   describe('init', () => {
+    function configureInitTest() {
+      const use = vi.fn().mockReturnValue(of({}));
+      const setTranslation = vi.fn();
+      const setFallbackLang = vi.fn();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          LanguageService,
+          {
+            provide: TranslateService,
+            useValue: {
+              addLangs: vi.fn(),
+              setTranslation,
+              setFallbackLang,
+              use,
+            },
+          },
+        ],
+      });
+      return {
+        http: TestBed.inject(HttpTestingController),
+        svc: TestBed.inject(LanguageService),
+        setTranslation,
+        setFallbackLang,
+        use,
+      };
+    }
+
     beforeEach(() => {
       vi.stubGlobal(
         'localStorage',
@@ -48,25 +76,7 @@ describe('LanguageService', () => {
     });
 
     it('preloads all locale files, registers translations, then applies resolved language', async () => {
-      const use = vi.fn().mockReturnValue(of({}));
-      const setTranslation = vi.fn();
-      TestBed.configureTestingModule({
-        imports: [HttpClientTestingModule],
-        providers: [
-          LanguageService,
-          {
-            provide: TranslateService,
-            useValue: {
-              addLangs: vi.fn(),
-              setTranslation,
-              setFallbackLang: vi.fn(),
-              use,
-            },
-          },
-        ],
-      });
-      const http = TestBed.inject(HttpTestingController);
-      const svc = TestBed.inject(LanguageService);
+      const { http, svc, setTranslation, use } = configureInitTest();
       const done = svc.init();
       for (const code of SUPPORTED_UI_LANGUAGES) {
         http.expectOne((req) => req.urlWithParams.startsWith(`assets/i18n/${code}.json?v=`)).flush({ x: 1 });
@@ -74,6 +84,39 @@ describe('LanguageService', () => {
       await done;
       expect(setTranslation).toHaveBeenCalledTimes(SUPPORTED_UI_LANGUAGES.length);
       expect(use).toHaveBeenCalledWith('ro');
+      http.verify();
+    });
+
+    it('does not reject startup when a non-active locale fails to preload', async () => {
+      const { http, svc, setTranslation, use } = configureInitTest();
+      const done = svc.init();
+      for (const code of SUPPORTED_UI_LANGUAGES) {
+        const req = http.expectOne((r) => r.urlWithParams.startsWith(`assets/i18n/${code}.json?v=`));
+        if (code === 'fr') {
+          req.flush('missing', { status: 404, statusText: 'Not Found' });
+        } else {
+          req.flush({ x: code });
+        }
+      }
+      await done;
+      expect(setTranslation).toHaveBeenCalledTimes(SUPPORTED_UI_LANGUAGES.length - 1);
+      expect(use).toHaveBeenCalledWith('ro');
+      http.verify();
+    });
+
+    it('falls back to Spanish when the resolved locale fails to preload', async () => {
+      const { http, svc, use } = configureInitTest();
+      const done = svc.init();
+      for (const code of SUPPORTED_UI_LANGUAGES) {
+        const req = http.expectOne((r) => r.urlWithParams.startsWith(`assets/i18n/${code}.json?v=`));
+        if (code === 'ro') {
+          req.flush('broken', { status: 500, statusText: 'Server Error' });
+        } else {
+          req.flush({ x: code });
+        }
+      }
+      await done;
+      expect(use).toHaveBeenCalledWith('es');
       http.verify();
     });
   });
