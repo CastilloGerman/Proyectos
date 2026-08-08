@@ -324,8 +324,6 @@ WHERE lower(email) = lower('tu@email.com');
 
 Luego cierra sesión y vuelve a entrar, o refresca `/auth/me`, para que el frontend reciba `canWrite=true`.
 
-**Nota de seguridad:** En `SecurityConfig` existe regla para **`/usuarios/**`** (rol `ADMIN`). En el código actual **no hay** un `@RestController` bajo ese prefijo; si el front u otra herramienta llaman a esa ruta, el comportamiento dependerá de la configuración de seguridad y de que exista o no un controlador añadido más adelante.
-
 ---
 
 ## ⚙️ Funcionalidades (código)
