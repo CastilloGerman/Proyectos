@@ -16,8 +16,8 @@ import { PresupuestoService } from '../../core/services/presupuesto.service';
 import { FacturaService } from '../../core/services/factura.service';
 import { MaterialService } from '../../core/services/material.service';
 import { AuthService } from '../../core/auth/auth.service';
-import { Presupuesto, PresupuestoItemRequest, PresupuestoRequest } from '../../core/models/presupuesto.model';
-import { Factura, FacturaItemRequest, FacturaRequest } from '../../core/models/factura.model';
+import { Presupuesto } from '../../core/models/presupuesto.model';
+import { Factura } from '../../core/models/factura.model';
 import { Material } from '../../core/models/material.model';
 import { EstadoBadgeComponent } from '../../shared/estado-badge/estado-badge.component';
 import { FacturaParcialImporteDialogComponent } from '../../shared/factura-parcial-importe-dialog/factura-parcial-importe-dialog.component';
@@ -1832,8 +1832,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     if (this.equivalentesEstadoEjecucionUi(nuevo, actual)) return;
 
     this.actualizandoPresupuestoId = p.id;
-    const payload = this.buildPresupuestoUpdateRequest(p, nuevo);
-    this.presupuestoService.update(p.id, payload).subscribe({
+    this.presupuestoService.updateEstado(p.id, nuevo).subscribe({
       next: (updated) => {
         this.actualizandoPresupuestoId = null;
         this.patchPresupuestoReciente(updated);
@@ -1877,8 +1876,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   private ejecutarActualizacionEstadoFactura(f: Factura, nuevo: string, montoParcial?: number): void {
     this.actualizandoFacturaId = f.id;
-    const payload = this.buildFacturaUpdateRequest(f, nuevo, montoParcial);
-    this.facturaService.update(f.id, payload).subscribe({
+    this.facturaService.updateEstadoPago(f.id, nuevo, montoParcial).subscribe({
       next: (updated) => {
         this.actualizandoFacturaId = null;
         this.patchFacturaReciente(updated);
@@ -1898,65 +1896,6 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     const lb = b.trim().toLowerCase();
     if (ej.includes(la) && ej.includes(lb)) return true;
     return la === lb;
-  }
-
-  private buildPresupuestoUpdateRequest(p: Presupuesto, estado: string): PresupuestoRequest {
-    const items: PresupuestoItemRequest[] = (p.items ?? []).map((it) => {
-      const manual = it.esTareaManual === true;
-      return {
-        materialId: manual ? undefined : it.materialId,
-        tareaManual: manual ? (it.descripcion?.trim() || undefined) : undefined,
-        cantidad: it.cantidad,
-        precioUnitario: it.precioUnitario,
-        visiblePdf: it.visiblePdf,
-      };
-    });
-    return {
-      clienteId: p.clienteId,
-      items,
-      ivaHabilitado: p.ivaHabilitado,
-      estado,
-      descuentoGlobalPorcentaje: p.descuentoGlobalPorcentaje,
-      descuentoGlobalFijo: p.descuentoGlobalFijo,
-      descuentoAntesIva: p.descuentoAntesIva ?? true,
-      condicionesActivas: p.condicionesActivas ?? [],
-      notaAdicional: p.notaAdicional ?? undefined,
-    };
-  }
-
-  private buildFacturaUpdateRequest(f: Factura, estadoPago: string, montoParcialExplicito?: number): FacturaRequest {
-    const items: FacturaItemRequest[] = (f.items ?? []).map((it) => {
-      const manual = it.esTareaManual === true;
-      return {
-        materialId: manual ? undefined : it.materialId,
-        tareaManual: manual ? (it.descripcion?.trim() || undefined) : undefined,
-        cantidad: it.cantidad,
-        precioUnitario: it.precioUnitario,
-        aplicaIva: it.aplicaIva,
-      };
-    });
-    const fechaCreacionIso = f.fechaCreacion ? f.fechaCreacion.split('T')[0] : '';
-    const fechaExp =
-      typeof f.fechaExpedicion === 'string' ? f.fechaExpedicion : f.fechaExpedicion ?? fechaCreacionIso;
-    return {
-      clienteId: f.clienteId,
-      items,
-      presupuestoId: f.presupuestoId,
-      numeroFactura: f.numeroFactura,
-      fechaExpedicion: fechaExp || new Date().toISOString().split('T')[0],
-      fechaOperacion: f.fechaOperacion,
-      fechaVencimiento: f.fechaVencimiento,
-      regimenFiscal: f.regimenFiscal,
-      condicionesPago: f.condicionesPago,
-      metodoPago: f.metodoPago,
-      estadoPago,
-      montoCobrado:
-        estadoPago === 'Parcial'
-          ? (montoParcialExplicito != null ? montoParcialExplicito : f.montoCobrado != null ? +f.montoCobrado : undefined)
-          : undefined,
-      notas: f.notas,
-      ivaHabilitado: f.ivaHabilitado,
-    };
   }
 
   private patchPresupuestoReciente(updated: Presupuesto): void {

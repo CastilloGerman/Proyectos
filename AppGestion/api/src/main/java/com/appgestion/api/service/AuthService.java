@@ -112,7 +112,8 @@ public class AuthService {
         usuario.setNombre(request.nombre());
         usuario.setEmail(emailNormalized);
         usuario.setPasswordHash(passwordEncoder.encode(request.password()));
-        usuario.setRol(request.getRol());
+        // Public registration must never honor a client-supplied role (privilege escalation).
+        usuario.setRol("USER");
         usuario.setActivo(true);
         usuario.setReferredByUsuarioId(referralInv != null ? referralInv.getInviterUsuarioId() : null);
 
@@ -147,7 +148,8 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
-        Optional<Usuario> opt = usuarioRepository.findByEmail(request.email());
+        String emailLogin = request.email() != null ? request.email().trim() : "";
+        Optional<Usuario> opt = usuarioRepository.findByEmailIgnoreCase(emailLogin);
         if (opt.isEmpty()) {
             throw new IllegalArgumentException("Credenciales inválidas");
         }

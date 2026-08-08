@@ -192,6 +192,30 @@ public class FacturaService {
     }
 
     @Transactional
+    public FacturaResponse actualizarEstadoPago(Long id, String estadoPago, Double montoCobrado, Long usuarioId) {
+        Factura factura = facturaRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
+
+        if (Boolean.TRUE.equals(factura.getAnulada())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede editar una factura anulada");
+        }
+
+        String estadoNormalizado = normalizarEstadoPago(estadoPago);
+        factura.setEstadoPago(estadoNormalizado);
+        if (FacturaEstadoPago.PARCIAL.equals(estadoNormalizado)) {
+            Double importe = montoCobrado != null ? montoCobrado : factura.getMontoCobrado();
+            if (importe == null || importe <= 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El importe cobrado debe ser mayor que cero");
+            }
+            factura.setMontoCobrado(importe);
+        }
+
+        factura = facturaRepository.save(factura);
+        return facturaResponseMapper.toResponse(factura,
+                facturaCobroRepository.findByFacturaIdOrderByFechaDescCreatedAtDesc(factura.getId()));
+    }
+
+    @Transactional
     public FacturaResponse crearDesdePresupuesto(Long presupuestoId, Usuario usuario) {
         Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(presupuestoId, usuario.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
@@ -422,6 +446,20 @@ public class FacturaService {
 
             factura.getItems().add(item);
         }
+    }
+
+    private String normalizarEstadoPago(String estadoPago) {
+        String valor = estadoPago != null ? estadoPago.trim() : "";
+        if (FacturaEstadoPago.NO_PAGADA.equalsIgnoreCase(valor)) {
+            return FacturaEstadoPago.NO_PAGADA;
+        }
+        if (FacturaEstadoPago.PARCIAL.equalsIgnoreCase(valor)) {
+            return FacturaEstadoPago.PARCIAL;
+        }
+        if (FacturaEstadoPago.PAGADA.equalsIgnoreCase(valor)) {
+            return FacturaEstadoPago.PAGADA;
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado de pago no válido");
     }
 
     private void calcularTotales(Factura factura) {

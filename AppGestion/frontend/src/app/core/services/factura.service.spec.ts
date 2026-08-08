@@ -73,6 +73,20 @@ describe('FacturaService', () => {
     });
   });
 
+  describe('updateEstadoPago', () => {
+    it('PATCHes payment status to /facturas/:id/estado-pago', () => {
+      service.updateEstadoPago(5, 'Parcial', 40).subscribe((f) => {
+        expect(f.estadoPago).toBe('Parcial');
+        expect(f.montoCobrado).toBe(40);
+      });
+
+      const req = http.expectOne(`${API}/5/estado-pago`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ estadoPago: 'Parcial', montoCobrado: 40 });
+      req.flush({ id: 5, estadoPago: 'Parcial', montoCobrado: 40, items: [] });
+    });
+  });
+
   describe('registrarCobro', () => {
     it('POSTs cobro to /facturas/:id/cobros', () => {
       const cobro = { importe: 250, fecha: '2026-02-01', metodo: 'Transferencia' };
