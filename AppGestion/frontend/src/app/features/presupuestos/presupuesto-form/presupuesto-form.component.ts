@@ -30,8 +30,7 @@ import { CondicionesPresupuestoComponent } from '../condiciones-presupuesto/cond
 import { CalculadoraM2Component, CalculadoraResult } from '../calculadora-m2/calculadora-m2.component';
 import { HintBannerComponent } from '../../../shared/hint-banner/hint-banner.component';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-
-const IVA_RATE = 0.21;
+import { calcularPresupuestoCostes } from '../../../core/utils/presupuesto-costes.util';
 
 @Component({
     selector: 'app-presupuesto-form',
@@ -1094,55 +1093,24 @@ export class PresupuestoFormComponent implements OnInit {
     return result;
   }
 
-  private calcularCostesResumen(): {
-    subtotalItems: number;
-    descuentoPorcentaje: number;
-    descuentoFijo: number;
-    descuentoTotal: number;
-    baseIva: number;
-    iva: number;
-    total: number;
-  } {
+  private calcularCostesResumen(): ReturnType<typeof calcularPresupuestoCostes> {
     const allItems = this.getAllItems();
-    let subtotalItems = 0;
-    let baseIva = 0;
-    for (const { ctrl } of allItems) {
-      const v = ctrl.value;
-      const cantidad = +(v.cantidad ?? 0);
-      const precio = +(v.precioUnitario ?? 0);
-      const descPct = +(v.descuentoPorcentaje ?? 0);
-      const descFijo = +(v.descuentoFijo ?? 0);
-      let itemSub = cantidad * precio;
-      itemSub = itemSub * (1 - descPct / 100) - descFijo;
-      itemSub = Math.max(0, itemSub);
-      subtotalItems += itemSub;
-      if (v.aplicaIva) baseIva += itemSub;
-    }
-    const descPct = +(this.form.get('descuentoGlobalPorcentaje')?.value ?? 0);
-    const descFijo = +(this.form.get('descuentoGlobalFijo')?.value ?? 0);
-    const descuentoAntesIva = this.form.get('descuentoAntesIva')?.value !== false;
-    let subtotal = subtotalItems;
-    if (descuentoAntesIva) {
-      subtotal = subtotal * (1 - descPct / 100) - descFijo;
-      baseIva = baseIva * (1 - descPct / 100) - descFijo;
-    } else {
-      subtotal = subtotal * (1 - descPct / 100) - descFijo;
-    }
-    subtotal = Math.max(0, subtotal);
-    baseIva = Math.max(0, baseIva);
-    const descuentoTotal = subtotalItems - subtotal;
-    const ivaHabilitado = this.form.get('ivaHabilitado')?.value !== false;
-    const iva = ivaHabilitado ? baseIva * IVA_RATE : 0;
-    const total = subtotal + iva;
-    return {
-      subtotalItems,
-      descuentoPorcentaje: descPct,
-      descuentoFijo: descFijo,
-      descuentoTotal,
-      baseIva,
-      iva,
-      total,
-    };
+    return calcularPresupuestoCostes({
+      items: allItems.map(({ ctrl }) => {
+        const v = ctrl.value;
+        return {
+          cantidad: +(v.cantidad ?? 0),
+          precioUnitario: +(v.precioUnitario ?? 0),
+          descuentoPorcentaje: +(v.descuentoPorcentaje ?? 0),
+          descuentoFijo: +(v.descuentoFijo ?? 0),
+          aplicaIva: v.aplicaIva,
+        };
+      }),
+      descuentoGlobalPorcentaje: +(this.form.get('descuentoGlobalPorcentaje')?.value ?? 0),
+      descuentoGlobalFijo: +(this.form.get('descuentoGlobalFijo')?.value ?? 0),
+      descuentoAntesIva: this.form.get('descuentoAntesIva')?.value !== false,
+      ivaHabilitado: this.form.get('ivaHabilitado')?.value !== false,
+    });
   }
 
   onSubmit(): void {

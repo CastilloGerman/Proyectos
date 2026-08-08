@@ -37,6 +37,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
 import { AnularFacturaDialogComponent } from '../../../shared/anular-factura-dialog/anular-factura-dialog.component';
 import { FacturaParcialImporteDialogComponent } from '../../../shared/factura-parcial-importe-dialog/factura-parcial-importe-dialog.component';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { facturaTieneImportePendiente } from '../../../core/utils/factura-cobro.util';
 
 @Component({
     selector: 'app-factura-list',
@@ -727,7 +728,7 @@ export class FacturaListComponent implements OnInit {
     if (f.anulada) return false;
     if (f.estadoPago === 'Pagada') return false;
     if (!f.fechaVencimiento) return false;
-    if (!this.tieneImportePendiente(f)) return false;
+    if (!facturaTieneImportePendiente(f)) return false;
     if (!f.clienteEmail?.trim()) return false;
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
@@ -735,15 +736,6 @@ export class FacturaListComponent implements OnInit {
     venc.setHours(0, 0, 0, 0);
     const diasHastaVenc = Math.round((venc.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
     return diasHastaVenc <= 15;
-  }
-
-  private tieneImportePendiente(f: Factura): boolean {
-    if (f.estadoPago === 'Pagada') return false;
-    if (f.estadoPago === 'Parcial') {
-      const cobrado = f.montoCobrado ?? 0;
-      return f.total - cobrado > 0.009;
-    }
-    return true;
   }
 
   enviarRecordatorioCliente(factura: Factura): void {

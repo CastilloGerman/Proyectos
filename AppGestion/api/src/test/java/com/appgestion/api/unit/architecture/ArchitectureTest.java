@@ -5,13 +5,15 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.simpleName;
+import static com.tngtech.archunit.base.DescribedPredicate.not;
 
 /**
  * Reglas de capas acordes a Parte 2: reforzar límites sin exigir refactors masivos previos.
  * <p>
- * Nota: varios controllers inyectan repositorios (webhooks, dev, auditoría). Eso sigue siendo
- * deuda técnica documentada en la auditoría Parte 1; aquí no se añade regla que falle hasta
- * mover esos casos a servicios.
+ * Deuda pendiente: {@code DevController} y {@code ResendWebhookController} aún inyectan
+ * repositorios; migrar en sesiones separadas y retirar las exclusiones de
+ * {@link #controllers_should_not_depend_on_repositories}.
  */
 @AnalyzeClasses(packages = "com.appgestion.api")
 class ArchitectureTest {
@@ -22,6 +24,17 @@ class ArchitectureTest {
                 .that().resideInAPackage("..repository..")
                 .should().dependOnClassesThat().resideInAPackage("..controller..")
                 .because("los repositorios son adaptadores de persistencia; no deben conocer la capa HTTP")
+                .check(classes);
+    }
+
+    @ArchTest
+    void controllers_should_not_depend_on_repositories(JavaClasses classes) {
+        noClasses()
+                .that().resideInAPackage("..controller..")
+                .and(not(simpleName("DevController")))
+                .and(not(simpleName("ResendWebhookController")))
+                .should().dependOnClassesThat().resideInAPackage("..repository..")
+                .because("los controllers delegan en servicios; no acceden a persistencia directamente")
                 .check(classes);
     }
 

@@ -50,6 +50,7 @@ public class AuditAccessService {
 
     private final AuditAccessEventRepository auditAccessEventRepository;
     private final UsuarioRepository usuarioRepository;
+    private final CurrentUserService currentUserService;
     private final ObjectMapper objectMapper;
 
     @Value("${app.audit.access.anonymize-ip:true}")
@@ -57,9 +58,11 @@ public class AuditAccessService {
 
     public AuditAccessService(AuditAccessEventRepository auditAccessEventRepository,
                               UsuarioRepository usuarioRepository,
+                              CurrentUserService currentUserService,
                               ObjectMapper objectMapper) {
         this.auditAccessEventRepository = auditAccessEventRepository;
         this.usuarioRepository = usuarioRepository;
+        this.currentUserService = currentUserService;
         this.objectMapper = objectMapper;
     }
 
@@ -179,7 +182,15 @@ public class AuditAccessService {
     }
 
     @Transactional(readOnly = true)
-    public AuditAccessPageResponse listForCurrentUser(Usuario current, int page, int size, Instant from, Instant to,
+    public AuditAccessPageResponse listHistorialAccesos(int page, int size, Instant from, Instant to,
+                                                      AuditAccessEventType eventType, Boolean successFilter,
+                                                      String ipContains, String q, Long filterUsuarioId) {
+        return listHistorialAccesosParaUsuario(currentUserService.getCurrentUsuario(), page, size, from, to,
+                eventType, successFilter, ipContains, q, filterUsuarioId);
+    }
+
+    @Transactional(readOnly = true)
+    private AuditAccessPageResponse listHistorialAccesosParaUsuario(Usuario current, int page, int size, Instant from, Instant to,
                                                       AuditAccessEventType eventType, Boolean successFilter,
                                                       String ipContains, String q, Long filterUsuarioId) {
         boolean admin = isApplicationAdmin(current);
@@ -284,7 +295,15 @@ public class AuditAccessService {
     }
 
     @Transactional(readOnly = true)
-    public byte[] export(Usuario current, String format, Instant from, Instant to, AuditAccessEventType eventType,
+    public byte[] exportHistorialAccesos(String format, Instant from, Instant to, AuditAccessEventType eventType,
+                                         Boolean successFilter, String ipContains, String q, Long filterUsuarioId,
+                                         HttpServletRequest request) {
+        return exportHistorialAccesosParaUsuario(currentUserService.getCurrentUsuario(), format, from, to, eventType,
+                successFilter, ipContains, q, filterUsuarioId, request);
+    }
+
+    @Transactional(readOnly = true)
+    private byte[] exportHistorialAccesosParaUsuario(Usuario current, String format, Instant from, Instant to, AuditAccessEventType eventType,
                          Boolean successFilter, String ipContains, String q, Long filterUsuarioId,
                          HttpServletRequest request) {
         boolean admin = isApplicationAdmin(current);

@@ -1,10 +1,13 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.config.CacheNames;
 import com.appgestion.api.domain.entity.Material;
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.request.MaterialRequest;
 import com.appgestion.api.dto.response.MaterialResponse;
 import com.appgestion.api.repository.MaterialRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +31,7 @@ public class MaterialService {
                 .toList();
     }
 
+    @Cacheable(cacheNames = CacheNames.MATERIALES_TOP_USADOS, key = "#usuarioId")
     public List<MaterialResponse> findTop5MasUsados(Long usuarioId) {
         return materialRepository.findTop5MasUsadosByUsuarioId(usuarioId).stream()
                 .map(this::toResponse)
@@ -41,6 +45,7 @@ public class MaterialService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.MATERIALES_TOP_USADOS, key = "#usuario.id")
     public MaterialResponse crear(MaterialRequest request, Usuario usuario) {
         Material material = new Material();
         material.setUsuario(usuario);
@@ -50,6 +55,7 @@ public class MaterialService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.MATERIALES_TOP_USADOS, key = "#usuarioId")
     public MaterialResponse actualizar(Long id, MaterialRequest request, Long usuarioId) {
         Material material = Objects.requireNonNull(
                 materialRepository.findByIdAndUsuarioId(
@@ -61,6 +67,7 @@ public class MaterialService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.MATERIALES_TOP_USADOS, key = "#usuarioId")
     public void eliminar(Long id, Long usuarioId) {
         if (!materialRepository.existsByIdAndUsuarioId(Objects.requireNonNull(id), Objects.requireNonNull(usuarioId))) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Material no encontrado");

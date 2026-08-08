@@ -1,10 +1,7 @@
 package com.appgestion.api.controller;
 
-import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.domain.enums.AuditAccessEventType;
 import com.appgestion.api.dto.response.AuditAccessPageResponse;
-import com.appgestion.api.repository.UsuarioRepository;
-import com.appgestion.api.security.SecurityUtils;
 import com.appgestion.api.service.AuditAccessService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -25,11 +22,9 @@ import java.time.Instant;
 public class AuditAccessController {
 
     private final AuditAccessService auditAccessService;
-    private final UsuarioRepository usuarioRepository;
 
-    public AuditAccessController(AuditAccessService auditAccessService, UsuarioRepository usuarioRepository) {
+    public AuditAccessController(AuditAccessService auditAccessService) {
         this.auditAccessService = auditAccessService;
-        this.usuarioRepository = usuarioRepository;
     }
 
     @GetMapping
@@ -43,8 +38,7 @@ public class AuditAccessController {
             @RequestParam(required = false) String ip,
             @RequestParam(required = false) String q,
             @RequestParam(required = false) Long usuarioId) {
-        Usuario current = SecurityUtils.getCurrentUsuario(usuarioRepository);
-        return auditAccessService.listForCurrentUser(current, page, size, from, to, eventType, success, ip, q, usuarioId);
+        return auditAccessService.listHistorialAccesos(page, size, from, to, eventType, success, ip, q, usuarioId);
     }
 
     @GetMapping("/export")
@@ -58,8 +52,7 @@ public class AuditAccessController {
             @RequestParam(required = false) String q,
             @RequestParam(required = false) Long usuarioId,
             HttpServletRequest request) {
-        Usuario current = SecurityUtils.getCurrentUsuario(usuarioRepository);
-        byte[] body = auditAccessService.export(current, format, from, to, eventType, success, ip, q, usuarioId, request);
+        byte[] body = auditAccessService.exportHistorialAccesos(format, from, to, eventType, success, ip, q, usuarioId, request);
         String ext = "json".equalsIgnoreCase(format) ? "json" : "csv";
         String mime = "json".equalsIgnoreCase(format) ? MediaType.APPLICATION_JSON_VALUE : "text/csv";
         String filename = "historial-accesos." + ext;

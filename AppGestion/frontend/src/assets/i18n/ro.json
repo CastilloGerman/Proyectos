@@ -1100,7 +1100,6 @@
     "ph_total": "De plată"
   },
   "acctAudit": {
-    "back": "",
     "title": "Access history",
     "subUser": "Logins and security‑sensitive actions. You only see your user.",
     "subAdmin": "As admin you see the whole organisation.",
@@ -1124,6 +1123,7 @@
     "loadRows": "Loading events…",
     "loadFail": "Couldn’t load history.",
     "retry": "Retry",
+    "colWhen": "Date (UTC)",
     "colUser": "User",
     "colEvent": "Event",
     "colIp": "IP",
@@ -1155,7 +1155,9 @@
     "ev_TOTP_SETUP_CANCELLED": "2FA setup cancelled",
     "ev_AUDIT_EXPORT_JSON": "Audit export (JSON)",
     "ev_AUDIT_EXPORT_CSV": "Audit export (CSV)",
-    "foot": "Audit rows are append‑only; retention is server‑policy. IPs may appear masked."
+    "foot": "Audit rows are append‑only; retention is server‑policy. IPs may appear masked.",
+    "exportCsv": "CSV",
+    "exportJson": "JSON"
   },
   "acctHelp": {
     "back": "Back to dashboard",
@@ -1203,7 +1205,6 @@
     "faq_iva_a": "Toggle VAT per document; totals match. Confirm with your adviser."
   },
   "acctSess": {
-    "back": "",
     "title": "Active sessions",
     "lead": "Each sign‑in logs browser/OS/IP for accountability. Close other devices without touching this browser.",
     "tokenHint": "This browser token expires about",
@@ -1285,8 +1286,6 @@
     "hUnpaid": "Multiple failed charges — settle in Stripe.",
     "hCanceled": "Canceled — resubscribe or check portal.",
     "hTrialExpiredRo": "Read‑only until you subscribe.",
-    "remDaysOne": "{{days}} days",
-    "remDaysOther": "{{days}} days",
     "perMonthLbl": "{{v}} monthly",
     "perYearLbl": "{{y}} yearly"
   },
