@@ -30,15 +30,12 @@
       <div class="dh-alert dh-alert--info" role="note">
         <mat-icon class="dh-alert__icon">account_balance</mat-icon>
         <div class="dh-alert__body">
-          <strong class="dh-alert__title">IVA soportado (compras / gastos) no disponible en esta versión</strong>
+          <strong class="dh-alert__title">IVA soportado desde tus gastos</strong>
           <p>
             En el 303 intervienen dos lados: el IVA que cobras a clientes (<strong>repercutido</strong>) y el IVA de tus compras (<strong>soportado</strong>). La diferencia orienta lo que suele ingresarse a Hacienda.
           </p>
           <p>
-            Aquí solo hay registro de <strong>ventas</strong>, por eso el IVA soportado se muestra como <strong>0&nbsp;€</strong>. El resultado orientativo puede ser <strong>mayor</strong> que el que te corresponda en la práctica.
-          </p>
-          <p class="dh-alert__emphasis">
-            Incluye tus gastos manualmente en tu propia hoja o gestoría hasta que exista un módulo de compras en la app.
+            Registra tus compras en <a routerLink="/gastos">Gastos</a> para que el IVA soportado de este trimestre se sume aquí automáticamente.
           </p>
         </div>
       </div>
@@ -76,10 +73,10 @@
             <mat-panel-title>IVA repercutido, IVA soportado y “resultado”</mat-panel-title>
           </mat-expansion-panel-header>
           <p>
-            El <strong>IVA repercutido</strong> refleja lo asociado a tus ventas registradas aquí. El <strong>IVA soportado</strong> sería el de tus compras y gastos deducibles; al no tener aún un módulo de gastos, lo mostramos en cero.
+            El <strong>IVA repercutido</strong> refleja lo asociado a tus ventas registradas aquí. El <strong>IVA soportado</strong> se calcula a partir de los gastos que registres en la sección Gastos (fecha de compra dentro del trimestre).
           </p>
           <p>
-            Por eso el <strong>resultado orientativo</strong> (repercutido menos soportado) puede verse “demasiado alto”: falta restar el IVA de tus compras. En una siguiente iteración se podrá registrar compras en la aplicación.
+            Si aún no has registrado gastos del trimestre, el soportado será 0&nbsp;€ y el resultado orientativo puede verse mayor de lo real hasta que incorpores tus compras.
           </p>
         </mat-expansion-panel>
         <mat-expansion-panel>
@@ -160,21 +157,25 @@
             <span class="dh-v">{{ r.ivaRepercutido | number : '1.2-2' }} €</span>
           </div>
           <div class="dh-row dh-row--muted">
-            <span class="dh-k">IVA soportado <span class="dh-tag">solo ventas en app</span></span>
+            <span class="dh-k">IVA soportado <span class="dh-tag">desde gastos</span></span>
             <span class="dh-v">{{ r.ivaSoportado | number : '1.2-2' }} €</span>
           </div>
-          <p class="dh-inline-hint">
-            Sin compras registradas en la aplicación, este valor permanece en 0&nbsp;€; no sustituye el IVA deducible de tus gastos reales.
-          </p>
+          @if (r.ivaSoportado <= 0) {
+            <p class="dh-inline-hint">
+              No hay gastos registrados en este trimestre. Añádelos en <a routerLink="/gastos">Gastos</a> para restar su IVA del resultado orientativo.
+            </p>
+          }
           <div class="dh-row dh-result" [class.dh-result--favor]="!r.resultadoEsIngreso">
             <span class="dh-k">
               {{ r.resultadoEsIngreso ? 'Resultado orientativo (ingreso)' : 'Resultado orientativo (compensación / a favor)' }}
             </span>
             <span class="dh-v">{{ r.resultadoIva | number : '1.2-2' }} €</span>
           </div>
-          <p class="dh-result-footnote">
-            Con IVA soportado en 0&nbsp;€, este importe no representa la cuota a ingresar o compensar en el modelo oficial hasta que incorpores tus compras.
-          </p>
+          @if (r.ivaSoportado <= 0) {
+            <p class="dh-result-footnote">
+              Con IVA soportado en 0&nbsp;€, el resultado puede ser mayor que en la práctica hasta que registres tus compras del trimestre.
+            </p>
+          }
           <p class="dh-nota">{{ r.ivaSoportadoNota }}</p>
           @for (a of r.advertencias; track a) {
             <p class="dh-adv">• {{ a }}</p>

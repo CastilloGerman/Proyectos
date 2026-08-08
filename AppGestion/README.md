@@ -1,6 +1,6 @@
 # AppGestion
 
-**Documentación adicional:** [Despliegue en producción](docs/DEPLOY.md) · [OAuth correo Gmail/Microsoft (local)](docs/EMAIL-OAUTH-SETUP.md) · [Modelo organización / tenant](docs/TENANT-MODEL.md) · [Dependencias](docs/DEPENDENCIES.md) · [Diagnóstico recuperación de contraseña / correo](docs/TROUBLESHOOTING-PASSWORD-RESET.md)
+**Documentación adicional:** [Despliegue en producción](docs/DEPLOY.md) · [OAuth correo Gmail/Microsoft (local)](docs/EMAIL-OAUTH-SETUP.md) · [Modelo organización / tenant](docs/TENANT-MODEL.md) · [Dependencias](docs/DEPENDENCIES.md) · [Frontend](frontend/README.md) · [Diagnóstico recuperación de contraseña / correo](docs/TROUBLESHOOTING-PASSWORD-RESET.md)
 
 ---
 
@@ -28,13 +28,13 @@ Versiones tomadas de `pom.xml`, `api/pom.xml`, `frontend/package.json` y `.nvmrc
 
 | Tecnología | Versión / criterio |
 |------------|-------------------|
-| **Java** | **21** (`java.version` en `api/pom.xml`) |
-| **Spring Boot** | **4.0.5** (parent `spring-boot-starter-parent` en `api/pom.xml`) |
+| **Java** | **21** (`java.version` en `pom.xml` raíz) |
+| **Spring Boot** | **4.0.6** (parent `spring-boot-starter-parent` en `pom.xml` raíz) |
 | **Maven** | **3.9+** (no hay Maven Wrapper en el repo; usar Maven instalado) |
 | **Node.js** | **`>=24.14.1`** (`engines` en `frontend/package.json`; `.nvmrc`: `24.14.1`) |
-| **Angular** | **~20.3.18** (`@angular/core` y paquetes alineados en `package.json`) |
-| **Angular CLI** | **^20.3.21** (`devDependencies`) |
-| **TypeScript** | **~5.9.3** (`frontend/package.json`) |
+| **Angular** | **~21.2** (`@angular/core` y paquetes alineados en `frontend/package.json`) |
+| **Angular CLI** | **^21.2** (`devDependencies`) |
+| **TypeScript** | **~6.0** (`frontend/package.json`) |
 | **PostgreSQL** | Servidor accesible por JDBC; por defecto la API usa **`localhost:5433`** y base **`appgestion`** (ver `application.yml`) |
 
 ---
@@ -44,6 +44,10 @@ Versiones tomadas de `pom.xml`, `api/pom.xml`, `frontend/package.json` y `.nvmrc
 Monorepo Maven en la raíz (`packaging` **pom**) con un módulo **`api`**. El frontend **no** es módulo Maven; es una aplicación **Angular** en `frontend/`.
 
 Patrón habitual en la API: **capas** `controller` → `service` → `repository` (Spring Data JPA), entidades en `domain/entity`, DTOs en `dto`, configuración en `config`, seguridad en `security`, migraciones **Flyway** en `resources/db/migration`, jobs en `scheduler`.
+
+Los controllers **no** acceden a repositorios directamente (regla **ArchUnit** en `api/src/test/.../ArchitectureTest.java`). Quedan por migrar a servicio: `DevController`, `ResendWebhookController`.
+
+**Caché in-memory (Caffeine):** `GET /materiales/top-usados` se cachea por **`usuarioId`** (TTL 5 min; invalidación al crear/editar/borrar material). Sin Redis ni infra adicional.
 
 ```mermaid
 flowchart TB
@@ -84,13 +88,13 @@ AppGestion/
 │       └── service/
 │   └── src/main/resources/
 │       ├── application.yml
-│       └── db/migration/        # Flyway V1..V23
+│       └── db/migration/        # Flyway V1..V36
 ├── frontend/
 │   ├── package.json
 │   ├── angular.json
 │   ├── proxy.conf.js            # /api -> http://localhost:8081 (pathRewrite)
 │   └── src/app/
-│       ├── core/                # Auth, servicios HTTP, modelos
+│       ├── core/                # Auth, servicios HTTP, modelos, utils (p. ej. cálculo presupuesto/cobro)
 │       ├── features/            # auth, clientes, facturas, presupuestos, cuenta, etc.
 │       └── shared/
 ├── docs/
@@ -184,6 +188,21 @@ Documentación: [Stripe subscription upsells](https://docs.stripe.com/payments/c
 
 ---
 
+## 🧪 Tests
+
+| Módulo | Comando | Runner / notas |
+|--------|---------|----------------|
+| **API** | `mvn test` (desde `api/`) | JUnit 5, Mockito, Testcontainers (PostgreSQL en integración), ArchUnit |
+| **Frontend** | `npm test` (desde `frontend/`) | Vitest vía `ng test` (`@angular/build:unit-test`) |
+
+**Backend:** suites de integración (auth JWT/TOTP, multitenancy, facturas, presupuestos, fiscal, PDF, validación/IDOR) y unitarias (servicios, Stripe webhook, arquitectura de capas, caché multi-tenant de materiales).
+
+**Frontend:** specs en `core/auth/` (servicio, guards, interceptor, JWT sid), `core/utils/` (cálculo de totales/IVA de presupuesto, importe pendiente de cobro en facturas), servicios HTTP (`factura`, `presupuesto`, etc.) e i18n.
+
+Perfil de test API: `@ActiveProfiles("test")` con H2 en memoria (`application-test.properties`).
+
+---
+
 ## 🔌 API REST
 
 Prefijos **tal como los expone el backend** (sin `/api`; el front añade `/api` y el proxy lo quita).
@@ -248,11 +267,23 @@ Prefijos **tal como los expone el backend** (sin `/api`; el front añade `/api` 
 | Método | Ruta | Descripción breve |
 |--------|------|-------------------|
 | GET | `/materiales` | Listar |
-| GET | `/materiales/top-usados` | Más usados |
+| GET | `/materiales/top-usados` | Más usados en presupuestos (caché Caffeine 5 min por usuario) |
 | GET | `/materiales/{id}` | Detalle (id numérico) |
 | POST | `/materiales` | Crear |
 | PUT | `/materiales/{id}` | Actualizar |
 | DELETE | `/materiales/{id}` | Eliminar |
+
+### Gastos (`/gastos`)
+
+Registro manual de compras/gastos con IVA soportado. La cuota IVA de los gastos del trimestre se agrega al resumen orientativo **`GET /fiscal/modelo303`** (`ivaSoportado`). Aislamiento por `usuario_id`.
+
+| Método | Ruta | Descripción breve |
+|--------|------|-------------------|
+| GET | `/gastos` | Listar (orden por fecha desc) |
+| GET | `/gastos/{id}` | Detalle |
+| POST | `/gastos` | Crear |
+| PUT | `/gastos/{id}` | Actualizar |
+| DELETE | `/gastos/{id}` | Eliminar |
 
 ### Presupuestos (`/presupuestos`)
 
@@ -333,28 +364,29 @@ Servicios Spring (`@Service`) y utilidades clave:
 - **Auth:** `AuthService`, `SessionService`, `InvitacionService`, `CurrentUserService`, `JwtService`, `UserDetailsServiceImpl`, `TotpService`
 - **Organización:** `OrganizationService`
 - **Clientes y panel:** `ClienteService`, `ClientePanelService`
-- **Materiales:** `MaterialService`
+- **Materiales:** `MaterialService` (incl. ranking top-usados cacheado)
 - **Presupuestos y PDF:** `PresupuestoService`, `PresupuestoPdfService`, `PlantillasPdfPreviewService`
 - **Facturas:** `FacturaService`, `FacturaPdfService`, `FacturaNumeroService`, `FacturaCobroService`, `FacturaEmailService`, `FacturaPaymentLinkService`, `FacturaRecordatorioService`, `FacturaRecordatorioClienteService`
 - **Empresa / correo:** `EmpresaService`, `EmailService`, `SupportService`
-- **Suscripción:** `SubscriptionService`, `StripeService`
+- **Suscripción:** `SubscriptionService`, `StripeService`, `StripeWebhookService`
 - **Notificaciones:** `NotificacionService`
 - **Auditoría:** `AuditAccessService`, `AuditAccessCleanupService`
 - **Limpieza sesiones:** `UsuarioSesionCleanupService`
-- **Utilidades (no `@Service`):** `DocumentTemplateService`, `WhatsAppLinkService` (plantillas texto PDF, enlaces WhatsApp)
+- **Utilidades frontend (`core/utils/`):** `presupuesto-costes.util`, `factura-cobro.util` (preview de totales/cobros en formularios)
+- **Utilidades API (no `@Service`):** `DocumentTemplateService`, `WhatsAppLinkService` (plantillas texto PDF, enlaces WhatsApp)
+
+**Config relevante:** `CacheConfig` (Caffeine), `SecurityConfig`, `GlobalExceptionHandler` (`@RestControllerAdvice`).
 
 **Schedulers:** `FacturaRecordatorioJob`, `TrialExpirationJob`, `UsuarioSesionCleanupJob`, `AuditAccessCleanupJob`.
-
-**Consejo global:** `GlobalExceptionHandler` (`@RestControllerAdvice`).
 
 ---
 
 ## 🗄️ Base de datos (Flyway)
 
-Migraciones en `api/src/main/resources/db/migration/` (**V1** a **V23**), incluyendo entre otras:
+Migraciones en `api/src/main/resources/db/migration/` (**V1** a **V36**), incluyendo entre otras:
 
 - **V1:** esquema inicial (`usuarios`, `empresas`, `clientes`, `materiales`, `presupuestos`, `presupuesto_items`, `facturas`, `factura_items`, …)
-- Evolución posterior: reset password, recordatorios, cobros, organizaciones/membresías, invitaciones, datos fiscales, logo, métodos de cobro, TOTP, notificaciones, sesiones, auditoría de accesos, rubro autónomo, recordatorios cliente, etc.
+- Evolución posterior: reset password, recordatorios, cobros, organizaciones/membresías, invitaciones, datos fiscales, logo, métodos de cobro, TOTP, notificaciones, sesiones, auditoría de accesos, rubro autónomo, recordatorios cliente, anticipo fiscal, email híbrido/outbox, Stripe billing, índices de rendimiento, etc.
 
 Hibernate `ddl-auto`: **`validate`** por defecto y en `prod`; **`update`** solo en perfil **`local`**.
 
@@ -363,4 +395,5 @@ Hibernate `ddl-auto`: **`validate`** por defecto y en `prod`; **`update`** solo 
 ## 📚 Dependencias y licencia
 
 - Detalle de librerías: [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) y [`frontend/README.md`](frontend/README.md).
+- **Documentación:** mantener alineadas versiones con `pom.xml`, `frontend/package.json` y migraciones Flyway (`db/migration/`).
 - **Licencia:** proyecto privado.

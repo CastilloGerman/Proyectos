@@ -7,6 +7,7 @@
     "budgets": "Presupuestos",
     "quickBudget": "Presup. rápido",
     "invoices": "Facturas",
+    "expenses": "Gastos",
     "tax": "Hacienda"
   },
   "shell": {
@@ -45,6 +46,8 @@
     "cancel": "Cancelar",
     "save": "Guardar",
     "create": "Crear",
+    "edit": "Editar",
+    "delete": "Eliminar",
     "back": "Volver"
   },
   "invite": {
@@ -65,6 +68,45 @@
     "copyDone": "Enlace copiado.",
     "copyFail": "No pudimos copiar el enlace.",
     "sendErrorFallback": "No pudimos enviar la invitación. Revisa la dirección e inténtalo de nuevo."
+  },
+  "gastos": {
+    "title": "Gastos",
+    "new": "Nuevo gasto",
+    "newTitle": "Nuevo gasto",
+    "editTitle": "Editar gasto",
+    "empty": "No hay gastos registrados. Añade uno para llevar el IVA soportado.",
+    "hintTitle": "¿Para qué sirven los gastos?",
+    "hintStep1": "Registra compras y gastos con proveedor, importe e IVA.",
+    "hintStep2": "El IVA soportado se incluye en el resumen del Modelo 303 (Hacienda).",
+    "hintStep3": "Puedes editar o eliminar cualquier gasto cuando lo necesites.",
+    "colDate": "Fecha",
+    "colSupplier": "Proveedor",
+    "colConcept": "Concepto",
+    "colBase": "Base",
+    "colVat": "IVA",
+    "colCategory": "Categoría",
+    "fieldSupplier": "Proveedor",
+    "fieldConcept": "Concepto",
+    "fieldDate": "Fecha",
+    "fieldBase": "Base imponible",
+    "fieldVatType": "Tipo IVA",
+    "fieldCategory": "Categoría",
+    "previewVat": "Cuota IVA",
+    "previewTotal": "Total",
+    "deleteTitle": "Eliminar gasto",
+    "deleteMessage": "¿Eliminar \"{{concepto}}\"?",
+    "deleted": "Gasto eliminado",
+    "deleteFail": "No se pudo eliminar el gasto",
+    "created": "Gasto creado",
+    "saved": "Gasto guardado",
+    "saveFail": "No se pudo guardar el gasto",
+    "loadFail": "No se pudo cargar el gasto",
+    "category": {
+      "SUMINISTROS": "Suministros",
+      "MATERIAL": "Material",
+      "DIETAS": "Dietas",
+      "OTROS": "Otros"
+    }
   },
   "snack": {
     "tax347LoadFail": "No pudimos cargar la información del modelo 347.",

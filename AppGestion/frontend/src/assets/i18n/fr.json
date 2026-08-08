@@ -7,6 +7,7 @@
     "budgets": "Devis",
     "quickBudget": "Devis rapide",
     "invoices": "Factures",
+    "expenses": "Dépenses",
     "tax": "Finances publiques"
   },
   "shell": {
@@ -45,6 +46,8 @@
     "cancel": "Annuler",
     "save": "Enregistrer",
     "create": "Créer",
+    "edit": "Modifier",
+    "delete": "Supprimer",
     "back": "Retour"
   },
   "invite": {
@@ -702,6 +705,45 @@
   },
   "lang": {
     "switcherAria": "Changer la langue de l’application"
+  },
+  "gastos": {
+    "title": "Dépenses",
+    "new": "Nouvelle dépense",
+    "newTitle": "Nouvelle dépense",
+    "editTitle": "Modifier la dépense",
+    "empty": "Aucune dépense enregistrée.",
+    "hintTitle": "À quoi servent les dépenses ?",
+    "hintStep1": "Enregistrez achats et dépenses avec fournisseur, montant et TVA.",
+    "hintStep2": "La TVA déductible est incluse dans le résumé du modèle 303.",
+    "hintStep3": "Vous pouvez modifier ou supprimer une dépense à tout moment.",
+    "colDate": "Date",
+    "colSupplier": "Fournisseur",
+    "colConcept": "Libellé",
+    "colBase": "Base",
+    "colVat": "TVA",
+    "colCategory": "Catégorie",
+    "fieldSupplier": "Fournisseur",
+    "fieldConcept": "Libellé",
+    "fieldDate": "Date",
+    "fieldBase": "Base imposable",
+    "fieldVatType": "Taux TVA",
+    "fieldCategory": "Catégorie",
+    "previewVat": "Montant TVA",
+    "previewTotal": "Total",
+    "deleteTitle": "Supprimer la dépense",
+    "deleteMessage": "Supprimer « {{concepto}} » ?",
+    "deleted": "Dépense supprimée",
+    "deleteFail": "Impossible de supprimer la dépense",
+    "created": "Dépense créée",
+    "saved": "Dépense enregistrée",
+    "saveFail": "Impossible d'enregistrer la dépense",
+    "loadFail": "Impossible de charger la dépense",
+    "category": {
+      "SUMINISTROS": "Fournitures",
+      "MATERIAL": "Matériel",
+      "DIETAS": "Repas",
+      "OTROS": "Autres"
+    }
   },
   "snack": {
     "tax347LoadFail": "Impossible de charger les informations du modèle 347.",

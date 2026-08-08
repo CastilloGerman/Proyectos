@@ -7,6 +7,7 @@
     "budgets": "Devize",
     "quickBudget": "Deviz rapid",
     "invoices": "Facturi",
+    "expenses": "Cheltuieli",
     "tax": "Fisc"
   },
   "shell": {
@@ -45,6 +46,8 @@
     "cancel": "Anulează",
     "save": "Salvează",
     "create": "Creează",
+    "edit": "Editează",
+    "delete": "Șterge",
     "back": "Înapoi"
   },
   "invite": {
@@ -702,6 +705,45 @@
   },
   "lang": {
     "switcherAria": "Schimbă limba aplicației"
+  },
+  "gastos": {
+    "title": "Cheltuieli",
+    "new": "Cheltuială nouă",
+    "newTitle": "Cheltuială nouă",
+    "editTitle": "Editează cheltuiala",
+    "empty": "Nu există cheltuieli înregistrate.",
+    "hintTitle": "La ce servesc cheltuielile?",
+    "hintStep1": "Înregistrați cumpărăturile cu furnizor, sumă și TVA.",
+    "hintStep2": "TVA deductibilă apare în rezumatul modelului 303.",
+    "hintStep3": "Puteți edita sau șterge orice cheltuială.",
+    "colDate": "Dată",
+    "colSupplier": "Furnizor",
+    "colConcept": "Concept",
+    "colBase": "Bază",
+    "colVat": "TVA",
+    "colCategory": "Categorie",
+    "fieldSupplier": "Furnizor",
+    "fieldConcept": "Concept",
+    "fieldDate": "Dată",
+    "fieldBase": "Bază impozabilă",
+    "fieldVatType": "Cotă TVA",
+    "fieldCategory": "Categorie",
+    "previewVat": "TVA",
+    "previewTotal": "Total",
+    "deleteTitle": "Șterge cheltuiala",
+    "deleteMessage": "Ștergeți « {{concepto}} »?",
+    "deleted": "Cheltuială ștearsă",
+    "deleteFail": "Nu s-a putut șterge cheltuiala",
+    "created": "Cheltuială creată",
+    "saved": "Cheltuială salvată",
+    "saveFail": "Nu s-a putut salva cheltuiala",
+    "loadFail": "Nu s-a putut încărca cheltuiala",
+    "category": {
+      "SUMINISTROS": "Utilități",
+      "MATERIAL": "Materiale",
+      "DIETAS": "Diurne",
+      "OTROS": "Altele"
+    }
   },
   "snack": {
     "tax347LoadFail": "Nu am putut încărca informațiile pentru modelul 347.",

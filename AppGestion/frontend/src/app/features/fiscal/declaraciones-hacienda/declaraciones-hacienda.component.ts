@@ -13,6 +13,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { RouterLink } from '@angular/router';
 import { FiscalService } from '../../../core/services/fiscal.service';
 import { FiscalCriterio, Modelo303Resumen, Modelo347Resumen } from '../../../core/models/fiscal.model';
 import { FiscalAlertaBannerComponent } from '../fiscal-alerta-banner/fiscal-alerta-banner.component';
@@ -36,6 +37,7 @@ const DEFAULT_DOC_TITLE = 'Noemí - Web de Gestión';
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatExpansionModule,
+    RouterLink,
     FiscalAlertaBannerComponent,
   ],
   templateUrl: './declaraciones-hacienda.component.html',

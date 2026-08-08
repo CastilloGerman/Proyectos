@@ -30,8 +30,11 @@ public class FiscalService {
             supera 3.005,06 €. No sustituye el Modelo 347 ni su presentación. Verifica datos fiscales y exclusiones en normativa vigente.""";
 
     private static final String NOTA_IVA_SOPORTADO = """
-            El IVA soportado (compras/gastos) no está disponible en la aplicación en esta versión; se muestra 0 €. \
-            Cuando exista registro de compras, se podrá incluir en el cálculo.""";
+            El IVA soportado (compras/gastos) no está registrado en este trimestre; se muestra 0 €. \
+            Registra tus gastos en la sección Gastos para incluirlos en el cálculo.""";
+
+    private static final String NOTA_IVA_SOPORTADO_CON_GASTOS = """
+            IVA soportado calculado a partir de los gastos registrados en la aplicación para este trimestre.""";
 
     private final FiscalQueryRepository fiscalQueryRepository;
 
@@ -90,7 +93,20 @@ public class FiscalService {
         BigDecimal ivaRep = toMoney(row[1]);
         long numFacturas = row[2] != null ? ((Number) row[2]).longValue() : 0L;
 
-        BigDecimal ivaSop = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal ivaSop = aggregateIvaSoportadoGastos(usuarioId, desde, hasta, criterio);
+        if (criterio == FiscalCriterioImputacion.CAJA) {
+            advertencias.add(
+                    "IVA soportado (gastos): en criterio caja se imputa por la fecha del gasto; " +
+                            "aún no hay fecha de pago registrada en compras."
+            );
+        } else {
+            advertencias.add(
+                    "IVA soportado (gastos): suma de cuota IVA de gastos con fecha de compra dentro del trimestre."
+            );
+        }
+        String notaIvaSoportado = ivaSop.compareTo(BigDecimal.ZERO) > 0
+                ? NOTA_IVA_SOPORTADO_CON_GASTOS.trim()
+                : NOTA_IVA_SOPORTADO.trim();
         BigDecimal resultado = ivaRep.subtract(ivaSop).setScale(2, RoundingMode.HALF_UP);
 
         return new Modelo303ResumenResponse(
@@ -103,8 +119,8 @@ public class FiscalService {
                 base,
                 ivaRep,
                 ivaSop,
-                false,
-                NOTA_IVA_SOPORTADO.trim(),
+                true,
+                notaIvaSoportado,
                 resultado,
                 resultado.compareTo(BigDecimal.ZERO) >= 0,
                 numFacturas,
@@ -165,6 +181,18 @@ public class FiscalService {
             case 4 -> LocalDate.of(anio, 12, 31);
             default -> throw new IllegalArgumentException("Trimestre inválido");
         };
+    }
+
+    private BigDecimal aggregateIvaSoportadoGastos(
+            Long usuarioId,
+            LocalDate desde,
+            LocalDate hasta,
+            FiscalCriterioImputacion criterio
+    ) {
+        Object raw = criterio == FiscalCriterioImputacion.CAJA
+                ? fiscalQueryRepository.aggregateGastosModelo303Caja(usuarioId, desde, hasta)
+                : fiscalQueryRepository.aggregateGastosModelo303Devengo(usuarioId, desde, hasta);
+        return toMoney(raw);
     }
 
     private static BigDecimal toMoney(Object value) {

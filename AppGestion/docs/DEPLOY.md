@@ -202,7 +202,7 @@ Revisión orientativa antes del go-live (complementa §1–2). No sustituye un p
 
 ## 5. Frontend (Angular)
 
-- El proyecto usa **Angular 21.x** en dependencias (`package.json`); las guías genéricas “Angular 20” pueden diferir en detalles de CLI.
+- Stack frontend: **Angular 21.x** y **TypeScript 6.x** (`frontend/package.json`). Tests con **Vitest** (`npm test`).
 - **npm en CI y en el servidor de build:** si el repositorio incluye [`frontend/.npmrc`](c:\Users\German\Documents\Proyectos\AppGestion\frontend\.npmrc) con `legacy-peer-deps=true` (p. ej. para alinear TypeScript 6.x con peers de Angular), **respétalo** al ejecutar `npm ci` o `npm install` en el pipeline; no lo sustituyas por flags distintos sin revisar resolución de dependencias.
 - La base de la API se define en `environment.ts` / `environment.prod.ts` como **`apiUrl`**:
   - **`/api`** (recomendado): el navegador llama a la misma origen del front + `/api/...`; en desarrollo, `proxy.conf.js` reenvía `/api` al backend (puerto 8081) sin CORS extra. En producción, nginx (u otro proxy) debe hacer lo mismo o cambia `apiUrl` a `''` si la API está en el mismo host sin prefijo.

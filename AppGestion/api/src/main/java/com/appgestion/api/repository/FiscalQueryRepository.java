@@ -69,4 +69,31 @@ public interface FiscalQueryRepository extends Repository<Factura, Long> {
             @Param("hasta") LocalDate hasta,
             @Param("umbral") double umbral
     );
+
+    @Query(value = """
+            SELECT CAST(COALESCE(SUM(g.cuota_iva), 0) AS numeric)
+            FROM gastos g
+            WHERE g.usuario_id = :usuarioId
+              AND g.fecha BETWEEN :desde AND :hasta
+            """, nativeQuery = true)
+    Object aggregateGastosModelo303Devengo(
+            @Param("usuarioId") Long usuarioId,
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta
+    );
+
+    /**
+     * Criterio caja para gastos (MVP): imputación por {@code gastos.fecha} hasta que exista fecha de pago.
+     */
+    @Query(value = """
+            SELECT CAST(COALESCE(SUM(g.cuota_iva), 0) AS numeric)
+            FROM gastos g
+            WHERE g.usuario_id = :usuarioId
+              AND g.fecha BETWEEN :desde AND :hasta
+            """, nativeQuery = true)
+    Object aggregateGastosModelo303Caja(
+            @Param("usuarioId") Long usuarioId,
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta
+    );
 }

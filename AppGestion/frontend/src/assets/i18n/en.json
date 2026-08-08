@@ -7,6 +7,7 @@
     "budgets": "Estimates",
     "quickBudget": "Quick estimate",
     "invoices": "Invoices",
+    "expenses": "Expenses",
     "tax": "Tax agency"
   },
   "shell": {
@@ -45,6 +46,8 @@
     "cancel": "Cancel",
     "save": "Save",
     "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
     "back": "Back"
   },
   "invite": {
@@ -1221,6 +1224,45 @@
   },
   "lang": {
     "switcherAria": "Change application language"
+  },
+  "gastos": {
+    "title": "Expenses",
+    "new": "New expense",
+    "newTitle": "New expense",
+    "editTitle": "Edit expense",
+    "empty": "No expenses recorded. Add one to track supported VAT.",
+    "hintTitle": "What are expenses for?",
+    "hintStep1": "Record purchases with supplier, amount and VAT.",
+    "hintStep2": "Supported VAT is included in the Model 303 tax summary.",
+    "hintStep3": "You can edit or delete any expense when needed.",
+    "colDate": "Date",
+    "colSupplier": "Supplier",
+    "colConcept": "Description",
+    "colBase": "Base",
+    "colVat": "VAT",
+    "colCategory": "Category",
+    "fieldSupplier": "Supplier",
+    "fieldConcept": "Description",
+    "fieldDate": "Date",
+    "fieldBase": "Taxable base",
+    "fieldVatType": "VAT rate",
+    "fieldCategory": "Category",
+    "previewVat": "VAT amount",
+    "previewTotal": "Total",
+    "deleteTitle": "Delete expense",
+    "deleteMessage": "Delete \"{{concepto}}\"?",
+    "deleted": "Expense deleted",
+    "deleteFail": "Could not delete expense",
+    "created": "Expense created",
+    "saved": "Expense saved",
+    "saveFail": "Could not save expense",
+    "loadFail": "Could not load expense",
+    "category": {
+      "SUMINISTROS": "Utilities",
+      "MATERIAL": "Materials",
+      "DIETAS": "Meals",
+      "OTROS": "Other"
+    }
   },
   "snack": {
     "tax347LoadFail": "We couldn’t load the model 347 information.",
