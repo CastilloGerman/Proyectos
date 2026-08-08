@@ -1,3 +1,4 @@
+import { DecimalPipe } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -21,6 +22,7 @@ import {
 @Component({
   selector: 'app-gasto-form',
   imports: [
+    DecimalPipe,
     ReactiveFormsModule,
     RouterLink,
     MatCardModule,
