@@ -1,5 +1,6 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.constant.PresupuestoEstado;
 import com.appgestion.api.constant.TaxConstants;
 import com.appgestion.api.domain.entity.*;
 import com.appgestion.api.domain.enums.TipoFactura;
@@ -164,6 +165,16 @@ public class PresupuestoService {
     }
 
     @Transactional
+    public PresupuestoResponse actualizarEstado(Long id, String estado, Long usuarioId) {
+        Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
+
+        presupuesto.setEstado(normalizarEstadoPresupuesto(estado));
+        presupuesto = presupuestoRepository.save(presupuesto);
+        return toResponse(presupuesto);
+    }
+
+    @Transactional
     public void eliminar(Long id, Long usuarioId) {
         if (!presupuestoRepository.existsByIdAndUsuarioId(Objects.requireNonNull(id), Objects.requireNonNull(usuarioId))) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado");
@@ -197,6 +208,24 @@ public class PresupuestoService {
         String cuerpo = EmailCopy.prefijoClienteEmpresa(nombreCliente, nombreEmpresa)
                 + "<p>Adjunto encontrará el presupuesto solicitado.</p><p>Saludos cordiales.</p>";
         emailService.enviarPdf(usuarioId, email, asunto, cuerpo, pdf, nombreArchivo);
+    }
+
+    private String normalizarEstadoPresupuesto(String estado) {
+        String valor = estado != null ? estado.trim() : "";
+        if (PresupuestoEstado.PENDIENTE.equalsIgnoreCase(valor)) {
+            return PresupuestoEstado.PENDIENTE;
+        }
+        if (PresupuestoEstado.ACEPTADO.equalsIgnoreCase(valor)) {
+            return PresupuestoEstado.ACEPTADO;
+        }
+        if (PresupuestoEstado.RECHAZADO.equalsIgnoreCase(valor)) {
+            return PresupuestoEstado.RECHAZADO;
+        }
+        if (PresupuestoEstado.EN_EJECUCION.equalsIgnoreCase(valor)
+                || PresupuestoEstado.EN_EJECUCION_SIN_TILDE.equalsIgnoreCase(valor)) {
+            return PresupuestoEstado.EN_EJECUCION;
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado de presupuesto no válido");
     }
 
     private void mapItems(List<PresupuestoItemRequest> itemRequests, Presupuesto presupuesto) {

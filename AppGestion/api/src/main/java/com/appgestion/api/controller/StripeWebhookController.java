@@ -24,6 +24,9 @@ public class StripeWebhookController {
         if (result.signatureInvalid()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid signature");
         }
+        if (result.processingFailed()) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Processing failed");
+        }
         return ResponseEntity.ok().build();
     }
 }

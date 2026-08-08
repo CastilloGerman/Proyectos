@@ -39,7 +39,8 @@ public class DevGrantPremiumService {
         }
         Set<String> allowlist = devProperties.grantPremiumAllowlistEmailsNormalized();
         if (allowlist.isEmpty()) {
-            return true;
+            // Fail closed: enabling the feature without an explicit allowlist must not grant to everyone.
+            return false;
         }
         return allowlist.contains(usuario.getEmail().trim().toLowerCase(Locale.ROOT));
     }
