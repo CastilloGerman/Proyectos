@@ -18,6 +18,7 @@ import {
   GastoCategoria,
   TIPOS_IVA,
 } from '../../../core/models/gasto.model';
+import { formatLocalDateForApi, parseApiLocalDate } from '../../../shared/utils/local-date.util';
 
 @Component({
   selector: 'app-gasto-form',
@@ -157,7 +158,7 @@ export class GastoFormComponent implements OnInit {
           this.form.patchValue({
             proveedor: g.proveedor,
             concepto: g.concepto,
-            fecha: new Date(g.fecha + 'T12:00:00'),
+            fecha: parseApiLocalDate(g.fecha) ?? new Date(),
             baseImponible: g.baseImponible,
             tipoIva: g.tipoIva,
             categoria: g.categoria,
@@ -178,8 +179,10 @@ export class GastoFormComponent implements OnInit {
   onSubmit(): void {
     if (this.form.invalid) return;
     const raw = this.form.getRawValue();
+    // Datepicker values are local midnight; never use toISOString() (UTC shift
+    // can move quarter-boundary dates, e.g. 1 Apr Europe/Madrid → 31 Mar).
     const fecha = raw.fecha instanceof Date
-      ? raw.fecha.toISOString().slice(0, 10)
+      ? formatLocalDateForApi(raw.fecha)
       : String(raw.fecha).slice(0, 10);
     const payload = {
       proveedor: raw.proveedor,
