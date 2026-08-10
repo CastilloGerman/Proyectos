@@ -336,6 +336,11 @@ public class FacturaService {
         }
     }
 
+    /**
+     * Copia líneas del presupuesto respetando subtotales ya descontados (línea y global).
+     * No recalcular {@code cantidad * precioUnitario}: eso ignoraría descuentos de línea y el
+     * descuento global del presupuesto, inflando base/IVA/total de la factura.
+     */
     private void copiarItemsDesdePresupuesto(Presupuesto presupuesto, Factura factura) {
         for (PresupuestoItem pi : presupuesto.getItems()) {
             FacturaItem item = new FacturaItem();
@@ -344,14 +349,59 @@ public class FacturaService {
             item.setTareaManual(pi.getTareaManual());
             item.setEsTareaManual(Optional.ofNullable(pi.getEsTareaManual()).orElse(false));
             BigDecimal cant = BigDecimal.valueOf(Optional.ofNullable(pi.getCantidad()).orElse(0.0));
-            BigDecimal precio = BigDecimal.valueOf(Optional.ofNullable(pi.getPrecioUnitario()).orElse(0.0));
+            BigDecimal st = BigDecimal.valueOf(Optional.ofNullable(pi.getSubtotal()).orElse(0.0))
+                    .setScale(SCALE, ROUNDING);
             item.setCantidad(cant.doubleValue());
-            item.setPrecioUnitario(precio.doubleValue());
-            BigDecimal st = cant.multiply(precio).setScale(SCALE, ROUNDING);
+            // Precio efectivo tras descuento de línea (FacturaItem no modela descuentos propios).
+            if (cant.compareTo(BigDecimal.ZERO) > 0) {
+                item.setPrecioUnitario(st.divide(cant, 4, ROUNDING).doubleValue());
+            } else {
+                item.setPrecioUnitario(0.0);
+            }
             item.setSubtotal(st.doubleValue());
             item.setCuotaIva(0.0);
             item.setAplicaIva(Optional.ofNullable(pi.getAplicaIva()).orElse(true));
             factura.getItems().add(item);
+        }
+        prorratearLineasABasePresupuesto(factura, presupuesto);
+    }
+
+    /**
+     * Si hay descuento global, la suma de subtotales de línea supera {@code presupuesto.subtotal}.
+     * Escala las líneas para que la base de la factura coincida con el presupuesto aceptado.
+     */
+    private void prorratearLineasABasePresupuesto(Factura factura, Presupuesto presupuesto) {
+        List<FacturaItem> items = factura.getItems();
+        if (items.isEmpty()) {
+            return;
+        }
+        BigDecimal target = BigDecimal.valueOf(Optional.ofNullable(presupuesto.getSubtotal()).orElse(0.0))
+                .setScale(SCALE, ROUNDING);
+        BigDecimal sum = BigDecimal.ZERO;
+        for (FacturaItem item : items) {
+            sum = sum.add(BigDecimal.valueOf(Optional.ofNullable(item.getSubtotal()).orElse(0.0)));
+        }
+        sum = sum.setScale(SCALE, ROUNDING);
+        if (sum.compareTo(BigDecimal.ZERO) <= 0 || sum.compareTo(target) == 0) {
+            return;
+        }
+        BigDecimal acum = BigDecimal.ZERO;
+        for (int i = 0; i < items.size(); i++) {
+            FacturaItem fi = items.get(i);
+            BigDecimal current = BigDecimal.valueOf(Optional.ofNullable(fi.getSubtotal()).orElse(0.0));
+            BigDecimal parte;
+            if (i < items.size() - 1) {
+                BigDecimal peso = current.divide(sum, 10, ROUNDING);
+                parte = target.multiply(peso).setScale(SCALE, ROUNDING);
+                acum = acum.add(parte);
+            } else {
+                parte = target.subtract(acum).max(BigDecimal.ZERO).setScale(SCALE, ROUNDING);
+            }
+            fi.setSubtotal(parte.doubleValue());
+            BigDecimal cant = BigDecimal.valueOf(Optional.ofNullable(fi.getCantidad()).orElse(0.0));
+            if (cant.compareTo(BigDecimal.ZERO) > 0) {
+                fi.setPrecioUnitario(parte.divide(cant, 4, ROUNDING).doubleValue());
+            }
         }
     }
 

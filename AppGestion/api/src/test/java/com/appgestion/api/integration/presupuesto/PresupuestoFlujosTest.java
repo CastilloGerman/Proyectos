@@ -144,4 +144,98 @@ class PresupuestoFlujosTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.tipoFactura").value(TipoFactura.NORMAL.name()));
     }
+
+    @Test
+    void facturar_presupuestoConDescuentoDeLinea_conservaBaseEIva() throws Exception {
+        // 100 - 10% = 90 base → IVA 18.90 → total 108.90 (no 121.00 sin descuento)
+        String body = """
+                {
+                  "clienteId": %d,
+                  "items": [{
+                    "materialId": null,
+                    "tareaManual": "Línea con dto",
+                    "cantidad": 1.0,
+                    "precioUnitario": 100.0,
+                    "aplicaIva": true,
+                    "descuentoPorcentaje": 10.0,
+                    "descuentoFijo": 0.0
+                  }],
+                  "ivaHabilitado": true,
+                  "estado": "%s",
+                  "descuentoGlobalPorcentaje": 0.0,
+                  "descuentoGlobalFijo": 0.0,
+                  "descuentoAntesIva": true,
+                  "condicionesActivas": [],
+                  "notaAdicional": null
+                }
+                """.formatted(scenario.clienteCompletoId(), PresupuestoEstado.ACEPTADO);
+
+        String res = mockMvc.perform(post("/presupuestos")
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.subtotal").value(90.0))
+                .andExpect(jsonPath("$.iva").value(18.9))
+                .andExpect(jsonPath("$.total").value(108.9))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long presId = objectMapper.readTree(res).get("id").asLong();
+
+        mockMvc.perform(post("/presupuestos/{id}/factura", presId)
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.subtotal").value(90.0))
+                .andExpect(jsonPath("$.iva").value(18.9))
+                .andExpect(jsonPath("$.total").value(108.9));
+    }
+
+    @Test
+    void facturar_presupuestoConDescuentoGlobal_conservaBaseEIva() throws Exception {
+        // 200 - 20 fijo = 180 base → IVA 37.80 → total 217.80
+        String body = """
+                {
+                  "clienteId": %d,
+                  "items": [{
+                    "materialId": null,
+                    "tareaManual": "Línea",
+                    "cantidad": 2.0,
+                    "precioUnitario": 100.0,
+                    "aplicaIva": true,
+                    "descuentoPorcentaje": 0.0,
+                    "descuentoFijo": 0.0
+                  }],
+                  "ivaHabilitado": true,
+                  "estado": "%s",
+                  "descuentoGlobalPorcentaje": 0.0,
+                  "descuentoGlobalFijo": 20.0,
+                  "descuentoAntesIva": true,
+                  "condicionesActivas": [],
+                  "notaAdicional": null
+                }
+                """.formatted(scenario.clienteCompletoId(), PresupuestoEstado.ACEPTADO);
+
+        String res = mockMvc.perform(post("/presupuestos")
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.subtotal").value(180.0))
+                .andExpect(jsonPath("$.iva").value(37.8))
+                .andExpect(jsonPath("$.total").value(217.8))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long presId = objectMapper.readTree(res).get("id").asLong();
+
+        mockMvc.perform(post("/presupuestos/{id}/factura", presId)
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.subtotal").value(180.0))
+                .andExpect(jsonPath("$.iva").value(37.8))
+                .andExpect(jsonPath("$.total").value(217.8));
+    }
 }
