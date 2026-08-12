@@ -24,6 +24,7 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
     private static final Logger log = LoggerFactory.getLogger(DefaultStripeWebhookService.class);
 
     private static final String METADATA_USUARIO_ID = "usuario_id";
+    private static final String METADATA_FACTURA_ID = "factura_id";
 
     private static final String EVENT_CHECKOUT_SESSION_COMPLETED = "checkout.session.completed";
     private static final String EVENT_CUSTOMER_SUBSCRIPTION_CREATED = "customer.subscription.created";
@@ -38,6 +39,7 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
     private final StripeWebhookEventParser webhookEventParser;
     private final StripeSubscriptionFetcher subscriptionFetcher;
     private final SubscriptionService subscriptionService;
+    private final FacturaPaymentLinkService facturaPaymentLinkService;
     private final ProcessedStripeEventRepository processedEventRepository;
     private final String webhookSecret;
 
@@ -45,11 +47,13 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
             StripeWebhookEventParser webhookEventParser,
             StripeSubscriptionFetcher subscriptionFetcher,
             SubscriptionService subscriptionService,
+            FacturaPaymentLinkService facturaPaymentLinkService,
             ProcessedStripeEventRepository processedEventRepository,
             @Value("${stripe.webhook-secret}") String webhookSecret) {
         this.webhookEventParser = webhookEventParser;
         this.subscriptionFetcher = subscriptionFetcher;
         this.subscriptionService = subscriptionService;
+        this.facturaPaymentLinkService = facturaPaymentLinkService;
         this.processedEventRepository = processedEventRepository;
         this.webhookSecret = webhookSecret;
     }
@@ -94,6 +98,12 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
     }
 
     private void handleCheckoutSessionCompleted(Session session) {
+        String facturaIdStr = session.getMetadata() != null ? session.getMetadata().get(METADATA_FACTURA_ID) : null;
+        if (facturaIdStr != null && !facturaIdStr.isBlank()) {
+            facturaPaymentLinkService.registrarPagoDesdeCheckoutSession(session, facturaIdStr);
+            return;
+        }
+
         String usuarioIdStr = session.getMetadata() != null ? session.getMetadata().get(METADATA_USUARIO_ID) : null;
         if (usuarioIdStr == null) {
             return;

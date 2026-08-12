@@ -144,6 +144,33 @@ class Modelo303ResumenTest {
         assertThat(root.get("numeroFacturas").asLong()).isZero();
     }
 
+    @Test
+    void resumenDevengo_excluyeFacturasAnuladas() throws Exception {
+        int year = Year.now().getValue();
+        String created = mockMvc.perform(post("/facturas")
+                        .with(FacturacionAuth.asUsuarioFacturacion(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(facturaJson(scenario.clienteCompletoId(), LocalDate.of(year, 1, 12), null, 200.0)))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        long facturaId = objectMapper.readTree(created).get("id").asLong();
+
+        mockMvc.perform(post("/facturas/{id}/anular", facturaId)
+                        .with(FacturacionAuth.asUsuarioFacturacion(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"motivo\":\"Error de emisión\"}"))
+                .andExpect(status().isNoContent());
+
+        JsonNode root = getModelo303(year, 1);
+        assertThat(new BigDecimal(root.get("baseImponibleTotal").asText()))
+                .isEqualByComparingTo(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+        assertThat(new BigDecimal(root.get("ivaRepercutido").asText()))
+                .isEqualByComparingTo(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+        assertThat(root.get("numeroFacturas").asLong()).isZero();
+    }
+
     private JsonNode getModelo303(int year, int trimestre) throws Exception {
         String content = mockMvc.perform(get("/fiscal/modelo303")
                         .param("year", String.valueOf(year))
