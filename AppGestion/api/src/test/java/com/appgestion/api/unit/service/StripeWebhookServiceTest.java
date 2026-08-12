@@ -2,6 +2,7 @@ package com.appgestion.api.unit.service;
 
 import com.appgestion.api.repository.ProcessedStripeEventRepository;
 import com.appgestion.api.service.DefaultStripeWebhookService;
+import com.appgestion.api.service.FacturaPaymentLinkService;
 import com.appgestion.api.service.StripeWebhookService;
 import com.appgestion.api.service.SubscriptionService;
 import com.appgestion.api.service.stripe.StripeSubscriptionFetcher;
@@ -32,6 +33,7 @@ class StripeWebhookServiceTest {
             @Mock StripeWebhookEventParser webhookEventParser,
             @Mock StripeSubscriptionFetcher subscriptionFetcher,
             @Mock SubscriptionService subscriptionService,
+            @Mock FacturaPaymentLinkService facturaPaymentLinkService,
             @Mock ProcessedStripeEventRepository processedEventRepository) {
         this.webhookEventParser = webhookEventParser;
         this.subscriptionService = subscriptionService;
@@ -40,6 +42,7 @@ class StripeWebhookServiceTest {
                 webhookEventParser,
                 subscriptionFetcher,
                 subscriptionService,
+                facturaPaymentLinkService,
                 processedEventRepository,
                 "whsec_test_secret");
     }

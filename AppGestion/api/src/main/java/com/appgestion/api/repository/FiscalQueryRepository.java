@@ -19,6 +19,7 @@ public interface FiscalQueryRepository extends Repository<Factura, Long> {
                    COUNT(f.id)
             FROM facturas f
             WHERE f.usuario_id = :usuarioId
+              AND COALESCE(f.anulada, false) = false
               AND COALESCE(f.fecha_expedicion, f.fecha_operacion, CAST(f.fecha_creacion AS date)) BETWEEN :desde AND :hasta
               AND (NOT :soloPagadas OR TRIM(f.estado_pago) = :estadoPagada)
             """, nativeQuery = true)
@@ -41,6 +42,7 @@ public interface FiscalQueryRepository extends Repository<Factura, Long> {
                 GROUP BY factura_id
             ) cob ON cob.factura_id = f.id
             WHERE f.usuario_id = :usuarioId
+              AND COALESCE(f.anulada, false) = false
               AND TRIM(f.estado_pago) = :estadoPagada
               AND cob.ultima_fecha BETWEEN :desde AND :hasta
             """, nativeQuery = true)
@@ -56,6 +58,7 @@ public interface FiscalQueryRepository extends Repository<Factura, Long> {
             FROM facturas f
             INNER JOIN clientes c ON c.id = f.cliente_id
             WHERE f.usuario_id = :usuarioId
+              AND COALESCE(f.anulada, false) = false
               AND COALESCE(f.fecha_expedicion, f.fecha_operacion, CAST(f.fecha_creacion AS date)) BETWEEN :desde AND :hasta
               AND c.dni IS NOT NULL
               AND TRIM(c.dni) <> ''

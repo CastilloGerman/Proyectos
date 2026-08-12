@@ -3,6 +3,7 @@ package com.appgestion.api.unit.stripe;
 import com.appgestion.api.domain.entity.ProcessedStripeEvent;
 import com.appgestion.api.repository.ProcessedStripeEventRepository;
 import com.appgestion.api.service.DefaultStripeWebhookService;
+import com.appgestion.api.service.FacturaPaymentLinkService;
 import com.appgestion.api.service.SubscriptionService;
 import com.appgestion.api.service.stripe.StripeSubscriptionFetcher;
 import com.appgestion.api.service.stripe.StripeWebhookEventParser;
@@ -45,6 +46,7 @@ class StripeWebhookIdempotenciaTest {
             @Mock StripeWebhookEventParser webhookEventParser,
             @Mock StripeSubscriptionFetcher subscriptionFetcher,
             @Mock SubscriptionService subscriptionService,
+            @Mock FacturaPaymentLinkService facturaPaymentLinkService,
             @Mock ProcessedStripeEventRepository processedEventRepository) {
         this.webhookEventParser = webhookEventParser;
         this.subscriptionFetcher = subscriptionFetcher;
@@ -54,6 +56,7 @@ class StripeWebhookIdempotenciaTest {
                 webhookEventParser,
                 subscriptionFetcher,
                 subscriptionService,
+                facturaPaymentLinkService,
                 processedEventRepository,
                 SECRET);
     }

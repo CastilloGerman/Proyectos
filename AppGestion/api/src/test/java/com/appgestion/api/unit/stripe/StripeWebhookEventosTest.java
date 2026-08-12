@@ -3,6 +3,7 @@ package com.appgestion.api.unit.stripe;
 import com.appgestion.api.domain.entity.ProcessedStripeEvent;
 import com.appgestion.api.repository.ProcessedStripeEventRepository;
 import com.appgestion.api.service.DefaultStripeWebhookService;
+import com.appgestion.api.service.FacturaPaymentLinkService;
 import com.appgestion.api.service.SubscriptionService;
 import com.appgestion.api.service.stripe.StripeSubscriptionFetcher;
 import com.appgestion.api.service.stripe.StripeWebhookEventParser;
@@ -39,6 +40,7 @@ class StripeWebhookEventosTest {
     private final StripeWebhookEventParser webhookEventParser;
     private final StripeSubscriptionFetcher subscriptionFetcher;
     private final SubscriptionService subscriptionService;
+    private final FacturaPaymentLinkService facturaPaymentLinkService;
     private final ProcessedStripeEventRepository processedEventRepository;
     private final DefaultStripeWebhookService stripeWebhookService;
 
@@ -46,15 +48,18 @@ class StripeWebhookEventosTest {
             @Mock StripeWebhookEventParser webhookEventParser,
             @Mock StripeSubscriptionFetcher subscriptionFetcher,
             @Mock SubscriptionService subscriptionService,
+            @Mock FacturaPaymentLinkService facturaPaymentLinkService,
             @Mock ProcessedStripeEventRepository processedEventRepository) {
         this.webhookEventParser = webhookEventParser;
         this.subscriptionFetcher = subscriptionFetcher;
         this.subscriptionService = subscriptionService;
+        this.facturaPaymentLinkService = facturaPaymentLinkService;
         this.processedEventRepository = processedEventRepository;
         this.stripeWebhookService = new DefaultStripeWebhookService(
                 webhookEventParser,
                 subscriptionFetcher,
                 subscriptionService,
+                facturaPaymentLinkService,
                 processedEventRepository,
                 SECRET);
     }
@@ -108,6 +113,24 @@ class StripeWebhookEventosTest {
         stripeWebhookService.processWebhook("{}", "sig");
 
         verify(subscriptionService).recordInvoicePaid(any(Invoice.class));
+    }
+
+    @Test
+    void checkoutSessionCompleted_conFacturaId_registraCobroFactura() throws Exception {
+        com.stripe.model.checkout.Session session = org.mockito.Mockito.mock(com.stripe.model.checkout.Session.class);
+        when(session.getMetadata()).thenReturn(java.util.Map.of("factura_id", "42"));
+        when(session.getPaymentStatus()).thenReturn("paid");
+
+        Event event = eventWith("evt_fac_pay", "checkout.session.completed", session);
+
+        when(webhookEventParser.parse(any(), any(), eq(SECRET))).thenReturn(event);
+        when(processedEventRepository.existsByEventId("evt_fac_pay")).thenReturn(false);
+
+        stripeWebhookService.processWebhook("{}", "sig");
+
+        verify(facturaPaymentLinkService).registrarPagoDesdeCheckoutSession(session, "42");
+        verify(subscriptionService, never()).syncFromStripeSubscription(any(), any(), any());
+        verify(subscriptionFetcher, never()).fetch(any());
     }
 
     @Test
