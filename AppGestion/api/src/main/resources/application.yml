@@ -88,6 +88,11 @@ app:
     display:
       monthly-eur: ${SUBSCRIPTION_DISPLAY_MONTHLY_EUR:9.99}
       yearly-eur: ${SUBSCRIPTION_DISPLAY_YEARLY_EUR:90.00}
+  auth:
+    google:
+      # Client ID del botón de login (GSI). Debe coincidir con googleClientId del SPA.
+      # Tokens cuyo aud no coincide se rechazan (evita account takeover con un OAuth client ajeno).
+      client-id: ${GOOGLE_LOGIN_CLIENT_ID:622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.apps.googleusercontent.com}
   # Nombre que verá el usuario en la app de autenticación (QR TOTP).
   totp:
     issuer: ${TOTP_ISSUER:AppGestion}
