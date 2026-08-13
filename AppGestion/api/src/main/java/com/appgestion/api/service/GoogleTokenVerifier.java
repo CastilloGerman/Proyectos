@@ -66,7 +66,7 @@ public class GoogleTokenVerifier {
      * Sin comprobar {@code aud}, un ID token de cualquier app OAuth del atacante permitiría
      * iniciar sesión como la víctima.
      */
-    boolean isUsableLoginToken(TokenInfo info) {
+    public boolean isUsableLoginToken(TokenInfo info) {
         if (info == null || !Boolean.TRUE.equals(info.emailVerified())
                 || info.email() == null || info.email().isBlank()) {
             return false;
