@@ -111,6 +111,7 @@ public class FacturaService {
         if (request.presupuestoId() != null) {
             presupuesto = presupuestoRepository.findByIdAndUsuarioId(request.presupuestoId(), usuario.getId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
+            validarReglasNegocioPresupuestoParaFacturaNormal(presupuesto, request.presupuestoId(), usuario.getId());
             presupuesto.setEstado(PresupuestoEstado.ACEPTADO);
         }
 
@@ -164,6 +165,10 @@ public class FacturaService {
         if (request.presupuestoId() != null) {
             presupuesto = presupuestoRepository.findByIdAndUsuarioId(request.presupuestoId(), usuarioId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
+            Long linkedId = factura.getPresupuesto() != null ? factura.getPresupuesto().getId() : null;
+            if (!request.presupuestoId().equals(linkedId)) {
+                validarReglasNegocioPresupuestoParaFacturaNormal(presupuesto, request.presupuestoId(), usuarioId);
+            }
             presupuesto.setEstado(PresupuestoEstado.ACEPTADO);
         }
 

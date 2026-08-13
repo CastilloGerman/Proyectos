@@ -144,4 +144,82 @@ class PresupuestoFlujosTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.tipoFactura").value(TipoFactura.NORMAL.name()));
     }
+
+    @Test
+    void crearFacturaManual_mismoPresupuestoYaFacturado_devuelve400() throws Exception {
+        String body = PresupuestoIntegrationTestSupport.presupuestoJson(
+                scenario.clienteCompletoId(), PresupuestoEstado.ACEPTADO, 200.0, 1.0);
+        String res = mockMvc.perform(post("/presupuestos")
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long presId = objectMapper.readTree(res).get("id").asLong();
+
+        mockMvc.perform(post("/presupuestos/{id}/factura", presId)
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService)))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/facturas")
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(facturaManualJson(scenario.clienteCompletoId(), presId)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("ya tiene una factura")));
+    }
+
+    @Test
+    void crearFacturaManual_presupuestoConAnticipo_devuelve400() throws Exception {
+        String body = PresupuestoIntegrationTestSupport.presupuestoJson(
+                scenario.clienteCompletoId(), PresupuestoEstado.ACEPTADO, 200.0, 1.0);
+        String res = mockMvc.perform(post("/presupuestos")
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long presId = objectMapper.readTree(res).get("id").asLong();
+
+        mockMvc.perform(post("/presupuestos/{id}/anticipo", presId)
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"importeAnticipo": 60, "fechaAnticipo": "2026-08-13"}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/facturas")
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(facturaManualJson(scenario.clienteCompletoId(), presId)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("anticipo")));
+    }
+
+    private static String facturaManualJson(long clienteId, long presupuestoId) {
+        return """
+                {
+                  "clienteId": %d,
+                  "presupuestoId": %d,
+                  "items": [{"materialId": null, "tareaManual": "Segunda factura", "cantidad": 1.0, "precioUnitario": 200.0, "aplicaIva": true}],
+                  "numeroFactura": null,
+                  "fechaExpedicion": "2026-08-13",
+                  "fechaOperacion": null,
+                  "fechaVencimiento": null,
+                  "regimenFiscal": null,
+                  "condicionesPago": null,
+                  "metodoPago": "Transferencia",
+                  "montoCobrado": null,
+                  "notas": null,
+                  "ivaHabilitado": true
+                }
+                """.formatted(clienteId, presupuestoId);
+    }
 }
