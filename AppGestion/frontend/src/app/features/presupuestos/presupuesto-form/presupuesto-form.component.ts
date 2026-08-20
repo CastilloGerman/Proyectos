@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, OnDestroy, OnInit, inject } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
@@ -376,6 +376,29 @@ import { calcularPresupuestoCostes } from '../../../core/utils/presupuesto-coste
               </div>
             </div>
 
+            @if (isEdit) {
+              <div class="section adjuntos-section">
+                <h3>{{ 'budgetForm.attachmentsTitle' | translate }}</h3>
+                @if (!fotoPreviewUrl && !firmaPreviewUrl) {
+                  <p class="hint-anticipo">{{ 'budgetForm.noAttachments' | translate }}</p>
+                }
+                <div class="adjuntos-grid">
+                  @if (fotoPreviewUrl) {
+                    <figure class="adjunto-card">
+                      <img [src]="fotoPreviewUrl" [alt]="'budgetForm.workPhoto' | translate" />
+                      <figcaption>{{ 'budgetForm.workPhoto' | translate }}</figcaption>
+                    </figure>
+                  }
+                  @if (firmaPreviewUrl) {
+                    <figure class="adjunto-card">
+                      <img [src]="firmaPreviewUrl" [alt]="'budgetForm.clientSignature' | translate" />
+                      <figcaption>{{ 'budgetForm.clientSignature' | translate }}</figcaption>
+                    </figure>
+                  }
+                </div>
+              </div>
+            }
+
             <div class="actions">
               <button mat-button type="button" routerLink="/presupuestos">{{ 'common.cancel' | translate }}</button>
               <button
@@ -547,6 +570,29 @@ import { calcularPresupuestoCostes } from '../../../core/utils/presupuesto-coste
     .discount-fields mat-form-field { max-width: 120px; }
 
     .summary-rows { display: flex; flex-direction: column; gap: 8px; }
+    .adjuntos-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .adjunto-card {
+      margin: 0;
+      max-width: 280px;
+    }
+    .adjunto-card img {
+      display: block;
+      width: 100%;
+      max-height: 220px;
+      object-fit: contain;
+      border-radius: 8px;
+      border: 1px solid var(--app-border, rgba(15, 23, 42, 0.12));
+      background: var(--app-bg-page, #f6f4f1);
+    }
+    .adjunto-card figcaption {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--app-text-secondary, #64748b);
+    }
     .summary-row {
       display: flex;
       justify-content: space-between;
@@ -569,7 +615,7 @@ import { calcularPresupuestoCostes } from '../../../core/utils/presupuesto-coste
     .actions { display: flex; gap: 16px; margin-top: 24px; }
   `]
 })
-export class PresupuestoFormComponent implements OnInit {
+export class PresupuestoFormComponent implements OnInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -594,6 +640,8 @@ export class PresupuestoFormComponent implements OnInit {
   facturaPrincipalId: number | null = null;
   anticipoRegImporte: number | '' = '';
   anticipoRegFecha = '';
+  fotoPreviewUrl: string | null = null;
+  firmaPreviewUrl: string | null = null;
 
   get materialItems(): FormArray {
     return this.form.get('materialItems') as FormArray;
@@ -660,6 +708,10 @@ export class PresupuestoFormComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    this.revokeAdjuntos();
+  }
+
   ngOnInit(): void {
     this.translate.onLangChange.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.cdr.markForCheck());
 
@@ -700,6 +752,7 @@ export class PresupuestoFormComponent implements OnInit {
             },
           });
           this.facturaPrincipalId = p.facturaId ?? null;
+          this.cargarAdjuntos(p.tieneFotoTrabajo, p.tieneFirmaCliente);
           if (this.estadoStrFlujoAnticipo(p.estado)) {
             this.anticipoRegFecha = new Date().toISOString().slice(0, 10);
             this.loadResumenAnticipo();
@@ -768,6 +821,40 @@ export class PresupuestoFormComponent implements OnInit {
           this.resumenAnticipo = null;
         }
       });
+  }
+
+  private cargarAdjuntos(tieneFoto?: boolean, tieneFirma?: boolean): void {
+    this.revokeAdjuntos();
+    if (!this.id) return;
+    if (tieneFoto) {
+      this.presupuestoService.downloadFoto(this.id).subscribe({
+        next: (blob) => {
+          this.fotoPreviewUrl = URL.createObjectURL(blob);
+          this.cdr.markForCheck();
+        },
+        error: () => {},
+      });
+    }
+    if (tieneFirma) {
+      this.presupuestoService.downloadFirma(this.id).subscribe({
+        next: (blob) => {
+          this.firmaPreviewUrl = URL.createObjectURL(blob);
+          this.cdr.markForCheck();
+        },
+        error: () => {},
+      });
+    }
+  }
+
+  private revokeAdjuntos(): void {
+    if (this.fotoPreviewUrl) {
+      URL.revokeObjectURL(this.fotoPreviewUrl);
+      this.fotoPreviewUrl = null;
+    }
+    if (this.firmaPreviewUrl) {
+      URL.revokeObjectURL(this.firmaPreviewUrl);
+      this.firmaPreviewUrl = null;
+    }
   }
 
   private estadoStrFlujoAnticipo(estado: string | null | undefined): boolean {

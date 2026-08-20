@@ -259,6 +259,15 @@
     "recentEstimatesEmpty": "Немає кошторисів",
     "recentInvoices": "Останні рахунки",
     "recentInvoicesEmpty": "Немає рахунків",
+    "expensesQuarterTitle": "Витрати T{{trimestre}} {{year}}",
+    "expensesQuarterVat": "ПДВ до відрахування:",
+    "expensesQuarterCount": "{{count}} витрат",
+    "expensesQuarterEmpty": "Немає витрат у цьому кварталі",
+    "expensesQuarterTooltip": "Податкова база поточного кварталу. ПДВ до відрахування потрапляє у податковий звіт.",
+    "recentExpenses": "Останні витрати",
+    "recentExpensesEmpty": "Немає зареєстрованих витрат",
+    "seeAllExpenses": "Переглянути витрати",
+    "addExpense": "Додати витрату",
     "budgetBarPending": "{{count}} очікує",
     "budgetBarAccepted": "{{count}} прийнято",
     "budgetBarInProgress": "{{count}} у виконанні",
@@ -580,7 +589,11 @@
     "finalConfirmLine1": "Всього кошторис: {{total}} €",
     "finalConfirmLine2": "Залишок до фіналу: {{pending}} €",
     "finalConfirmQuestion": "Виставити фінальний рахунок з урахуванням авансів уже виставлених?",
-    "finalConfirmBtn": "Створити фінальний рахунок"
+    "finalConfirmBtn": "Створити фінальний рахунок",
+    "attachmentsTitle": "Фото і підпис",
+    "workPhoto": "Фото роботи",
+    "clientSignature": "Підпис клієнта",
+    "noAttachments": "У цього кошторису немає фото чи підпису."
   },
   "calcM2": {
     "includeDetailToggle": "Додати деталі зон до опису",
@@ -644,7 +657,16 @@
     "waAria": "Відкрити WhatsApp клієнту з текстом-підказкою",
     "waLink": "WhatsApp клієнту",
     "waHint": "На багатьох телефонах PDF підхоплюється при поширенні в WhatsApp; якщо ні — відкрийте PDF в іншій вкладці і це посилання (текст підказки, вкладення не надсилаються автоматично).",
-    "waMsg": "Привіт{{nameSuffix}}, надсилаю кошторис №{{id}} — ок?"
+    "waMsg": "Привіт{{nameSuffix}}, надсилаю кошторис №{{id}} — ок?",
+    "inSituTitle": "Фото і підпис на місці",
+    "inSituHint": "Необов’язково: додайте фото роботи та підпис клієнта, потім відкрийте PDF.",
+    "attachPhoto": "Додати фото роботи",
+    "signClient": "Підпис клієнта",
+    "photoOk": "Фото збережено",
+    "signOk": "Підпис збережено",
+    "continuePdf": "Відкрити PDF",
+    "uploadingPhoto": "Завантаження фото…",
+    "uploadingSign": "Завантаження підпису…"
   },
   "acctCfg": {
     "title": "Акаунт",
@@ -883,7 +905,11 @@
     "inlineClientFail": "Не вдалося створити клієнта.",
     "errorSave": "Не вдалося зберегти. Спробуйте ще раз.",
     "taxDataSaved": "Податкові дані збережено.",
-    "errorGeneric": "Щось пішло не так. Спробуйте ще раз."
+    "errorGeneric": "Щось пішло не так. Спробуйте ще раз.",
+    "budgetPhotoOk": "Фото роботи збережено.",
+    "budgetPhotoFail": "Не вдалося зберегти фото. Спробуйте ще раз.",
+    "budgetSignOk": "Підпис клієнта збережено.",
+    "budgetSignFail": "Не вдалося зберегти підпис. Спробуйте ще раз."
   },
   "acctProf": {
     "title": "Your profile",
@@ -1403,5 +1429,9 @@
     "optFailBlock": "Do not send",
     "oauthFailHint": "When token expires or provider rejects submission.",
     "saveChanges": "Save changes"
+  },
+  "signature": {
+    "clear": "Очистити підпис",
+    "confirm": "Підтвердити підпис"
   }
 }

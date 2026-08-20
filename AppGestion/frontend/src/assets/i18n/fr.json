@@ -259,6 +259,15 @@
     "recentEstimatesEmpty": "Aucun devis",
     "recentInvoices": "Dernières factures",
     "recentInvoicesEmpty": "Aucune facture",
+    "expensesQuarterTitle": "Dépenses T{{trimestre}} {{year}}",
+    "expensesQuarterVat": "TVA déductible :",
+    "expensesQuarterCount": "{{count}} dépenses",
+    "expensesQuarterEmpty": "Aucune dépense ce trimestre",
+    "expensesQuarterTooltip": "Base imposable du trimestre en cours. La TVA déductible alimente le résumé fiscal.",
+    "recentExpenses": "Dernières dépenses",
+    "recentExpensesEmpty": "Aucune dépense enregistrée",
+    "seeAllExpenses": "Voir les dépenses",
+    "addExpense": "Enregistrer une dépense",
     "budgetBarPending": "{{count}} en attente",
     "budgetBarAccepted": "{{count}} acceptés",
     "budgetBarInProgress": "{{count}} en cours",
@@ -580,7 +589,11 @@
     "finalConfirmLine1": "Total devis : {{total}} €",
     "finalConfirmLine2": "Restant (pour la finale) : {{pending}} €",
     "finalConfirmQuestion": "Émettre la facture finale en déduction des factures d’acompte ?",
-    "finalConfirmBtn": "Émettre la facture finale"
+    "finalConfirmBtn": "Émettre la facture finale",
+    "attachmentsTitle": "Photo et signature",
+    "workPhoto": "Photo du travail",
+    "clientSignature": "Signature du client",
+    "noAttachments": "Ce devis n’a ni photo ni signature."
   },
   "calcM2": {
     "includeDetailToggle": "Inclure le détail des zones dans la description",
@@ -644,7 +657,16 @@
     "waAria": "Ouvrir WhatsApp avec le client et un message suggéré",
     "waLink": "WhatsApp au client",
     "waHint": "Sur beaucoup de téléphones le PDF apparaît en partageant vers WhatsApp ; sinon ouvrez le PDF dans l’autre onglet et ce lien (message suggéré, pièce jointe non automatique).",
-    "waMsg": "Bonjour{{nameSuffix}}, voici le devis n°{{id}} — cela vous convient ?"
+    "waMsg": "Bonjour{{nameSuffix}}, voici le devis n°{{id}} — cela vous convient ?",
+    "inSituTitle": "Photo et signature sur place",
+    "inSituHint": "Facultatif : joignez une photo du travail et la signature du client, puis ouvrez le PDF.",
+    "attachPhoto": "Joindre la photo du travail",
+    "signClient": "Signature du client",
+    "photoOk": "Photo enregistrée",
+    "signOk": "Signature enregistrée",
+    "continuePdf": "Ouvrir le PDF",
+    "uploadingPhoto": "Envoi de la photo…",
+    "uploadingSign": "Envoi de la signature…"
   },
   "acctCfg": {
     "title": "Paramètres du compte",
@@ -883,7 +905,11 @@
     "inlineClientFail": "Impossible de créer le client.",
     "errorSave": "Impossible d’enregistrer. Réessayez.",
     "taxDataSaved": "Données fiscales enregistrées.",
-    "errorGeneric": "Un problème est survenu. Réessayez."
+    "errorGeneric": "Un problème est survenu. Réessayez.",
+    "budgetPhotoOk": "Photo du travail enregistrée.",
+    "budgetPhotoFail": "Impossible d’enregistrer la photo. Réessayez.",
+    "budgetSignOk": "Signature du client enregistrée.",
+    "budgetSignFail": "Impossible d’enregistrer la signature. Réessayez."
   },
   "acctProf": {
     "title": "Your profile",
@@ -1403,5 +1429,9 @@
     "optFailBlock": "Do not send",
     "oauthFailHint": "When token expires or provider rejects submission.",
     "saveChanges": "Save changes"
+  },
+  "signature": {
+    "clear": "Effacer la signature",
+    "confirm": "Confirmer la signature"
   }
 }

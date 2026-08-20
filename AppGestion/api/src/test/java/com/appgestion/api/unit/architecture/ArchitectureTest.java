@@ -5,15 +5,8 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
-import static com.tngtech.archunit.core.domain.JavaClass.Predicates.simpleName;
-import static com.tngtech.archunit.base.DescribedPredicate.not;
-
 /**
  * Reglas de capas acordes a Parte 2: reforzar límites sin exigir refactors masivos previos.
- * <p>
- * Deuda pendiente: {@code DevController} y {@code ResendWebhookController} aún inyectan
- * repositorios; migrar en sesiones separadas y retirar las exclusiones de
- * {@link #controllers_should_not_depend_on_repositories}.
  */
 @AnalyzeClasses(packages = "com.appgestion.api")
 class ArchitectureTest {
@@ -31,8 +24,6 @@ class ArchitectureTest {
     void controllers_should_not_depend_on_repositories(JavaClasses classes) {
         noClasses()
                 .that().resideInAPackage("..controller..")
-                .and(not(simpleName("DevController")))
-                .and(not(simpleName("ResendWebhookController")))
                 .should().dependOnClassesThat().resideInAPackage("..repository..")
                 .because("los controllers delegan en servicios; no acceden a persistencia directamente")
                 .check(classes);

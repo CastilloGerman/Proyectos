@@ -24,10 +24,18 @@ const contentTypes = {
   '.json': 'application/json; charset=utf-8',
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
+  '.webmanifest': 'application/manifest+json',
   '.webp': 'image/webp',
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
 };
+
+function isRevalidatedAsset(pathname, filePath) {
+  if (filePath === indexFile) return true;
+  if (pathname.startsWith('/assets/i18n/') && extname(filePath) === '.json') return true;
+  const base = pathname.split('/').pop() ?? '';
+  return base === 'manifest.webmanifest' || base === 'ngsw.json' || base === 'ngsw-worker.js';
+}
 
 function resolveRequestPath(url) {
   const pathname = decodeURIComponent(new URL(url, 'http://localhost').pathname);
@@ -52,10 +60,10 @@ function handleRequest(req, res) {
   res.setHeader('Content-Type', contentTypes[extname(filePath)] ?? 'application/octet-stream');
   if (pathname.startsWith('/assets/i18n/') && extname(filePath) === '.json') {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  } else if (filePath !== indexFile) {
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-  } else {
+  } else if (isRevalidatedAsset(pathname, filePath)) {
     res.setHeader('Cache-Control', 'no-cache');
+  } else {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
   }
 
   stream.on('error', () => {

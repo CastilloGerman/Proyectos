@@ -138,4 +138,32 @@ describe('PresupuestoService', () => {
       req.flush(null);
     });
   });
+
+  describe('adjuntos', () => {
+    it('POSTs multipart foto to /presupuestos/:id/foto', () => {
+      const blob = new Blob(['x'], { type: 'image/jpeg' });
+      service.uploadFoto(8, blob, 'foto.jpg').subscribe();
+
+      const req = http.expectOne(`${API}/8/foto`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toBeInstanceOf(FormData);
+      req.flush(null);
+    });
+
+    it('POSTs multipart firma to /presupuestos/:id/firma', () => {
+      const blob = new Blob(['y'], { type: 'image/png' });
+      service.uploadFirma(8, blob).subscribe();
+
+      const req = http.expectOne(`${API}/8/firma`);
+      expect(req.request.method).toBe('POST');
+      req.flush(null);
+    });
+
+    it('GETs foto blob', () => {
+      service.downloadFoto(8).subscribe((b) => expect(b.size).toBeGreaterThan(0));
+      const req = http.expectOne(`${API}/8/foto`);
+      expect(req.request.method).toBe('GET');
+      req.flush(new Blob(['img']));
+    });
+  });
 });

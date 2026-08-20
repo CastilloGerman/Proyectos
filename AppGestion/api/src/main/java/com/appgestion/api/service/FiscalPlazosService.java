@@ -40,7 +40,7 @@ public class FiscalPlazosService {
     /** Expuesto para tests y reutilización con fecha fija. */
     public FiscalPlazoActualResponse calcularParaFecha(LocalDate today) {
         List<Plazo> plazos = construirPlazosParaRango(today.getYear());
-        plazos.sort(Comparator.comparing(Plazo::fecha));
+        plazos.sort(Comparator.comparing((Plazo p) -> p.fecha()));
 
         Plazo siguiente = plazos.stream()
                 .filter(p -> !p.fecha().isBefore(today))
@@ -57,7 +57,7 @@ public class FiscalPlazosService {
 
         Plazo anterior = plazos.stream()
                 .filter(p -> p.fecha().isBefore(today))
-                .max(Comparator.comparing(Plazo::fecha))
+                .max(Comparator.comparing((Plazo p) -> p.fecha()))
                 .orElse(null);
 
         boolean entreDos = anterior != null

@@ -23,9 +23,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -176,5 +178,35 @@ public class PresupuestoController {
     public void eliminar(@PathVariable Long id) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
         presupuestoService.eliminar(id, usuarioId);
+    }
+
+    @PostMapping(value = "/{id}/foto", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void subirFoto(@PathVariable Long id, @RequestParam("file") MultipartFile file) throws IOException {
+        Long usuarioId = currentUserService.getCurrentUsuario().getId();
+        presupuestoService.guardarFoto(id, usuarioId, file);
+    }
+
+    @PostMapping(value = "/{id}/firma", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void subirFirma(@PathVariable Long id, @RequestParam("file") MultipartFile file) throws IOException {
+        Long usuarioId = currentUserService.getCurrentUsuario().getId();
+        presupuestoService.guardarFirma(id, usuarioId, file);
+    }
+
+    @GetMapping("/{id}/foto")
+    public ResponseEntity<byte[]> descargarFoto(@PathVariable Long id) {
+        Long usuarioId = currentUserService.getCurrentUsuario().getId();
+        var adjunto = presupuestoService.obtenerFoto(id, usuarioId);
+        return ResponseEntity.ok().contentType(adjunto.mediaType()).body(adjunto.bytes());
+    }
+
+    @GetMapping("/{id}/firma")
+    public ResponseEntity<byte[]> descargarFirma(@PathVariable Long id) {
+        Long usuarioId = currentUserService.getCurrentUsuario().getId();
+        var adjunto = presupuestoService.obtenerFirma(id, usuarioId);
+        return ResponseEntity.ok().contentType(adjunto.mediaType()).body(adjunto.bytes());
     }
 }

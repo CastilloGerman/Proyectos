@@ -112,7 +112,7 @@ public class SessionService {
         Instant now = Instant.now();
         return all.stream()
                 .filter(s -> s.getRevokedAt() == null && s.getExpiresAt().isAfter(now))
-                .sorted(Comparator.comparing(UsuarioSesion::getLastActivityAt).reversed())
+                .sorted(Comparator.comparing((UsuarioSesion s) -> s.getLastActivityAt()).reversed())
                 .map(s -> toDto(s, currentSessionId, now))
                 .toList();
     }

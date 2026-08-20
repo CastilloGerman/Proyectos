@@ -207,7 +207,7 @@ public class AuditAccessService {
         int p = Math.max(0, page);
         int s = Math.min(100, Math.max(1, size));
         Page<AuditAccessEvent> result = auditAccessEventRepository.findAll(spec,
-                PageRequest.of(p, s, Sort.by(Sort.Direction.DESC, "occurredAt")));
+                PageRequest.of(p, s, Sort.by((AuditAccessEvent e) -> e.getOccurredAt()).descending()));
 
         Instant since24h = Instant.now().minus(24, ChronoUnit.HOURS);
         long failed24h = auditAccessEventRepository.count(
@@ -317,7 +317,7 @@ public class AuditAccessService {
         Specification<AuditAccessEvent> spec = buildSpec(current, admin, filterUsuarioId, from, to, eventType,
                 successFilter, ipContains, q);
         Page<AuditAccessEvent> page = auditAccessEventRepository.findAll(spec,
-                PageRequest.of(0, EXPORT_MAX_ROWS, Sort.by(Sort.Direction.DESC, "occurredAt")));
+                PageRequest.of(0, EXPORT_MAX_ROWS, Sort.by((AuditAccessEvent e) -> e.getOccurredAt()).descending()));
         List<AuditAccessEventResponse> rows = page.getContent().stream().map(this::toResponse).toList();
 
         if ("json".equalsIgnoreCase(format)) {

@@ -335,7 +335,7 @@ public class SubscriptionService {
             }
         }
         Optional<StripeSubscription> row = stripeSubscriptionRepository.findByStripeSubscriptionId(subscription.getId());
-        return row.map(StripeSubscription::getUsuario).orElse(null);
+        return row.map(r -> r.getUsuario()).orElse(null);
     }
 
     private void upsertStripeSubscriptionRow(Usuario usuario, Subscription subscription, String priceId) {

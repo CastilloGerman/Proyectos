@@ -15,10 +15,12 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { PresupuestoService } from '../../core/services/presupuesto.service';
 import { FacturaService } from '../../core/services/factura.service';
 import { MaterialService } from '../../core/services/material.service';
+import { GastoService } from '../../core/services/gasto.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { Presupuesto, PresupuestoItemRequest, PresupuestoRequest } from '../../core/models/presupuesto.model';
 import { Factura, FacturaItemRequest, FacturaRequest } from '../../core/models/factura.model';
 import { Material } from '../../core/models/material.model';
+import { Gasto } from '../../core/models/gasto.model';
 import { EstadoBadgeComponent } from '../../shared/estado-badge/estado-badge.component';
 import { FacturaParcialImporteDialogComponent } from '../../shared/factura-parcial-importe-dialog/factura-parcial-importe-dialog.component';
 import { catchError, forkJoin, of } from 'rxjs';
@@ -47,6 +49,15 @@ interface SaludCobros {
   proximasAVencer: number;
   importeProximas: number;
   ratioCobro: number;
+}
+
+interface GastoTrimestreStats {
+  year: number;
+  trimestre: number;
+  count: number;
+  totalBase: number;
+  totalIva: number;
+  totalConIva: number;
 }
 
 /** Ingresos por mes para el gráfico (nombre del mes/año y total facturado). */
@@ -365,6 +376,30 @@ export interface TopCliente {
             <mat-progress-bar mode="determinate" [value]="saludCobros.ratioCobro" color="primary"></mat-progress-bar>
           </div>
         </div>
+
+        <div class="salud-card salud-gastos" [class.salud-gastos-empty]="gastoTrimestreStats.count === 0">
+          <div class="salud-icon">
+            <mat-icon>shopping_cart</mat-icon>
+          </div>
+          <div class="salud-content">
+            <span class="salud-value">{{ gastoTrimestreStats.totalBase | number:'1.2-2' }} €</span>
+            <span class="salud-label">{{ 'dashboard.expensesQuarterTitle' | translate: { trimestre: gastoTrimestreStats.trimestre, year: gastoTrimestreStats.year } }}</span>
+            @if (gastoTrimestreStats.count > 0) {
+              <span class="salud-importe">
+                {{ 'dashboard.expensesQuarterVat' | translate }} {{ gastoTrimestreStats.totalIva | number:'1.2-2' }} €
+                · {{ 'dashboard.expensesQuarterCount' | translate: { count: gastoTrimestreStats.count } }}
+              </span>
+            } @else {
+              <span class="salud-importe">{{ 'dashboard.expensesQuarterEmpty' | translate }}</span>
+            }
+          </div>
+          <a
+            mat-button
+            routerLink="/gastos"
+            class="salud-cta"
+            [matTooltip]="'dashboard.expensesQuarterTooltip' | translate"
+          >{{ 'dashboard.seeAllExpenses' | translate }}</a>
+        </div>
       </section>
 
       <section class="chart-section">
@@ -622,6 +657,42 @@ export interface TopCliente {
                         <app-estado-badge [estado]="f.estadoPago"></app-estado-badge>
                       }
                       <span class="recent-amount">{{ f.total | number:'1.2-2' }} €</span>
+                    </span>
+                  </li>
+                }
+              </ul>
+            }
+          </mat-card-content>
+        </mat-card>
+      </section>
+
+      <section class="recent-section recent-gastos-section">
+        <mat-card class="recent-card">
+          <mat-card-header>
+            <mat-card-title>{{ 'dashboard.recentExpenses' | translate }}</mat-card-title>
+            <a mat-button routerLink="/gastos">{{ 'dashboard.seeAllExpenses' | translate }}</a>
+          </mat-card-header>
+          <mat-card-content>
+            @if (recentGastos.length === 0) {
+              <p class="empty">{{ 'dashboard.recentExpensesEmpty' | translate }}</p>
+              @if (auth.canMutate()) {
+                <a mat-stroked-button color="primary" routerLink="/gastos/nuevo" class="gastos-empty-cta">
+                  {{ 'dashboard.addExpense' | translate }}
+                </a>
+              }
+            } @else {
+              <ul class="recent-list">
+                @for (g of recentGastos; track g.id) {
+                  <li class="recent-row">
+                    <a [routerLink]="['/gastos', g.id]" class="recent-name-link">
+                      {{ g.proveedor || g.concepto }}
+                      @if (g.proveedor && g.concepto) {
+                        <span class="gasto-concepto-sub"> · {{ g.concepto }}</span>
+                      }
+                    </a>
+                    <span class="recent-meta">
+                      <span class="recent-date">{{ g.fecha | date:'dd/MM/yyyy' }}</span>
+                      <span class="recent-amount">{{ gastoTotal(g) | number:'1.2-2' }} €</span>
                     </span>
                   </li>
                 }
@@ -1225,6 +1296,29 @@ export interface TopCliente {
     .salud-proximas { border-left-color: #e2e8f0; }
     .salud-proximas.salud-warn { border-left-color: #f59e0b; background: rgba(245, 158, 11, 0.12); }
     .salud-ratio { border-left-color: #1e3a8a; }
+    .salud-gastos { border-left-color: #e11d48; }
+    .salud-gastos.salud-gastos-empty { border-left-color: #e2e8f0; }
+    .salud-gastos .salud-icon mat-icon { color: #e11d48; }
+    .salud-gastos.salud-gastos-empty .salud-icon mat-icon { color: #94a3b8; }
+
+    .recent-gastos-section {
+      margin-top: var(--app-space-xl, 32px);
+    }
+
+    .gastos-empty-cta {
+      margin-top: 8px;
+    }
+
+    .gasto-concepto-sub {
+      font-weight: 400;
+      color: var(--app-text-secondary, #64748b);
+    }
+
+    .recent-date {
+      font-size: 0.8125rem;
+      color: var(--app-text-muted, #94a3b8);
+      white-space: nowrap;
+    }
 
     .salud-icon mat-icon {
       font-size: 28px;
@@ -1314,6 +1408,14 @@ export interface TopCliente {
     :host-context(html.app-dark-theme) .kpi-icon {
       background: rgba(255, 255, 255, 0.06);
     }
+
+    :host-context(html.app-dark-theme) .salud-gastos:not(.salud-gastos-empty) {
+      border-left-color: #fb7185;
+    }
+
+    :host-context(html.app-dark-theme) .salud-gastos:not(.salud-gastos-empty) .salud-icon mat-icon {
+      color: #fb7185;
+    }
   `]
 })
 export class DashboardComponent implements OnInit, AfterViewInit {
@@ -1343,6 +1445,15 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   };
   recentPresupuestos: Presupuesto[] = [];
   recentFacturas: Factura[] = [];
+  recentGastos: Gasto[] = [];
+  gastoTrimestreStats: GastoTrimestreStats = {
+    year: new Date().getFullYear(),
+    trimestre: 1,
+    count: 0,
+    totalBase: 0,
+    totalIva: 0,
+    totalConIva: 0,
+  };
   /** Datos del gráfico según modo (último mes natural o 12 meses del año elegido). */
   ingresosPorMes: IngresoPorMes[] = [];
   /** Vista: un mes natural anterior o año completo. */
@@ -1505,6 +1616,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     private presupuestoService: PresupuestoService,
     private facturaService: FacturaService,
     private materialService: MaterialService,
+    private gastoService: GastoService,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone,
     private translate: TranslateService,
@@ -1525,8 +1637,9 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       presupuestos: this.presupuestoService.getAll().pipe(catchError(() => of<Presupuesto[]>([]))),
       facturas: this.facturaService.getAll().pipe(catchError(() => of<Factura[]>([]))),
       materiales: this.materialService.getTopUsados().pipe(catchError(() => of<Material[]>([]))),
+      gastos: this.gastoService.getAll().pipe(catchError(() => of<Gasto[]>([]))),
     }).subscribe({
-      next: ({ presupuestos, facturas, materiales }) => {
+      next: ({ presupuestos, facturas, materiales, gastos }) => {
         this.allPresupuestos = presupuestos;
         this.presupuestosCount = presupuestos.length;
         this.recentPresupuestos = [...presupuestos]
@@ -1544,9 +1657,53 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
         this.topMateriales = materiales;
         this.computeTopClientes();
+
+        this.recentGastos = [...gastos]
+          .sort((a, b) => this.parseLocalDate(b.fecha).getTime() - this.parseLocalDate(a.fecha).getTime())
+          .slice(0, 5);
+        this.gastoTrimestreStats = this.computeGastoTrimestreStats(gastos);
+
         this.scheduleLayoutRefresh();
       },
     });
+  }
+
+  gastoTotal(g: Gasto): number {
+    return (g.baseImponible ?? 0) + (g.cuotaIva ?? 0);
+  }
+
+  private computeGastoTrimestreStats(gastos: Gasto[]): GastoTrimestreStats {
+    const now = new Date();
+    const year = now.getFullYear();
+    const trimestre = Math.floor(now.getMonth() / 3) + 1;
+    const startMonth = (trimestre - 1) * 3;
+    const start = new Date(year, startMonth, 1);
+    const end = new Date(year, startMonth + 3, 0);
+
+    let count = 0;
+    let totalBase = 0;
+    let totalIva = 0;
+    for (const g of gastos) {
+      if (!g.fecha) continue;
+      const d = this.parseLocalDate(g.fecha);
+      if (d < start || d > end) continue;
+      count++;
+      totalBase += g.baseImponible ?? 0;
+      totalIva += g.cuotaIva ?? 0;
+    }
+    return {
+      year,
+      trimestre,
+      count,
+      totalBase,
+      totalIva,
+      totalConIva: totalBase + totalIva,
+    };
+  }
+
+  private parseLocalDate(isoDate: string): Date {
+    const [y, m, d] = isoDate.split('T')[0].split('-').map(Number);
+    return new Date(y, m - 1, d);
   }
 
   ngAfterViewInit(): void {

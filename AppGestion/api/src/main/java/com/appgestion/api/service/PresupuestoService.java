@@ -16,16 +16,30 @@ import com.appgestion.api.repository.PresupuestoRepository;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.appgestion.api.util.EmailCopy;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class PresupuestoService {
+
+    public static final long MAX_ADJUNTO_BYTES = 4L * 1024 * 1024;
+    private static final Set<String> TIPOS_IMAGEN = Set.of(
+            MediaType.IMAGE_PNG_VALUE,
+            MediaType.IMAGE_JPEG_VALUE,
+            "image/jpg",
+            "image/webp"
+    );
+
+    public record PresupuestoAdjunto(byte[] bytes, MediaType mediaType) {}
 
     private final PresupuestoRepository presupuestoRepository;
     private final ClienteRepository clienteRepository;
@@ -199,6 +213,40 @@ public class PresupuestoService {
         emailService.enviarPdf(usuarioId, email, asunto, cuerpo, pdf, nombreArchivo);
     }
 
+    @Transactional
+    public void guardarFoto(Long id, Long usuarioId, MultipartFile file) throws IOException {
+        Presupuesto presupuesto = requireOwned(id, usuarioId);
+        presupuesto.setFotoTrabajo(leerImagenValidada(file, "foto"));
+        presupuestoRepository.save(presupuesto);
+    }
+
+    @Transactional
+    public void guardarFirma(Long id, Long usuarioId, MultipartFile file) throws IOException {
+        Presupuesto presupuesto = requireOwned(id, usuarioId);
+        presupuesto.setFirmaCliente(leerImagenValidada(file, "firma"));
+        presupuestoRepository.save(presupuesto);
+    }
+
+    @Transactional(readOnly = true)
+    public PresupuestoAdjunto obtenerFoto(Long id, Long usuarioId) {
+        Presupuesto presupuesto = requireOwned(id, usuarioId);
+        byte[] data = presupuesto.getFotoTrabajo();
+        if (data == null || data.length == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Este presupuesto no tiene foto del trabajo");
+        }
+        return new PresupuestoAdjunto(data, detectarMediaType(data));
+    }
+
+    @Transactional(readOnly = true)
+    public PresupuestoAdjunto obtenerFirma(Long id, Long usuarioId) {
+        Presupuesto presupuesto = requireOwned(id, usuarioId);
+        byte[] data = presupuesto.getFirmaCliente();
+        if (data == null || data.length == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Este presupuesto no tiene firma del cliente");
+        }
+        return new PresupuestoAdjunto(data, detectarMediaType(data));
+    }
+
     private void mapItems(List<PresupuestoItemRequest> itemRequests, Presupuesto presupuesto) {
         for (PresupuestoItemRequest req : itemRequests) {
             PresupuestoItem item = new PresupuestoItem();
@@ -310,7 +358,44 @@ public class PresupuestoService {
                 presupuesto.getImporteAnticipo(),
                 Boolean.TRUE.equals(presupuesto.getAnticipoFacturado()),
                 presupuesto.getFechaAnticipo(),
-                facturaId
+                facturaId,
+                presupuesto.getFotoTrabajo() != null && presupuesto.getFotoTrabajo().length > 0,
+                presupuesto.getFirmaCliente() != null && presupuesto.getFirmaCliente().length > 0
         );
+    }
+
+    private Presupuesto requireOwned(Long id, Long usuarioId) {
+        return presupuestoRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
+    }
+
+    private byte[] leerImagenValidada(MultipartFile file, String etiqueta) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("La " + etiqueta + " es obligatoria.");
+        }
+        if (file.getSize() > MAX_ADJUNTO_BYTES) {
+            throw new IllegalArgumentException("La " + etiqueta + " no puede superar 4 MB.");
+        }
+        String ct = file.getContentType() != null ? file.getContentType().toLowerCase() : "";
+        if (!TIPOS_IMAGEN.contains(ct)) {
+            throw new IllegalArgumentException("La " + etiqueta + " debe ser PNG, JPEG o WebP.");
+        }
+        return file.getBytes();
+    }
+
+    static MediaType detectarMediaType(byte[] data) {
+        if (data.length >= 8
+                && data[0] == (byte) 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47) {
+            return MediaType.IMAGE_PNG;
+        }
+        if (data.length >= 3 && (data[0] & 0xFF) == 0xFF && (data[1] & 0xFF) == 0xD8 && (data[2] & 0xFF) == 0xFF) {
+            return MediaType.IMAGE_JPEG;
+        }
+        if (data.length >= 12
+                && data[0] == 'R' && data[1] == 'I' && data[2] == 'F' && data[3] == 'F'
+                && data[8] == 'W' && data[9] == 'E' && data[10] == 'B' && data[11] == 'P') {
+            return MediaType.parseMediaType("image/webp");
+        }
+        return MediaType.IMAGE_PNG;
     }
 }

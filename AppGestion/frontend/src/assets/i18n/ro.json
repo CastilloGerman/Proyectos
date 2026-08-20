@@ -259,6 +259,15 @@
     "recentEstimatesEmpty": "Nu există oferte",
     "recentInvoices": "Ultimele facturi",
     "recentInvoicesEmpty": "Nu există facturi",
+    "expensesQuarterTitle": "Cheltuieli T{{trimestre}} {{year}}",
+    "expensesQuarterVat": "TVA deductibilă:",
+    "expensesQuarterCount": "{{count}} cheltuieli",
+    "expensesQuarterEmpty": "Fără cheltuieli în acest trimestru",
+    "expensesQuarterTooltip": "Baza impozabilă pentru trimestrul curent. TVA deductibilă alimentează rezumatul fiscal.",
+    "recentExpenses": "Cheltuieli recente",
+    "recentExpensesEmpty": "Nu există cheltuieli înregistrate",
+    "seeAllExpenses": "Vezi cheltuielile",
+    "addExpense": "Înregistrează cheltuială",
     "budgetBarPending": "{{count}} în așteptare",
     "budgetBarAccepted": "{{count}} acceptate",
     "budgetBarInProgress": "{{count}} în lucru",
@@ -580,7 +589,11 @@
     "finalConfirmLine1": "Total ofertă: {{total}} €",
     "finalConfirmLine2": "Rest de facturat (finală): {{pending}} €",
     "finalConfirmQuestion": "Emiti factura finală cu deductibilitate pentru avansele facturate?",
-    "finalConfirmBtn": "Emite factura finală"
+    "finalConfirmBtn": "Emite factura finală",
+    "attachmentsTitle": "Foto și semnătură",
+    "workPhoto": "Foto lucrării",
+    "clientSignature": "Semnătura clientului",
+    "noAttachments": "Acest deviz nu are foto sau semnătură."
   },
   "calcM2": {
     "includeDetailToggle": "Include detaliul zonelor în descriere",
@@ -644,7 +657,16 @@
     "waAria": "Deschide WhatsApp către client cu text sugerat",
     "waLink": "WhatsApp către client",
     "waHint": "Pe multe telefoane PDF-ul apare la partajare către WhatsApp; dacă nu, folosește PDF-ul în cealaltă filă și acest link (mesaj sugerat, atașamentul nu e automat).",
-    "waMsg": "Bună{{nameSuffix}}, îți trimit oferta #{{id}} — e în regulă?"
+    "waMsg": "Bună{{nameSuffix}}, îți trimit oferta #{{id}} — e în regulă?",
+    "inSituTitle": "Foto și semnătură la fața locului",
+    "inSituHint": "Opțional: atașează o poză a lucrării și semnătura clientului, apoi deschide PDF-ul.",
+    "attachPhoto": "Atașează foto lucrării",
+    "signClient": "Semnătura clientului",
+    "photoOk": "Foto salvată",
+    "signOk": "Semnătură salvată",
+    "continuePdf": "Deschide PDF",
+    "uploadingPhoto": "Se încarcă foto…",
+    "uploadingSign": "Se încarcă semnătura…"
   },
   "acctCfg": {
     "title": "Setări cont",
@@ -883,7 +905,11 @@
     "inlineClientFail": "Nu am putut crea clientul.",
     "errorSave": "Nu am putut salva. Încearcă din nou.",
     "taxDataSaved": "Date fiscale salvate.",
-    "errorGeneric": "Ceva nu a mers bine. Încearcă din nou."
+    "errorGeneric": "Ceva nu a mers bine. Încearcă din nou.",
+    "budgetPhotoOk": "Foto lucrării salvată.",
+    "budgetPhotoFail": "Nu am putut salva foto. Încearcă din nou.",
+    "budgetSignOk": "Semnătura clientului salvată.",
+    "budgetSignFail": "Nu am putut salva semnătura. Încearcă din nou."
   },
   "acctProf": {
     "title": "Your profile",
@@ -1403,5 +1429,9 @@
     "optFailBlock": "Do not send",
     "oauthFailHint": "When token expires or provider rejects submission.",
     "saveChanges": "Save changes"
+  },
+  "signature": {
+    "clear": "Șterge semnătura",
+    "confirm": "Confirmă semnătura"
   }
 }

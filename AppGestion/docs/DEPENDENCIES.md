@@ -6,19 +6,20 @@ Versiones de referencia: [`pom.xml`](../pom.xml) (parent BOM), [`api/pom.xml`](.
 
 ## API (Maven)
 
-Parent BOM: **Spring Boot 4.0.6** (`spring-boot-starter-parent` en el `pom.xml` raíz). Se usa `spring-boot-starter-classic` como puente de classpath; los starters concretos heredan la versión del BOM:
+Parent BOM: **Spring Boot 4.1.0** (`spring-boot-starter-parent` en el `pom.xml` raíz). Se usa `spring-boot-starter-classic` como puente de classpath; los starters concretos heredan la versión del BOM:
 
 | Grupo | Artefacto | Versión | Uso |
 |-------|-----------|---------|-----|
-| org.springframework.boot | spring-boot-starter-webmvc | 4.0.6 (BOM) | REST API |
-| org.springframework.boot | spring-boot-starter-data-jpa | 4.0.6 (BOM) | Persistencia |
-| org.springframework.boot | spring-boot-starter-validation | 4.0.6 (BOM) | Validación |
-| org.springframework.boot | spring-boot-starter-security | 4.0.6 (BOM) | Seguridad |
-| org.springframework.boot | spring-boot-starter-cache | 4.0.6 (BOM) | Abstracción `@Cacheable` |
+| org.springframework.boot | spring-boot-starter-webmvc | 4.1.0 (BOM) | REST API |
+| org.springframework.boot | spring-boot-starter-data-jpa | 4.1.0 (BOM) | Persistencia |
+| org.springframework.boot | spring-boot-starter-validation | 4.1.0 (BOM) | Validación |
+| org.springframework.boot | spring-boot-starter-security | 4.1.0 (BOM) | Seguridad |
+| org.springframework.boot | spring-boot-starter-cache | 4.1.0 (BOM) | Abstracción `@Cacheable` |
+| org.springframework.boot | spring-boot-jackson2 | 4.1.0 (BOM) | ObjectMapper Jackson 2 (código existente) |
 | com.github.ben-manes.caffeine | caffeine | (BOM) | Caché in-memory (`/materiales/top-usados`) |
-| org.springframework.boot | spring-boot-starter-actuator | 4.0.6 (BOM) | Health/actuator |
-| org.springframework.boot | spring-boot-starter-mail | 4.0.6 (BOM) | Envío de correos |
-| org.springframework.boot | spring-boot-starter-flyway | 4.0.6 (BOM) | Migraciones de esquema |
+| org.springframework.boot | spring-boot-starter-actuator | 4.1.0 (BOM) | Health/actuator |
+| org.springframework.boot | spring-boot-starter-mail | 4.1.0 (BOM) | Envío de correos |
+| org.springframework.boot | spring-boot-starter-flyway | 4.1.0 (BOM) | Migraciones de esquema |
 | org.flywaydb | flyway-database-postgresql | (BOM) | Soporte Flyway para PostgreSQL 17+ |
 | io.jsonwebtoken | jjwt-api / jjwt-impl / jjwt-jackson | 0.12.6 | JWT |
 | com.stripe | stripe-java | 25.6.0 | Pagos |
@@ -31,7 +32,7 @@ Parent BOM: **Spring Boot 4.0.6** (`spring-boot-starter-parent` en el `pom.xml` 
 
 | Grupo | Artefacto | Versión | Uso |
 |-------|-----------|---------|-----|
-| org.springframework.boot | spring-boot-starter-test-classic | 4.0.6 (BOM) | JUnit 5, Mockito, AssertJ |
+| org.springframework.boot | spring-boot-starter-test-classic | 4.1.0 (BOM) | JUnit 5, Mockito, AssertJ |
 | org.springframework.security | spring-security-test | (BOM) | MockMvc + seguridad |
 | com.tngtech.archunit | archunit-junit5 | 1.4.1 | Reglas de capas (`ArchitectureTest`) |
 | org.testcontainers | junit-jupiter / postgresql | 1.21.2 (BOM) | Integración con PostgreSQL real |

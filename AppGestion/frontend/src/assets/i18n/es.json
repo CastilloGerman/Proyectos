@@ -246,7 +246,11 @@
     "inlineClientFail": "No pudimos crear el cliente.",
     "errorSave": "No pudimos guardar. Inténtalo de nuevo.",
     "taxDataSaved": "Datos fiscales guardados.",
-    "errorGeneric": "Algo salió mal. Inténtalo de nuevo."
+    "errorGeneric": "Algo salió mal. Inténtalo de nuevo.",
+    "budgetPhotoOk": "Foto del trabajo guardada.",
+    "budgetPhotoFail": "No pudimos guardar la foto. Inténtalo de nuevo.",
+    "budgetSignOk": "Firma del cliente guardada.",
+    "budgetSignFail": "No pudimos guardar la firma. Inténtalo de nuevo."
   },
   "pref": {
     "uiLanguageTitle": "Idioma de la aplicación",
@@ -438,6 +442,15 @@
     "recentEstimatesEmpty": "No hay presupuestos",
     "recentInvoices": "Últimas facturas",
     "recentInvoicesEmpty": "No hay facturas",
+    "expensesQuarterTitle": "Gastos T{{trimestre}} {{year}}",
+    "expensesQuarterVat": "IVA soportado:",
+    "expensesQuarterCount": "{{count}} gastos",
+    "expensesQuarterEmpty": "Sin gastos este trimestre",
+    "expensesQuarterTooltip": "Base imponible del trimestre en curso. El IVA soportado alimenta el Modelo 303 en Hacienda.",
+    "recentExpenses": "Últimos gastos",
+    "recentExpensesEmpty": "No hay gastos registrados",
+    "seeAllExpenses": "Ver gastos",
+    "addExpense": "Registrar gasto",
     "budgetBarPending": "{{count}} pendientes",
     "budgetBarAccepted": "{{count}} aceptados",
     "budgetBarInProgress": "{{count}} en ejecución",
@@ -759,7 +772,11 @@
     "finalConfirmLine1": "Total presupuesto: {{total}} €",
     "finalConfirmLine2": "Importe pendiente (a cobrar en la final): {{pending}} €",
     "finalConfirmQuestion": "¿Emitir la factura final con descuento del anticipo ya facturado?",
-    "finalConfirmBtn": "Generar factura final"
+    "finalConfirmBtn": "Generar factura final",
+    "attachmentsTitle": "Foto y firma",
+    "workPhoto": "Foto del trabajo",
+    "clientSignature": "Firma del cliente",
+    "noAttachments": "Este presupuesto no tiene foto ni firma."
   },
   "calcM2": {
     "includeDetailToggle": "Incluir detalle de zonas en la descripción",
@@ -823,7 +840,16 @@
     "waAria": "Abrir WhatsApp al cliente con un texto sugerido",
     "waLink": "WhatsApp al cliente",
     "waHint": "En muchos móviles el PDF se ofrece al compartir con WhatsApp; si no, abre el PDF en la otra pestaña y usa este enlace (texto sugerido, sin adjunto automático).",
-    "waMsg": "Hola{{nameSuffix}}, te envío el presupuesto #{{id}}. ¿Te encaja?"
+    "waMsg": "Hola{{nameSuffix}}, te envío el presupuesto #{{id}}. ¿Te encaja?",
+    "inSituTitle": "Foto y firma en obra",
+    "inSituHint": "Opcional: adjunta una foto del trabajo y la firma del cliente. Luego abre el PDF.",
+    "attachPhoto": "Adjuntar foto del trabajo",
+    "signClient": "Firma del cliente",
+    "photoOk": "Foto guardada",
+    "signOk": "Firma guardada",
+    "continuePdf": "Abrir PDF",
+    "uploadingPhoto": "Subiendo foto…",
+    "uploadingSign": "Subiendo firma…"
   },
   "acctCfg": {
     "title": "Configuración de cuenta",
@@ -1403,5 +1429,9 @@
   },
   "lang": {
     "switcherAria": "Cambiar idioma de la aplicación"
+  },
+  "signature": {
+    "clear": "Borrar firma",
+    "confirm": "Confirmar firma"
   }
 }

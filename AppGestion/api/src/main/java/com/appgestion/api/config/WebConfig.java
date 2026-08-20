@@ -32,7 +32,7 @@ public class WebConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         List<String> patterns = Arrays.stream(allowedOriginPatternsRaw.split(","))
-                .map(String::trim)
+                .map(s -> s.trim())
                 .filter(StringUtils::hasText)
                 .collect(Collectors.toList());
 
@@ -41,7 +41,7 @@ public class WebConfig {
             config.setAllowedOriginPatterns(patterns);
         } else {
             List<String> origins = Arrays.stream(allowedOriginsRaw.split(","))
-                    .map(String::trim)
+                    .map(s -> s.trim())
                     .filter(StringUtils::hasText)
                     .collect(Collectors.toList());
             if (origins.isEmpty()) {

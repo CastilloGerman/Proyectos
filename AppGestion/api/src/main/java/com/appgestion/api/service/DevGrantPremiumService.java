@@ -13,9 +13,23 @@ import java.util.Set;
 public class DevGrantPremiumService {
 
     private final AppDevProperties devProperties;
+    private final CurrentUserService currentUserService;
+    private final SubscriptionService subscriptionService;
 
-    public DevGrantPremiumService(AppDevProperties devProperties) {
+    public DevGrantPremiumService(
+            AppDevProperties devProperties,
+            CurrentUserService currentUserService,
+            SubscriptionService subscriptionService) {
         this.devProperties = devProperties;
+        this.currentUserService = currentUserService;
+        this.subscriptionService = subscriptionService;
+    }
+
+    /** Marca al usuario autenticado como ACTIVE (premium) en entornos de prueba. */
+    public void grantPremiumToAuthenticatedUser() {
+        Usuario usuario = currentUserService.getCurrentUsuario();
+        requireCanGrant(usuario);
+        subscriptionService.grantPremiumForDev(usuario);
     }
 
     /** Si el front debe mostrar el botón de activar premium (pruebas). */

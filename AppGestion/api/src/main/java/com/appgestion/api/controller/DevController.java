@@ -1,10 +1,6 @@
 package com.appgestion.api.controller;
 
-import com.appgestion.api.domain.entity.Usuario;
-import com.appgestion.api.security.SecurityUtils;
 import com.appgestion.api.service.DevGrantPremiumService;
-import com.appgestion.api.service.SubscriptionService;
-import com.appgestion.api.repository.UsuarioRepository;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,15 +18,9 @@ import java.util.Map;
 @ConditionalOnProperty(prefix = "app.dev", name = "grant-premium-enabled", havingValue = "true")
 public class DevController {
 
-    private final SubscriptionService subscriptionService;
-    private final UsuarioRepository usuarioRepository;
     private final DevGrantPremiumService devGrantPremiumService;
 
-    public DevController(SubscriptionService subscriptionService,
-            UsuarioRepository usuarioRepository,
-            DevGrantPremiumService devGrantPremiumService) {
-        this.subscriptionService = subscriptionService;
-        this.usuarioRepository = usuarioRepository;
+    public DevController(DevGrantPremiumService devGrantPremiumService) {
         this.devGrantPremiumService = devGrantPremiumService;
     }
 
@@ -40,9 +30,7 @@ public class DevController {
      */
     @PostMapping("/grant-premium")
     public ResponseEntity<Map<String, Object>> grantPremium() {
-        Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
-        devGrantPremiumService.requireCanGrant(usuario);
-        subscriptionService.grantPremiumForDev(usuario);
+        devGrantPremiumService.grantPremiumToAuthenticatedUser();
         return ResponseEntity.ok(Map.of(
                 "ok", true,
                 "message", "Usuario marcado como premium (ACTIVE). Refresca la página o vuelve a cargar la app para que se actualice canWrite."

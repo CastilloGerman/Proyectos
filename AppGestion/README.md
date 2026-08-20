@@ -29,7 +29,7 @@ Versiones tomadas de `pom.xml`, `api/pom.xml`, `frontend/package.json` y `.nvmrc
 | Tecnología | Versión / criterio |
 |------------|-------------------|
 | **Java** | **21** (`java.version` en `pom.xml` raíz) |
-| **Spring Boot** | **4.0.6** (parent `spring-boot-starter-parent` en `pom.xml` raíz) |
+| **Spring Boot** | **4.1.0** (parent `spring-boot-starter-parent` en `pom.xml` raíz) |
 | **Maven** | **3.9+** (no hay Maven Wrapper en el repo; usar Maven instalado) |
 | **Node.js** | **`>=24.14.1`** (`engines` en `frontend/package.json`; `.nvmrc`: `24.14.1`) |
 | **Angular** | **~21.2** (`@angular/core` y paquetes alineados en `frontend/package.json`) |

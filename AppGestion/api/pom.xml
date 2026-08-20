@@ -45,10 +45,15 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
-        <!-- JSON/Jackson: expone ObjectMapper y convierte HTTP; en Boot 4 no viene implícito solo con webmvc -->
+        <!-- JSON/Jackson 3 (Boot 4 default). Servicios y tests aún usan ObjectMapper de Jackson 2. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-json</artifactId>
+        </dependency>
+        <!-- Jackson 2 en compile: en 4.1 ya no llega por starter-json (solo runtime vía jjwt-jackson). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-jackson2</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -172,6 +177,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test-classic</artifactId>
             <scope>test</scope>
+            <exclusions>
+                <!-- Boot 4.1.0: classic test arrastra gRPC y falla el contexto si no hay spring-grpc. -->
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-grpc-test</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.springframework.security</groupId>

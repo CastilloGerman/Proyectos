@@ -75,4 +75,24 @@ export class PresupuestoService {
   guardarMisCondicionesPredeterminadas(claves: string[]): Observable<void> {
     return this.http.put<void>(`${this.apiUrl}/mis-condiciones-predeterminadas`, { claves });
   }
+
+  uploadFoto(id: number, file: Blob, filename = 'foto.jpg'): Observable<void> {
+    const body = new FormData();
+    body.append('file', file, filename);
+    return this.http.post<void>(`${this.apiUrl}/${id}/foto`, body);
+  }
+
+  uploadFirma(id: number, file: Blob, filename = 'firma.png'): Observable<void> {
+    const body = new FormData();
+    body.append('file', file, filename);
+    return this.http.post<void>(`${this.apiUrl}/${id}/firma`, body);
+  }
+
+  downloadFoto(id: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${id}/foto`, { responseType: 'blob' });
+  }
+
+  downloadFirma(id: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${id}/firma`, { responseType: 'blob' });
+  }
 }

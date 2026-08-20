@@ -70,6 +70,17 @@ public class Presupuesto {
     @Column(name = "fecha_anticipo")
     private LocalDate fechaAnticipo;
 
+    /**
+     * Foto in-situ del trabajo (JPEG/PNG comprimido).
+     * No usar {@code @Lob}: en PostgreSQL Hibernate lo mapea a {@code oid}, pero la columna es {@code BYTEA}.
+     */
+    @Column(name = "foto_trabajo", columnDefinition = "BYTEA")
+    private byte[] fotoTrabajo;
+
+    /** Firma táctil del cliente (PNG). */
+    @Column(name = "firma_cliente", columnDefinition = "BYTEA")
+    private byte[] firmaCliente;
+
     @OneToMany(mappedBy = "presupuesto", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PresupuestoItem> items = new ArrayList<>();
 
@@ -134,4 +145,10 @@ public class Presupuesto {
 
     public List<PresupuestoItem> getItems() { return items; }
     public void setItems(List<PresupuestoItem> items) { this.items = items; }
+
+    public byte[] getFotoTrabajo() { return fotoTrabajo; }
+    public void setFotoTrabajo(byte[] fotoTrabajo) { this.fotoTrabajo = fotoTrabajo; }
+
+    public byte[] getFirmaCliente() { return firmaCliente; }
+    public void setFirmaCliente(byte[] firmaCliente) { this.firmaCliente = firmaCliente; }
 }

@@ -3,7 +3,7 @@
 # Si el root del repo en Railway es la raíz "Proyectos", usa: mkdir -p target && cp AppGestion/api/target/appgestion-api.jar target/
 
 [build]
-buildCommand = "mvn -B -DskipTests package && mkdir -p target && cp api/target/appgestion-api.jar target/appgestion-api.jar"
+buildCommand = "mvn -B -Dmaven.test.skip=true package && mkdir -p target && cp api/target/appgestion-api.jar target/appgestion-api.jar"
 
 [deploy]
 startCommand = "java -jar target/appgestion-api.jar"

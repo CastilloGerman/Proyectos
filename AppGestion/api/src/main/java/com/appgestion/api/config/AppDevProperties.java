@@ -43,7 +43,7 @@ public class AppDevProperties {
             return Set.of();
         }
         return Arrays.stream(grantPremiumEmailAllowlist.split(","))
-                .map(String::trim)
+                .map(s -> s.trim())
                 .filter(s -> !s.isEmpty())
                 .map(s -> s.toLowerCase(Locale.ROOT))
                 .collect(Collectors.toUnmodifiableSet());

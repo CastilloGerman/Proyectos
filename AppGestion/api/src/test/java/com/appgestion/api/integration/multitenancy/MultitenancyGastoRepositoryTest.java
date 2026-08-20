@@ -83,7 +83,7 @@ class MultitenancyGastoRepositoryTest {
         assertThat(gastoRepository.findByUsuarioIdOrderByFechaDesc(usuarioB.getId()))
                 .hasSize(1)
                 .first()
-                .extracting(Gasto::getId)
+                .extracting(g -> g.getId())
                 .isEqualTo(gastoIdB);
     }
 

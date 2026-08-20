@@ -69,7 +69,7 @@ public class ClientePanelService {
                 .map(this::toFacturaResumen)
                 .toList();
 
-        double totalPendiente = facturasRes.stream().mapToDouble(ClienteFacturaResumen::pendiente).sum();
+        double totalPendiente = facturasRes.stream().mapToDouble(r -> r.pendiente()).sum();
         int facturasConPendiente = (int) facturasRes.stream().filter(f -> f.pendiente() > 0.001).count();
 
         List<ClientePresupuestoResumen> presRes = presupuestos.stream()
@@ -77,7 +77,7 @@ public class ClientePanelService {
                 .toList();
 
         List<ClientePresupuestoResumen> activos = presRes.stream()
-                .filter(ClientePresupuestoResumen::activo)
+                .filter(p -> p.activo())
                 .toList();
 
         List<ClienteHistorialItem> historial = new ArrayList<>();
@@ -113,7 +113,7 @@ public class ClientePanelService {
                     presupuestoToFactura.containsKey(p.getId()) ? "Factura generada" : ""
             ));
         }
-        historial.sort(Comparator.comparing(ClienteHistorialItem::fechaOrden).reversed());
+        historial.sort(Comparator.comparing((ClienteHistorialItem h) -> h.fechaOrden()).reversed());
 
         return new ClientePanelResponse(
                 cliente,

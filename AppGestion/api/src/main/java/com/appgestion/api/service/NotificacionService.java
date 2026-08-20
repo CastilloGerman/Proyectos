@@ -51,7 +51,7 @@ public class NotificacionService {
     public Page<NotificacionResponse> listForCurrentUser(Long usuarioId, Boolean readFilter, int page, int size) {
         int p = Math.max(0, page);
         int s = Math.min(50, Math.max(1, size));
-        var pageable = PageRequest.of(p, s, Sort.by(Sort.Direction.DESC, "createdAt"));
+        var pageable = PageRequest.of(p, s, Sort.by((Notificacion n) -> n.getCreatedAt()).descending());
         return notificacionRepository.findForUsuario(usuarioId, readFilter, pageable).map(this::toResponse);
     }
 

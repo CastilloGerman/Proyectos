@@ -259,6 +259,15 @@
     "recentEstimatesEmpty": "No estimates",
     "recentInvoices": "Recent invoices",
     "recentInvoicesEmpty": "No invoices",
+    "expensesQuarterTitle": "Expenses Q{{trimestre}} {{year}}",
+    "expensesQuarterVat": "Input VAT:",
+    "expensesQuarterCount": "{{count}} expenses",
+    "expensesQuarterEmpty": "No expenses this quarter",
+    "expensesQuarterTooltip": "Taxable base for the current quarter. Input VAT feeds into the tax summary in Tax.",
+    "recentExpenses": "Recent expenses",
+    "recentExpensesEmpty": "No expenses recorded",
+    "seeAllExpenses": "View expenses",
+    "addExpense": "Add expense",
     "budgetBarPending": "{{count}} pending",
     "budgetBarAccepted": "{{count}} accepted",
     "budgetBarInProgress": "{{count}} in progress",
@@ -580,7 +589,11 @@
     "finalConfirmLine1": "Estimate total: {{total}} €",
     "finalConfirmLine2": "Pending (for final invoice): {{pending}} €",
     "finalConfirmQuestion": "Issue the final invoice discounting invoiced deposits?",
-    "finalConfirmBtn": "Issue final invoice"
+    "finalConfirmBtn": "Issue final invoice",
+    "attachmentsTitle": "Photo and signature",
+    "workPhoto": "Job photo",
+    "clientSignature": "Client signature",
+    "noAttachments": "This estimate has no photo or signature."
   },
   "calcM2": {
     "includeDetailToggle": "Include zone breakdown in description",
@@ -644,7 +657,16 @@
     "waAria": "Open WhatsApp to the customer with suggested text",
     "waLink": "WhatsApp customer",
     "waHint": "On many phones the PDF appears when sharing to WhatsApp; if not, use the PDF in the other tab and this link (suggested message, attachment not automatic).",
-    "waMsg": "Hi{{nameSuffix}}, sending estimate #{{id}} — does this work for you?"
+    "waMsg": "Hi{{nameSuffix}}, sending estimate #{{id}} — does this work for you?",
+    "inSituTitle": "On-site photo and signature",
+    "inSituHint": "Optional: attach a photo of the job and the client signature, then open the PDF.",
+    "attachPhoto": "Attach job photo",
+    "signClient": "Client signature",
+    "photoOk": "Photo saved",
+    "signOk": "Signature saved",
+    "continuePdf": "Open PDF",
+    "uploadingPhoto": "Uploading photo…",
+    "uploadingSign": "Uploading signature…"
   },
   "acctCfg": {
     "title": "Account settings",
@@ -1402,6 +1424,14 @@
     "inlineClientFail": "We couldn’t create the customer.",
     "errorSave": "We couldn’t save. Try again.",
     "taxDataSaved": "Tax details saved.",
-    "errorGeneric": "Something went wrong. Try again."
+    "errorGeneric": "Something went wrong. Try again.",
+    "budgetPhotoOk": "Job photo saved.",
+    "budgetPhotoFail": "We could not save the photo. Please try again.",
+    "budgetSignOk": "Client signature saved.",
+    "budgetSignFail": "We could not save the signature. Please try again."
+  },
+  "signature": {
+    "clear": "Clear signature",
+    "confirm": "Confirm signature"
   }
 }
