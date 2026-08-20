@@ -11,6 +11,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { TranslateModule } from '@ngx-translate/core';
+import { NOEMI_FOUNDER_LINKEDIN_URL } from '../../../core/constants/noemi-site.constants';
 import { AboutHeroPreviewComponent } from './about-hero-preview/about-hero-preview.component';
 import { AnimatedBackgroundComponent } from '../../../shared/animated-background/animated-background.component';
 
@@ -26,6 +27,7 @@ export class AboutComponent implements AfterViewInit, OnDestroy {
 
   /** Segundos visibles por imagen antes del cambio automático. */
   readonly slideDurationSec = 6;
+  readonly founderLinkedInUrl = NOEMI_FOUNDER_LINKEDIN_URL;
 
   readonly founderSlides = [
     { src: 'assets/about/founder.jpg', altKey: 'auth.about.slide0Alt' },

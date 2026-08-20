@@ -440,6 +440,36 @@
   color: var(--app-text-primary, #0f172a) !important;
 }
 
+.about-letter-linkedin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #0a66c2;
+  text-decoration: none;
+  border-radius: 6px;
+}
+
+.about-letter-linkedin:hover,
+.about-letter-linkedin:focus-visible {
+  color: #004182;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.about-letter-linkedin:focus-visible {
+  outline: 2px solid #0a66c2;
+  outline-offset: 3px;
+}
+
+.about-letter-linkedin-icon {
+  flex-shrink: 0;
+  display: block;
+}
+
 .about-letter-signature {
   display: block;
   margin-top: 1rem;
@@ -605,6 +635,15 @@
 
 :host-context(html.app-dark-theme) .about-letter-name {
   color: var(--app-text-primary, #f8fafc) !important;
+}
+
+:host-context(html.app-dark-theme) .about-letter-linkedin {
+  color: #7eb3e8;
+}
+
+:host-context(html.app-dark-theme) .about-letter-linkedin:hover,
+:host-context(html.app-dark-theme) .about-letter-linkedin:focus-visible {
+  color: #9ec9f0;
 }
 
 :host-context(html.app-dark-theme) .about-letter-portrait {

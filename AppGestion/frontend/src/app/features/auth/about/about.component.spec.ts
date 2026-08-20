@@ -39,6 +39,15 @@ describe('AboutComponent', () => {
     expect(text).toContain('Nuestra historia');
     expect(text).toContain('Velocidad en campo');
     expect(text).toContain('Querido compañero');
+    expect(text).toContain('Contactar en LinkedIn');
     expect(text).not.toContain('auth.about.');
+  });
+
+  it('links the founder letter to the public LinkedIn profile', () => {
+    const link = fixture.nativeElement.querySelector('a.about-letter-linkedin') as HTMLAnchorElement | null;
+    expect(link).toBeTruthy();
+    expect(link?.getAttribute('href')).toBe('https://www.linkedin.com/in/germancastillo-tuc1998');
+    expect(link?.target).toBe('_blank');
+    expect(link?.rel).toContain('noopener');
   });
 });
