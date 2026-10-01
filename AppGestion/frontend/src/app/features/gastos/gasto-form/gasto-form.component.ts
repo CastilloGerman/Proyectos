@@ -10,6 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { MatIconModule } from '@angular/material/icon';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { GastoService } from '../../../core/services/gasto.service';
 import {
@@ -33,6 +34,7 @@ import {
     MatSnackBarModule,
     MatDatepickerModule,
     MatNativeDateModule,
+    MatIconModule,
     TranslateModule,
   ],
   template: `
@@ -88,6 +90,50 @@ import {
               </button>
             </div>
           </form>
+          @if (!isEdit) {
+            <section class="ai-import" aria-labelledby="ai-import-title">
+              <h2 id="ai-import-title">{{ 'gastos.aiTitle' | translate }}</h2>
+              <p>{{ 'gastos.aiDescription' | translate }}</p>
+              <input
+                #receiptInput
+                class="file-input"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,application/pdf,.jpg,.jpeg,.png,.webp,.pdf"
+                (change)="onReceiptSelected($event)"
+                [disabled]="isExtracting"
+              />
+              @if (selectedFile) {
+                <p class="selected-file">{{ selectedFile.name }}</p>
+              }
+              <div class="ai-actions">
+                <button mat-stroked-button type="button" (click)="receiptInput.click()" [disabled]="isExtracting">
+                  <mat-icon>attach_file</mat-icon>
+                  {{ 'gastos.aiChooseFile' | translate }}
+                </button>
+                <button mat-raised-button color="accent" type="button" (click)="extractDraft()"
+                        [disabled]="!selectedFile || isExtracting">
+                  <mat-icon>auto_awesome</mat-icon>
+                  {{ (isExtracting ? 'gastos.aiWorking' : 'gastos.aiExtract') | translate }}
+                </button>
+              </div>
+              @if (aiDocumentInvalid) {
+                <p class="ai-message ai-warning" role="alert">{{ 'gastos.aiInvalidDocument' | translate }}</p>
+              }
+              @if (aiReviewFields.length > 0) {
+                <div class="ai-message ai-warning" role="status">
+                  <p>{{ 'gastos.aiReview' | translate }}</p>
+                  <ul>
+                    @for (field of aiReviewFields; track field) {
+                      <li>{{ ('gastos.aiFields.' + field) | translate }}</li>
+                    }
+                  </ul>
+                </div>
+              }
+              @if (aiExtracted && !aiDocumentInvalid) {
+                <p class="ai-message ai-success" role="status">{{ 'gastos.aiDraftReady' | translate }}</p>
+              }
+            </section>
+          }
         </mat-card-content>
       </mat-card>
     </div>
@@ -109,6 +155,56 @@ import {
       gap: 16px;
       margin-top: 24px;
     }
+
+    .ai-import {
+      border-top: 1px solid rgba(0, 0, 0, 0.12);
+      margin-top: 24px;
+      padding-top: 20px;
+    }
+
+    .ai-import h2 {
+      font-size: 1.1rem;
+      margin: 0 0 8px;
+    }
+
+    .ai-import > p {
+      color: rgba(0, 0, 0, 0.7);
+    }
+
+    .file-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .selected-file {
+      font-size: 0.9rem;
+      overflow-wrap: anywhere;
+    }
+
+    .ai-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .ai-message {
+      margin: 16px 0 0;
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    .ai-message p { margin: 0; }
+    .ai-message ul { margin-bottom: 0; }
+    .ai-warning { background: #fff4e5; color: #663c00; }
+    .ai-success { background: #e8f5e9; color: #1b5e20; }
   `],
 })
 export class GastoFormComponent implements OnInit {
@@ -117,6 +213,11 @@ export class GastoFormComponent implements OnInit {
   id?: number;
   categorias = GASTO_CATEGORIAS;
   tiposIva = TIPOS_IVA;
+  selectedFile: File | null = null;
+  isExtracting = false;
+  aiExtracted = false;
+  aiDocumentInvalid = false;
+  aiReviewFields: string[] = [];
 
   constructor(
     private fb: FormBuilder,
@@ -207,6 +308,47 @@ export class GastoFormComponent implements OnInit {
           this.translate.instant('common.close'),
           { duration: 3000 },
         );
+      },
+    });
+  }
+
+  onReceiptSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.selectedFile = input.files?.[0] ?? null;
+    this.aiExtracted = false;
+    this.aiDocumentInvalid = false;
+    this.aiReviewFields = [];
+  }
+
+  extractDraft(): void {
+    if (!this.selectedFile || this.isExtracting) return;
+    this.isExtracting = true;
+    this.aiExtracted = false;
+    this.aiDocumentInvalid = false;
+    this.aiReviewFields = [];
+    this.gastoService.extractDraft(this.selectedFile).subscribe({
+      next: (draft) => {
+        this.isExtracting = false;
+        if (!draft.esDocumentoValido) {
+          this.aiDocumentInvalid = true;
+          return;
+        }
+        this.form.patchValue({
+          proveedor: draft.proveedor ?? '',
+          concepto: draft.concepto ?? '',
+          fecha: draft.fecha ? new Date(`${draft.fecha}T12:00:00`) : null,
+          baseImponible: draft.baseImponible,
+          tipoIva: draft.tipoIva,
+          categoria: draft.categoria,
+        });
+        this.aiReviewFields = draft.camposDudosos ?? [];
+        this.aiExtracted = true;
+      },
+      error: (error) => {
+        this.isExtracting = false;
+        const message = error?.error?.message || error?.error?.detail ||
+          this.translate.instant('gastos.aiExtractFail');
+        this.snackBar.open(message, this.translate.instant('common.close'), { duration: 5000 });
       },
     });
   }

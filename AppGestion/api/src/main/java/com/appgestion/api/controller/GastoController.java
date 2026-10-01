@@ -2,12 +2,16 @@ package com.appgestion.api.controller;
 
 import com.appgestion.api.dto.request.GastoRequest;
 import com.appgestion.api.dto.response.GastoResponse;
+import com.appgestion.api.dto.response.GastoBorradorResponse;
 import com.appgestion.api.service.CurrentUserService;
 import com.appgestion.api.service.GastoService;
+import com.appgestion.api.service.GastoIaService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -16,10 +20,16 @@ import java.util.List;
 public class GastoController {
 
     private final GastoService gastoService;
+    private final GastoIaService gastoIaService;
     private final CurrentUserService currentUserService;
 
-    public GastoController(GastoService gastoService, CurrentUserService currentUserService) {
+    public GastoController(
+            GastoService gastoService,
+            GastoIaService gastoIaService,
+            CurrentUserService currentUserService
+    ) {
         this.gastoService = gastoService;
+        this.gastoIaService = gastoIaService;
         this.currentUserService = currentUserService;
     }
 
@@ -40,6 +50,11 @@ public class GastoController {
     public GastoResponse crear(@Valid @RequestBody GastoRequest request) {
         var usuario = currentUserService.getCurrentUsuario();
         return gastoService.crear(request, usuario);
+    }
+
+    @PostMapping(value = "/ia/extraer", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public GastoBorradorResponse extraerBorrador(@RequestParam("archivo") MultipartFile archivo) {
+        return gastoIaService.extraerBorrador(archivo);
     }
 
     @PutMapping("/{id}")

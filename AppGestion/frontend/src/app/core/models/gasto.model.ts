@@ -20,6 +20,18 @@ export interface GastoRequest {
   categoria: GastoCategoria;
 }
 
+export interface GastoBorradorResponse {
+  proveedor: string | null;
+  concepto: string | null;
+  fecha: string | null;
+  baseImponible: number | null;
+  tipoIva: number | null;
+  categoria: GastoCategoria | null;
+  camposDudosos: string[];
+  tieneNif: boolean;
+  esDocumentoValido: boolean;
+}
+
 export const GASTO_CATEGORIAS: GastoCategoria[] = ['SUMINISTROS', 'MATERIAL', 'DIETAS', 'OTROS'];
 
 export const TIPOS_IVA: number[] = [21, 10, 4, 0];

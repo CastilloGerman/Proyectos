@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Gasto, GastoRequest } from '../models/gasto.model';
+import { Gasto, GastoBorradorResponse, GastoRequest } from '../models/gasto.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -20,6 +20,12 @@ export class GastoService {
 
   create(data: GastoRequest): Observable<Gasto> {
     return this.http.post<Gasto>(this.apiUrl, data);
+  }
+
+  extractDraft(file: File): Observable<GastoBorradorResponse> {
+    const formData = new FormData();
+    formData.append('archivo', file);
+    return this.http.post<GastoBorradorResponse>(`${this.apiUrl}/ia/extraer`, formData);
   }
 
   update(id: number, data: GastoRequest): Observable<Gasto> {

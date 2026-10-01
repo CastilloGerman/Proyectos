@@ -75,6 +75,17 @@ stripe:
   # invoice.payment_action_required (SCA pendiente).
 
 app:
+  ai:
+    gemini:
+      enabled: ${APP_AI_GEMINI_ENABLED:false}
+      api-key: ${GEMINI_API_KEY:}
+      model: ${APP_AI_GEMINI_MODEL:gemini-2.5-flash}
+      base-url: ${APP_AI_GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+      timeout-seconds: ${APP_AI_GEMINI_TIMEOUT_SECONDS:30}
+      max-image-bytes: ${APP_AI_GEMINI_MAX_IMAGE_BYTES:5242880}
+      max-audio-bytes: ${APP_AI_GEMINI_MAX_AUDIO_BYTES:10485760}
+      max-audio-seconds: ${APP_AI_GEMINI_MAX_AUDIO_SECONDS:120}
+      requests-per-hour: ${APP_AI_GEMINI_REQUESTS_PER_HOUR:20}
   api:
     # Si es false, las respuestas 500 genéricas no incluyen el mensaje interno de la excepción.
     expose-internal-error-message: ${APP_API_EXPOSE_INTERNAL_ERRORS:false}

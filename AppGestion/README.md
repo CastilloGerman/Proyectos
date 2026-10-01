@@ -136,6 +136,32 @@ Si ejecutas sin perfil `local`, define al menos **`JWT_SECRET`** (≥32 caracter
 
 La API escucha en **`http://localhost:8081`** (puerto `server.port` en `application.yml`).
 
+#### Desarrollo local: activar la extracción de gastos con Gemini
+
+Estos pasos son **solo para desarrollo local**: configuran el proceso Maven que arrancas desde esta ventana de PowerShell y no cambian el despliegue ni la configuración de producción. Gemini está desactivado por defecto. Ajusta la URL y las credenciales de PostgreSQL a tu instalación; si PostgreSQL escucha en `5432`, usa esta URL:
+
+```powershell
+$env:SPRING_DATASOURCE_URL = "jdbc:postgresql://localhost:5432/appgestion"
+$env:DB_USERNAME = "postgres"
+$env:DB_PASSWORD = "<contraseña de PostgreSQL>"
+$env:PORT = "8081"
+$env:APP_AI_GEMINI_ENABLED = "true"
+$secureKey = Read-Host "Pega la clave nueva de Gemini (no se mostrará)" -AsSecureString
+$keyPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureKey)
+try {
+    $env:GEMINI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($keyPointer)
+} finally {
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($keyPointer)
+    Remove-Variable secureKey, keyPointer
+}
+if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) { throw "GEMINI_API_KEY está vacío" }
+.\mvnw.cmd -pl api spring-boot:run
+```
+
+Genera la clave en Google AI Studio y no la guardes en el repositorio ni la compartas en logs o mensajes. La comprobación solo indica si falta la clave; no la imprime. Ejecuta todos los comandos y Maven en la misma ventana de PowerShell. Si la API ya estaba ejecutándose, detenla y vuelve a arrancarla después de definir las variables: los cambios de entorno no se aplican a un proceso que ya está activo. El servicio local quedará disponible en `http://localhost:8081`; el frontend en `http://localhost:4200` usa ese puerto mediante `frontend/proxy.conf.js`.
+
+Con la API y el frontend en marcha, inicia sesión y abre **Gastos → Nuevo gasto**. En el formulario, selecciona una imagen o PDF de factura/ticket y pulsa **Extraer datos**. La respuesta se carga como borrador editable; revisa los campos señalados y pulsa **Crear** cuando esté listo. La extracción no guarda el gasto automáticamente.
+
 ### Frontend (Angular)
 
 Desde `frontend/`:
@@ -149,13 +175,18 @@ Equivale a `ng serve --host 0.0.0.0 --port 4200`. Sin CLI global, puedes usar `n
 
 La SPA queda en **`http://localhost:4200`**. Las peticiones a **`/api/...`** las reenvía `proxy.conf.js` al backend **sin** prefijo `/api` en el servidor (rewrite a rutas como `/presupuestos`, `/auth`, etc.).
 
-### Variables de entorno relevantes (sin valores secretos)
+### Referencia de variables de entorno (nombres, sin valores secretos)
+
+Esta tabla es una referencia de nombres que reconoce la aplicación. Los comandos anteriores configuran **solo el entorno local**. Para producción, configura los valores como secretos/variables en la plataforma de despliegue y sigue [Despliegue en producción](docs/DEPLOY.md); no reutilices allí las credenciales locales ni la clave de desarrollo.
 
 | Variable | Uso |
 |----------|-----|
 | `SPRING_PROFILES_ACTIVE` | `local` / `prod` |
 | `SPRING_DATASOURCE_URL` | JDBC si no usas el default del yml |
 | `DB_USERNAME`, `DB_PASSWORD` | Credenciales PostgreSQL |
+| `APP_AI_GEMINI_ENABLED` | Activa (`true`) o desactiva (`false`) la extracción de gastos con IA; desactivada por defecto |
+| `GEMINI_API_KEY` | Clave de Google AI Studio; obligatoria si Gemini está activado |
+| `APP_AI_GEMINI_MODEL` | Modelo Gemini; por defecto `gemini-2.5-flash` |
 | `JWT_SECRET` | Obligatorio fuera de `local` (`app.jwt.secret`) |
 | `CORS_ALLOWED_ORIGINS` | Orígenes permitidos (coma) |
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` | SMTP (`spring.mail.*`) |
@@ -166,7 +197,9 @@ La SPA queda en **`http://localhost:4200`**. Las peticiones a **`/api/...`** las
 | `TOTP_ISSUER` | Nombre del emisor en apps TOTP |
 | `SESSIONS_CLEANUP_*`, `AUDIT_*` | Limpieza de sesiones y auditoría |
 
-**Producción:** perfil `prod`, `JWT_SECRET` fuerte, CORS acotado, claves Stripe reales; ver `docs/DEPLOY.md`.
+#### Producción
+
+Las instrucciones de publicación, variables obligatorias, CORS y secretos de producción están separadas en [Despliegue en producción](docs/DEPLOY.md). No uses el bloque PowerShell de desarrollo local para desplegar.
 
 ### Webhook Stripe (opcional)
 
@@ -188,7 +221,7 @@ Documentación: [Stripe subscription upsells](https://docs.stripe.com/payments/c
 
 ---
 
-## 🧪 Tests
+## Tests
 
 | Módulo | Comando | Runner / notas |
 |--------|---------|----------------|
