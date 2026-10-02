@@ -28,7 +28,5 @@ public record PresupuestoResponse(
         Boolean anticipoFacturado,
         LocalDate fechaAnticipo,
         /** Id de factura de venta principal (NORMAL o FINAL_CON_ANTICIPO), si existe. */
-        Long facturaId,
-        Boolean tieneFotoTrabajo,
-        Boolean tieneFirmaCliente
+        Long facturaId
 ) {}

@@ -344,11 +344,13 @@ export class GastoFormComponent implements OnInit {
         this.aiReviewFields = draft.camposDudosos ?? [];
         this.aiExtracted = true;
       },
-      error: (error) => {
+      error: () => {
         this.isExtracting = false;
-        const message = error?.error?.message || error?.error?.detail ||
-          this.translate.instant('gastos.aiExtractFail');
-        this.snackBar.open(message, this.translate.instant('common.close'), { duration: 5000 });
+        this.snackBar.open(
+          this.translate.instant('gastos.aiExtractFail'),
+          this.translate.instant('common.close'),
+          { duration: 5000 },
+        );
       },
     });
   }

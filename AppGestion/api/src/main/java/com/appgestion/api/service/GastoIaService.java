@@ -153,10 +153,10 @@ public class GastoIaService {
                         "concepto":{"type":"STRING","nullable":true},
                         "fecha":{"type":"STRING","nullable":true},
                         "baseImponible":{"type":"NUMBER","nullable":true},
-                        "tipoIva":{"type":"NUMBER","nullable":true,"enum":[21,10,4,0]},
-                        "categoria":{"type":"STRING","nullable":true,"enum":["SUMINISTROS","MATERIAL","DIETAS","OTROS"]},
+                        "tipoIva":{"type":"NUMBER","nullable":true},
+                        "categoria":{"type":"STRING","nullable":true},
                         "total":{"type":"NUMBER","nullable":true},
-                        "tiposIvaDetectados":{"type":"ARRAY","items":{"type":"NUMBER","enum":[21,10,4,0]}},
+                        "tiposIvaDetectados":{"type":"ARRAY","items":{"type":"NUMBER"}},
                         "camposDudosos":{"type":"ARRAY","items":{"type":"STRING"}},
                         "tieneNif":{"type":"BOOLEAN"},
                         "esDocumentoValido":{"type":"BOOLEAN"}

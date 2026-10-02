@@ -17,6 +17,10 @@ public class Gasto {
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "presupuesto_id")
+    private Presupuesto presupuesto;
+
     @Column(nullable = false, length = 200)
     private String proveedor;
 
@@ -52,6 +56,9 @@ public class Gasto {
 
     public Usuario getUsuario() { return usuario; }
     public void setUsuario(Usuario usuario) { this.usuario = usuario; }
+
+    public Presupuesto getPresupuesto() { return presupuesto; }
+    public void setPresupuesto(Presupuesto presupuesto) { this.presupuesto = presupuesto; }
 
     public String getProveedor() { return proveedor; }
     public void setProveedor(String proveedor) { this.proveedor = proveedor; }

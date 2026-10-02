@@ -10,6 +10,8 @@ public interface GastoRepository extends JpaRepository<Gasto, Long> {
 
     List<Gasto> findByUsuarioIdOrderByFechaDesc(Long usuarioId);
 
+    List<Gasto> findByUsuarioIdAndPresupuestoIdOrderByFechaDesc(Long usuarioId, Long presupuestoId);
+
     Optional<Gasto> findByIdAndUsuarioId(Long id, Long usuarioId);
 
     boolean existsByIdAndUsuarioId(Long id, Long usuarioId);

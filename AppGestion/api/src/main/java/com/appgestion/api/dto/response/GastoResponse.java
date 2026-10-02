@@ -12,5 +12,6 @@ public record GastoResponse(
         Double baseImponible,
         Double tipoIva,
         Double cuotaIva,
-        GastoCategoria categoria
+        GastoCategoria categoria,
+        PresupuestoResumenResponse presupuesto
 ) {}

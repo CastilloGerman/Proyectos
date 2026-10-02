@@ -15,6 +15,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Base64;
 
@@ -23,6 +25,13 @@ import java.util.Base64;
 public class GeminiClient {
 
     private static final String SERVICE_UNAVAILABLE = "Servicio de IA no disponible, inténtalo en unos minutos";
+    private static final String AI_CONFIGURATION_ERROR =
+            "La configuración del servicio de IA es incorrecta, contacta con soporte";
+    private static final String NO_CANDIDATES =
+            "El servicio de IA no devolvió ningún resultado para el documento";
+    private static final String BLOCKED_RESPONSE =
+            "El servicio de IA bloqueó la respuesta para este documento";
+    private static final Logger log = LoggerFactory.getLogger(GeminiClient.class);
     private final GeminiProperties properties;
     private final ObjectMapper objectMapper;
     private final RestClient restClient;
@@ -80,9 +89,14 @@ public class GeminiClient {
                 return parseResponse(response, responseType);
             } catch (RestClientResponseException ex) {
                 int code = ex.getStatusCode().value();
+                log.warn("Gemini devolvió HTTP {} (intento {}/2): error.status={}, error.message={}",
+                        code, attempt + 1, providerErrorStatus(ex), providerErrorMessage(ex));
                 if (code == 429) {
                     throw new AiServiceException(HttpStatus.TOO_MANY_REQUESTS,
-                            "Has alcanzado el límite diario de pruebas. Inténtalo más tarde.", ex);
+                            "Has alcanzado el límite de cuota del servicio de IA. Inténtalo más tarde.", ex);
+                }
+                if (code == 403 || code == 404) {
+                    throw new AiServiceException(HttpStatus.BAD_GATEWAY, AI_CONFIGURATION_ERROR, ex);
                 }
                 if (code == 400) {
                     throw new AiServiceException(HttpStatus.BAD_REQUEST,
@@ -106,6 +120,29 @@ public class GeminiClient {
             }
         }
         throw new AiServiceException(HttpStatus.SERVICE_UNAVAILABLE, SERVICE_UNAVAILABLE);
+    }
+
+    private String providerErrorStatus(RestClientResponseException ex) {
+        return providerErrorField(ex, "status");
+    }
+
+    private String providerErrorMessage(RestClientResponseException ex) {
+        return providerErrorField(ex, "message");
+    }
+
+    private String providerErrorField(RestClientResponseException ex, String field) {
+        try {
+            JsonNode body = objectMapper.readTree(ex.getResponseBodyAsString());
+            JsonNode value = body == null ? null : body.path("error").path(field);
+            if (value == null || value.isMissingNode() || value.isNull()) {
+                return "no disponible";
+            }
+            String text = value.asText();
+            String compact = text.replaceAll("[\\r\\n\\t]+", " ").trim();
+            return compact.length() > 300 ? compact.substring(0, 300) + "…" : compact;
+        } catch (Exception ignored) {
+            return "no disponible";
+        }
     }
 
     private ObjectNode buildRequest(
@@ -134,8 +171,14 @@ public class GeminiClient {
     }
 
     private <T> T parseResponse(JsonNode response, Class<T> responseType) {
-        JsonNode text = response == null ? null
-                : response.path("candidates").path(0).path("content").path("parts").path(0).path("text");
+        if (isBlocked(response)) {
+            throw new AiServiceException(HttpStatus.BAD_GATEWAY, BLOCKED_RESPONSE);
+        }
+        JsonNode candidates = response == null ? null : response.path("candidates");
+        if (candidates == null || !candidates.isArray() || candidates.isEmpty()) {
+            throw new AiServiceException(HttpStatus.BAD_GATEWAY, NO_CANDIDATES);
+        }
+        JsonNode text = candidates.path(0).path("content").path("parts").path(0).path("text");
         if (text == null || !text.isTextual() || text.asText().isBlank()) {
             throw new AiServiceException(HttpStatus.BAD_GATEWAY,
                     "La respuesta del servicio de IA no tiene un formato válido");
@@ -148,19 +191,38 @@ public class GeminiClient {
         }
     }
 
-    private String providerBadRequestMessage(RestClientResponseException ex) {
-        try {
-            JsonNode message = objectMapper.readTree(ex.getResponseBodyAsString())
-                    .path("error").path("message");
-            if (message.isTextual() && !message.asText().isBlank()) {
-                String detail = message.asText().replaceAll("[\\r\\n\\t]+", " ").trim();
-                if (detail.length() > 400) {
-                    detail = detail.substring(0, 400) + "…";
-                }
-                return "Gemini rechazó la solicitud: " + detail;
+    private boolean isBlocked(JsonNode response) {
+        if (response == null) {
+            return false;
+        }
+        JsonNode promptFeedback = response.path("promptFeedback");
+        if (promptFeedback.path("blockReason").isTextual()) {
+            return true;
+        }
+        JsonNode candidates = response.path("candidates");
+        if (!candidates.isArray()) {
+            return false;
+        }
+        for (JsonNode candidate : candidates) {
+            String finishReason = candidate.path("finishReason").asText("");
+            if (isBlockingFinishReason(finishReason)) {
+                return true;
             }
-        } catch (Exception ignored) {
-            // El proveedor no siempre devuelve un error JSON con el campo esperado.
+        }
+        return false;
+    }
+
+    private static boolean isBlockingFinishReason(String finishReason) {
+        return switch (finishReason) {
+            case "SAFETY", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII", "IMAGE_SAFETY" -> true;
+            default -> false;
+        };
+    }
+
+    private String providerBadRequestMessage(RestClientResponseException ex) {
+        String detail = providerErrorMessage(ex);
+        if (!"no disponible".equals(detail) && !detail.isBlank()) {
+            return "Gemini rechazó la solicitud: " + detail;
         }
         return "Gemini no pudo procesar el archivo enviado. Comprueba el formato e inténtalo de nuevo.";
     }

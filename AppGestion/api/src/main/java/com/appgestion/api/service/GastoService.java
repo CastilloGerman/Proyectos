@@ -2,10 +2,16 @@ package com.appgestion.api.service;
 
 import com.appgestion.api.domain.entity.Gasto;
 import com.appgestion.api.domain.entity.Usuario;
+import com.appgestion.api.domain.entity.Presupuesto;
+import com.appgestion.api.constant.PresupuestoEstado;
 import com.appgestion.api.dto.request.GastoRequest;
+import com.appgestion.api.dto.request.GastoPresupuestoPatchRequest;
 import com.appgestion.api.dto.response.GastoResponse;
+import com.appgestion.api.dto.response.PresupuestoResumenResponse;
 import com.appgestion.api.repository.GastoRepository;
+import com.appgestion.api.repository.PresupuestoRepository;
 import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -21,17 +27,35 @@ import java.util.Objects;
 public class GastoService {
 
     private final GastoRepository gastoRepository;
+    private final PresupuestoRepository presupuestoRepository;
 
-    public GastoService(GastoRepository gastoRepository) {
+    @Autowired
+    public GastoService(GastoRepository gastoRepository, PresupuestoRepository presupuestoRepository) {
         this.gastoRepository = gastoRepository;
+        this.presupuestoRepository = presupuestoRepository;
     }
 
-    public List<GastoResponse> listar(Long usuarioId) {
-        return gastoRepository.findByUsuarioIdOrderByFechaDesc(usuarioId).stream()
+    /** Constructor conservado para las pruebas unitarias del CRUD básico. */
+    public GastoService(GastoRepository gastoRepository) {
+        this.gastoRepository = gastoRepository;
+        this.presupuestoRepository = null;
+    }
+
+    @Transactional(readOnly = true)
+    public List<GastoResponse> listar(Long usuarioId, Long presupuestoId) {
+        List<Gasto> gastos = presupuestoId == null
+                ? gastoRepository.findByUsuarioIdOrderByFechaDesc(usuarioId)
+                : gastoRepository.findByUsuarioIdAndPresupuestoIdOrderByFechaDesc(usuarioId, presupuestoId);
+        return gastos.stream()
                 .map(this::toResponse)
                 .toList();
     }
 
+    public List<GastoResponse> listar(Long usuarioId) {
+        return listar(usuarioId, null);
+    }
+
+    @Transactional(readOnly = true)
     public GastoResponse obtenerPorId(Long id, Long usuarioId) {
         Gasto gasto = gastoRepository.findByIdAndUsuarioId(id, usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Gasto no encontrado"));
@@ -65,6 +89,27 @@ public class GastoService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Gasto no encontrado");
         }
         gastoRepository.deleteById(id);
+    }
+
+    @Transactional
+    public GastoResponse asignarPresupuesto(Long id, GastoPresupuestoPatchRequest request, Long usuarioId) {
+        Gasto gasto = gastoRepository.findByIdAndUsuarioId(
+                        Objects.requireNonNull(id), Objects.requireNonNull(usuarioId))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Gasto no encontrado"));
+
+        Long presupuestoId = request != null ? request.presupuestoId() : null;
+        if (presupuestoId == null) {
+            gasto.setPresupuesto(null);
+        } else {
+            Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(presupuestoId, usuarioId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
+            if (PresupuestoEstado.RECHAZADO.equals(presupuesto.getEstado())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "No se pueden asignar gastos a un presupuesto rechazado");
+            }
+            gasto.setPresupuesto(presupuesto);
+        }
+        return toResponse(gastoRepository.save(gasto));
     }
 
     public static double calcularCuotaIva(double baseImponible, double tipoIva) {
@@ -120,7 +165,12 @@ public class GastoService {
                 gasto.getBaseImponible(),
                 gasto.getTipoIva(),
                 gasto.getCuotaIva(),
-                gasto.getCategoria()
+                gasto.getCategoria(),
+                gasto.getPresupuesto() == null ? null : new PresupuestoResumenResponse(
+                        gasto.getPresupuesto().getId(),
+                        gasto.getPresupuesto().getCliente() != null
+                                ? gasto.getPresupuesto().getCliente().getNombre() : null,
+                        gasto.getPresupuesto().getEstado())
         );
     }
 }

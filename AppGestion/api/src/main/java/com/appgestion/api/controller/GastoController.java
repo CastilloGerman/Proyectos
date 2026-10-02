@@ -1,6 +1,7 @@
 package com.appgestion.api.controller;
 
 import com.appgestion.api.dto.request.GastoRequest;
+import com.appgestion.api.dto.request.GastoPresupuestoPatchRequest;
 import com.appgestion.api.dto.response.GastoResponse;
 import com.appgestion.api.dto.response.GastoBorradorResponse;
 import com.appgestion.api.service.CurrentUserService;
@@ -34,9 +35,9 @@ public class GastoController {
     }
 
     @GetMapping
-    public List<GastoResponse> listar() {
+    public List<GastoResponse> listar(@RequestParam(required = false) Long presupuestoId) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
-        return gastoService.listar(usuarioId);
+        return gastoService.listar(usuarioId, presupuestoId);
     }
 
     @GetMapping("/{id:\\d+}")
@@ -62,6 +63,15 @@ public class GastoController {
     public GastoResponse actualizar(@PathVariable Long id, @Valid @RequestBody GastoRequest request) {
         Long usuarioId = currentUserService.getCurrentUsuario().getId();
         return gastoService.actualizar(id, request, usuarioId);
+    }
+
+    @PatchMapping("/{id}/presupuesto")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public GastoResponse asignarPresupuesto(
+            @PathVariable Long id,
+            @RequestBody GastoPresupuestoPatchRequest request) {
+        Long usuarioId = currentUserService.getCurrentUsuario().getId();
+        return gastoService.asignarPresupuesto(id, request, usuarioId);
     }
 
     @DeleteMapping("/{id}")

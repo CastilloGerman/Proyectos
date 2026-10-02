@@ -18,7 +18,6 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatRadioModule } from '@angular/material/radio';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
 import { ClienteService } from '../../../core/services/cliente.service';
@@ -28,8 +27,6 @@ import { Cliente } from '../../../core/models/cliente.model';
 import { Material } from '../../../core/models/material.model';
 import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { SignaturePadComponent } from '../../../shared/signature-pad/signature-pad.component';
-import { compressImageFile, dataUrlToBlob } from '../../../shared/utils/compress-image';
 
 @Component({
     selector: 'app-presupuesto-rapido',
@@ -47,10 +44,8 @@ import { compressImageFile, dataUrlToBlob } from '../../../shared/utils/compress
         MatIconModule,
         MatTooltipModule,
         MatRadioModule,
-        MatProgressSpinnerModule,
         FormsModule,
         TranslateModule,
-        SignaturePadComponent,
     ],
     template: `
     <div class="rapido-wrap">
@@ -205,52 +200,11 @@ import { compressImageFile, dataUrlToBlob } from '../../../shared/utils/compress
             </div>
           </form>
           @if (savedPresupuestoId != null) {
-            <div class="insitu-block">
-              <h3 class="section-title">{{ 'budQuick.inSituTitle' | translate }}</h3>
-              <p class="section-hint">{{ 'budQuick.inSituHint' | translate }}</p>
-              <input
-                #fotoInput
-                type="file"
-                accept="image/*"
-                capture="environment"
-                class="sr-only"
-                (change)="onFotoSeleccionada($event)"
-              />
-              <div class="insitu-actions">
-                <button mat-stroked-button type="button" class="touch-btn" (click)="fotoInput.click()" [disabled]="subiendoFoto">
-                  <mat-icon>photo_camera</mat-icon>
-                  {{ 'budQuick.attachPhoto' | translate }}
-                </button>
-                @if (subiendoFoto) {
-                  <mat-spinner diameter="22"></mat-spinner>
-                  <span class="insitu-status">{{ 'budQuick.uploadingPhoto' | translate }}</span>
-                }
-                @if (fotoOk) {
-                  <span class="insitu-status ok">{{ 'budQuick.photoOk' | translate }}</span>
-                }
-              </div>
-              <button mat-stroked-button type="button" class="touch-btn" (click)="mostrarFirma = true">
-                <mat-icon>draw</mat-icon>
-                {{ 'budQuick.signClient' | translate }}
-              </button>
-              @if (mostrarFirma) {
-                <app-signature-pad (signatureCaptured)="onFirmaCapturada($event)" />
-              }
-              @if (subiendoFirma) {
-                <div class="insitu-actions">
-                  <mat-spinner diameter="22"></mat-spinner>
-                  <span class="insitu-status">{{ 'budQuick.uploadingSign' | translate }}</span>
-                </div>
-              }
-              @if (firmaOk) {
-                <span class="insitu-status ok">{{ 'budQuick.signOk' | translate }}</span>
-              }
-              <div class="actions">
+            <div class="actions">
                 <button mat-raised-button color="primary" type="button" class="touch-btn" (click)="abrirPdfGuardado()" [disabled]="loading">
                   <mat-icon>picture_as_pdf</mat-icon>
                   {{ 'budQuick.continuePdf' | translate }}
                 </button>
-              </div>
             </div>
           }
           @if (ultimoClienteWa) {
@@ -341,40 +295,6 @@ import { compressImageFile, dataUrlToBlob } from '../../../shared/utils/compress
     .add-line { margin-bottom: 8px; min-height: 44px; }
     .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; align-items: center; }
     .touch-btn { min-height: 44px; min-width: 44px; }
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
-    .insitu-block {
-      margin-top: 20px;
-      padding: 14px;
-      border-radius: var(--app-radius-md, 12px);
-      border: 1px solid rgba(30, 58, 138, 0.16);
-      background: rgba(30, 58, 138, 0.04);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .insitu-actions {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 12px;
-    }
-    .insitu-status { font-size: 13px; color: var(--app-text-secondary, #64748b); }
-    .insitu-status.ok { color: #2e7d32; font-weight: 600; }
-    :host-context(html.app-dark-theme) .insitu-block {
-      border-color: rgba(147, 197, 253, 0.28);
-      background: rgba(30, 58, 138, 0.18);
-    }
-    :host-context(html.app-dark-theme) .insitu-status.ok { color: #86efac; }
     .wa-row { margin-top: 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
     .wa-hint { font-size: 12px; color: #64748b; }
     .wa-link {
@@ -460,11 +380,6 @@ export class PresupuestoRapidoComponent implements OnInit {
   nombreClienteNuevo = '';
   savedPresupuestoId: number | null = null;
   private savedCliente: Cliente | undefined;
-  mostrarFirma = false;
-  subiendoFoto = false;
-  subiendoFirma = false;
-  fotoOk = false;
-  firmaOk = false;
 
   constructor(
     private fb: FormBuilder,
@@ -680,62 +595,6 @@ export class PresupuestoRapidoComponent implements OnInit {
           this.translate.instant('common.close'),
           { duration: 4000 },
         );
-      },
-    });
-  }
-
-  onFotoSeleccionada(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = '';
-    if (!file || this.savedPresupuestoId == null) return;
-    this.subiendoFoto = true;
-    this.fotoOk = false;
-    void compressImageFile(file)
-      .then((blob) => {
-        this.presupuestoService.uploadFoto(this.savedPresupuestoId!, blob, 'foto.jpg').subscribe({
-          next: () => {
-            this.subiendoFoto = false;
-            this.fotoOk = true;
-            this.snackBar.open(this.translate.instant('snack.budgetPhotoOk'), this.translate.instant('common.close'), {
-              duration: 2500,
-            });
-          },
-          error: () => {
-            this.subiendoFoto = false;
-            this.snackBar.open(this.translate.instant('snack.budgetPhotoFail'), this.translate.instant('common.close'), {
-              duration: 4000,
-            });
-          },
-        });
-      })
-      .catch(() => {
-        this.subiendoFoto = false;
-        this.snackBar.open(this.translate.instant('snack.budgetPhotoFail'), this.translate.instant('common.close'), {
-          duration: 4000,
-        });
-      });
-  }
-
-  onFirmaCapturada(dataUrl: string): void {
-    if (this.savedPresupuestoId == null) return;
-    this.subiendoFirma = true;
-    this.firmaOk = false;
-    const blob = dataUrlToBlob(dataUrl);
-    this.presupuestoService.uploadFirma(this.savedPresupuestoId, blob, 'firma.png').subscribe({
-      next: () => {
-        this.subiendoFirma = false;
-        this.firmaOk = true;
-        this.mostrarFirma = false;
-        this.snackBar.open(this.translate.instant('snack.budgetSignOk'), this.translate.instant('common.close'), {
-          duration: 2500,
-        });
-      },
-      error: () => {
-        this.subiendoFirma = false;
-        this.snackBar.open(this.translate.instant('snack.budgetSignFail'), this.translate.instant('common.close'), {
-          duration: 4000,
-        });
       },
     });
   }

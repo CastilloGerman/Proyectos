@@ -48,8 +48,6 @@ export interface Presupuesto {
   anticipoFacturado?: boolean;
   fechaAnticipo?: string | null;
   items: PresupuestoItem[];
-  tieneFotoTrabajo?: boolean;
-  tieneFirmaCliente?: boolean;
 }
 
 export interface PresupuestoRequest {

@@ -35,7 +35,7 @@ Versiones tomadas de `pom.xml`, `api/pom.xml`, `frontend/package.json` y `.nvmrc
 | **Angular** | **~21.2** (`@angular/core` y paquetes alineados en `frontend/package.json`) |
 | **Angular CLI** | **^21.2** (`devDependencies`) |
 | **TypeScript** | **~6.0** (`frontend/package.json`) |
-| **PostgreSQL** | Servidor accesible por JDBC; por defecto la API usa **`localhost:5433`** y base **`appgestion`** (ver `application.yml`) |
+| **PostgreSQL** | Servidor accesible por JDBC; por defecto la API usa **`localhost:5432`** y base **`appgestion`** (ver `application.yml`) |
 
 ---
 
@@ -114,7 +114,7 @@ AppGestion/
 
 ### Base de datos
 
-Por defecto (`application.yml`): `jdbc:postgresql://localhost:5433/appgestion`, usuario/contraseña vía `DB_USERNAME` / `DB_PASSWORD` (por defecto `postgres`/`postgres`). Ajusta host/puerto si tu PostgreSQL no usa **5433**.
+Por defecto (`application.yml`): `jdbc:postgresql://localhost:5432/appgestion`, usuario/contraseña vía `DB_USERNAME` / `DB_PASSWORD` (por defecto `postgres`/`postgres`). Ajusta host/puerto si tu PostgreSQL no usa **5432**.
 
 Ejemplo SQL (adapta nombres/contraseñas):
 
@@ -123,6 +123,22 @@ CREATE DATABASE appgestion;
 ```
 
 ### API (Spring Boot)
+
+Para iniciar el entorno local completo (PostgreSQL, API y frontend), ejecuta el comando correspondiente a la carpeta que aparece en tu prompt:
+
+Si estás en la raíz del repositorio `Proyectos` (`...\Proyectos>`):
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\AppGestion\start-local.ps1
+```
+
+Si ya estás dentro de `AppGestion` (`...\Proyectos\AppGestion>`):
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\start-local.ps1
+```
+
+El script comprueba/inicia PostgreSQL en `localhost:5432`, pide la contraseña sin mostrarla (Enter usa `postgres`) y arranca API y frontend en segundo plano. Por defecto activa Gemini; añade `-DisableGemini` al comando para arrancar sin la integración de IA. Si encuentra la API o el frontend de AppGestion en `8081` o `4200`, los reinicia; si el puerto pertenece a otro programa, se detiene sin cerrarlo. Los logs quedan bajo `api/target/` y `frontend/target/`.
 
 Desde la carpeta `api/`:
 

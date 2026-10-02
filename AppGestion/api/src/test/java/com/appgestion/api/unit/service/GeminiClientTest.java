@@ -37,6 +37,7 @@ class GeminiClientTest {
         properties = new GeminiProperties();
         properties.setEnabled(true);
         properties.setApiKey("test-key");
+        properties.setModel("gemini-2.5-flash");
         builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
         client = new GeminiClient(properties, mapper, builder, false);
@@ -62,11 +63,38 @@ class GeminiClientTest {
 
     @Test
     void mapsQuotaResponseTo429() {
-        server.expect(requestTo(URL)).andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+        server.expect(requestTo(URL)).andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS)
+                .body("{\"error\":{\"status\":\"RESOURCE_EXHAUSTED\",\"message\":\"quota exceeded\"}}"));
         AiServiceException ex = assertThrows(AiServiceException.class,
                 () -> client.generate("sistema", "usuario", null, null, schema, Result.class));
         assertEquals(HttpStatus.TOO_MANY_REQUESTS, ex.getStatus());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "Has alcanzado el límite de cuota del servicio de IA. Inténtalo más tarde.", ex.getMessage());
         server.verify();
+    }
+
+    @Test
+    void mapsForbiddenToConfigurationError() {
+        assertConfigurationError(HttpStatus.FORBIDDEN);
+        server.verify();
+    }
+
+    @Test
+    void mapsNotFoundToConfigurationError() {
+        assertConfigurationError(HttpStatus.NOT_FOUND);
+        server.verify();
+    }
+
+    private void assertConfigurationError(HttpStatus providerStatus) {
+        server.expect(requestTo(URL)).andRespond(withStatus(providerStatus)
+                .body("{\"error\":{\"status\":\"CONFIG_ERROR\",\"message\":\"invalid config\"}}"));
+
+        AiServiceException ex = assertThrows(AiServiceException.class,
+                () -> client.generate("sistema", "usuario", null, null, schema, Result.class));
+
+        assertEquals(HttpStatus.BAD_GATEWAY, ex.getStatus());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "La configuración del servicio de IA es incorrecta, contacta con soporte", ex.getMessage());
     }
 
     @Test
@@ -97,6 +125,47 @@ class GeminiClientTest {
         AiServiceException ex = assertThrows(AiServiceException.class,
                 () -> client.generate("sistema", "usuario", null, null, schema, Result.class));
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, ex.getStatus());
+        server.verify();
+    }
+
+    @Test
+    void mapsProviderServerErrorToServiceUnavailable() {
+        server.expect(requestTo(URL)).andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("{\"error\":{\"status\":\"INTERNAL\",\"message\":\"provider failure\"}}"));
+        server.expect(requestTo(URL)).andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("{\"error\":{\"status\":\"INTERNAL\",\"message\":\"provider failure\"}}"));
+
+        AiServiceException ex = assertThrows(AiServiceException.class,
+                () -> client.generate("sistema", "usuario", null, null, schema, Result.class));
+
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, ex.getStatus());
+        assertEquals("Servicio de IA no disponible, inténtalo en unos minutos", ex.getMessage());
+        server.verify();
+    }
+
+    @Test
+    void rejectsResponseWithoutCandidatesWithSpecificError() {
+        server.expect(requestTo(URL)).andRespond(withSuccess("{}", org.springframework.http.MediaType.APPLICATION_JSON));
+
+        AiServiceException ex = assertThrows(AiServiceException.class,
+                () -> client.generate("sistema", "usuario", null, null, schema, Result.class));
+
+        assertEquals(HttpStatus.BAD_GATEWAY, ex.getStatus());
+        assertEquals("El servicio de IA no devolvió ningún resultado para el documento", ex.getMessage());
+        server.verify();
+    }
+
+    @Test
+    void rejectsBlockedResponseWithSpecificError() {
+        server.expect(requestTo(URL)).andRespond(withSuccess("""
+                {"promptFeedback":{"blockReason":"SAFETY"},"candidates":[]}
+                """, org.springframework.http.MediaType.APPLICATION_JSON));
+
+        AiServiceException ex = assertThrows(AiServiceException.class,
+                () -> client.generate("sistema", "usuario", null, null, schema, Result.class));
+
+        assertEquals(HttpStatus.BAD_GATEWAY, ex.getStatus());
+        assertEquals("El servicio de IA bloqueó la respuesta para este documento", ex.getMessage());
         server.verify();
     }
 

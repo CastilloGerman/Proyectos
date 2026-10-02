@@ -13,7 +13,7 @@ public class GeminiProperties {
     private boolean enabled;
     private String apiKey = "";
     @NotBlank
-    private String model = "gemini-2.5-flash";
+    private String model = "gemini-3.5-flash-lite";
     @NotBlank
     private String baseUrl = "https://generativelanguage.googleapis.com";
     @Min(1)
