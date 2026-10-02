@@ -27,6 +27,10 @@ export interface Presupuesto {
   /** PROVISIONAL | COMPLETO — desde API para facturación sin GET extra. */
   clienteEstado?: string | null;
   clienteEmail?: string;
+  clienteTelefono?: string;
+  clientePais?: string;
+  enviadoAt?: string | null;
+  canalEnvio?: 'WHATSAPP' | 'EMAIL' | null;
   fechaCreacion: string;
   subtotal: number;
   iva: number;

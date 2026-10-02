@@ -31,6 +31,7 @@ import { CalculadoraM2Component, CalculadoraResult } from '../calculadora-m2/cal
 import { HintBannerComponent } from '../../../shared/hint-banner/hint-banner.component';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { calcularPresupuestoCostes } from '../../../core/utils/presupuesto-costes.util';
+import { EnviarPresupuestoComponent } from '../enviar-presupuesto/enviar-presupuesto.component';
 
 @Component({
     selector: 'app-presupuesto-form',
@@ -54,6 +55,7 @@ import { calcularPresupuestoCostes } from '../../../core/utils/presupuesto-coste
         CondicionesPresupuestoComponent,
         TranslateModule,
         HintBannerComponent,
+        EnviarPresupuestoComponent,
     ],
     template: `
     <div class="presupuesto-form">
@@ -62,6 +64,9 @@ import { calcularPresupuestoCostes } from '../../../core/utils/presupuesto-coste
           <mat-card-title>{{ isEdit ? ('budgetForm.edit' | translate) : ('budgetForm.new' | translate) }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
+          @if (presupuestoActual) {
+            <app-enviar-presupuesto [presupuesto]="presupuestoActual" (enviado)="presupuestoActual = $event" />
+          }
           @if (!isEdit) {
             <app-hint-banner
               storageKey="hint_presupuesto_form_v1"
@@ -582,6 +587,7 @@ export class PresupuestoFormComponent implements OnInit, OnDestroy {
   showVisibilityColumn = false;
   isEdit = false;
   id?: number;
+  presupuestoActual: import('../../../core/models/presupuesto.model').Presupuesto | null = null;
   /** existente: desplegable; nuevo: solo nombre y alta rápida. */
   clienteModo: 'existente' | 'nuevo' = 'existente';
   nombreClienteNuevo = '';
@@ -686,6 +692,7 @@ export class PresupuestoFormComponent implements OnInit, OnDestroy {
         disp: this.presupuestoService.getCondicionesDisponibles(),
       }).subscribe({
         next: ({ p, disp }) => {
+          this.presupuestoActual = p;
           this.condicionesCatalogo = disp;
           this.form.patchValue({
             clienteId: p.clienteId,
@@ -1166,6 +1173,7 @@ export class PresupuestoFormComponent implements OnInit, OnDestroy {
       : this.presupuestoService.create(payload);
     req.subscribe({
       next: (presupuesto) => {
+        this.presupuestoActual = presupuesto;
         this.snackBar.open(
           this.translate.instant(this.isEdit ? 'snack.budgetUpdated' : 'snack.budgetSavedCreated'),
           this.translate.instant('common.close'),
@@ -1179,7 +1187,7 @@ export class PresupuestoFormComponent implements OnInit, OnDestroy {
           },
           error: () => {},
         });
-        this.router.navigate(['/presupuestos']);
+        this.router.navigate(this.isEdit ? ['/presupuestos'] : ['/presupuestos', presupuesto.id]);
       },
       error: (err) => {
         const raw = err.error?.message || err.error?.error;

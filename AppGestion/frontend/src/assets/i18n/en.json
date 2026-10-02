@@ -1454,4 +1454,6 @@
     "clear": "Clear signature",
     "confirm": "Confirm signature"
   }
+,
+  "budgetShare": {"whatsapp":"Enviar por WhatsApp","copied":"Mensaje copiado.","subject":"Asunto","emailQueued":"Email encolado para su envío con el PDF adjunto.","shareFailed":"No se pudo abrir el selector para compartir.","phoneRequired":"Introduce un teléfono válido con prefijo internacional.","savePhone":"Guardar el teléfono en el cliente","title":"Enviar presupuesto","sendEmail":"Enviar email","pdfFailed":"No se pudo descargar el PDF.","openWhatsApp":"Abrir WhatsApp","message":"Mensaje","recipient":"Destinatario","copy":"Copiar mensaje","alreadySent":"Ya lo envié","emailFailed":"No se pudo encolar el email.","download":"Descargar PDF","fallbackHint":"Se ha descargado el PDF. Adjunta el archivo en WhatsApp y confirma cuando lo envíes.","phoneSaveFailed":"No se pudo guardar el teléfono; puedes continuar igualmente.","sent":"Envío registrado.","email":"Enviar por email","markFailed":"El envío se realizó, pero no se pudo registrar.","phone":"Teléfono del cliente"}
 }

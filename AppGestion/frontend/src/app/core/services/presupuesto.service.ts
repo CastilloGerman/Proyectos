@@ -58,8 +58,12 @@ export class PresupuestoService {
     return this.http.get(`${this.apiUrl}/${id}/pdf`, { responseType: 'blob' });
   }
 
-  enviarPorEmail(id: number, email?: string): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/${id}/enviar-email`, email ? { email } : {});
+  enviarPorEmail(id: number, request?: { email?: string; asunto?: string; mensaje?: string }): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${id}/enviar-email`, request ?? {});
+  }
+
+  marcarEnviado(id: number, canal: 'WHATSAPP' | 'EMAIL'): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${id}/marcar-enviado`, { canal });
   }
 
   /** Textos y claves del catálogo (única fuente de verdad en API). */

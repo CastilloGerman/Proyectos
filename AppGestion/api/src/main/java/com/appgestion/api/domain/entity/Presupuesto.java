@@ -41,6 +41,12 @@ public class Presupuesto {
     @Column(length = 50)
     private String estado = "Pendiente";
 
+    @Column(name = "enviado_at")
+    private LocalDateTime enviadoAt;
+
+    @Column(name = "canal_envio", length = 20)
+    private String canalEnvio;
+
     @Column(name = "descuento_global_porcentaje")
     private Double descuentoGlobalPorcentaje = 0.0;
 
@@ -105,6 +111,12 @@ public class Presupuesto {
 
     public String getEstado() { return estado; }
     public void setEstado(String estado) { this.estado = estado; }
+
+    public LocalDateTime getEnviadoAt() { return enviadoAt; }
+    public void setEnviadoAt(LocalDateTime enviadoAt) { this.enviadoAt = enviadoAt; }
+
+    public String getCanalEnvio() { return canalEnvio; }
+    public void setCanalEnvio(String canalEnvio) { this.canalEnvio = canalEnvio; }
 
     public Double getDescuentoGlobalPorcentaje() { return descuentoGlobalPorcentaje; }
     public void setDescuentoGlobalPorcentaje(Double descuentoGlobalPorcentaje) { this.descuentoGlobalPorcentaje = descuentoGlobalPorcentaje; }

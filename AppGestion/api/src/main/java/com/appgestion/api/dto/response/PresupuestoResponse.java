@@ -11,6 +11,8 @@ public record PresupuestoResponse(
         /** PROVISIONAL o COMPLETO; null si el cliente no está cargado. */
         String clienteEstado,
         String clienteEmail,
+        String clienteTelefono,
+        String clientePais,
         LocalDateTime fechaCreacion,
         Double subtotal,
         Double iva,
@@ -28,5 +30,7 @@ public record PresupuestoResponse(
         Boolean anticipoFacturado,
         LocalDate fechaAnticipo,
         /** Id de factura de venta principal (NORMAL o FINAL_CON_ANTICIPO), si existe. */
-        Long facturaId
+        Long facturaId,
+        LocalDateTime enviadoAt,
+        String canalEnvio
 ) {}

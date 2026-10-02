@@ -3,6 +3,7 @@ package com.appgestion.api.service;
 import com.appgestion.api.constant.TaxConstants;
 import com.appgestion.api.domain.entity.*;
 import com.appgestion.api.domain.enums.TipoFactura;
+import com.appgestion.api.domain.enums.CanalEnvio;
 import com.appgestion.api.dto.request.PresupuestoItemRequest;
 import com.appgestion.api.dto.request.PresupuestoRequest;
 import com.appgestion.api.dto.request.EnviarEmailRequest;
@@ -191,12 +192,33 @@ public class PresupuestoService {
         }
         byte[] pdf = presupuestoPdfService.generarPdf(presupuesto, usuarioId);
         String nombreArchivo = "presupuesto-" + id + ".pdf";
-        String asunto = "Presupuesto - " + (presupuesto.getCliente() != null ? presupuesto.getCliente().getNombre() : "");
+        String asunto = request != null && request.asunto() != null && !request.asunto().isBlank()
+                ? request.asunto().trim()
+                : "Presupuesto - " + (presupuesto.getCliente() != null ? presupuesto.getCliente().getNombre() : "");
         String nombreEmpresa = empresaRepository.findByUsuarioId(usuarioId).map(e -> e.getNombre()).orElse(null);
         String nombreCliente = presupuesto.getCliente() != null ? presupuesto.getCliente().getNombre() : null;
         String cuerpo = EmailCopy.prefijoClienteEmpresa(nombreCliente, nombreEmpresa)
                 + "<p>Adjunto encontrará el presupuesto solicitado.</p><p>Saludos cordiales.</p>";
+        if (request != null && request.mensaje() != null && !request.mensaje().isBlank()) {
+            cuerpo = EmailCopy.prefijoClienteEmpresa(nombreCliente, nombreEmpresa)
+                    + "<p>" + escapeHtml(request.mensaje()).replace("\n", "<br>") + "</p>";
+        }
         emailService.enviarPdf(usuarioId, email, asunto, cuerpo, pdf, nombreArchivo);
+        marcarEnviado(id, usuarioId, CanalEnvio.EMAIL);
+    }
+
+    @Transactional
+    public void marcarEnviado(Long id, Long usuarioId, CanalEnvio canal) {
+        Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
+        presupuesto.setEnviadoAt(java.time.LocalDateTime.now());
+        presupuesto.setCanalEnvio(canal.name());
+        presupuestoRepository.save(presupuesto);
+    }
+
+    private static String escapeHtml(String value) {
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
     }
 
     private void mapItems(List<PresupuestoItemRequest> itemRequests, Presupuesto presupuesto) {
@@ -294,6 +316,8 @@ public class PresupuestoService {
                 cli.getNombre(),
                 estadoCliente,
                 cli.getEmail(),
+                cli.getTelefono(),
+                cli.getPais(),
                 presupuesto.getFechaCreacion(),
                 presupuesto.getSubtotal(),
                 presupuesto.getIva(),
@@ -310,7 +334,9 @@ public class PresupuestoService {
                 presupuesto.getImporteAnticipo(),
                 Boolean.TRUE.equals(presupuesto.getAnticipoFacturado()),
                 presupuesto.getFechaAnticipo(),
-                facturaId
+                facturaId,
+                presupuesto.getEnviadoAt(),
+                presupuesto.getCanalEnvio()
         );
     }
 

@@ -2,6 +2,7 @@ package com.appgestion.api.controller;
 
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.request.EnviarEmailRequest;
+import com.appgestion.api.dto.request.MarcarPresupuestoEnviadoRequest;
 import com.appgestion.api.dto.request.PresupuestoCondicionesPredeterminadasRequest;
 import com.appgestion.api.dto.request.AnticipoRegistroRequest;
 import com.appgestion.api.dto.request.PresupuestoRequest;
@@ -116,6 +117,14 @@ public class PresupuestoController {
                     org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
                     "Error al encolar el envío. Inténtalo más tarde.");
         }
+    }
+
+    @PostMapping("/{id}/marcar-enviado")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void marcarEnviado(@PathVariable Long id, @Valid @RequestBody MarcarPresupuestoEnviadoRequest request) {
+        Long usuarioId = currentUserService.getCurrentUsuario().getId();
+        presupuestoService.marcarEnviado(id, usuarioId, request.canal());
     }
 
     @PostMapping("/{id}/factura")

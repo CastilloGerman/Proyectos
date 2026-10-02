@@ -27,6 +27,7 @@ import { Cliente } from '../../../core/models/cliente.model';
 import { Material } from '../../../core/models/material.model';
 import { PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { EnviarPresupuestoComponent } from '../enviar-presupuesto/enviar-presupuesto.component';
 
 @Component({
     selector: 'app-presupuesto-rapido',
@@ -46,6 +47,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
         MatRadioModule,
         FormsModule,
         TranslateModule,
+        EnviarPresupuestoComponent,
     ],
     template: `
     <div class="rapido-wrap">
@@ -199,28 +201,8 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
               </button>
             </div>
           </form>
-          @if (savedPresupuestoId != null) {
-            <div class="actions">
-                <button mat-raised-button color="primary" type="button" class="touch-btn" (click)="abrirPdfGuardado()" [disabled]="loading">
-                  <mat-icon>picture_as_pdf</mat-icon>
-                  {{ 'budQuick.continuePdf' | translate }}
-                </button>
-            </div>
-          }
-          @if (ultimoClienteWa) {
-            <div class="wa-row">
-              <a
-                class="wa-link"
-                [href]="ultimoClienteWa"
-                target="_blank"
-                rel="noopener"
-                [attr.aria-label]="'budQuick.waAria' | translate"
-              >
-                <img src="assets/whatsapp-logo.png" alt="" class="wa-logo" width="22" height="22" />
-                <span class="wa-link-text">{{ 'budQuick.waLink' | translate }}</span>
-              </a>
-              <span class="wa-hint">{{ 'budQuick.waHint' | translate }}</span>
-            </div>
+          @if (presupuestoCreado) {
+            <app-enviar-presupuesto [presupuesto]="presupuestoCreado" (enviado)="presupuestoCreado = $event" />
           }
         </mat-card-content>
       </mat-card>
@@ -379,6 +361,7 @@ export class PresupuestoRapidoComponent implements OnInit {
   clienteModo: 'existente' | 'nuevo' = 'existente';
   nombreClienteNuevo = '';
   savedPresupuestoId: number | null = null;
+  presupuestoCreado: import('../../../core/models/presupuesto.model').Presupuesto | null = null;
   private savedCliente: Cliente | undefined;
 
   constructor(
@@ -582,6 +565,7 @@ export class PresupuestoRapidoComponent implements OnInit {
         const cli = this.clientes.find((c) => c.id === v.clienteId);
         this.savedCliente = cli;
         this.savedPresupuestoId = pres.id;
+        this.presupuestoCreado = { ...pres, clienteTelefono: cli?.telefono, clientePais: cli?.pais };
         this.ultimoClienteWa = this.buildWaLink(cli, pres.id);
         this.loading = false;
         this.snackBar.open(this.translate.instant('snack.budgetCreated'), this.translate.instant('common.close'), {
