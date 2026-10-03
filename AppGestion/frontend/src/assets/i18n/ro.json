@@ -479,6 +479,8 @@
   "factForm": {
     "edit": "Editează factura",
     "new": "Factură nouă",
+    "createdShareHint": "Factura a fost salvat?, iar PDF-ul este gata. Alege cum ?l partajezi cu clientul.",
+    "backToInvoices": "?napoi la facturi",
     "customer": "Client",
     "pickCustomer": "Selectează un client",
     "sameNifError": "Clientul ales are același cod fiscal/NIF cu profilul tău. Alege alt client.",
@@ -534,6 +536,8 @@
   "budgetForm": {
     "edit": "Editează oferta",
     "new": "Ofertă nouă",
+    "createdShareHint": "Devizul a fost salvat, iar PDF-ul este gata. Alege cum ?l partajezi cu clientul.",
+    "backToBudgets": "?napoi la devize",
     "depositCartelEditTitle": "Avans / semnătura contractului",
     "depositCartelEditHint": "După salvare, redeschide oferta în starea Acceptată sau În desfășurare pentru a înregistra avansul și a emite facturile.",
     "customerModeLabel": "Client pentru ofertă",
@@ -631,6 +635,23 @@
     "defaultCountryEs": "Spania"
   },
   "budQuick": {
+    "searchClient": "Caută client",
+    "retry": "Reîtry",
+    "searchCatalog": "Caută în catalog",
+    "topUsed": "Cele mai folosite",
+    "unitMeasure": "Unitate",
+    "saveToCatalog": "Salvează în catalogul meu",
+    "notes": "Note pentru ofertă",
+    "total": "Total cu TVA",
+    "createAndSend": "Creează și trimite",
+    "clientsLoadError": "Clienții nu au putut fi încărcați. Încearcă din nou.",
+    "catalogLoadError": "Catalogul nu a putut fi încărcat.",
+    "clientCreateError": "Clientul nu a putut fi creat.",
+    "catalogSaveError": "Poziția nu a putut fi salvată în catalog. Încearcă din nou.",
+    "clientRequired": "Selectează un client.",
+
+    "confirmZeroPrice": "Pozi?ia are pre?ul zero. Vrei s? o salvezi oricum ?n catalog?",
+    "catalogDuplicateReused": "Exist? deja o pozi?ie cu acest nume ?n catalog; va fi reutilizat?.",
     "title": "Rapid la șantier",
     "subtitle": "Client, linii din catalog și/sau sarcini manuale și PDF în câteva secunde. Ideal de pe mobil.",
     "clientLabel": "Client",
@@ -1455,5 +1476,6 @@
     "confirm": "Confirmă semnătura"
   }
 ,
+  "invoiceShare": {"emailQueued":"E-mailul cu factura a fost pus ?n coada de trimitere.","whatsappReady":"WhatsApp este deschis, iar PDF-ul a fost desc?rcat. Ata?eaz?-l ?n conversa?ie ?i apas? Trimite; WhatsApp nu permite trimiterea automat? din aplica?ie.","popupBlocked":"Browserul a blocat fereastra WhatsApp. Permite ferestrele pop-up ?i ?ncearc? din nou. PDF-ul a fost desc?rcat.","preparing":"Se preg?te?te PDF-ul pentru partajare?"},
   "budgetShare": {"whatsapp":"Enviar por WhatsApp","copied":"Mensaje copiado.","subject":"Asunto","emailQueued":"Email encolado para su envío con el PDF adjunto.","shareFailed":"No se pudo abrir el selector para compartir.","phoneRequired":"Introduce un teléfono válido con prefijo internacional.","savePhone":"Guardar el teléfono en el cliente","title":"Enviar presupuesto","sendEmail":"Enviar email","pdfFailed":"No se pudo descargar el PDF.","openWhatsApp":"Abrir WhatsApp","message":"Mensaje","recipient":"Destinatario","copy":"Copiar mensaje","alreadySent":"Ya lo envié","emailFailed":"No se pudo encolar el email.","download":"Descargar PDF","fallbackHint":"Se ha descargado el PDF. Adjunta el archivo en WhatsApp y confirma cuando lo envíes.","phoneSaveFailed":"No se pudo guardar el teléfono; puedes continuar igualmente.","sent":"Envío registrado.","email":"Enviar por email","markFailed":"El envío se realizó, pero no se pudo registrar.","phone":"Teléfono del cliente"}
 }

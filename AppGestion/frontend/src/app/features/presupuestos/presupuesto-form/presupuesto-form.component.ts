@@ -64,9 +64,15 @@ import { EnviarPresupuestoComponent } from '../enviar-presupuesto/enviar-presupu
           <mat-card-title>{{ isEdit ? ('budgetForm.edit' | translate) : ('budgetForm.new' | translate) }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
-          @if (presupuestoActual) {
-            <app-enviar-presupuesto [presupuesto]="presupuestoActual" (enviado)="presupuestoActual = $event" />
-          }
+          @if (creacionCompletada && presupuestoActual) {
+            <section class="creacion-completada" role="status">
+              <mat-icon>check_circle</mat-icon>
+              <h2>{{ (isEdit ? 'snack.budgetUpdated' : 'snack.budgetSavedCreated') | translate }}</h2>
+              <p>{{ 'budgetForm.createdShareHint' | translate }}</p>
+              <app-enviar-presupuesto [presupuesto]="presupuestoActual" [mostrarOpcionesAlInicio]="true" (enviado)="presupuestoActual = $event" />
+              <button mat-stroked-button type="button" routerLink="/presupuestos">{{ 'budgetForm.backToBudgets' | translate }}</button>
+            </section>
+          } @else {
           @if (!isEdit) {
             <app-hint-banner
               storageKey="hint_presupuesto_form_v1"
@@ -393,6 +399,7 @@ import { EnviarPresupuestoComponent } from '../enviar-presupuesto/enviar-presupu
               </button>
             </div>
           </form>
+          }
         </mat-card-content>
       </mat-card>
     </div>
@@ -572,9 +579,12 @@ import { EnviarPresupuestoComponent } from '../enviar-presupuesto/enviar-presupu
     }
 
     .actions { display: flex; gap: 16px; margin-top: 24px; }
+    .creacion-completada { display: grid; justify-items: start; gap: 12px; padding: 8px 0; }
+    .creacion-completada > mat-icon { color: #168447; font-size: 40px; width: 40px; height: 40px; }
+    .creacion-completada h2, .creacion-completada p { margin: 0; }
   `]
 })
-export class PresupuestoFormComponent implements OnInit, OnDestroy {
+export class PresupuestoFormComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -588,6 +598,7 @@ export class PresupuestoFormComponent implements OnInit, OnDestroy {
   isEdit = false;
   id?: number;
   presupuestoActual: import('../../../core/models/presupuesto.model').Presupuesto | null = null;
+  creacionCompletada = false;
   /** existente: desplegable; nuevo: solo nombre y alta rápida. */
   clienteModo: 'existente' | 'nuevo' = 'existente';
   nombreClienteNuevo = '';
@@ -1174,20 +1185,12 @@ export class PresupuestoFormComponent implements OnInit, OnDestroy {
     req.subscribe({
       next: (presupuesto) => {
         this.presupuestoActual = presupuesto;
+        this.creacionCompletada = true;
         this.snackBar.open(
           this.translate.instant(this.isEdit ? 'snack.budgetUpdated' : 'snack.budgetSavedCreated'),
           this.translate.instant('common.close'),
           { duration: 3000 },
         );
-        this.presupuestoService.downloadPdf(presupuesto.id).subscribe({
-          next: (blob) => {
-            const url = URL.createObjectURL(blob);
-            window.open(url, '_blank');
-            URL.revokeObjectURL(url);
-          },
-          error: () => {},
-        });
-        this.router.navigate(this.isEdit ? ['/presupuestos'] : ['/presupuestos', presupuesto.id]);
       },
       error: (err) => {
         const raw = err.error?.message || err.error?.error;

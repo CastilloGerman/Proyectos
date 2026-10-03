@@ -526,7 +526,7 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
     });
     ref.afterClosed().subscribe((email: string | undefined) => {
       if (email !== undefined) {
-        this.presupuestoService.enviarPorEmail(presupuesto.id, email || undefined).subscribe({
+        this.presupuestoService.enviarPorEmail(presupuesto.id, email ? { email } : undefined).subscribe({
           next: () => {
             this.snackBar.open(this.translate.instant('snack.budgetEmailSent'), this.closeLbl(), { duration: 3000 });
           },

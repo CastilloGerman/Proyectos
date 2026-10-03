@@ -28,6 +28,8 @@ export interface InviteVerifyResponse {
 }
 
 export interface AuthResponse {
+  /** Se hidrata desde GET /auth/me; login no siempre incluye el identificador. */
+  id?: number;
   token: string;
   type: string;
   email: string;

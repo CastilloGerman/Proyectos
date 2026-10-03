@@ -234,6 +234,7 @@ export class AuthService {
     const preservedSessionId = current.sessionId ?? readJwtSessionId(this.getToken());
     const updated: AuthResponse = {
       ...current,
+      id: me.id,
       rol: me.rol ?? current.rol,
       nombre: me.nombre ?? current.nombre,
       subscriptionStatus: me.subscriptionStatus,

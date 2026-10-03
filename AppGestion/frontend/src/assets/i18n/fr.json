@@ -479,6 +479,8 @@
   "factForm": {
     "edit": "Modifier la facture",
     "new": "Nouvelle facture",
+    "createdShareHint": "La facture a ?t? enregistr?e et son PDF est pr?t. Choisissez comment le partager avec votre client.",
+    "backToInvoices": "Retour aux factures",
     "customer": "Client",
     "pickCustomer": "Choisissez un client",
     "sameNifError": "Le client choisi utilise le même NIF/VAT que votre profil. Choisissez un autre client.",
@@ -534,6 +536,8 @@
   "budgetForm": {
     "edit": "Modifier le devis",
     "new": "Nouveau devis",
+    "createdShareHint": "Le devis a ?t? enregistr? et son PDF est pr?t. Choisissez comment le partager avec votre client.",
+    "backToBudgets": "Retour aux devis",
     "depositCartelEditTitle": "Acompte / arrhes",
     "depositCartelEditHint": "Après enregistrement du devis, rouvrez-le lorsqu’il est Accepté ou En cours pour indiquer l’acompte et émettre les factures.",
     "customerModeLabel": "Client pour ce devis",
@@ -631,6 +635,23 @@
     "defaultCountryEs": "Espagne"
   },
   "budQuick": {
+    "searchClient": "Rechercher un client",
+    "retry": "Réessayer",
+    "searchCatalog": "Rechercher dans le catalogue",
+    "topUsed": "Les plus utilisés",
+    "unitMeasure": "Unité",
+    "saveToCatalog": "Enregistrer dans mon catalogue",
+    "notes": "Notes du devis",
+    "total": "Total TTC",
+    "createAndSend": "Créer et envoyer",
+    "clientsLoadError": "Impossible de charger les clients. Réessayez.",
+    "catalogLoadError": "Impossible de charger le catalogue.",
+    "clientCreateError": "Impossible de créer le client.",
+    "catalogSaveError": "Impossible d’enregistrer la ligne dans le catalogue. Réessayez.",
+    "clientRequired": "Sélectionnez un client.",
+
+    "confirmZeroPrice": "Le prix de cet article est nul. L?enregistrer quand m?me dans le catalogue ?",
+    "catalogDuplicateReused": "Un article portant ce nom existe d?j? dans le catalogue ; il sera r?utilis?.",
     "title": "Rapide sur chantier",
     "subtitle": "Client, lignes catalogue et/ou tâches manuelles et un PDF en quelques secondes. Idéal depuis le téléphone.",
     "clientLabel": "Client",
@@ -1455,5 +1476,6 @@
     "confirm": "Confirmer la signature"
   }
 ,
+  "invoiceShare": {"emailQueued":"L?e-mail de la facture a ?t? mis en file d?envoi.","whatsappReady":"WhatsApp est ouvert et le PDF a ?t? t?l?charg?. Joignez-le ? la conversation et appuyez sur Envoyer ; WhatsApp ne permet pas l?envoi automatique depuis cette application.","popupBlocked":"Le navigateur a bloqu? la fen?tre WhatsApp. Autorisez les fen?tres contextuelles et r?essayez. Le PDF a ?t? t?l?charg?.","preparing":"Pr?paration du PDF ? partager?"},
   "budgetShare": {"whatsapp":"Enviar por WhatsApp","copied":"Mensaje copiado.","subject":"Asunto","emailQueued":"Email encolado para su envío con el PDF adjunto.","shareFailed":"No se pudo abrir el selector para compartir.","phoneRequired":"Introduce un teléfono válido con prefijo internacional.","savePhone":"Guardar el teléfono en el cliente","title":"Enviar presupuesto","sendEmail":"Enviar email","pdfFailed":"No se pudo descargar el PDF.","openWhatsApp":"Abrir WhatsApp","message":"Mensaje","recipient":"Destinatario","copy":"Copiar mensaje","alreadySent":"Ya lo envié","emailFailed":"No se pudo encolar el email.","download":"Descargar PDF","fallbackHint":"Se ha descargado el PDF. Adjunta el archivo en WhatsApp y confirma cuando lo envíes.","phoneSaveFailed":"No se pudo guardar el teléfono; puedes continuar igualmente.","sent":"Envío registrado.","email":"Enviar por email","markFailed":"El envío se realizó, pero no se pudo registrar.","phone":"Teléfono del cliente"}
 }
