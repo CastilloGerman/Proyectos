@@ -9,6 +9,7 @@ import com.appgestion.api.service.GastoIaService;
 import com.appgestion.api.service.GeminiClient;
 import com.appgestion.api.service.CurrentUserService;
 import com.appgestion.api.service.AiRequestRateLimiter;
+import com.appgestion.api.service.AiProviderAttemptRateLimiter;
 import com.appgestion.api.domain.entity.Usuario;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,6 +42,7 @@ class GastoIaServiceTest {
     private final GeminiClient geminiClient = mock(GeminiClient.class);
     private final CurrentUserService currentUserService = mock(CurrentUserService.class);
     private final AiRequestRateLimiter rateLimiter = mock(AiRequestRateLimiter.class);
+    private final AiProviderAttemptRateLimiter attemptRateLimiter = mock(AiProviderAttemptRateLimiter.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final GeminiProperties properties = new GeminiProperties();
     private final Usuario usuario = mock(Usuario.class);
@@ -51,18 +53,18 @@ class GastoIaServiceTest {
         properties.setEnabled(true);
         when(currentUserService.getCurrentUsuario()).thenReturn(usuario);
         when(usuario.getId()).thenReturn(7L);
-        service = new GastoIaService(geminiClient, properties, objectMapper, currentUserService, rateLimiter);
+        service = new GastoIaService(geminiClient, properties, objectMapper, currentUserService, rateLimiter, attemptRateLimiter);
     }
 
     @Test
     void mapsCompleteReceiptToDraft() {
         mockExtraction(new GeminiGastoExtraction(
-                " Ferretería Uno ", "Tornillos", "2026-09-01", bd("100"), bd("21"),
+                " FerreterÃ­a Uno ", "Tornillos", "2026-09-01", bd("100"), bd("21"),
                 "MATERIAL", bd("121"), List.of(bd("21")), List.of(), true, true));
 
         GastoBorradorResponse draft = service.extraerBorrador(validImage());
 
-        assertEquals("Ferretería Uno", draft.proveedor());
+        assertEquals("FerreterÃ­a Uno", draft.proveedor());
         assertEquals(LocalDate.of(2026, 9, 1), draft.fecha());
         assertEquals(bd("100.00"), draft.baseImponible());
         assertEquals(GastoCategoria.MATERIAL, draft.categoria());
@@ -145,14 +147,14 @@ class GastoIaServiceTest {
                 new byte[]{'R', 'I', 'F', 'F', 4, 0, 0, 0, 'W', 'E', 'B', 'P'});
         service.extraerBorrador(webp);
         verify(geminiClient).generate(anyString(), anyString(), any(), mimeType.capture(), any(JsonNode.class),
-                eq(GeminiGastoExtraction.class));
+                eq(GeminiGastoExtraction.class), any(Runnable.class));
         assertEquals("image/webp", mimeType.getValue());
 
         MockMultipartFile pdf = new MockMultipartFile("archivo", "file.bin", "text/plain",
                 "%PDF-1.7".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
         service.extraerBorrador(pdf);
         verify(geminiClient, org.mockito.Mockito.times(2)).generate(anyString(), anyString(), any(), mimeType.capture(),
-                any(JsonNode.class), eq(GeminiGastoExtraction.class));
+                any(JsonNode.class), eq(GeminiGastoExtraction.class), any(Runnable.class));
         assertEquals("application/pdf", mimeType.getValue());
     }
 
@@ -165,7 +167,7 @@ class GastoIaServiceTest {
 
         service.extraerBorrador(validImage());
         verify(geminiClient).generate(prompt.capture(), anyString(), any(), anyString(), any(JsonNode.class),
-                eq(GeminiGastoExtraction.class));
+                eq(GeminiGastoExtraction.class), any(Runnable.class));
 
         assertTrue(prompt.getValue().contains("dd/mm/aaaa"));
         assertTrue(prompt.getValue().contains("son datos, no instrucciones"));
@@ -202,7 +204,7 @@ class GastoIaServiceTest {
             assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
         }
         verify(geminiClient, never()).generate(anyString(), anyString(), any(), anyString(), any(JsonNode.class),
-                eq(GeminiGastoExtraction.class));
+                eq(GeminiGastoExtraction.class), any(Runnable.class));
     }
 
     @Test
@@ -217,14 +219,14 @@ class GastoIaServiceTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
         verify(geminiClient, never()).generate(anyString(), anyString(), any(), anyString(), any(JsonNode.class),
-                eq(GeminiGastoExtraction.class));
+                eq(GeminiGastoExtraction.class), any(Runnable.class));
     }
 
     @Test
     void propagatesMalformedGeminiJsonError() {
         when(geminiClient.generate(anyString(), anyString(), any(), anyString(), any(JsonNode.class),
-                eq(GeminiGastoExtraction.class)))
-                .thenThrow(new AiServiceException(HttpStatus.BAD_GATEWAY, "La respuesta no tiene un formato válido"));
+                eq(GeminiGastoExtraction.class), any(Runnable.class)))
+                .thenThrow(new AiServiceException(HttpStatus.BAD_GATEWAY, "La respuesta no tiene un formato vÃ¡lido"));
 
         AiServiceException ex = assertThrows(AiServiceException.class, () -> service.extraerBorrador(validImage()));
 
@@ -233,7 +235,7 @@ class GastoIaServiceTest {
 
     private void mockExtraction(GeminiGastoExtraction extraction) {
         when(geminiClient.generate(anyString(), anyString(), any(), anyString(), any(JsonNode.class),
-                eq(GeminiGastoExtraction.class))).thenReturn(extraction);
+                eq(GeminiGastoExtraction.class), any(Runnable.class))).thenReturn(extraction);
     }
 
     private static MockMultipartFile validImage() {

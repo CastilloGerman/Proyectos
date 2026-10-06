@@ -24,6 +24,7 @@ import { Material } from '../../../core/models/material.model';
 import { Factura, FacturaCobro, FacturaItemRequest, FacturaRequest } from '../../../core/models/factura.model';
 import { startWith } from 'rxjs';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { EnviarFacturaComponent } from '../enviar-factura/enviar-factura.component';
 
 @Component({
     selector: 'app-factura-form',
@@ -41,6 +42,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
         MatSnackBarModule,
         MatDividerModule,
         TranslateModule,
+        EnviarFacturaComponent,
     ],
     template: `
     <div class="factura-form">
@@ -49,6 +51,15 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
           <mat-card-title>{{ isEdit ? ('factForm.edit' | translate) : ('factForm.new' | translate) }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
+          @if (creacionCompletada && facturaActual) {
+            <section class="creacion-completada" role="status">
+              <mat-icon>check_circle</mat-icon>
+              <h2>{{ (isEdit ? 'snack.invoiceUpdated' : 'snack.invoiceCreated') | translate }}</h2>
+              <p>{{ 'factForm.createdShareHint' | translate }}</p>
+              <app-enviar-factura [factura]="facturaActual" />
+              <button mat-stroked-button type="button" routerLink="/facturas">{{ 'factForm.backToInvoices' | translate }}</button>
+            </section>
+          } @else {
           <form [formGroup]="form" (ngSubmit)="onSubmit()">
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>{{ 'factForm.customer' | translate }}</mat-label>
@@ -260,6 +271,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
               </button>
             </div>
           </form>
+          }
         </mat-card-content>
       </mat-card>
     </div>
@@ -333,6 +345,10 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
       gap: 16px;
       margin-top: 24px;
     }
+
+    .creacion-completada { display:grid; justify-items:start; gap:12px; padding:8px 0; }
+    .creacion-completada > mat-icon { color:#168447; font-size:40px; width:40px; height:40px; }
+    .creacion-completada h2, .creacion-completada p { margin:0; }
 
     .vencimiento-buttons {
       display: flex;
@@ -434,6 +450,8 @@ export class FacturaFormComponent implements OnInit {
   materiales: Material[] = [];
   isEdit = false;
   id?: number;
+  facturaActual: Factura | null = null;
+  creacionCompletada = false;
   cobros: FacturaCobro[] = [];
   paymentLinkUrl: string | null = null;
   private facturaTotalSnapshot = 0;
@@ -592,6 +610,7 @@ export class FacturaFormComponent implements OnInit {
     this.id = id;
     this.facturaService.getById(id).subscribe({
       next: (f) => {
+        this.facturaActual = f;
         if (f.anulada) {
           this.snackBar.open(
             this.translate.instant('snack.invoiceAnnulledReadonly'),
@@ -809,13 +828,14 @@ export class FacturaFormComponent implements OnInit {
       ? this.facturaService.update(this.id, payload)
       : this.facturaService.create(payload);
     req.subscribe({
-      next: () => {
+      next: (factura) => {
+        this.facturaActual = factura;
+        this.creacionCompletada = true;
         this.snackBar.open(
           this.translate.instant(this.isEdit ? 'snack.invoiceUpdated' : 'snack.invoiceCreated'),
           this.translate.instant('common.close'),
           { duration: 3000 },
         );
-        this.router.navigate(['/facturas']);
       },
       error: (err) => {
         const raw = err.error?.message || err.error?.detail;

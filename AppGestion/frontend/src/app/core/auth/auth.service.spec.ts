@@ -227,6 +227,7 @@ describe('AuthService', () => {
       req.flush(me);
 
       expect(service.user()?.nombre).toBe('Updated Name');
+      expect(service.user()?.id).toBe(1);
       expect(service.user()?.rol).toBe('ADMIN');
       expect(service.canWrite()).toBe(false);
     });

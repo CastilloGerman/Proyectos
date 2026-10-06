@@ -41,6 +41,12 @@ export function construirMensajePresupuesto(p: Presupuesto, contratista: string)
   standalone: true,
   imports: [CommonModule, FormsModule, TranslateModule],
   template: `
+    <div class="share-actions">
+      <button class="share-trigger" type="button" (click)="expanded = !expanded" [attr.aria-expanded]="expanded">
+        {{ 'invite.shareTooltip' | translate }}
+      </button>
+    </div>
+    @if (expanded) {
     <section class="share-panel" aria-labelledby="share-title">
       <h2 id="share-title">{{ 'budgetShare.title' | translate }}</h2>
       @if (presupuesto.enviadoAt) {
@@ -70,9 +76,12 @@ export function construirMensajePresupuesto(p: Presupuesto, contratista: string)
       }
       @if (feedback) { <p role="status" class="feedback">{{ feedback }}</p> }
     </section>
+    }
   `,
   styles: [`
-    .share-panel { display:grid; gap:12px; padding:16px; margin:16px 0; border:1px solid var(--app-border,#d1d5db); border-radius:12px; }
+    .share-actions { margin-top:20px; }
+    .share-trigger { min-height:44px; padding:8px 18px; border:0; border-radius:8px; background:var(--app-primary,#2563eb); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
+    .share-panel { display:grid; gap:12px; padding:16px; margin:12px 0 0; border:1px solid var(--app-border,#d1d5db); border-radius:12px; }
     h2 { margin:0 0 4px; font-size:1.15rem; }
     button { min-height:48px; padding:10px 16px; border-radius:8px; font:inherit; cursor:pointer; }
     button:disabled { opacity:.55; cursor:wait; }
@@ -90,7 +99,9 @@ export function construirMensajePresupuesto(p: Presupuesto, contratista: string)
 })
 export class EnviarPresupuestoComponent implements OnChanges {
   @Input({ required: true }) presupuesto!: Presupuesto;
+  @Input() mostrarOpcionesAlInicio = false;
   @Output() enviado = new EventEmitter<Presupuesto>();
+  expanded = false;
   loading = false;
   mostrarEmail = false;
   telefono = '';
@@ -110,6 +121,7 @@ export class EnviarPresupuestoComponent implements OnChanges {
   ) {}
 
   ngOnChanges(): void {
+    if (this.mostrarOpcionesAlInicio) this.expanded = true;
     if (!this.presupuesto) return;
     this.telefono = this.presupuesto.clienteTelefono ?? '';
     this.email = this.presupuesto.clienteEmail ?? '';

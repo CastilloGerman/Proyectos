@@ -114,7 +114,7 @@ class GastoIaEndpointTest {
     @Test
     void returnsDraftWithoutPersistingWhenGeminiIsMocked() throws Exception {
         when(geminiClient.generate(anyString(), anyString(), any(), anyString(), any(),
-                eq(GeminiGastoExtraction.class)))
+                eq(GeminiGastoExtraction.class), any(Runnable.class)))
                 .thenReturn(new GeminiGastoExtraction(
                         "Proveedor test", "Material", "01/09/2026", new BigDecimal("100"),
                         new BigDecimal("21"), "MATERIAL", new BigDecimal("121"),

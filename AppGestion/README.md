@@ -1,5 +1,7 @@
 # AppGestion
 
+DocumentaciÃ³n de IA para presupuestos: [docs/IA-PRESUPUESTOS.md](docs/IA-PRESUPUESTOS.md).
+
 **Documentación adicional:** [Despliegue en producción](docs/DEPLOY.md) · [OAuth correo Gmail/Microsoft (local)](docs/EMAIL-OAUTH-SETUP.md) · [Modelo organización / tenant](docs/TENANT-MODEL.md) · [Dependencias](docs/DEPENDENCIES.md) · [Frontend](frontend/README.md) · [Diagnóstico recuperación de contraseña / correo](docs/TROUBLESHOOTING-PASSWORD-RESET.md)
 
 ---
@@ -200,9 +202,12 @@ Esta tabla es una referencia de nombres que reconoce la aplicación. Los comando
 | `SPRING_PROFILES_ACTIVE` | `local` / `prod` |
 | `SPRING_DATASOURCE_URL` | JDBC si no usas el default del yml |
 | `DB_USERNAME`, `DB_PASSWORD` | Credenciales PostgreSQL |
-| `APP_AI_GEMINI_ENABLED` | Activa (`true`) o desactiva (`false`) la extracción de gastos con IA; desactivada por defecto |
+| `APP_AI_GEMINI_ENABLED` | Activa (`true`) o desactiva (`false`) la extracción de gastos y los borradores de presupuestos con IA; desactivada por defecto |
 | `GEMINI_API_KEY` | Clave de Google AI Studio; obligatoria si Gemini está activado |
-| `APP_AI_GEMINI_MODEL` | Modelo Gemini; por defecto `gemini-2.5-flash` |
+| `APP_AI_GEMINI_MODEL` | Modelo Gemini usado por backend; por defecto `gemini-3.5-flash-lite`. Se selecciona solo mediante esta variable |
+| `APP_AI_PRESUPUESTO_REQUESTS_PER_DAY` | Máximo diario de borradores IA por usuario e instancia; por defecto `20` |
+| `APP_AI_GEMINI_MAX_ATTEMPTS_PER_HOUR` | Máximo de intentos HTTP enviados a Gemini por usuario e instancia por hora; cuenta fallos y reintentos; por defecto `60` |
+| `APP_AI_EVAL_GEMINI` | Variable de test: con valor `true` habilita la evaluación manual real `PresupuestoIaGeminiEvaluationTest`; no activa funciones de producción |
 | `JWT_SECRET` | Obligatorio fuera de `local` (`app.jwt.secret`) |
 | `CORS_ALLOWED_ORIGINS` | Orígenes permitidos (coma) |
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` | SMTP (`spring.mail.*`) |
@@ -342,6 +347,7 @@ Registro manual de compras/gastos con IVA soportado. La cuota IVA de los gastos 
 | GET | `/presupuestos/{id}` | Detalle |
 | GET | `/presupuestos/{id}/pdf` | PDF |
 | POST | `/presupuestos/{id}/enviar-email` | Enviar por email |
+| POST | `/presupuestos/ia/borrador` | Generar borrador editable desde texto; sin persistencia y con precios solo desde el catálogo del usuario |
 | POST | `/presupuestos/{id}/factura` | Generar factura desde presupuesto |
 | POST | `/presupuestos` | Crear |
 | PUT | `/presupuestos/{id}` | Actualizar |

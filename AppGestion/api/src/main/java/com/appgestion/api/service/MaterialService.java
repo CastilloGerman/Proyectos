@@ -47,6 +47,10 @@ public class MaterialService {
     @Transactional
     @CacheEvict(cacheNames = CacheNames.MATERIALES_TOP_USADOS, key = "#usuario.id")
     public MaterialResponse crear(MaterialRequest request, Usuario usuario) {
+        var existente = materialRepository.findByUsuarioIdAndNombreNormalizado(usuario.getId(), request.nombre());
+        if (existente.isPresent()) {
+            return toResponse(existente.get());
+        }
         Material material = new Material();
         material.setUsuario(usuario);
         mapRequestToEntity(request, material);

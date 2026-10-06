@@ -74,9 +74,48 @@ public class GeminiClient {
             JsonNode responseSchema,
             Class<T> responseType
     ) {
+        return generate(systemInstruction, userText, attachment, mimeType, responseSchema, responseType, () -> { });
+    }
+
+    public <T> T generate(
+            String systemInstruction,
+            String userText,
+            byte[] attachment,
+            String mimeType,
+            JsonNode responseSchema,
+            Class<T> responseType,
+            Runnable beforeProviderAttempt
+    ) {
+        return generateWithMetadata(systemInstruction, userText, attachment, mimeType, responseSchema, responseType,
+                beforeProviderAttempt)
+                .content();
+    }
+
+    public <T> GeminiGenerationResult<T> generateWithMetadata(
+            String systemInstruction,
+            String userText,
+            byte[] attachment,
+            String mimeType,
+            JsonNode responseSchema,
+            Class<T> responseType
+    ) {
+        return generateWithMetadata(systemInstruction, userText, attachment, mimeType, responseSchema, responseType,
+                () -> { });
+    }
+
+    public <T> GeminiGenerationResult<T> generateWithMetadata(
+            String systemInstruction,
+            String userText,
+            byte[] attachment,
+            String mimeType,
+            JsonNode responseSchema,
+            Class<T> responseType,
+            Runnable beforeProviderAttempt
+    ) {
         requireEnabled();
         ObjectNode request = buildRequest(systemInstruction, userText, attachment, mimeType, responseSchema);
         for (int attempt = 0; attempt < 2; attempt++) {
+            beforeProviderAttempt.run();
             try {
                 String responseBody = restClient.post()
                         .uri("/v1beta/models/{model}:generateContent", properties.getModel())
@@ -86,11 +125,12 @@ public class GeminiClient {
                         .retrieve()
                         .body(String.class);
                 JsonNode response = responseBody == null ? null : objectMapper.readTree(responseBody);
-                return parseResponse(response, responseType);
+                return new GeminiGenerationResult<>(parseResponse(response, responseType),
+                        optionalInt(response == null ? null : response.path("usageMetadata").path("promptTokenCount")),
+                        optionalInt(response == null ? null : response.path("usageMetadata").path("candidatesTokenCount")));
             } catch (RestClientResponseException ex) {
                 int code = ex.getStatusCode().value();
-                log.warn("Gemini devolvió HTTP {} (intento {}/2): error.status={}, error.message={}",
-                        code, attempt + 1, providerErrorStatus(ex), providerErrorMessage(ex));
+                log.warn("Gemini devolvió HTTP {} (intento {}/2)", code, attempt + 1);
                 if (code == 429) {
                     throw new AiServiceException(HttpStatus.TOO_MANY_REQUESTS,
                             "Has alcanzado el límite de cuota del servicio de IA. Inténtalo más tarde.", ex);
@@ -100,7 +140,7 @@ public class GeminiClient {
                 }
                 if (code == 400) {
                     throw new AiServiceException(HttpStatus.BAD_REQUEST,
-                            providerBadRequestMessage(ex), ex);
+                            providerBadRequestMessage(), ex);
                 }
                 if (code >= 500 && code <= 599) {
                     if (attempt == 0) {
@@ -111,6 +151,10 @@ public class GeminiClient {
                 }
                 throw new AiServiceException(HttpStatus.BAD_GATEWAY, SERVICE_UNAVAILABLE, ex);
             } catch (ResourceAccessException ex) {
+                if (attempt == 0) {
+                    pauseBeforeRetry();
+                    continue;
+                }
                 throw new AiServiceException(HttpStatus.SERVICE_UNAVAILABLE, SERVICE_UNAVAILABLE, ex);
             } catch (AiServiceException ex) {
                 throw ex;
@@ -122,27 +166,8 @@ public class GeminiClient {
         throw new AiServiceException(HttpStatus.SERVICE_UNAVAILABLE, SERVICE_UNAVAILABLE);
     }
 
-    private String providerErrorStatus(RestClientResponseException ex) {
-        return providerErrorField(ex, "status");
-    }
-
-    private String providerErrorMessage(RestClientResponseException ex) {
-        return providerErrorField(ex, "message");
-    }
-
-    private String providerErrorField(RestClientResponseException ex, String field) {
-        try {
-            JsonNode body = objectMapper.readTree(ex.getResponseBodyAsString());
-            JsonNode value = body == null ? null : body.path("error").path(field);
-            if (value == null || value.isMissingNode() || value.isNull()) {
-                return "no disponible";
-            }
-            String text = value.asText();
-            String compact = text.replaceAll("[\\r\\n\\t]+", " ").trim();
-            return compact.length() > 300 ? compact.substring(0, 300) + "…" : compact;
-        } catch (Exception ignored) {
-            return "no disponible";
-        }
+    private static Integer optionalInt(JsonNode value) {
+        return value != null && value.canConvertToInt() ? value.intValue() : null;
     }
 
     private ObjectNode buildRequest(
@@ -219,12 +244,8 @@ public class GeminiClient {
         };
     }
 
-    private String providerBadRequestMessage(RestClientResponseException ex) {
-        String detail = providerErrorMessage(ex);
-        if (!"no disponible".equals(detail) && !detail.isBlank()) {
-            return "Gemini rechazó la solicitud: " + detail;
-        }
-        return "Gemini no pudo procesar el archivo enviado. Comprueba el formato e inténtalo de nuevo.";
+    private String providerBadRequestMessage() {
+        return "La solicitud de IA no se pudo procesar. Comprueba el contenido e inténtalo de nuevo.";
     }
 
     private static void pauseBeforeRetry() {

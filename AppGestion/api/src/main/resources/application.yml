@@ -86,6 +86,8 @@ app:
       max-audio-bytes: ${APP_AI_GEMINI_MAX_AUDIO_BYTES:10485760}
       max-audio-seconds: ${APP_AI_GEMINI_MAX_AUDIO_SECONDS:120}
       requests-per-hour: ${APP_AI_GEMINI_REQUESTS_PER_HOUR:20}
+      max-provider-attempts-per-hour: ${APP_AI_GEMINI_MAX_ATTEMPTS_PER_HOUR:60}
+      presupuesto-requests-per-day: ${APP_AI_PRESUPUESTO_REQUESTS_PER_DAY:20}
   api:
     # Si es false, las respuestas 500 genéricas no incluyen el mensaje interno de la excepción.
     expose-internal-error-message: ${APP_API_EXPOSE_INTERNAL_ERRORS:false}
