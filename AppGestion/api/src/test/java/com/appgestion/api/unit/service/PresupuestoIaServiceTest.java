@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -141,6 +142,120 @@ class PresupuestoIaServiceTest {
         assertEquals(11L, items.get(1).materialId());
         assertEquals("Azulejo blanco", items.get(1).materialNombre());
         assertFalse(items.get(1).faltaPrecio());
+    }
+
+    @Test
+    void keepsAnExactProductDimensionMatch() {
+        var item = generateMeasuredItem("Plato de ducha 120x70", "Plato de ducha resina 120x70 blanco");
+
+        assertEquals(11L, item.materialId());
+        assertFalse(item.faltaPrecio());
+    }
+
+    @Test
+    void clearsMaterialWhenProductDimensionsDiffer() {
+        var item = generateMeasuredItem("Plato de ducha 120x70", "Plato de ducha resina 100x70 blanco");
+
+        assertNull(item.materialId());
+        assertNull(item.materialNombre());
+        assertEquals(0.0, item.precioUnitario());
+        assertTrue(item.faltaPrecio());
+    }
+
+    @Test
+    void clearsMaterialWhenDescriptionHasMeasurementsButMaterialNameHasNone() {
+        var materialWithoutDimensions = generateMeasuredItem("Plato de ducha 120x70", "Plato de ducha blanco");
+
+        assertNull(materialWithoutDimensions.materialId());
+        assertNull(materialWithoutDimensions.materialNombre());
+        assertEquals(0.0, materialWithoutDimensions.precioUnitario());
+        assertTrue(materialWithoutDimensions.faltaPrecio());
+    }
+
+    @Test
+    void rejectsDifferentPipeDiametersAndRadiatorElementCounts() {
+        var pipe = generateMeasuredItem("Tubo PVC Ø32 mm", "Tubo PVC evacuación Ø40 mm");
+        assertNull(pipe.materialId());
+        assertTrue(pipe.faltaPrecio());
+
+        var radiator = generateMeasuredItem("Radiador aluminio blanco 12 elementos",
+                "Radiador aluminio blanco 10 elementos");
+        assertNull(radiator.materialId());
+        assertTrue(radiator.faltaPrecio());
+    }
+
+    @Test
+    void doesNotChangeMaterialWhenTheLineDescriptionHasNoProductMeasurements() {
+        var item = generateMeasuredItem("Colocar plato de ducha blanco", "Plato de ducha resina 120x70 blanco");
+
+        assertEquals(11L, item.materialId());
+        assertFalse(item.faltaPrecio());
+    }
+
+    @Test
+    void normalizesMultiplicationAndMetricMeasurementFormats() {
+        var pair = generateMeasuredItem("Plato 120 por 70 mm", "Plato 120X70 blanco");
+        assertEquals(11L, pair.materialId());
+
+        var decimalLength = generateMeasuredItem("Panel de 1,2 m", "Panel de 120 cm");
+        assertEquals(11L, decimalLength.materialId());
+
+        var centimetresToMillimetres = generateMeasuredItem("Panel de 120 cm", "Panel de 1200 mm");
+        assertEquals(11L, centimetresToMillimetres.materialId());
+
+        var millimetresToMetres = generateMeasuredItem("Panel de 1200 mm", "Panel de 1.2 m");
+        assertEquals(11L, millimetresToMetres.materialId());
+
+        var diameter = generateMeasuredItem("Tubo PVC Ø40", "Tubo PVC 40 mm");
+        assertEquals(11L, diameter.materialId());
+    }
+
+    @Test
+    void measurementParsingAndFormattingDoNotDependOnTheDefaultLocale() {
+        Locale originalLocale = Locale.getDefault();
+        try {
+            Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+            var item = generateMeasuredItem("Panel de 1,2 m", "Panel de 1200 mm");
+
+            assertEquals(11L, item.materialId());
+            assertFalse(item.faltaPrecio());
+        } finally {
+            Locale.setDefault(originalLocale);
+        }
+    }
+
+    @Test
+    void ignoresAnAreaQuantityInsteadOfTreatingItAsAProductMeasurement() {
+        var item = generateMeasuredItem("Colocar 6 m2 de azulejo", "Azulejo blanco 30x60");
+
+        assertEquals(11L, item.materialId());
+        assertFalse(item.faltaPrecio());
+    }
+
+    @Test
+    void evaluatesSixCatalogDistractorExamplesFromTheSharedFixture() throws Exception {
+        JsonNode cases;
+        try (var stream = getClass().getResourceAsStream("/ia-presupuesto-casos.json")) {
+            cases = mapper.readTree(stream);
+        }
+        int[] fixtureIndexes = {0, 3, 5, 6, 12, 13};
+        String[] lineDescriptions = {
+                "Gres porcelánico suelo 60x60 antideslizante",
+                "Laminado roble claro AC4 8 mm",
+                "Mortero de albañilería M-5",
+                "Base enchufe doble blanco",
+                "Tubo PVC evacuación Ø40 mm",
+                "Radiador aluminio blanco 12 elementos",
+        };
+
+        for (int i = 0; i < fixtureIndexes.length; i++) {
+            JsonNode testCase = cases.get(fixtureIndexes[i]);
+            String materialName = testCase.path("esperado").path("materialesEsperados").get(0)
+                    .path("material").asText();
+            var item = generateMeasuredItem(lineDescriptions[i], materialName, testCase.path("texto").asText());
+            assertEquals(11L, item.materialId(), "fixture case index " + fixtureIndexes[i]);
+            assertFalse(item.faltaPrecio(), "fixture case index " + fixtureIndexes[i]);
+        }
     }
 
     @Test
@@ -278,6 +393,24 @@ class PresupuestoIaServiceTest {
     private void mockResponse(String value) {
         when(geminiClient.generateWithMetadata(anyString(), anyString(), isNull(), isNull(), any(JsonNode.class),
                 eq(JsonNode.class), any(Runnable.class))).thenReturn(generation(value));
+    }
+
+    private com.appgestion.api.dto.response.PresupuestoIaItemBorradorResponse generateMeasuredItem(
+            String description, String materialName) {
+        return generateMeasuredItem(description, materialName, description);
+    }
+
+    private com.appgestion.api.dto.response.PresupuestoIaItemBorradorResponse generateMeasuredItem(
+            String description, String materialName, String inputText) {
+        Material catalogMaterial = material(11L, materialName, "ud", 42.0);
+        when(materialRepository.findTop5MasUsadosByUsuarioId(7L)).thenReturn(List.of(catalogMaterial));
+        when(materialRepository.findByIdAndUsuarioId(11L, 7L)).thenReturn(Optional.of(catalogMaterial));
+        mockResponse("""
+                {"transcripcion":"obra","partidas":[
+                  {"descripcion":%s,"cantidad":1,"unidad":"ud","materialId":11,"confianza":"alta"}],"notas":null}
+                """.formatted(mapper.valueToTree(description).toString()));
+
+        return service.generarBorrador(new PresupuestoIaRequest(inputText, null), user).items().getFirst();
     }
 
     private GeminiGenerationResult<JsonNode> generation(String value) {

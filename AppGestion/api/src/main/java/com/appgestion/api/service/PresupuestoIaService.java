@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -44,6 +45,23 @@ public class PresupuestoIaService {
             "hacer", "poner", "quitar", "obra", "trabajo", "reforma", "metros", "metro", "desde", "hasta");
     private static final Set<String> UNITS = Set.of("m2", "ml", "ud", "h", "global");
     private static final Set<String> CONFIDENCE = Set.of("alta", "media", "baja");
+    private static final String MEASURE_NUMBER = "(?:\\d+(?:[.,]\\d+)?|[.,]\\d+)";
+    private static final Pattern DIMENSION_PAIR_PATTERN = Pattern.compile(
+            "(?<![\\p{L}\\d])(" + MEASURE_NUMBER + ")\\s*(?:x|×|por)\\s*(" +
+                    MEASURE_NUMBER + ")(?:\\s*(mm|cm|m))?(?![\\p{L}])",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern DIAMETER_PATTERN = Pattern.compile(
+            "(?:ø|⌀|diam(?:etro)?)\\s*(" + MEASURE_NUMBER + ")\\s*(mm|cm|m)?",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern ELEMENT_COUNT_PATTERN = Pattern.compile(
+            "(?<![\\p{L}\\d])(" + MEASURE_NUMBER + ")\\s*elementos?\\b",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern EXPLICIT_LENGTH_PATTERN = Pattern.compile(
+            "(?<![\\p{L}\\d])(" + MEASURE_NUMBER + ")\\s*(mm|cm)\\b",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern DECIMAL_METRE_PATTERN = Pattern.compile(
+            "(?<![\\p{L}\\d])(" + MEASURE_NUMBER + ")\\s*m\\b",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final String SYSTEM_INSTRUCTION = """
             Eres un asistente para contratistas de reformas en España. Extrae del texto únicamente las partidas,
             los datos del cliente que aparezcan explícitamente, la transcripción limpia y las notas del presupuesto.
@@ -241,6 +259,7 @@ public class PresupuestoIaService {
                     .findByIdAndUsuarioId(requestedMaterialId, usuarioId).orElse(null);
             if (material != null && !candidateIds.contains(material.getId())) material = null;
             if ("baja".equals(confidence)) material = null;
+            if (material != null && hasMismatchedMeasurements(description, material.getNombre())) material = null;
 
             Double quantity = positiveDouble(row.get("cantidad"));
             boolean doubtfulQuantity = quantity == null;
@@ -283,6 +302,69 @@ public class PresupuestoIaService {
 
     private static Double validPrice(Double value) {
         return value == null || !Double.isFinite(value) || value <= 0 ? 0.0 : value;
+    }
+
+    private static boolean hasMismatchedMeasurements(String description, String materialName) {
+        Set<String> descriptionMeasurements = measurements(description);
+        if (descriptionMeasurements.isEmpty()) return false;
+        Set<String> materialMeasurements = measurements(materialName);
+        if (materialMeasurements.isEmpty()) return true;
+        return descriptionMeasurements.stream().noneMatch(materialMeasurements::contains);
+    }
+
+    private static Set<String> measurements(String text) {
+        Set<String> measurements = new LinkedHashSet<>();
+        if (text == null) return measurements;
+        addDimensionPairs(text, measurements);
+        addMeasurements(DIAMETER_PATTERN, text, measurements, "length");
+        addMeasurements(ELEMENT_COUNT_PATTERN, text, measurements, "elements");
+        addMeasurements(EXPLICIT_LENGTH_PATTERN, text, measurements, "length");
+        addDecimalMetres(text, measurements);
+        return measurements;
+    }
+
+    private static void addDimensionPairs(String text, Set<String> measurements) {
+        var matcher = DIMENSION_PAIR_PATTERN.matcher(text);
+        while (matcher.find()) {
+            String unit = matcher.group(3);
+            String first = normalizeNumber(matcher.group(1), unit);
+            String second = normalizeNumber(matcher.group(2), unit);
+            if (first.compareTo(second) > 0) {
+                String swap = first;
+                first = second;
+                second = swap;
+            }
+            measurements.add("pair:" + first + "x" + second);
+        }
+    }
+
+    private static void addMeasurements(Pattern pattern, String text, Set<String> measurements, String kind) {
+        var matcher = pattern.matcher(text);
+        while (matcher.find()) {
+            String unit = matcher.groupCount() >= 2 ? matcher.group(2) : null;
+            measurements.add(kind + ":" + normalizeNumber(matcher.group(1), unit));
+        }
+    }
+
+    private static void addDecimalMetres(String text, Set<String> measurements) {
+        var matcher = DECIMAL_METRE_PATTERN.matcher(text);
+        while (matcher.find()) {
+            String rawNumber = matcher.group(1);
+            if (rawNumber.indexOf(',') < 0 && rawNumber.indexOf('.') < 0) continue;
+            measurements.add("length:" + normalizeNumber(rawNumber, "m"));
+        }
+    }
+
+    private static String normalizeNumber(String value, String unit) {
+        BigDecimal number = new BigDecimal(value.replace(',', '.'));
+        if (unit != null) {
+            number = switch (unit.toLowerCase(Locale.ROOT)) {
+                case "m" -> number.multiply(BigDecimal.valueOf(1000));
+                case "cm" -> number.multiply(BigDecimal.TEN);
+                default -> number;
+            };
+        }
+        return number.stripTrailingZeros().toPlainString();
     }
 
     private static String enumValue(JsonNode value, Set<String> allowed, String fallback) {

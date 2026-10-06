@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, ElementRef, OnInit, ViewChild, effect, inject } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, ViewChild, effect, inject, isDevMode } from '@angular/core';
 import {
   AbstractControl,
   FormArray,
@@ -185,7 +185,7 @@ function decimalMin(minimum: number) {
                 <button type="button" mat-stroked-button class="retry-btn" (click)="cargarCatalogo()">{{ 'budQuick.retry' | translate }}</button>
               }
               <div formArrayName="materialItems" class="lines-block">
-                @for (line of materialItems.controls; track line; let i = $index) {
+                @for (line of materialItems.controls; track line.get('lineId')?.value; let i = $index) {
                   <div [formGroupName]="i" class="line-card">
                     <mat-form-field appearance="outline" class="full">
                       <mat-label>{{ 'budQuick.material' | translate }}</mat-label>
@@ -224,7 +224,7 @@ function decimalMin(minimum: number) {
             <section class="section tareas-section" aria-labelledby="manual-title">
               <h2 id="manual-title" class="section-title">{{ 'budQuick.manualTitle' | translate }}</h2>
               <div formArrayName="manualItems" class="lines-block">
-                @for (line of manualItems.controls; track line; let i = $index) {
+                @for (line of manualItems.controls; track line.get('lineId')?.value; let i = $index) {
                   <div [formGroupName]="i" class="line-card" [class.ai-review-card]="requiereRevisionVisual(line)">
                     @if (line.get('iaSugerida')?.value) {
                       <div class="ai-line-status" aria-live="polite">
@@ -323,7 +323,7 @@ function decimalMin(minimum: number) {
             </p>
           }
           @if (cantidadSegurasPorConfirmar() > 0) {
-            <button mat-stroked-button type="button" class="confirm-ai-btn confirm-safe-btn" (click)="confirmarSugerenciasSeguras()">
+            <button #safeConfirmTrigger mat-stroked-button type="button" class="confirm-ai-btn confirm-safe-btn" (click)="abrirConfirmacionSeguras()">
               {{ 'budQuick.ai.confirmSafe' | translate:{count: cantidadSegurasPorConfirmar()} }}
             </button>
           }
@@ -334,6 +334,28 @@ function decimalMin(minimum: number) {
           {{ 'budQuick.createAndSend' | translate }}
         </button>
       </div>
+    }
+    @if (confirmacionSegurasAbierta) {
+      <dialog #safeConfirmationDialog class="safe-confirmation-dialog"
+        aria-modal="true" aria-labelledby="safe-confirmation-title" aria-describedby="safe-confirmation-description"
+        tabindex="-1"
+        (cancel)="cancelarConfirmacionSeguras()">
+        <h2 id="safe-confirmation-title">{{ 'budQuick.ai.safeDialogTitle' | translate }}</h2>
+        <p id="safe-confirmation-description">{{ 'budQuick.ai.safeDialogDescription' | translate }}</p>
+        <ul class="safe-confirmation-list">
+          @for (item of resumenConfirmacionSeguras; track item.lineId) {
+            <li><strong>{{ item.description }}</strong> → {{ item.materialName }} → {{ item.price | number:'1.2-2' }} €</li>
+          }
+        </ul>
+        <div class="safe-confirmation-actions">
+          <button mat-stroked-button type="button" class="safe-dialog-button" (click)="cancelarConfirmacionSeguras()">
+            {{ 'budQuick.ai.cancelSafe' | translate }}
+          </button>
+          <button mat-raised-button color="primary" type="button" class="safe-dialog-button" (click)="confirmarTodasSeguras()">
+            {{ 'budQuick.ai.confirmAllSafe' | translate }}
+          </button>
+        </div>
+      </dialog>
     }
   `,
   styles: [`
@@ -365,6 +387,12 @@ function decimalMin(minimum: number) {
     .submit-details { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
     .submit-details .pending-ai-summary { max-width: min(52vw, 440px); margin: 0; }
     .confirm-safe-btn { min-height: 48px; }
+    .safe-confirmation-dialog { width: min(600px, calc(100vw - 32px)); max-height: min(80vh, 720px); padding: 20px; border: 0; border-radius: 12px; box-shadow: 0 16px 48px rgba(15, 23, 42, .28); }
+    .safe-confirmation-dialog::backdrop { background: rgba(15, 23, 42, .55); }
+    .safe-confirmation-list { max-height: 45vh; overflow: auto; padding-left: 24px; }
+    .safe-confirmation-list li { padding: 8px 0; overflow-wrap: anywhere; }
+    .safe-confirmation-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+    .safe-dialog-button { min-height: 48px; }
     .top-used { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 12px; }
     .top-label { width: 100%; font-size: 13px; color: var(--app-text-secondary, #64748b); }
     .top-chip, .add-line, .remove-btn { min-height: 44px; }
@@ -388,6 +416,7 @@ function decimalMin(minimum: number) {
 })
 export class PresupuestoRapidoComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
+  private nextLineId = 0;
   private draftUserId: number | null = null;
   form = this.fb.group({
     clienteId: [null as number | null],
@@ -416,7 +445,11 @@ export class PresupuestoRapidoComponent implements OnInit {
   creandoClienteSugerido = false;
   clienteSugerido: { nombre: string; telefono: string } | null = null;
   clientesCoincidentes: Cliente[] = [];
+  confirmacionSegurasAbierta = false;
+  resumenConfirmacionSeguras: Array<{ lineId: number; description: string; materialName: string; price: number }> = [];
   @ViewChild('iaStatus') private iaStatusElement?: ElementRef<HTMLElement>;
+  @ViewChild('safeConfirmationDialog') private safeConfirmationDialog?: ElementRef<HTMLDialogElement>;
+  @ViewChild('safeConfirmTrigger') private safeConfirmTrigger?: ElementRef<HTMLButtonElement>;
 
   constructor(
     private fb: FormBuilder,
@@ -512,6 +545,7 @@ export class PresupuestoRapidoComponent implements OnInit {
 
   private createMaterialLine(): FormGroup {
     return this.fb.group({
+      lineId: [this.nextLineId++],
       materialId: [null as number | null],
       descripcion: [''],
       cantidad: [1, [Validators.required, decimalMin(0.001)]],
@@ -520,6 +554,7 @@ export class PresupuestoRapidoComponent implements OnInit {
   }
   private createManualLine(): FormGroup {
     return this.fb.group({
+      lineId: [this.nextLineId++],
       tareaManual: ['', Validators.required],
       unidadMedida: ['ud'],
       cantidad: [1, [Validators.required, decimalMin(0.001)]],
@@ -622,17 +657,70 @@ export class PresupuestoRapidoComponent implements OnInit {
   }
 
   confirmarSugerenciasSeguras(): void {
-    for (const control of this.manualItems.controls) {
-      const values = control.getRawValue();
-      const materialId = values.materialId;
-      const safe = values.iaSugerida && !values.iaRevisada &&
-        values.confianza === 'alta' &&
-        typeof materialId === 'number' && this.materiales.some((material) => material.id === materialId) &&
-        !values.faltaPrecio && !values.cantidadDudosa &&
-        (parseDecimal(values.precioUnitario) ?? 0) > 0 &&
-        this.validNumericLine(values.cantidad, values.precioUnitario);
-      if (safe) control.get('iaRevisada')?.setValue(true);
+    this.abrirConfirmacionSeguras();
+  }
+
+  abrirConfirmacionSeguras(): void {
+    this.resumenConfirmacionSeguras = this.manualItems.controls
+      .filter((control) => this.esSeguraParaConfirmacion(control))
+      .map((control) => {
+        const values = control.getRawValue();
+        const material = this.materiales.find((candidate) => candidate.id === values.materialId);
+        return {
+          lineId: values.lineId as number,
+          description: String(values.tareaManual ?? ''),
+          materialName: String(values.materialNombre || material?.nombre || ''),
+          price: parseDecimal(values.precioUnitario) ?? 0,
+        };
+      });
+    if (!this.resumenConfirmacionSeguras.length) return;
+    this.confirmacionSegurasAbierta = true;
+    setTimeout(() => {
+      const dialog = this.safeConfirmationDialog?.nativeElement;
+      if (!dialog) return;
+      if (!dialog.open) {
+        if (typeof dialog.showModal === 'function') dialog.showModal();
+        else dialog.setAttribute('open', '');
+      }
+      dialog.focus();
+    }, 0);
+  }
+
+  confirmarTodasSeguras(): void {
+    for (const item of this.resumenConfirmacionSeguras) {
+      const control = this.manualItems.controls.find((candidate) =>
+        candidate.get('lineId')?.value === item.lineId);
+      if (control && this.esSeguraParaConfirmacion(control)) {
+        control.get('iaRevisada')?.setValue(true);
+      }
     }
+    this.cerrarDialogoSeguras();
+  }
+
+  cancelarConfirmacionSeguras(): void {
+    this.cerrarDialogoSeguras();
+  }
+
+  private cerrarDialogoSeguras(): void {
+    const dialog = this.safeConfirmationDialog?.nativeElement;
+    if (dialog?.open) {
+      if (typeof dialog.close === 'function') dialog.close();
+      else dialog.removeAttribute('open');
+    }
+    this.confirmacionSegurasAbierta = false;
+    this.resumenConfirmacionSeguras = [];
+    setTimeout(() => this.safeConfirmTrigger?.nativeElement?.focus(), 0);
+  }
+
+  private esSeguraParaConfirmacion(control: AbstractControl): boolean {
+    const values = control.getRawValue();
+    const materialId = values.materialId;
+    return values.iaSugerida && !values.iaRevisada &&
+      values.confianza === 'alta' &&
+      typeof materialId === 'number' && this.materiales.some((material) => material.id === materialId) &&
+      !values.faltaPrecio && !values.cantidadDudosa &&
+      (parseDecimal(values.precioUnitario) ?? 0) > 0 &&
+      this.validNumericLine(values.cantidad, values.precioUnitario);
   }
 
   requiereRevisionVisual(line: AbstractControl): boolean {
@@ -691,6 +779,17 @@ export class PresupuestoRapidoComponent implements OnInit {
         guardarEnCatalogo: false,
       });
       this.manualItems.push(line);
+    }
+    if (isDevMode()) {
+      console.debug('[Presupuesto IA] Partidas estructuradas', draft.items.map((item) => ({
+        descripcion: item.tareaManual,
+        materialId: item.materialId,
+        materialNombre: item.materialNombre,
+        confianza: item.confianza,
+        faltaPrecio: item.faltaPrecio,
+        cantidadDudosa: item.cantidadDudosa,
+        cantidad: item.cantidad,
+      })));
     }
     if (draft.notaAdicional != null) this.form.controls.notaAdicional.setValue(draft.notaAdicional);
     this.proponerCliente(draft);

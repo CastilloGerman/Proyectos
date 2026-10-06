@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { isDevMode, signal } from '@angular/core';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
@@ -84,6 +84,10 @@ describe('PresupuestoRapidoComponent', () => {
         lowConfidence: 'Revisar confianza', changeMaterial: 'Cambiar material', freeItem: 'Partida libre',
         confirmSuggestion: 'Confirmar',
         confirmSafe: 'Confirmar las {{count}} seguras',
+        safeDialogTitle: 'Revisa las sugerencias seguras',
+        safeDialogDescription: 'Comprueba descripción, material y precio antes de confirmar.',
+        confirmAllSafe: 'Confirmar todas',
+        cancelSafe: 'Cancelar',
       } },
     });
     translate.setFallbackLang('es');
@@ -107,9 +111,16 @@ describe('PresupuestoRapidoComponent', () => {
 
   it('adds and removes material and free task lines', () => {
     expect(component.totalLineCount()).toBe(1);
+    const firstLineId = component.materialItems.at(0).get('lineId')?.value;
     component.addMaterialLine();
     component.addManualLine();
     expect(component.totalLineCount()).toBe(3);
+    expect(component.materialItems.at(0).get('lineId')?.value).toBe(firstLineId);
+    const ids = [
+      ...component.materialItems.controls,
+      ...component.manualItems.controls,
+    ].map((line) => line.get('lineId')?.value);
+    expect(new Set(ids).size).toBe(ids.length);
     component.removeManualLine(0);
     component.removeMaterialLine(1);
     expect(component.totalLineCount()).toBe(1);
@@ -310,6 +321,32 @@ describe('PresupuestoRapidoComponent', () => {
     expect(presupuestoService.create).not.toHaveBeenCalled();
   });
 
+  it('logs only the permitted per-line AI review fields in development mode', () => {
+    const debug = vi.spyOn(console, 'debug').mockImplementation(() => undefined);
+    presupuestoIaService.generarBorrador.mockReturnValue(of(iaDraft({
+      clienteNombre: 'No registrar nombre',
+      clienteTelefono: 'No registrar teléfono',
+      transcripcion: 'No registrar texto completo',
+    })));
+    component.textoObraIa = 'Texto completo privado';
+
+    component.generarConIa();
+
+    if (isDevMode()) {
+      expect(debug).toHaveBeenCalledOnce();
+      const logged = JSON.stringify(debug.mock.calls);
+      expect(logged).toContain('Alicatar baño');
+      expect(logged).toContain('materialId');
+      expect(logged).toContain('confianza');
+      expect(logged).not.toContain('No registrar nombre');
+      expect(logged).not.toContain('No registrar teléfono');
+      expect(logged).not.toContain('No registrar texto completo');
+      expect(logged).not.toContain('Texto completo privado');
+    } else {
+      expect(debug).not.toHaveBeenCalled();
+    }
+  });
+
   it('blocks create and send until AI price and quantity flags are completed', () => {
     component.form.controls.clienteId.setValue(cliente.id);
     component.textoObraIa = 'Alicatar baño y pintar pared';
@@ -336,7 +373,7 @@ describe('PresupuestoRapidoComponent', () => {
     expect(fixture.nativeElement.querySelector('.submit-btn').disabled).toBe(false);
   });
 
-  it('confirms only high-confidence suggestions with a valid catalogue material, price, quantity and no flags', () => {
+  it('shows a per-line confirmation summary and confirms safe suggestions only after acceptance', async () => {
     component.textoObraIa = 'Pintar pared';
     component.generarConIa();
     component.manualItems.at(0).patchValue({
@@ -357,12 +394,50 @@ describe('PresupuestoRapidoComponent', () => {
     fixture.detectChanges();
     expect(component.cantidadSegurasPorConfirmar()).toBe(1);
     expect(fixture.nativeElement.textContent).toContain('Confirmar las 1 seguras');
-    component.confirmarSugerenciasSeguras();
+    fixture.nativeElement.querySelector('.confirm-safe-btn').click();
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve, 1));
+    fixture.detectChanges();
+
+    const dialog = fixture.nativeElement.querySelector('dialog[aria-modal="true"]');
+    expect(dialog).not.toBeNull();
+    expect(dialog.textContent).toContain('Alicatar baño');
+    expect(dialog.textContent).toContain('Pintura blanca');
+    expect(dialog.textContent).toContain('20.00');
+    expect(dialog.textContent).toContain('Confirmar todas');
+    expect(dialog.textContent).toContain('Cancelar');
+    expect(document.activeElement).toBe(dialog);
+    expect(component.manualItems.at(0).get('iaRevisada')?.value).toBe(false);
+    expect(component.manualItems.at(1).get('iaRevisada')?.value).toBe(false);
+
+    dialog.querySelector('.safe-dialog-button:last-child').click();
+    fixture.detectChanges();
 
     expect(component.manualItems.at(0).get('iaRevisada')?.value).toBe(true);
     expect(component.manualItems.at(1).get('iaRevisada')?.value).toBe(false);
     expect(component.manualItems.at(2).get('iaRevisada')?.value).toBe(false);
     expect(component.manualItems.at(3).get('iaRevisada')?.value).toBe(false);
+  });
+
+  it('cancels the safe-suggestions summary without confirming any line', async () => {
+    component.manualItems.clear();
+    component.manualItems.push(component['createManualLine']());
+    component.manualItems.at(0).patchValue({
+      tareaManual: 'Instalar material', materialId: material.id, materialNombre: material.nombre,
+      iaSugerida: true, iaRevisada: false, confianza: 'alta', cantidad: 1,
+      precioUnitario: 10, faltaPrecio: false, cantidadDudosa: false,
+    });
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('.confirm-safe-btn').click();
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve, 1));
+    fixture.detectChanges();
+    fixture.nativeElement.querySelector('.safe-dialog-button:first-child').click();
+    fixture.detectChanges();
+
+    expect(component.confirmacionSegurasAbierta).toBe(false);
+    expect(component.manualItems.at(0).get('iaRevisada')?.value).toBe(false);
   });
 
   it('lets the user remove an AI material association and keep the line as free text', () => {
