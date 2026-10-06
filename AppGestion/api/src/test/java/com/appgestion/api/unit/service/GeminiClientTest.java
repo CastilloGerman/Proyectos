@@ -3,6 +3,7 @@ package com.appgestion.api.unit.service;
 import com.appgestion.api.config.GeminiProperties;
 import com.appgestion.api.exception.AiServiceException;
 import com.appgestion.api.service.GeminiClient;
+import com.appgestion.api.service.GeminiGenerationResult;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,6 +59,22 @@ class GeminiClientTest {
         Result result = client.generate("instrucción", "texto", new byte[]{1, 2}, "image/jpeg", schema, Result.class);
 
         assertEquals("ok", result.answer());
+        server.verify();
+    }
+
+    @Test
+    void returnsTokenCountsForSafeUsageTelemetry() {
+        server.expect(requestTo(URL)).andRespond(withSuccess("""
+                {"candidates":[{"content":{"parts":[{"text":"{\\\"answer\\\":\\\"ok\\\"}"}]}}],
+                 "usageMetadata":{"promptTokenCount":42,"candidatesTokenCount":7}}
+                """, org.springframework.http.MediaType.APPLICATION_JSON));
+
+        GeminiGenerationResult<Result> result = client.generateWithMetadata(
+                "system", "user text", null, null, schema, Result.class);
+
+        assertEquals("ok", result.content().answer());
+        assertEquals(42, result.inputTokens());
+        assertEquals(7, result.outputTokens());
         server.verify();
     }
 
@@ -120,7 +137,39 @@ class GeminiClientTest {
     }
 
     @Test
+    void countsEachProviderAttemptIncludingAnInternalRetry() {
+        server.expect(requestTo(URL)).andRespond(withStatus(HttpStatus.BAD_GATEWAY));
+        server.expect(requestTo(URL)).andRespond(withSuccess("""
+                {"candidates":[{"content":{"parts":[{"text":"{\\\"answer\\\":\\\"ok\\\"}"}]}}]}
+                """, org.springframework.http.MediaType.APPLICATION_JSON));
+        var attempts = new java.util.concurrent.atomic.AtomicInteger();
+
+        client.generate("sistema", "usuario", null, null, schema, Result.class, attempts::incrementAndGet);
+
+        assertEquals(2, attempts.get());
+        server.verify();
+    }
+
+    @Test
+    void rejectsSecondAttemptWhenTotalProviderLimitIsReached() {
+        server.expect(requestTo(URL)).andRespond(withStatus(HttpStatus.BAD_GATEWAY));
+        var attempts = new java.util.concurrent.atomic.AtomicInteger();
+        AiServiceException ex = assertThrows(AiServiceException.class,
+                () -> client.generate("sistema", "usuario", null, null, schema, Result.class, () -> {
+                    if (attempts.incrementAndGet() > 1) {
+                        throw new AiServiceException(HttpStatus.TOO_MANY_REQUESTS,
+                                "Has alcanzado el límite de intentos del servicio de IA por hora. Inténtalo más tarde.");
+                    }
+                }));
+
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, ex.getStatus());
+        assertEquals(2, attempts.get());
+        server.verify();
+    }
+
+    @Test
     void mapsTimeoutToServiceUnavailable() {
+        server.expect(requestTo(URL)).andRespond(withException(new java.io.IOException("timeout")));
         server.expect(requestTo(URL)).andRespond(withException(new java.io.IOException("timeout")));
         AiServiceException ex = assertThrows(AiServiceException.class,
                 () -> client.generate("sistema", "usuario", null, null, schema, Result.class));

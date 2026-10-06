@@ -10,40 +10,39 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.time.Instant;
 
-/** Limitador local por usuario; cada ventana fija dura una hora. */
+/** Cuota diaria local por usuario. No sincroniza contadores entre instancias. */
 @Component
-public class AiRequestRateLimiter {
+public class AiDailyRequestRateLimiter {
 
+    private static final Duration DAY = Duration.ofDays(1);
     private final GeminiProperties properties;
     private final Cache<Long, Window> windows = Caffeine.newBuilder()
-            .expireAfterWrite(Duration.ofHours(1))
+            .expireAfterWrite(Duration.ofHours(25))
             .maximumSize(100_000)
             .build();
 
-    public AiRequestRateLimiter(GeminiProperties properties) {
+    public AiDailyRequestRateLimiter(GeminiProperties properties) {
         this.properties = properties;
     }
 
     public synchronized void checkAndRecord(Long userId) {
-        if (userId == null) {
-            throw new IllegalArgumentException("El usuario es obligatorio para limitar las solicitudes de IA");
-        }
+        if (userId == null) throw new IllegalArgumentException("El usuario es obligatorio");
         Instant now = Instant.now();
         Window window = currentWindow(userId, now);
-        if (window.count + window.inFlight >= properties.getRequestsPerHour()) {
+        if (window.count + window.inFlight >= properties.getPresupuestoRequestsPerDay()) {
             throw new AiServiceException(HttpStatus.TOO_MANY_REQUESTS,
-                    "Has alcanzado el límite de solicitudes de IA por hora. Inténtalo más tarde.");
+                    "Has alcanzado el límite diario de borradores de presupuesto con IA. Inténtalo mañana.");
         }
         window.count++;
         windows.put(userId, window);
     }
 
     public synchronized AiRequestQuotaPermit reserve(Long userId) {
-        if (userId == null) throw new IllegalArgumentException("El usuario es obligatorio para limitar las solicitudes de IA");
+        if (userId == null) throw new IllegalArgumentException("El usuario es obligatorio");
         Window window = currentWindow(userId, Instant.now());
-        if (window.count + window.inFlight >= properties.getRequestsPerHour()) {
+        if (window.count + window.inFlight >= properties.getPresupuestoRequestsPerDay()) {
             throw new AiServiceException(HttpStatus.TOO_MANY_REQUESTS,
-                    "Has alcanzado el límite de solicitudes de IA por hora. Inténtalo más tarde.");
+                    "Has alcanzado el límite diario de borradores de presupuesto con IA. Inténtalo mañana.");
         }
         window.inFlight++;
         windows.put(userId, window);
@@ -53,7 +52,7 @@ public class AiRequestRateLimiter {
 
     private Window currentWindow(Long userId, Instant now) {
         Window window = windows.getIfPresent(userId);
-        if (window == null || !now.isBefore(window.startedAt.plus(Duration.ofHours(1)))) {
+        if (window == null || !now.isBefore(window.startedAt.plus(DAY))) {
             window = new Window(now);
             windows.put(userId, window);
         }

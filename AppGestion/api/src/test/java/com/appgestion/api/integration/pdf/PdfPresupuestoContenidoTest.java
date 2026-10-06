@@ -166,6 +166,43 @@ class PdfPresupuestoContenidoTest {
         assertThat(text).doesNotContain("Notas");
     }
 
+    @Test
+    void pdfPresupuesto_renderizaEtiquetasHtmlComoTextoPlanoEnDescripcionYNotas() throws Exception {
+        var cliente = clienteRepository.findById(scenario.clienteCompletoId()).orElseThrow();
+        cliente.setNombre("<script>cliente()</script>");
+        clienteRepository.save(cliente);
+        String body = """
+                {
+                  "clienteId": %d,
+                  "items": [{"materialId": null, "tareaManual": "<script>alert(1)</script>", "cantidad": 1.0, "precioUnitario": 90.0, "aplicaIva": true}],
+                  "ivaHabilitado": true,
+                  "estado": "%s",
+                  "descuentoGlobalPorcentaje": 0.0,
+                  "descuentoGlobalFijo": 0.0,
+                  "descuentoAntesIva": true,
+                  "condicionesActivas": [],
+                  "notaAdicional": "<script>nota()</script>"
+                }
+                """.formatted(scenario.clienteCompletoId(), PresupuestoEstado.PENDIENTE);
+
+        String created = mockMvc.perform(post("/presupuestos")
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long id = objectMapper.readTree(created).get("id").asLong();
+        String text = descargarTextoPresupuestoPdf(id);
+
+        // OpenPDF construye texto PDF (no HTML): las etiquetas quedan como texto visible, no se interpretan.
+        assertThat(text).contains("<script>cliente()</script>");
+        assertThat(text).contains("<script>alert(1)</script>");
+        assertThat(text).contains("<script>nota()</script>");
+    }
+
     private String descargarTextoPresupuestoPdf(long presupuestoId) throws Exception {
         MvcResult result = mockMvc.perform(get("/presupuestos/{id}/pdf", presupuestoId)
                         .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService)))

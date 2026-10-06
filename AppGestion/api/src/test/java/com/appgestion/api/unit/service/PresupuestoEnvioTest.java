@@ -70,7 +70,7 @@ class PresupuestoEnvioTest {
         Presupuesto p = new Presupuesto();
         p.setId(5L);
         Cliente cliente = new Cliente();
-        cliente.setNombre("Cliente");
+        cliente.setNombre("<script>Cliente</script>");
         cliente.setEmail("cliente@example.test");
         p.setCliente(cliente);
         when(presupuestoRepository.findByIdAndUsuarioId(5L, 22L)).thenReturn(Optional.of(p));
@@ -82,7 +82,9 @@ class PresupuestoEnvioTest {
         org.mockito.ArgumentCaptor<String> body = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(emailService).enviarPdf(eq(22L), eq("destino@example.test"), eq("Asunto seguro"), body.capture(),
                 eq(new byte[]{1, 2}), anyString());
-        assertThat(body.getValue()).contains("&lt;script&gt;&amp; Hola").doesNotContain("<script>");
+        assertThat(body.getValue())
+                .contains("&lt;script&gt;&amp; Hola", "&lt;script&gt;Cliente&lt;/script&gt;")
+                .doesNotContain("<script>");
         assertThat(p.getCanalEnvio()).isEqualTo("EMAIL");
     }
 

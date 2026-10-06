@@ -60,32 +60,37 @@ public class GastoIaService {
     private final ObjectMapper objectMapper;
     private final CurrentUserService currentUserService;
     private final AiRequestRateLimiter rateLimiter;
+    private final AiProviderAttemptRateLimiter providerAttemptRateLimiter;
 
     public GastoIaService(
             GeminiClient geminiClient,
             GeminiProperties properties,
             ObjectMapper objectMapper,
             CurrentUserService currentUserService,
-            AiRequestRateLimiter rateLimiter
+            AiRequestRateLimiter rateLimiter,
+            AiProviderAttemptRateLimiter providerAttemptRateLimiter
     ) {
         this.geminiClient = geminiClient;
         this.properties = properties;
         this.objectMapper = objectMapper;
         this.currentUserService = currentUserService;
         this.rateLimiter = rateLimiter;
+        this.providerAttemptRateLimiter = providerAttemptRateLimiter;
     }
 
     public GastoBorradorResponse extraerBorrador(MultipartFile imagen) {
         geminiClient.requireEnabled();
         ValidatedAttachment attachment = validateAndRead(imagen);
-        rateLimiter.checkAndRecord(currentUserService.getCurrentUsuario().getId());
+        Long userId = currentUserService.getCurrentUsuario().getId();
+        rateLimiter.checkAndRecord(userId);
         GeminiGastoExtraction extraction = geminiClient.generate(
                 SYSTEM_INSTRUCTION,
                 "Lee la factura o ticket adjunto y devuelve los campos indicados.",
                 attachment.bytes(),
                 attachment.mimeType(),
                 responseSchema(),
-                GeminiGastoExtraction.class
+                GeminiGastoExtraction.class,
+                () -> providerAttemptRateLimiter.checkAndRecord(userId)
         );
         return normalize(extraction);
     }

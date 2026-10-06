@@ -26,6 +26,10 @@ public class GeminiProperties {
     private int maxAudioSeconds = 120;
     @Min(1)
     private int requestsPerHour = 20;
+    @Min(1)
+    private int maxProviderAttemptsPerHour = 60;
+    @Min(1)
+    private int presupuestoRequestsPerDay = 20;
 
     @AssertTrue(message = "app.ai.gemini.api-key (GEMINI_API_KEY) es obligatorio cuando app.ai.gemini.enabled=true")
     public boolean isApiKeyConfiguredWhenEnabled() {
@@ -50,4 +54,12 @@ public class GeminiProperties {
     public void setMaxAudioSeconds(int maxAudioSeconds) { this.maxAudioSeconds = maxAudioSeconds; }
     public int getRequestsPerHour() { return requestsPerHour; }
     public void setRequestsPerHour(int requestsPerHour) { this.requestsPerHour = requestsPerHour; }
+    public int getMaxProviderAttemptsPerHour() { return maxProviderAttemptsPerHour; }
+    public void setMaxProviderAttemptsPerHour(int maxProviderAttemptsPerHour) {
+        this.maxProviderAttemptsPerHour = maxProviderAttemptsPerHour;
+    }
+    public int getPresupuestoRequestsPerDay() { return presupuestoRequestsPerDay; }
+    public void setPresupuestoRequestsPerDay(int presupuestoRequestsPerDay) {
+        this.presupuestoRequestsPerDay = presupuestoRequestsPerDay;
+    }
 }
