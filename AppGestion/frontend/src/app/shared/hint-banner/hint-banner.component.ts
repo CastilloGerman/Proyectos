@@ -2,16 +2,18 @@ import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { TranslateModule } from '@ngx-translate/core';
 
 export interface HintStep {
   icon: string;
   text: string;
+  textKey?: string;
 }
 
 @Component({
   selector: 'app-hint-banner',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, TranslateModule],
   template: `
     <div class="hint-banner" *ngIf="visible" role="note" aria-label="Consejo de uso">
       <div class="hint-header">
@@ -25,9 +27,10 @@ export interface HintStep {
         <li *ngFor="let step of steps; let i = index" class="hint-step">
           <span class="step-number">{{ i + 1 }}</span>
           <mat-icon class="step-icon">{{ step.icon }}</mat-icon>
-          <span class="step-text">{{ step.text }}</span>
+          <span class="step-text">{{ step.textKey ? (step.textKey | translate) : step.text }}</span>
         </li>
       </ol>
+      <p class="hint-note" *ngIf="note">{{ note }}</p>
     </div>
   `,
   styles: [`
@@ -124,6 +127,13 @@ export interface HintStep {
       line-height: 1.4;
     }
 
+    .hint-note {
+      margin: 10px 0 0 54px;
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--app-text-secondary, #64748b);
+    }
+
     :host-context(html.app-dark-theme) .hint-banner {
       background: rgba(107, 63, 160, 0.14);
       border-color: rgba(107, 63, 160, 0.38);
@@ -149,6 +159,7 @@ export class HintBannerComponent implements OnInit {
   @Input() title: string = '¿Cómo funciona?';
   /** Máximo 3 pasos */
   @Input() steps: HintStep[] = [];
+  @Input() note = '';
 
   visible = false;
 

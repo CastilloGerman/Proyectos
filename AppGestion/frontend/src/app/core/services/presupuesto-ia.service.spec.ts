@@ -49,6 +49,7 @@ describe('PresupuestoIaService', () => {
     [429, 'Has alcanzado el límite de cuota del servicio de IA.', 'quota-provider'],
     [503, 'Servicio de IA no disponible, inténtalo en unos minutos', 'provider'],
     [502, 'La respuesta del servicio de IA no tiene un formato válido', 'provider'],
+    [502, 'La IA no pudo estructurar un borrador válido. Prueba a describir la obra de otra forma.', 'invalid-response'],
     [400, 'La descripción no puede superar los 8000 caracteres.', 'too-long'],
     [403, 'Tu plan actual no permite crear presupuestos.', 'forbidden'],
     [401, 'Inicia sesión para generar un presupuesto.', 'unauthorized'],

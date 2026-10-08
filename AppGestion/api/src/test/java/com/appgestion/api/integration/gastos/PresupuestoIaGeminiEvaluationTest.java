@@ -41,7 +41,7 @@ class PresupuestoIaGeminiEvaluationTest {
     @Autowired private GeminiProperties geminiProperties;
 
     @Test
-    void evaluatesFifteenSpanishConstructionTextsAgainstRealGemini() throws Exception {
+    void evaluatesTwentySpanishConstructionTextsAgainstRealGemini() throws Exception {
         Usuario user = createEvaluationUser();
         saveMaterials(user);
         JsonNode cases = objectMapper.readTree(getClass().getResourceAsStream("/ia-presupuesto-casos.json"));
@@ -53,6 +53,11 @@ class PresupuestoIaGeminiEvaluationTest {
         int mismatchedMaterialIds = 0;
         int correctNoMaterial = 0;
         int omittedParts = 0;
+        int dictatedPricesCorrect = 0;
+        int dictatedPricesOmitted = 0;
+        int fusedParts = 0;
+        int expectedPriceCases = 0;
+        int omittedForbiddenParts = 0;
         System.out.printf(Locale.ROOT, "modelo=%s casos=%d%n", geminiProperties.getModel(), cases.size());
         for (int i = 0; i < cases.size(); i++) {
             JsonNode testCase = cases.get(i);
@@ -75,6 +80,9 @@ class PresupuestoIaGeminiEvaluationTest {
             }
             int omittedInCase = expectedConcepts.size() - matchedExpectedConcepts.size();
             omittedParts += omittedInCase;
+            for (JsonNode price : expected.path("preciosEsperados")) {
+                if (price.path("precioDictado").isNumber()) expectedPriceCases++;
+            }
             boolean countInRange = result.items().size() >= expected.path("minPartidas").asInt()
                     && result.items().size() <= expected.path("maxPartidas").asInt();
             boolean conceptsMostlyFound = expectedConcepts.isEmpty() || conceptsFound * 2 >= expectedConcepts.size();
@@ -97,10 +105,9 @@ class PresupuestoIaGeminiEvaluationTest {
                 }
                 var matchedMaterial = item.materialId() == null ? null
                         : materialRepository.findByIdAndUsuarioId(item.materialId(), user.getId()).orElse(null);
-                if (item.precioUnitario() != null && item.precioUnitario() > 0
-                        && (item.materialId() == null || matchedMaterial == null
-                        || matchedMaterial.getPrecioUnitario() == null
-                        || Math.abs(item.precioUnitario() - matchedMaterial.getPrecioUnitario()) > 0.0001)) {
+                if ("dictado".equals(item.precioOrigen())
+                        && !matchesExpectedDictatedPrice(expected, description, item.precioDictado(),
+                        item.precioTipo(), item.precioAproximado())) {
                     inventedPrices++;
                 }
                 String expectedMaterialName = expectedMaterialName(expected, description);
@@ -114,22 +121,85 @@ class PresupuestoIaGeminiEvaluationTest {
                     }
                 }
             }
+            for (JsonNode expectedPrice : expected.path("preciosEsperados")) {
+                if (!expectedPrice.path("precioDictado").isNumber()) continue;
+                boolean correct = result.items().stream().anyMatch(item -> matchesAlias(
+                        expectedPrice, item.tareaManual().toLowerCase(Locale.ROOT))
+                        && matchesNumber(item.precioDictado(), expectedPrice.path("precioDictado").asDouble())
+                        && expectedPrice.path("precioTipo").asText().equals(item.precioTipo())
+                        && expectedPrice.path("precioAproximado").asBoolean() == item.precioAproximado());
+                if (correct) dictatedPricesCorrect++;
+                else dictatedPricesOmitted++;
+            }
+            for (JsonNode separated : expected.path("conceptosSeparados")) {
+                List<String> terms = new ArrayList<>();
+                separated.forEach(term -> terms.add(term.asText().toLowerCase(Locale.ROOT)));
+                if (terms.size() > 1 && descriptions.stream().anyMatch(description ->
+                        terms.stream().allMatch(description::contains))) fusedParts++;
+            }
+            for (JsonNode forbidden : expected.path("conceptosProhibidos")) {
+                if (descriptions.stream().anyMatch(description -> description.contains(forbidden.asText().toLowerCase(Locale.ROOT)))) {
+                    omittedForbiddenParts++;
+                }
+            }
+            if (expected.path("totalEsperado").isNumber()) {
+                double calculatedTotal = result.items().stream()
+                        .mapToDouble(item -> (item.cantidad() == null ? 0 : item.cantidad())
+                                * (item.precioUnitario() == null ? 0 : item.precioUnitario()))
+                        .sum();
+                System.out.printf(Locale.ROOT, "  total_calculado=%.2f total_esperado=%.2f%n",
+                        calculatedTotal, expected.path("totalEsperado").asDouble());
+            }
             System.out.printf(Locale.ROOT, "caso=%02d partidas=%d esperadas=%d..%d tipo_catalogo=%s " +
                             "aciertos_concepto=%d/%d omitidas=%d%n",
                     i + 1, result.items().size(), expected.path("minPartidas").asInt(),
                     expected.path("maxPartidas").asInt(), expected.path("tipoCatalogo").asText("coincidencia"),
                     conceptsFound, expectedConcepts.size(), omittedInCase);
-            result.items().forEach(item -> System.out.printf(Locale.ROOT,
-                    "  partida=%s materialId=%s faltaPrecio=%s cantidadDudosa=%s confianza=%s%n",
-                    item.tareaManual(), item.materialId(), item.faltaPrecio(), item.cantidadDudosa(), item.confianza()));
+            for (int itemIndex = 0; itemIndex < result.items().size(); itemIndex++) {
+                var item = result.items().get(itemIndex);
+                System.out.printf(Locale.ROOT,
+                        "  partida_n=%02d materialId=%s faltaPrecio=%s cantidadDudosa=%s confianza=%s%n",
+                        itemIndex + 1, item.materialId(), item.faltaPrecio(), item.cantidadDudosa(), item.confianza());
+            }
         }
         double correctPercent = totalItems == 0 ? 0 : correctItems * 100.0 / totalItems;
         System.out.printf(Locale.ROOT,
-                "resumen modelo=%s casos_ok=%d/%d precios_inventados=%d cantidades_inventadas=%d " +
-                        "falsos_positivos_material=%d aciertos_sin_material=%d partidas_omitidas=%d " +
-                        "partidas_correctas=%d/%d porcentaje_partidas_correctas=%.1f%%%n",
-                geminiProperties.getModel(), passed, cases.size(), inventedPrices, inventedQuantities,
-                mismatchedMaterialIds, correctNoMaterial, omittedParts, correctItems, totalItems, correctPercent);
+                "resumen modelo=%s casos_ok=%d/%d precios_dictados_correctos=%d/%d precios_inventados=%d " +
+                        "precios_dictados_omitidos=%d partidas_omitidas=%d partidas_fusionadas=%d " +
+                        "partidas_prohibidas=%d cantidades_inventadas=%d falsos_positivos_material=%d " +
+                        "aciertos_sin_material=%d partidas_correctas=%d/%d porcentaje_partidas_correctas=%.1f%%%n",
+                geminiProperties.getModel(), passed, cases.size(), dictatedPricesCorrect, expectedPriceCases,
+                inventedPrices, dictatedPricesOmitted, omittedParts, fusedParts, omittedForbiddenParts,
+                inventedQuantities, mismatchedMaterialIds, correctNoMaterial, correctItems, totalItems, correctPercent);
+    }
+
+    private static JsonNode expectedPrice(JsonNode expected, String description) {
+        for (JsonNode price : expected.path("preciosEsperados")) {
+            for (JsonNode alias : price.path("aliases")) {
+                if (description.contains(alias.asText().toLowerCase(Locale.ROOT))) return price;
+            }
+        }
+        return null;
+    }
+
+    private static boolean matchesAlias(JsonNode expectedPrice, String description) {
+        for (JsonNode alias : expectedPrice.path("aliases")) {
+            if (description.contains(alias.asText().toLowerCase(Locale.ROOT))) return true;
+        }
+        return false;
+    }
+
+    private static boolean matchesExpectedDictatedPrice(
+            JsonNode expected, String description, Double amount, String type, boolean approximate) {
+        JsonNode price = expectedPrice(expected, description);
+        return price != null && price.path("precioDictado").isNumber()
+                && matchesNumber(amount, price.path("precioDictado").asDouble())
+                && price.path("precioTipo").asText().equals(type)
+                && price.path("precioAproximado").asBoolean() == approximate;
+    }
+
+    private static boolean matchesNumber(Double actual, double expected) {
+        return actual != null && Math.abs(actual - expected) < 0.0001;
     }
 
     private static String expectedMaterialName(JsonNode expected, String description) {

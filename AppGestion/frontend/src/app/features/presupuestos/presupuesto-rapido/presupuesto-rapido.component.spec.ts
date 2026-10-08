@@ -76,7 +76,9 @@ describe('PresupuestoRapidoComponent', () => {
         quotaDaily: 'Límite diario. Inténtalo mañana.', quotaHourly: 'Límite por hora.',
         quotaAttempts: 'Límite de intentos.', quotaProvider: 'Cuota del proveedor.',
         providerError: 'Error temporal', tooLong: 'Texto demasiado largo', forbidden: 'Sin permiso',
-        unauthorized: 'Sesión caducada', invalidRequest: 'Solicitud no válida', genericError: 'Error',
+        unauthorized: 'Sesión caducada', invalidRequest: 'Solicitud no válida',
+        invalidResponse: 'Demasiadas partidas o datos incompletos. Divide la descripción y revisa cada partida.',
+        genericError: 'Error',
         confirmOverwrite: '¿Reemplazar partidas?', associatedMaterial: 'Material asociado',
         suggested: 'Sugerida por IA', reviewed: 'Revisada', missingPrice: 'Falta precio',
         missingQuantity: 'Falta cantidad', pendingSummary: '{{price}} sin precio; {{quantity}} sin cantidad; {{review}} por revisar',
@@ -84,6 +86,13 @@ describe('PresupuestoRapidoComponent', () => {
         lowConfidence: 'Revisar confianza', changeMaterial: 'Cambiar material', freeItem: 'Partida libre',
         confirmSuggestion: 'Confirmar',
         confirmSafe: 'Confirmar las {{count}} seguras',
+        priceTip: 'Di el precio y si es unitario o total',
+        dictatedPrice: 'Precio dictado',
+        approximatePrice: 'Precio aproximado',
+        catalogPrice: 'En tu catálogo',
+        priceIncludedInPreviousLine: 'Precio incluido en la línea anterior',
+        formPending: 'Pendientes {{count}}',
+        formReviewRequired: 'Revisa cada partida',
         safeDialogTitle: 'Revisa las sugerencias seguras',
         safeDialogDescription: 'Comprueba descripción, material y precio antes de confirmar.',
         confirmAllSafe: 'Confirmar todas',
@@ -335,9 +344,9 @@ describe('PresupuestoRapidoComponent', () => {
     if (isDevMode()) {
       expect(debug).toHaveBeenCalledOnce();
       const logged = JSON.stringify(debug.mock.calls);
-      expect(logged).toContain('Alicatar baño');
       expect(logged).toContain('materialId');
       expect(logged).toContain('confianza');
+      expect(logged).not.toContain('Alicatar baño');
       expect(logged).not.toContain('No registrar nombre');
       expect(logged).not.toContain('No registrar teléfono');
       expect(logged).not.toContain('No registrar texto completo');
@@ -345,6 +354,98 @@ describe('PresupuestoRapidoComponent', () => {
     } else {
       expect(debug).not.toHaveBeenCalled();
     }
+  });
+
+  it('shows dictated and approximate price labels with icons and a different catalogue reference', () => {
+    presupuestoIaService.generarBorrador.mockReturnValue(of(iaDraft({
+      items: [{
+        materialId: material.id, materialNombre: material.nombre, tareaManual: 'Pintar pared', cantidad: 1,
+        precioUnitario: 25, unidad: 'l', aplicaIva: true, descuentoPorcentaje: 0, descuentoFijo: 0,
+        visiblePdf: true, confianza: 'alta', faltaPrecio: false, cantidadDudosa: false,
+        precioDictado: 25, precioTipo: 'unitario', precioAproximado: true, precioCatalogo: 10, precioOrigen: 'dictado',
+      }],
+    })));
+
+    component.textoObraIa = 'Pintura a 25 euros aproximadamente';
+    component.generarConIa();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Precio aproximado');
+    expect(fixture.nativeElement.textContent).toContain('En tu catálogo');
+    expect(fixture.nativeElement.textContent).toContain('10.00');
+    expect(fixture.nativeElement.querySelector('.price-badge mat-icon')?.textContent.trim()).toBe('functions');
+
+    component.manualItems.at(0).patchValue({ precioAproximado: false });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Precio dictado');
+    expect(fixture.nativeElement.querySelector('.price-badge mat-icon')?.textContent.trim()).toBe('record_voice_over');
+  });
+
+  it('shows a helpful localized message when AI returns too many or malformed lines', () => {
+    presupuestoIaService.generarBorrador.mockReturnValue(throwError(() =>
+      new PresupuestoIaRequestError('invalid-response', 502)));
+    component.textoObraIa = 'Descripción extensa de la obra';
+
+    component.generarConIa();
+    fixture.detectChanges();
+
+    expect(component.iaErrorMessage).toContain('Demasiadas partidas o datos incompletos');
+    expect(component.iaErrorMessage).not.toBe('Error');
+    expect(fixture.nativeElement.textContent).toContain('revisa cada partida');
+  });
+
+  it('shows an explanatory note on a line covered by the previous total', () => {
+    component.cargarBorradorIa({
+      ...iaDraft(),
+      items: [
+        { ...iaDraft().items[0], precioUnitario: 70, precioDictado: 70, precioTipo: 'total', precioOrigen: 'dictado' },
+        { ...iaDraft().items[0], tareaManual: 'Otro rollo de cable', precioUnitario: 0,
+          precioIncluidoEnLineaAnterior: true, faltaPrecio: true },
+      ],
+    });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Precio incluido en la línea anterior');
+  });
+
+  it('keeps a missing AI quantity blank instead of showing the form default of one', () => {
+    presupuestoIaService.generarBorrador.mockReturnValue(of(iaDraft({
+      items: [{
+        materialId: null, materialNombre: null, tareaManual: 'Partida contable', cantidad: 1,
+        precioUnitario: 20, unidad: 'ud', aplicaIva: true, descuentoPorcentaje: 0, descuentoFijo: 0,
+        visiblePdf: true, confianza: 'alta', faltaPrecio: false, cantidadDudosa: true,
+      }],
+    })));
+
+    component.textoObraIa = 'Trabajo con precio 20 euros';
+    component.generarConIa();
+
+    expect(component.manualItems.at(0).get('cantidad')?.value).toBeNull();
+    expect(component.manualItems.at(0).get('cantidadDudosa')?.value).toBe(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[formArrayName="manualItems"] [formControlName="cantidad"]').value)
+      .toBe('');
+    expect(fixture.nativeElement.textContent).toContain('Falta cantidad');
+  });
+
+  it('keeps a dictated price when the user removes its catalogue association', () => {
+    presupuestoIaService.generarBorrador.mockReturnValue(of(iaDraft({
+      items: [{
+        materialId: material.id, materialNombre: material.nombre, tareaManual: 'Pintar pared', cantidad: 1,
+        precioUnitario: 25, unidad: 'l', aplicaIva: true, descuentoPorcentaje: 0, descuentoFijo: 0,
+        visiblePdf: true, confianza: 'alta', faltaPrecio: false, cantidadDudosa: false,
+        precioDictado: 25, precioTipo: 'unitario', precioAproximado: false, precioCatalogo: 10, precioOrigen: 'dictado',
+      }],
+    })));
+    component.textoObraIa = 'Pintura a 25 euros cada bote';
+    component.generarConIa();
+
+    component.onIaMaterialChange(0, null);
+
+    expect(component.manualItems.at(0).get('precioUnitario')?.value).toBe(25);
+    expect(component.manualItems.at(0).get('precioOrigen')?.value).toBe('dictado');
+    expect(component.manualItems.at(0).get('faltaPrecio')?.value).toBe(false);
+    expect(component.manualItems.at(0).get('precioCatalogo')?.value).toBeNull();
   });
 
   it('blocks create and send until AI price and quantity flags are completed', () => {
@@ -417,6 +518,42 @@ describe('PresupuestoRapidoComponent', () => {
     expect(component.manualItems.at(1).get('iaRevisada')?.value).toBe(false);
     expect(component.manualItems.at(2).get('iaRevisada')?.value).toBe(false);
     expect(component.manualItems.at(3).get('iaRevisada')?.value).toBe(false);
+  });
+
+  it('allows exact dictated prices in safe confirmation but excludes approximate prices', () => {
+    component.textoObraIa = 'Pintar pared';
+    component.generarConIa();
+    component.manualItems.at(0).patchValue({
+      tareaManual: 'Partida dictada', confianza: 'alta', cantidad: 1, precioUnitario: 25,
+      precioOrigen: 'dictado', precioAproximado: true, faltaPrecio: false, cantidadDudosa: false,
+    });
+    expect(component.cantidadSegurasPorConfirmar()).toBe(0);
+
+    component.manualItems.at(0).get('precioAproximado')?.setValue(false);
+    expect(component.cantidadSegurasPorConfirmar()).toBe(1);
+  });
+
+  it('restores a flagged AI quantity as blank rather than the default value of one', () => {
+    window.localStorage.setItem('presupuesto_rapido_borrador_v2_42', JSON.stringify({
+      version: 2,
+      ownerId: 42,
+      savedAt: Date.now(),
+      data: {
+        clienteId: cliente.id,
+        materialItems: [],
+        manualItems: [{
+          tareaManual: 'Un trabajo sin cantidad', cantidad: null, precioUnitario: 0,
+          iaSugerida: true, cantidadDudosa: true, faltaPrecio: true,
+        }],
+        ivaHabilitado: true,
+        notaAdicional: '',
+      },
+    }));
+
+    component['restaurarBorrador']();
+
+    expect(component.manualItems.at(0).get('cantidad')?.value).toBeNull();
+    expect(component.manualItems.at(0).get('cantidadDudosa')?.value).toBe(true);
   });
 
   it('cancels the safe-suggestions summary without confirming any line', async () => {

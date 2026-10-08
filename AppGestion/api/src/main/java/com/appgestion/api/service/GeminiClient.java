@@ -139,7 +139,7 @@ public class GeminiClient {
                     throw new AiServiceException(HttpStatus.BAD_GATEWAY, AI_CONFIGURATION_ERROR, ex);
                 }
                 if (code == 400) {
-                    throw new AiServiceException(HttpStatus.BAD_REQUEST,
+                    throw new AiServiceException(HttpStatus.BAD_GATEWAY,
                             providerBadRequestMessage(), ex);
                 }
                 if (code >= 500 && code <= 599) {
@@ -245,7 +245,7 @@ public class GeminiClient {
     }
 
     private String providerBadRequestMessage() {
-        return "La solicitud de IA no se pudo procesar. Comprueba el contenido e inténtalo de nuevo.";
+        return "El servicio de IA no pudo procesar la solicitud. Inténtalo de nuevo más tarde.";
     }
 
     private static void pauseBeforeRetry() {

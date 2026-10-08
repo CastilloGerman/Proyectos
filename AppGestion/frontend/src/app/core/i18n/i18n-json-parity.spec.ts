@@ -35,4 +35,34 @@ describe('i18n JSON parity', () => {
       expect(keys, `Keys mismatch for ${loc}`).toEqual(baseKeys);
     }
   });
+
+  it('provides localized AI invalid-response and previous-line price explanations', () => {
+    const prefixes: Record<(typeof locales)[number], string> = {
+      es: 'La IA',
+      en: 'The AI',
+      fr: 'L’IA',
+      ro: 'IA',
+      uk: 'ШІ',
+    };
+    for (const locale of locales) {
+      const raw = fs.readFileSync(path.join(dir, `${locale}.json`), 'utf-8');
+      const ai = JSON.parse(raw).budQuick.ai;
+      expect(ai.invalidResponse.startsWith(prefixes[locale]), locale);
+      expect(ai.invalidResponse.length).toBeGreaterThan(50);
+      expect(ai.priceIncludedInPreviousLine.length).toBeGreaterThan(10);
+    }
+  });
+
+  it('provides translated AI entry, overwrite warnings and price guidance in every locale', () => {
+    for (const locale of locales) {
+      const raw = fs.readFileSync(path.join(dir, `${locale}.json`), 'utf-8');
+      const translations = JSON.parse(raw);
+      expect(translations.budList.createWithAi.length).toBeGreaterThan(5);
+      expect(translations.budQuick.ai.sentWarning.length).toBeGreaterThan(20);
+      expect(translations.budQuick.ai.nonPendingWarning.length).toBeGreaterThan(20);
+      expect(translations.budQuick.aiHelp.step3.length).toBeGreaterThan(40);
+      expect(translations.budQuick.aiHelp.note.length).toBeGreaterThan(10);
+      expect(translations.budQuick.ai.priceTip.length).toBeGreaterThan(20);
+    }
+  });
 });

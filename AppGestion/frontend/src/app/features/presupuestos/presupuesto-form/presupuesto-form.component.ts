@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, DestroyRef, OnDestroy, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
@@ -31,7 +31,16 @@ import { CalculadoraM2Component, CalculadoraResult } from '../calculadora-m2/cal
 import { HintBannerComponent } from '../../../shared/hint-banner/hint-banner.component';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { calcularPresupuestoCostes } from '../../../core/utils/presupuesto-costes.util';
+import {
+  esSugerenciaPresupuestoIaSegura,
+  evaluarPendientesPresupuestoIa,
+  parsePresupuestoDecimal,
+} from '../../../core/utils/presupuesto-ia-review.util';
+import { PresupuestoIaRevisionDatos } from '../../../core/utils/presupuesto-ia-review.util';
 import { EnviarPresupuestoComponent } from '../enviar-presupuesto/enviar-presupuesto.component';
+import { PresupuestoIaBorradorResponse } from '../../../core/models/presupuesto-ia.model';
+import { PresupuestoIaPanelComponent, PresupuestoIaPanelState } from '../../../shared/presupuesto-ia-panel/presupuesto-ia-panel.component';
+import { PresupuestoIaPriceInfoComponent } from '../../../shared/presupuesto-ia-panel/presupuesto-ia-price-info.component';
 
 @Component({
     selector: 'app-presupuesto-form',
@@ -56,6 +65,8 @@ import { EnviarPresupuestoComponent } from '../enviar-presupuesto/enviar-presupu
         TranslateModule,
         HintBannerComponent,
         EnviarPresupuestoComponent,
+        PresupuestoIaPanelComponent,
+        PresupuestoIaPriceInfoComponent,
     ],
     template: `
     <div class="presupuesto-form">
@@ -75,12 +86,12 @@ import { EnviarPresupuestoComponent } from '../enviar-presupuesto/enviar-presupu
           } @else {
           @if (!isEdit) {
             <app-hint-banner
-              storageKey="hint_presupuesto_form_v1"
+              storageKey="hint_presupuesto_form_v2"
               title="¿Cómo crear un presupuesto?"
               [steps]="[
                 { icon: 'person', text: 'Elige o crea el cliente. Si ya lo tienes guardado, selecciónalo directamente.' },
                 { icon: 'inventory_2', text: 'Añade materiales desde el catálogo — el precio se rellena solo. Para trabajos sin material, usa «Tarea manual».' },
-                { icon: 'picture_as_pdf', text: 'Al guardar se genera el PDF automáticamente. Cuando el cliente acepte, cambia el estado a «Aceptado» para activar el flujo de anticipo y factura.' }
+                { icon: 'price_check', text: '', textKey: 'budgetForm.stepReviewPrices' }
               ]"
             />
           }
@@ -217,6 +228,58 @@ import { EnviarPresupuestoComponent } from '../enviar-presupuesto/enviar-presupu
             <!-- 3. Tareas manuales -->
             <div class="section tareas-section">
               <h3>{{ 'budgetForm.manualTasksTitle' | translate }}</h3>
+              <app-hint-banner
+                storageKey="hint_presupuesto_ia_form_v1"
+                [title]="'budQuick.aiHelp.title' | translate"
+                [steps]="[
+                  { icon: 'edit_note', text: ('budQuick.aiHelp.step1' | translate) },
+                  { icon: 'auto_awesome', text: ('budQuick.aiHelp.step2' | translate) },
+                  { icon: 'fact_check', text: ('budQuick.aiHelp.step3' | translate) }
+                ]"
+                [note]="'budQuick.aiHelp.note' | translate"
+              />
+              <app-presupuesto-ia-panel [text]="textoObraIa" (textChange)="textoObraIa = $event"
+                [clienteId]="form.get('clienteId')?.value"
+                [hasExistingItems]="hayTrabajoEditado()"
+                [warningMessage]="avisoPresupuestoExistenteIa()"
+                [focusOnInit]="focusAiOnInit"
+                [disabled]="!auth.canMutate()"
+                (draftGenerated)="cargarBorradorIa($event)" (stateChange)="onIaPanelState($event)" />
+              @if (pendientesIa().precio || pendientesIa().cantidad || pendientesIa().revision) {
+                <div class="pending-ai-summary" role="status" aria-live="polite" aria-atomic="true">
+                  {{ 'budQuick.ai.pendingSummary' | translate:{price: pendientesIa().precio, quantity: pendientesIa().cantidad, review: pendientesIa().revision} }}
+                </div>
+              }
+              @if (cantidadSegurasPorConfirmar() > 0) {
+                <button #safeConfirmTrigger mat-stroked-button type="button" class="confirm-ai-btn confirm-safe-btn"
+                  (click)="abrirConfirmacionSeguras()">
+                  {{ 'budQuick.ai.confirmSafe' | translate:{count: cantidadSegurasPorConfirmar()} }}
+                </button>
+              }
+              @if (confirmacionSegurasAbierta) {
+                <dialog #safeConfirmationDialog class="safe-confirmation-dialog"
+                  aria-modal="true" aria-labelledby="safe-confirmation-title"
+                  aria-describedby="safe-confirmation-description"
+                  tabindex="-1" (cancel)="cancelarConfirmacionSeguras()">
+                  <h2 id="safe-confirmation-title">{{ 'budQuick.ai.safeDialogTitle' | translate }}</h2>
+                  <p id="safe-confirmation-description">{{ 'budQuick.ai.safeDialogDescription' | translate }}</p>
+                  <ul>
+                    @for (item of resumenConfirmacionSeguras; track item.lineId) {
+                      <li>{{ item.description }} · {{ item.materialName }} · {{ item.price | number:'1.2-2' }} €</li>
+                    }
+                  </ul>
+                  <div class="safe-confirmation-actions">
+                    <button mat-stroked-button type="button" class="safe-dialog-button"
+                      (click)="cancelarConfirmacionSeguras()">
+                      {{ 'budQuick.ai.cancelSafe' | translate }}
+                    </button>
+                    <button mat-raised-button color="primary" type="button" class="safe-dialog-button"
+                      (click)="confirmarTodasSeguras()">
+                      {{ 'budQuick.ai.confirmAllSafe' | translate }}
+                    </button>
+                  </div>
+                </dialog>
+              }
               <div formArrayName="manualItems">
                 @for (item of manualItems.controls; track item; let i = $index) {
                   <div [formGroupName]="i" class="item-row manual-row">
@@ -227,9 +290,30 @@ import { EnviarPresupuestoComponent } from '../enviar-presupuesto/enviar-presupu
                       <mat-label>{{ 'factForm.description' | translate }}</mat-label>
                       <input matInput formControlName="tareaManual" [placeholder]="'budgetForm.manualDescPh' | translate">
                     </mat-form-field>
+                    @if (item.get('iaSugerida')?.value) {
+                      <div class="ai-review-info">
+                        <app-presupuesto-ia-price-info
+                          [priceOrigin]="item.get('precioOrigen')?.value"
+                          [approximate]="item.get('precioAproximado')?.value === true"
+                          [catalogPrice]="item.get('precioCatalogo')?.value"
+                          [includedInPreviousLine]="item.get('precioIncluidoEnLineaAnterior')?.value === true"
+                          [currentPrice]="item.get('precioUnitario')?.value" />
+                        @if (item.get('faltaPrecio')?.value) {
+                          <p class="ia-warning"><mat-icon aria-hidden="true">warning_amber</mat-icon>{{ 'budQuick.ai.missingPrice' | translate }}</p>
+                        }
+                        @if (item.get('cantidadDudosa')?.value) {
+                          <p class="ia-warning"><mat-icon aria-hidden="true">warning_amber</mat-icon>{{ 'budQuick.ai.missingQuantity' | translate }}</p>
+                        }
+                        @if (!item.get('iaRevisada')?.value) {
+                          <button type="button" mat-stroked-button (click)="confirmarSugerenciaIa(i)">
+                            <mat-icon>task_alt</mat-icon>{{ 'budQuick.ai.confirmSuggestion' | translate }}
+                          </button>
+                        }
+                      </div>
+                    }
                     <mat-form-field appearance="outline" class="qty-with-calc">
                       <mat-label>{{ 'factForm.qty' | translate }}</mat-label>
-                      <input matInput type="number" formControlName="cantidad" min="0.001" step="0.01">
+                      <input matInput type="number" formControlName="cantidad" min="0.001" step="0.01" (input)="actualizarCantidadIa(i)">
                       <button
                         matSuffix
                         mat-icon-button
@@ -243,7 +327,7 @@ import { EnviarPresupuestoComponent } from '../enviar-presupuesto/enviar-presupu
                     </mat-form-field>
                     <mat-form-field appearance="outline">
                       <mat-label>{{ 'factForm.unitPrice' | translate }}</mat-label>
-                      <input matInput type="number" formControlName="precioUnitario" min="0" step="0.01">
+                      <input matInput type="number" formControlName="precioUnitario" min="0" step="0.01" (input)="actualizarPrecioIa(i)">
                     </mat-form-field>
                     <mat-checkbox formControlName="aplicaIva">{{ 'factForm.vatShort' | translate }}</mat-checkbox>
                     <button type="button" mat-icon-button color="warn" (click)="removeManualItem(i)" [matTooltip]="'cliList.tooltipDelete' | translate">
@@ -551,6 +635,14 @@ import { EnviarPresupuestoComponent } from '../enviar-presupuesto/enviar-presupu
     .item-row .desc-wide { min-width: 250px; }
     .item-row .visibility-check { margin-right: 8px; }
     .item-row mat-checkbox { margin: 0 8px; }
+    .ai-review-info { flex: 1 1 100%; }
+    .ia-warning { display: flex; align-items: center; gap: 6px; margin: 4px 0; color: #713f12; font-weight: 600; }
+    .ia-status, .ia-pending { margin: 6px 0 12px; font-weight: 600; }
+    .pending-ai-summary { margin: 12px 0; padding: 12px; border-radius: 8px; background: rgba(30, 58, 138, .06); }
+    .safe-confirmation-dialog { width: min(600px, calc(100vw - 32px)); max-height: min(80vh, 720px); padding: 20px; border: 0; border-radius: 12px; box-shadow: 0 16px 48px rgba(15, 23, 42, .28); }
+    .safe-confirmation-dialog::backdrop { background: rgba(15, 23, 42, .55); }
+    .safe-confirmation-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+    .ia-error { color: #b91c1c; }
 
     .section > button { margin-top: 8px; margin-right: 16px; }
     .visibility-toggle { margin-top: 12px; display: block; }
@@ -602,6 +694,17 @@ export class PresupuestoFormComponent implements OnInit {
   /** existente: desplegable; nuevo: solo nombre y alta rápida. */
   clienteModo: 'existente' | 'nuevo' = 'existente';
   nombreClienteNuevo = '';
+  textoObraIa = '';
+  iaLoading = false;
+  iaStatusMessage = '';
+  iaErrorMessage = '';
+  focusAiOnInit = false;
+  confirmacionSegurasAbierta = false;
+  resumenConfirmacionSeguras: Array<{ lineId: number; description: string; materialName: string; price: number }> = [];
+  @ViewChild(PresupuestoIaPanelComponent) private iaPanel?: PresupuestoIaPanelComponent;
+  @ViewChild('safeConfirmationDialog') private safeConfirmationDialog?: ElementRef<HTMLDialogElement>;
+  @ViewChild('safeConfirmTrigger') private safeConfirmTrigger?: ElementRef<HTMLButtonElement>;
+  private nextIaLineId = 1;
 
   /** Resumen API del flujo de anticipo (solo presupuesto Aceptado en edición). */
   resumenAnticipo: AnticipoResumen | null = null;
@@ -626,7 +729,186 @@ export class PresupuestoFormComponent implements OnInit {
 
   /** El botón no depende de filas vacías: la validación fuerte está en onSubmit. */
   botonCrearDeshabilitado(): boolean {
-    return !this.auth.canMutate() || this.form.pending;
+    const pending = this.pendientesIa();
+    return !this.auth.canMutate() || this.form.pending ||
+      pending.precio > 0 || pending.cantidad > 0 || pending.revision > 0;
+  }
+
+  private getIaRevisionDatos(): PresupuestoIaRevisionDatos[] {
+    return this.manualItems.controls.filter((item) => item.get('iaSugerida')?.value === true)
+      .map((item) => {
+        const values = item.getRawValue();
+        return {
+          iaSugerida: values.iaSugerida === true,
+          iaRevisada: values.iaRevisada === true,
+          confianza: values.confianza,
+          materialId: values.materialId,
+          materialEnCatalogo: this.materiales.some((material) => material.id === values.materialId),
+          faltaPrecio: values.faltaPrecio === true,
+          cantidadDudosa: values.cantidadDudosa === true,
+          cantidad: values.cantidad,
+          precioUnitario: values.precioUnitario,
+        };
+      });
+  }
+
+  pendientesIa(): { precio: number; cantidad: number; revision: number } {
+    return evaluarPendientesPresupuestoIa(this.getIaRevisionDatos());
+  }
+
+  cantidadSegurasPorConfirmar(): number {
+    return this.getIaRevisionDatos().filter(esSugerenciaPresupuestoIaSegura).length;
+  }
+
+  private esSeguraParaConfirmacion(control: AbstractControl): boolean {
+    const values = control.getRawValue();
+    return esSugerenciaPresupuestoIaSegura({
+      iaSugerida: values.iaSugerida === true,
+      iaRevisada: values.iaRevisada === true,
+      confianza: values.confianza,
+      materialId: values.materialId,
+      materialEnCatalogo: this.materiales.some((material) => material.id === values.materialId),
+      faltaPrecio: values.faltaPrecio === true,
+      cantidadDudosa: values.cantidadDudosa === true,
+      cantidad: values.cantidad,
+      precioUnitario: values.precioUnitario,
+    });
+  }
+
+  abrirConfirmacionSeguras(): void {
+    this.resumenConfirmacionSeguras = this.manualItems.controls
+      .filter((control) => this.esSeguraParaConfirmacion(control))
+      .map((control) => {
+        const values = control.getRawValue();
+        const material = this.materiales.find((candidate) => candidate.id === values.materialId);
+        return {
+          lineId: values.iaLineId as number,
+          description: String(values.tareaManual ?? ''),
+          materialName: String(values.materialNombre || material?.nombre || ''),
+          price: parsePresupuestoDecimal(values.precioUnitario) ?? 0,
+        };
+      });
+    if (!this.resumenConfirmacionSeguras.length) return;
+    this.confirmacionSegurasAbierta = true;
+    setTimeout(() => {
+      const dialog = this.safeConfirmationDialog?.nativeElement;
+      if (!dialog) return;
+      if (!dialog.open) {
+        if (typeof dialog.showModal === 'function') dialog.showModal();
+        else dialog.setAttribute('open', '');
+      }
+      dialog.focus();
+    }, 0);
+  }
+
+  confirmarTodasSeguras(): void {
+    for (const summary of this.resumenConfirmacionSeguras) {
+      const control = this.manualItems.controls
+        .find((candidate) => candidate.get('iaLineId')?.value === summary.lineId);
+      if (control && this.esSeguraParaConfirmacion(control)) control.get('iaRevisada')?.setValue(true);
+    }
+    this.cerrarDialogoSeguras();
+  }
+
+  cancelarConfirmacionSeguras(): void {
+    this.cerrarDialogoSeguras();
+  }
+
+  private cerrarDialogoSeguras(): void {
+    const dialog = this.safeConfirmationDialog?.nativeElement;
+    if (dialog?.open) {
+      if (typeof dialog.close === 'function') dialog.close();
+      else dialog.removeAttribute('open');
+    }
+    this.confirmacionSegurasAbierta = false;
+    this.resumenConfirmacionSeguras = [];
+    setTimeout(() => this.safeConfirmTrigger?.nativeElement?.focus(), 0);
+  }
+
+  generarConIa(): void {
+    const text = this.textoObraIa.trim();
+    if (!text || text.length > 8000 || this.iaLoading || !this.auth.canMutate()) return;
+    const clienteId = this.form.get('clienteId')?.value as number | null;
+    this.iaPanel?.generarBorrador(text, clienteId, this.hayTrabajoEditado());
+  }
+
+  avisoPresupuestoExistenteIa(): string {
+    if (!this.isEdit) return '';
+    if (this.presupuestoActual?.enviadoAt) {
+      return this.translate.instant('budQuick.ai.sentWarning');
+    }
+    if ((this.form.get('estado')?.value ?? 'Pendiente').toString().trim() !== 'Pendiente') {
+      return this.translate.instant('budQuick.ai.nonPendingWarning');
+    }
+    return '';
+  }
+
+  onIaPanelState(state: PresupuestoIaPanelState): void {
+    this.iaLoading = state.loading;
+    this.iaStatusMessage = state.statusMessage;
+    this.iaErrorMessage = state.errorMessage;
+  }
+
+  hayTrabajoEditado(): boolean {
+    return this.manualItems.controls.some((item) =>
+      String(item.get('tareaManual')?.value ?? '').trim()) ||
+      this.materialItems.controls.some((item) => item.get('materialId')?.value != null);
+  }
+
+  cargarBorradorIa(draft: PresupuestoIaBorradorResponse): void {
+    this.materialItems.clear();
+    this.manualItems.clear();
+    for (const item of draft.items) {
+      this.manualItems.push(this.createItemGroup({
+        iaLineId: this.nextIaLineId++,
+        materialId: item.materialId,
+        tareaManual: item.tareaManual,
+        cantidad: item.cantidadDudosa ? null : item.cantidad,
+        precioUnitario: item.precioUnitario,
+        aplicaIva: item.aplicaIva ?? true,
+        descuentoPorcentaje: item.descuentoPorcentaje ?? 0,
+        descuentoFijo: item.descuentoFijo ?? 0,
+        visiblePdf: item.visiblePdf ?? true,
+        isManualTask: true,
+        iaSugerida: true,
+        iaRevisada: false,
+        confianza: item.confianza,
+        faltaPrecio: item.faltaPrecio || item.precioUnitario <= 0,
+        cantidadDudosa: item.cantidadDudosa || item.cantidad == null || item.cantidad <= 0,
+        precioOrigen: item.precioOrigen ?? (item.precioUnitario > 0 ? 'catalogo' : 'ninguno'),
+        precioAproximado: item.precioAproximado === true,
+        precioCatalogo: item.precioCatalogo ?? null,
+        precioIncluidoEnLineaAnterior: item.precioIncluidoEnLineaAnterior === true,
+      }));
+    }
+    if (draft.notaAdicional) {
+      const conditions = this.form.get('condiciones')?.value as CondicionesPresupuestoFormValue;
+      this.form.patchValue({ condiciones: { ...conditions, notaAdicional: draft.notaAdicional } });
+    }
+    this.iaLoading = false;
+  }
+
+  confirmarSugerenciaIa(index: number): void {
+    const item = this.manualItems.at(index);
+    if (item.get('iaSugerida')?.value === true) item.get('iaRevisada')?.setValue(true);
+  }
+
+  actualizarPrecioIa(index: number): void {
+    const item = this.manualItems.at(index);
+    if (item.get('iaSugerida')?.value !== true) return;
+    const price = parsePresupuestoDecimal(item.get('precioUnitario')?.value);
+    item.patchValue({
+      faltaPrecio: price == null || price <= 0,
+      precioOrigen: 'ninguno',
+      precioAproximado: false,
+    }, { emitEvent: false });
+  }
+
+  actualizarCantidadIa(index: number): void {
+    const item = this.manualItems.at(index);
+    if (item.get('iaSugerida')?.value !== true) return;
+    const quantity = parsePresupuestoDecimal(item.get('cantidad')?.value);
+    item.patchValue({ cantidadDudosa: quantity == null || quantity <= 0 }, { emitEvent: false });
   }
 
   /**
@@ -695,6 +977,7 @@ export class PresupuestoFormComponent implements OnInit {
       error: () => {}, // Opcional: top materiales
     });
     const id = this.route.snapshot.paramMap.get('id');
+    this.focusAiOnInit = this.route.snapshot.queryParamMap.get('ia') === '1';
     if (id && id !== 'nuevo') {
       this.isEdit = true;
       this.id = +id;
@@ -951,17 +1234,28 @@ export class PresupuestoFormComponent implements OnInit {
   }
 
   private createItemGroup(values: {
+    iaLineId?: number;
     materialId: number | null;
     tareaManual: string;
-    cantidad: number;
+    cantidad: number | null;
     precioUnitario: number;
     aplicaIva: boolean;
     descuentoPorcentaje: number;
     descuentoFijo: number;
     visiblePdf: boolean;
     isManualTask: boolean;
+    iaSugerida?: boolean;
+    iaRevisada?: boolean;
+    confianza?: string;
+    faltaPrecio?: boolean;
+    cantidadDudosa?: boolean;
+    precioOrigen?: string;
+    precioAproximado?: boolean;
+    precioCatalogo?: number | null;
+    precioIncluidoEnLineaAnterior?: boolean;
   }): FormGroup {
     return this.fb.group({
+      iaLineId: [values.iaLineId ?? null],
       materialId: [values.materialId],
       // Sin required aquí: una fila vacía no debe bloquear el botón Crear; onSubmit exige líneas con contenido.
       tareaManual: [values.tareaManual],
@@ -972,6 +1266,15 @@ export class PresupuestoFormComponent implements OnInit {
       descuentoFijo: [values.descuentoFijo],
       visiblePdf: [values.visiblePdf],
       isManualTask: [values.isManualTask],
+      iaSugerida: [values.iaSugerida ?? false],
+      iaRevisada: [values.iaRevisada ?? false],
+      confianza: [values.confianza ?? 'alta'],
+      faltaPrecio: [values.faltaPrecio ?? false],
+      cantidadDudosa: [values.cantidadDudosa ?? false],
+      precioOrigen: [values.precioOrigen ?? 'ninguno'],
+      precioAproximado: [values.precioAproximado ?? false],
+      precioCatalogo: [values.precioCatalogo ?? null],
+      precioIncluidoEnLineaAnterior: [values.precioIncluidoEnLineaAnterior ?? false],
     });
   }
 
@@ -1132,6 +1435,13 @@ export class PresupuestoFormComponent implements OnInit {
   }
 
   onSubmit(): void {
+    const pending = this.pendientesIa();
+    if (pending.precio > 0 || pending.cantidad > 0 || pending.revision > 0) {
+      this.form.markAllAsTouched();
+      this.snackBar.open(this.translate.instant('budQuick.aiPendingBlock'),
+        this.translate.instant('common.close'), { duration: 5000 });
+      return;
+    }
     const allItems = this.getAllItems();
     const validItems = allItems.filter(({ ctrl }) => {
       const v = ctrl.value;

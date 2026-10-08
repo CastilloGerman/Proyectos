@@ -54,6 +54,10 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
             <mat-icon>settings</mat-icon>
           </button>
           @if (auth.canMutate()) {
+          <a mat-stroked-button color="primary" routerLink="/presupuestos/nuevo" [queryParams]="{ia: '1'}">
+            <mat-icon>auto_awesome</mat-icon>
+            {{ 'budList.createWithAi' | translate }}
+          </a>
           <a mat-raised-button color="primary" routerLink="/presupuestos/nuevo">
             <mat-icon>add</mat-icon>
             {{ 'budList.newBudget' | translate }}

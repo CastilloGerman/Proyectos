@@ -26,13 +26,14 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { Cliente } from '../../../core/models/cliente.model';
 import { Material, MaterialRequest } from '../../../core/models/material.model';
 import { Presupuesto, PresupuestoItemRequest } from '../../../core/models/presupuesto.model';
-import { PresupuestoIaBorradorResponse, PresupuestoIaRequestError } from '../../../core/models/presupuesto-ia.model';
+import { PresupuestoIaBorradorResponse } from '../../../core/models/presupuesto-ia.model';
 import { ClienteService } from '../../../core/services/cliente.service';
 import { MaterialService } from '../../../core/services/material.service';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
-import { PresupuestoIaService } from '../../../core/services/presupuesto-ia.service';
 import { calcularPresupuestoCostes } from '../../../core/utils/presupuesto-costes.util';
 import { EnviarPresupuestoComponent } from '../enviar-presupuesto/enviar-presupuesto.component';
+import { PresupuestoIaPanelComponent, PresupuestoIaPanelState } from '../../../shared/presupuesto-ia-panel/presupuesto-ia-panel.component';
+import { PresupuestoIaPriceInfoComponent } from '../../../shared/presupuesto-ia-panel/presupuesto-ia-price-info.component';
 
 const BORRADOR_LEGACY_KEY = 'presupuesto_rapido_borrador_v1';
 const BORRADOR_KEY_PREFIX = 'presupuesto_rapido_borrador';
@@ -74,6 +75,8 @@ function decimalMin(minimum: number) {
     FormsModule,
     TranslateModule,
     EnviarPresupuestoComponent,
+    PresupuestoIaPanelComponent,
+    PresupuestoIaPriceInfoComponent,
   ],
   template: `
     <div class="rapido-wrap">
@@ -123,25 +126,11 @@ function decimalMin(minimum: number) {
               }
             </section>
 
-            <section class="section ia-section" aria-labelledby="ia-title">
-              <h2 id="ia-title" class="section-title">{{ 'budQuick.ai.title' | translate }}</h2>
-              <mat-form-field appearance="outline" class="full">
-                <mat-label>{{ 'budQuick.ai.descriptionLabel' | translate }}</mat-label>
-                <textarea matInput [(ngModel)]="textoObraIa" [ngModelOptions]="{standalone: true}"
-                  maxlength="8000" rows="4" aria-describedby="ia-char-count ia-status"></textarea>
-              </mat-form-field>
-              <div class="ai-actions">
-                <span id="ia-char-count" class="char-count">{{ 'budQuick.ai.charCount' | translate:{count: textoObraIa.length} }}</span>
-                <button type="button" mat-raised-button color="primary" class="ai-generate"
-                  (click)="generarConIa()" [disabled]="iaLoading || iaDesactivada || !textoObraIa.trim() || textoObraIa.length > 8000 || !auth.canMutate()"
-                  [attr.aria-disabled]="iaLoading || iaDesactivada || !textoObraIa.trim() || textoObraIa.length > 8000 || !auth.canMutate()">
-                  <mat-icon>{{ iaLoading ? 'sync' : 'auto_awesome' }}</mat-icon>
-                  {{ (iaLoading ? 'budQuick.ai.generating' : 'budQuick.ai.generate') | translate }}
-                </button>
-              </div>
-              <p #iaStatus id="ia-status" class="ai-status" [class.error-message]="!!iaErrorMessage"
-                [hidden]="!iaStatusMessage" [attr.role]="iaErrorMessage ? 'alert' : 'status'"
-                aria-live="polite" aria-atomic="true" tabindex="-1">{{ iaStatusMessage }}</p>
+            <section class="section ia-section" aria-labelledby="ia-panel-title">
+              <app-presupuesto-ia-panel [text]="textoObraIa" (textChange)="textoObraIa = $event"
+                [clienteId]="form.controls.clienteId.value" [hasExistingItems]="hayTrabajoEditado()"
+                [disabled]="iaDesactivada || !auth.canMutate()"
+                (draftGenerated)="cargarBorradorIa($event)" (stateChange)="onIaPanelState($event)" />
               @if (clienteSugerido) {
                 <div class="client-suggestion" aria-live="polite">
                   <p><strong>{{ 'budQuick.ai.clientSuggestion' | translate }}</strong> {{ clienteSugerido.nombre }}</p>
@@ -252,6 +241,12 @@ function decimalMin(minimum: number) {
                           }
                         </mat-select>
                       </mat-form-field>
+                      <app-presupuesto-ia-price-info
+                        [priceOrigin]="line.get('precioOrigen')?.value"
+                        [approximate]="line.get('precioAproximado')?.value === true"
+                        [catalogPrice]="line.get('precioCatalogo')?.value"
+                        [includedInPreviousLine]="line.get('precioIncluidoEnLineaAnterior')?.value === true"
+                        [currentPrice]="line.get('precioUnitario')?.value" />
                       @if (line.get('faltaPrecio')?.value) {
                         <p class="review-label"><mat-icon aria-hidden="true">warning_amber</mat-icon>{{ 'budQuick.ai.missingPrice' | translate }}</p>
                       }
@@ -344,7 +339,9 @@ function decimalMin(minimum: number) {
         <p id="safe-confirmation-description">{{ 'budQuick.ai.safeDialogDescription' | translate }}</p>
         <ul class="safe-confirmation-list">
           @for (item of resumenConfirmacionSeguras; track item.lineId) {
-            <li><strong>{{ item.description }}</strong> → {{ item.materialName }} → {{ item.price | number:'1.2-2' }} €</li>
+            <li><strong>{{ item.description }}</strong> → {{ item.materialName }} → {{ item.quantity }} × {{ item.price | number:'1.2-2' }} €
+              @if (item.dictated) { · {{ 'budQuick.ai.dictatedPrice' | translate }} }
+            </li>
           }
         </ul>
         <div class="safe-confirmation-actions">
@@ -446,8 +443,8 @@ export class PresupuestoRapidoComponent implements OnInit {
   clienteSugerido: { nombre: string; telefono: string } | null = null;
   clientesCoincidentes: Cliente[] = [];
   confirmacionSegurasAbierta = false;
-  resumenConfirmacionSeguras: Array<{ lineId: number; description: string; materialName: string; price: number }> = [];
-  @ViewChild('iaStatus') private iaStatusElement?: ElementRef<HTMLElement>;
+  resumenConfirmacionSeguras: Array<{ lineId: number; description: string; materialName: string; quantity: number; price: number; dictated: boolean }> = [];
+  @ViewChild(PresupuestoIaPanelComponent) private iaPanel?: PresupuestoIaPanelComponent;
   @ViewChild('safeConfirmationDialog') private safeConfirmationDialog?: ElementRef<HTMLDialogElement>;
   @ViewChild('safeConfirmTrigger') private safeConfirmTrigger?: ElementRef<HTMLButtonElement>;
 
@@ -457,7 +454,6 @@ export class PresupuestoRapidoComponent implements OnInit {
     private presupuestoService: PresupuestoService,
     private clienteService: ClienteService,
     private materialService: MaterialService,
-    private presupuestoIaService: PresupuestoIaService,
     private snackBar: MatSnackBar,
     private translate: TranslateService,
   ) {
@@ -568,6 +564,10 @@ export class PresupuestoRapidoComponent implements OnInit {
       confianza: ['alta'],
       faltaPrecio: [false],
       cantidadDudosa: [false],
+      precioOrigen: ['ninguno'],
+      precioAproximado: [false],
+      precioCatalogo: [null as number | null],
+      precioIncluidoEnLineaAnterior: [false],
     });
   }
 
@@ -649,7 +649,9 @@ export class PresupuestoRapidoComponent implements OnInit {
       const materialId = values.materialId;
       return values.iaSugerida && !values.iaRevisada &&
         values.confianza === 'alta' &&
-        typeof materialId === 'number' && this.materiales.some((material) => material.id === materialId) &&
+        (values.precioOrigen === 'dictado' || (typeof materialId === 'number' &&
+          this.materiales.some((material) => material.id === materialId))) &&
+        values.precioAproximado !== true &&
         !values.faltaPrecio && !values.cantidadDudosa &&
         (parseDecimal(values.precioUnitario) ?? 0) > 0 &&
         this.validNumericLine(values.cantidad, values.precioUnitario);
@@ -670,7 +672,9 @@ export class PresupuestoRapidoComponent implements OnInit {
           lineId: values.lineId as number,
           description: String(values.tareaManual ?? ''),
           materialName: String(values.materialNombre || material?.nombre || ''),
+          quantity: parseDecimal(values.cantidad) ?? 1,
           price: parseDecimal(values.precioUnitario) ?? 0,
+          dictated: values.precioOrigen === 'dictado',
         };
       });
     if (!this.resumenConfirmacionSeguras.length) return;
@@ -717,7 +721,9 @@ export class PresupuestoRapidoComponent implements OnInit {
     const materialId = values.materialId;
     return values.iaSugerida && !values.iaRevisada &&
       values.confianza === 'alta' &&
-      typeof materialId === 'number' && this.materiales.some((material) => material.id === materialId) &&
+      (values.precioOrigen === 'dictado' || (typeof materialId === 'number' &&
+        this.materiales.some((material) => material.id === materialId))) &&
+      values.precioAproximado !== true &&
       !values.faltaPrecio && !values.cantidadDudosa &&
       (parseDecimal(values.precioUnitario) ?? 0) > 0 &&
       this.validNumericLine(values.cantidad, values.precioUnitario);
@@ -731,34 +737,18 @@ export class PresupuestoRapidoComponent implements OnInit {
   generarConIa(): void {
     const texto = this.textoObraIa.trim();
     if (!texto || texto.length > 8000 || this.iaLoading || this.iaDesactivada || !this.auth.canMutate()) return;
-    if (this.hayTrabajoEditado()) {
-      const confirm = window.confirm(this.translate.instant('budQuick.ai.confirmOverwrite'));
-      if (!confirm) return;
-    }
-
-    this.iaLoading = true;
-    this.iaErrorMessage = '';
-    this.iaStatusMessage = this.translate.instant('budQuick.ai.progress');
     const clienteId = this.form.controls.clienteId.value;
-    this.presupuestoIaService.generarBorrador({ texto, ...(clienteId == null ? {} : { clienteId }) })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (draft) => {
-          this.cargarBorradorIa(draft);
-          this.iaStatusMessage = this.translate.instant('budQuick.ai.draftReady');
-          this.enfocarEstadoIa();
-        },
-        error: (error: unknown) => {
-          this.iaLoading = false;
-          this.iaErrorMessage = this.mensajeErrorIa(error);
-          this.iaStatusMessage = this.iaErrorMessage;
-          this.enfocarEstadoIa();
-        },
-        complete: () => this.iaLoading = false,
-      });
+    this.iaPanel?.generarBorrador(texto, clienteId, this.hayTrabajoEditado());
   }
 
-  private cargarBorradorIa(draft: PresupuestoIaBorradorResponse): void {
+  onIaPanelState(state: PresupuestoIaPanelState): void {
+    this.iaLoading = state.loading;
+    this.iaStatusMessage = state.statusMessage;
+    this.iaErrorMessage = state.errorMessage;
+    if (state.errorKind === 'disabled') this.iaDesactivada = true;
+  }
+
+  cargarBorradorIa(draft: PresupuestoIaBorradorResponse): void {
     this.materialItems.clear();
     this.materialItems.push(this.createMaterialLine());
     this.manualItems.clear();
@@ -767,7 +757,7 @@ export class PresupuestoRapidoComponent implements OnInit {
       line.patchValue({
         tareaManual: item.tareaManual,
         unidadMedida: item.unidad ?? 'ud',
-        cantidad: item.cantidad,
+        cantidad: item.cantidadDudosa ? null : item.cantidad,
         precioUnitario: item.precioUnitario,
         materialId: item.materialId,
         materialNombre: item.materialNombre ?? '',
@@ -776,19 +766,24 @@ export class PresupuestoRapidoComponent implements OnInit {
         confianza: item.confianza,
         faltaPrecio: item.faltaPrecio || item.precioUnitario <= 0,
         cantidadDudosa: item.cantidadDudosa || item.cantidad == null || item.cantidad <= 0,
+        precioOrigen: item.precioOrigen ?? (item.precioUnitario > 0 ? 'catalogo' : 'ninguno'),
+        precioAproximado: item.precioAproximado === true,
+        precioCatalogo: item.precioCatalogo ?? null,
+        precioIncluidoEnLineaAnterior: item.precioIncluidoEnLineaAnterior === true,
         guardarEnCatalogo: false,
       });
       this.manualItems.push(line);
     }
     if (isDevMode()) {
       console.debug('[Presupuesto IA] Partidas estructuradas', draft.items.map((item) => ({
-        descripcion: item.tareaManual,
         materialId: item.materialId,
-        materialNombre: item.materialNombre,
         confianza: item.confianza,
         faltaPrecio: item.faltaPrecio,
         cantidadDudosa: item.cantidadDudosa,
         cantidad: item.cantidad,
+        precioOrigen: item.precioOrigen ?? 'ninguno',
+        precioAproximado: item.precioAproximado === true,
+        precioIncluidoEnLineaAnterior: item.precioIncluidoEnLineaAnterior === true,
       })));
     }
     if (draft.notaAdicional != null) this.form.controls.notaAdicional.setValue(draft.notaAdicional);
@@ -843,8 +838,17 @@ export class PresupuestoRapidoComponent implements OnInit {
 
   onIaMaterialChange(index: number, rawId: number | null): void {
     const control = this.manualItems.at(index);
+    const dictatedPrice = control.get('precioOrigen')?.value === 'dictado';
+    const currentPrice = parseDecimal(control.get('precioUnitario')?.value) ?? 0;
     if (rawId == null) {
-      control.patchValue({ materialId: null, materialNombre: '', precioUnitario: 0, faltaPrecio: true });
+      control.patchValue({
+        materialId: null, materialNombre: '',
+        precioUnitario: dictatedPrice ? currentPrice : 0,
+        faltaPrecio: dictatedPrice ? false : true,
+        precioOrigen: dictatedPrice ? 'dictado' : 'ninguno',
+        precioCatalogo: null,
+        precioAproximado: dictatedPrice && control.get('precioAproximado')?.value === true,
+      });
       return;
     }
     const material = this.materiales.find((candidate) => candidate.id === Number(rawId));
@@ -852,9 +856,12 @@ export class PresupuestoRapidoComponent implements OnInit {
     control.patchValue({
       materialId: material.id,
       materialNombre: material.nombre,
-      precioUnitario: material.precioUnitario,
+      precioUnitario: dictatedPrice ? currentPrice : material.precioUnitario,
       unidadMedida: material.unidadMedida || control.get('unidadMedida')?.value,
-      faltaPrecio: material.precioUnitario <= 0,
+      faltaPrecio: dictatedPrice ? false : material.precioUnitario <= 0,
+      precioOrigen: dictatedPrice ? 'dictado' : (material.precioUnitario > 0 ? 'catalogo' : 'ninguno'),
+      precioCatalogo: material.precioUnitario > 0 ? material.precioUnitario : null,
+      precioAproximado: dictatedPrice && control.get('precioAproximado')?.value === true,
     });
   }
 
@@ -866,7 +873,11 @@ export class PresupuestoRapidoComponent implements OnInit {
     const control = this.manualItems.at(index);
     if (!control.get('iaSugerida')?.value) return;
     const price = parseDecimal(control.get('precioUnitario')?.value);
-    control.patchValue({ faltaPrecio: price == null || price <= 0 }, { emitEvent: false });
+    control.patchValue({
+      faltaPrecio: price == null || price <= 0,
+      precioOrigen: 'ninguno',
+      precioAproximado: false,
+    }, { emitEvent: false });
   }
 
   actualizarCantidadIa(index: number): void {
@@ -880,35 +891,12 @@ export class PresupuestoRapidoComponent implements OnInit {
     this.manualItems.at(index).get('iaRevisada')?.setValue(true);
   }
 
-  private hayTrabajoEditado(): boolean {
+  hayTrabajoEditado(): boolean {
     const manualWork = this.manualItems.controls.some((control) => {
       const values = control.getRawValue();
       return !!String(values.tareaManual ?? '').trim();
     });
     return manualWork || this.materialItems.controls.some((control) => !!control.get('materialId')?.value);
-  }
-
-  private mensajeErrorIa(error: unknown): string {
-    const kind = error instanceof PresupuestoIaRequestError ? error.kind : 'unknown';
-    if (kind === 'disabled') this.iaDesactivada = true;
-    const keys: Record<string, string> = {
-      disabled: 'disabled',
-      'quota-hourly': 'quotaHourly',
-      'quota-daily': 'quotaDaily',
-      'quota-attempts': 'quotaAttempts',
-      'quota-provider': 'quotaProvider',
-      provider: 'providerError',
-      'too-long': 'tooLong',
-      forbidden: 'forbidden',
-      unauthorized: 'unauthorized',
-      'invalid-request': 'invalidRequest',
-      unknown: 'genericError',
-    };
-    return this.translate.instant(`budQuick.ai.${keys[kind] ?? 'genericError'}`);
-  }
-
-  private enfocarEstadoIa(): void {
-    setTimeout(() => this.iaStatusElement?.nativeElement.focus(), 0);
   }
 
   private normalizarTelefono(value: string | null | undefined): string {
@@ -1063,7 +1051,9 @@ export class PresupuestoRapidoComponent implements OnInit {
           this.manualItems.at(this.manualItems.length - 1).patchValue({
             tareaManual: typeof v['tareaManual'] === 'string' ? v['tareaManual'].slice(0, 300) : '',
             unidadMedida: typeof v['unidadMedida'] === 'string' ? v['unidadMedida'].slice(0, 30) : 'ud',
-            cantidad: parseDecimal(v['cantidad']) ?? 1,
+            cantidad: v['iaSugerida'] === true && (v['cantidadDudosa'] === true ||
+              parseDecimal(v['cantidad']) == null || (parseDecimal(v['cantidad']) ?? 0) <= 0)
+              ? null : parseDecimal(v['cantidad']) ?? 1,
             precioUnitario: parseDecimal(v['precioUnitario']) ?? 0,
             guardarEnCatalogo: v['guardarEnCatalogo'] === true,
             materialIdCreado: typeof v['materialIdCreado'] === 'number' ? v['materialIdCreado'] : null,
@@ -1074,6 +1064,10 @@ export class PresupuestoRapidoComponent implements OnInit {
             confianza: v['confianza'] === 'baja' || v['confianza'] === 'media' ? v['confianza'] : 'alta',
             faltaPrecio: v['faltaPrecio'] === true,
             cantidadDudosa: v['cantidadDudosa'] === true,
+            precioOrigen: v['precioOrigen'] === 'dictado' || v['precioOrigen'] === 'catalogo' ? v['precioOrigen'] : 'ninguno',
+            precioAproximado: v['precioAproximado'] === true,
+            precioCatalogo: parseDecimal(v['precioCatalogo']),
+            precioIncluidoEnLineaAnterior: v['precioIncluidoEnLineaAnterior'] === true,
           });
         }
       }

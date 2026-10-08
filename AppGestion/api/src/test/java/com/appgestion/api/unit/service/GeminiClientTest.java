@@ -115,11 +115,15 @@ class GeminiClientTest {
     }
 
     @Test
-    void mapsProviderBadRequestTo400() {
-        server.expect(requestTo(URL)).andRespond(withStatus(HttpStatus.BAD_REQUEST));
+    void mapsProviderBadRequestToBadGatewayWithoutExposingProviderBody() {
+        server.expect(requestTo(URL)).andRespond(withStatus(HttpStatus.BAD_REQUEST)
+                .body("{\"error\":\"private provider details\"}"));
         AiServiceException ex = assertThrows(AiServiceException.class,
                 () -> client.generate("sistema", "usuario", null, null, schema, Result.class));
-        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        assertEquals(HttpStatus.BAD_GATEWAY, ex.getStatus());
+        assertEquals("El servicio de IA no pudo procesar la solicitud. Inténtalo de nuevo más tarde.",
+                ex.getMessage());
+        org.junit.jupiter.api.Assertions.assertFalse(ex.getMessage().contains("private provider details"));
         server.verify();
     }
 

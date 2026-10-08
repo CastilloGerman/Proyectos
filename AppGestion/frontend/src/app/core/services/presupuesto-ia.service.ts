@@ -46,6 +46,9 @@ export function mapPresupuestoIaError(error: unknown): PresupuestoIaRequestError
   if (status === 503 && normalized.includes('desactivado')) {
     return new PresupuestoIaRequestError('disabled', status, message);
   }
+  if (status === 502 && normalized.includes('no pudo estructurar un borrador valido')) {
+    return new PresupuestoIaRequestError('invalid-response', status, message);
+  }
   if (status === 503 || status === 502 || status === 504 || status === 0 || status >= 500) {
     return new PresupuestoIaRequestError('provider', status, message);
   }

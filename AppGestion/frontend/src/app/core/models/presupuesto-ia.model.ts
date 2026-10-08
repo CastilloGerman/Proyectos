@@ -1,4 +1,6 @@
 export type PresupuestoIaConfianza = 'alta' | 'media' | 'baja';
+export type PresupuestoIaPrecioTipo = 'unitario' | 'total';
+export type PresupuestoIaPrecioOrigen = 'dictado' | 'catalogo' | 'ninguno';
 
 /** Contrato de respuesta de PresupuestoIaBorradorResponse en backend. */
 export interface PresupuestoIaBorradorResponse {
@@ -25,6 +27,12 @@ export interface PresupuestoIaItemBorradorResponse {
   confianza: PresupuestoIaConfianza;
   faltaPrecio: boolean;
   cantidadDudosa: boolean;
+  precioDictado?: number | null;
+  precioTipo?: PresupuestoIaPrecioTipo | null;
+  precioAproximado?: boolean;
+  precioCatalogo?: number | null;
+  precioOrigen?: PresupuestoIaPrecioOrigen;
+  precioIncluidoEnLineaAnterior?: boolean;
 }
 
 export interface PresupuestoIaBorradorRequest {
@@ -43,6 +51,7 @@ export type PresupuestoIaErrorKind =
   | 'forbidden'
   | 'unauthorized'
   | 'invalid-request'
+  | 'invalid-response'
   | 'unknown';
 
 export class PresupuestoIaRequestError extends Error {

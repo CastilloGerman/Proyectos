@@ -14,5 +14,11 @@ public record PresupuestoIaItemBorradorResponse(
         Boolean visiblePdf,
         String confianza,
         boolean faltaPrecio,
-        boolean cantidadDudosa
+        boolean cantidadDudosa,
+        Double precioDictado,
+        String precioTipo,
+        boolean precioAproximado,
+        Double precioCatalogo,
+        String precioOrigen,
+        boolean precioIncluidoEnLineaAnterior
 ) {}
