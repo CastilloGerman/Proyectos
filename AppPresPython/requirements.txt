@@ -1,4 +1,0 @@
-reportlab
-Pillow
-matplotlib
-pyinstaller
