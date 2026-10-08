@@ -91,6 +91,14 @@ describe('PresupuestoRapidoComponent', () => {
         approximatePrice: 'Precio aproximado',
         catalogPrice: 'En tu catálogo',
         priceIncludedInPreviousLine: 'Precio incluido en la línea anterior',
+        submitBlock: {
+          permission: 'Sin permiso', saving: 'Guardando', alreadyCreated: 'Ya creado',
+          generating: 'Espera a que termine la generación con IA.', validationPending: 'Validando',
+          customer: 'Select or create a customer.', line: 'Add a line',
+          review: 'Confirm {{count}} AI suggestions.', price: 'Missing price {{count}}',
+          quantity: 'Missing quantity {{count}}', invalidQuantity: 'Invalid quantity in line {{line}}.',
+          invalidPrice: 'Invalid price in line {{line}}.', invalidForm: 'Invalid form',
+        },
         formPending: 'Pendientes {{count}}',
         formReviewRequired: 'Revisa cada partida',
         safeDialogTitle: 'Revisa las sugerencias seguras',
@@ -328,6 +336,153 @@ describe('PresupuestoRapidoComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Material asociado');
     expect(fixture.nativeElement.textContent).toContain('Pintura blanca');
     expect(presupuestoService.create).not.toHaveBeenCalled();
+  });
+
+  it('enables create for a complete customer-selected draft after confirming every AI line', () => {
+    component.form.controls.clienteId.setValue(cliente.id);
+    component.cargarBorradorIa({
+      ...iaDraft(),
+      items: [{
+        ...iaDraft().items[1], tareaManual: 'Pintar habitación', confianza: 'alta',
+        cantidad: 2, precioUnitario: 10, faltaPrecio: false, cantidadDudosa: false,
+      }],
+    });
+    component.confirmarSugerenciaIa(0);
+    fixture.detectChanges();
+
+    expect(component.puedeCrear()).toBe(true);
+    expect(fixture.nativeElement.querySelector('.submit-btn').disabled).toBe(false);
+    expect(fixture.nativeElement.querySelector('.submit-btn').getAttribute('aria-describedby')).toBeNull();
+  });
+
+  it('keeps confirmation after editing a reviewed AI price or quantity', () => {
+    component.form.controls.clienteId.setValue(cliente.id);
+    component.cargarBorradorIa({
+      ...iaDraft(),
+      items: [{ ...iaDraft().items[1], confianza: 'alta', faltaPrecio: false, cantidadDudosa: false }],
+    });
+    component.confirmarSugerenciaIa(0);
+    component.manualItems.at(0).patchValue({ precioUnitario: '12,50', cantidad: '2,5' });
+    component.actualizarPrecioIa(0);
+    component.actualizarCantidadIa(0);
+
+    expect(component.manualItems.at(0).get('iaRevisada')?.value).toBe(true);
+    expect(component.puedeCrear()).toBe(true);
+  });
+
+  it('requires confirmation for regenerated AI lines and does not reuse an old line review', () => {
+    component.form.controls.clienteId.setValue(cliente.id);
+    const validDraft: PresupuestoIaBorradorResponse = {
+      ...iaDraft(),
+      items: [{ ...iaDraft().items[1], confianza: 'alta', faltaPrecio: false, cantidadDudosa: false }],
+    };
+    component.cargarBorradorIa(validDraft);
+    component.confirmarSugerenciaIa(0);
+    const oldLineId = component.manualItems.at(0).get('lineId')?.value;
+
+    component.cargarBorradorIa(validDraft);
+
+    expect(component.manualItems.at(0).get('lineId')?.value).not.toBe(oldLineId);
+    expect(component.manualItems.at(0).get('iaRevisada')?.value).toBe(false);
+    expect(component.motivosBloqueoCrear()).toContain('Confirm 1 AI suggestions.');
+  });
+
+  it('allows an individually confirmed approximate dictated price', () => {
+    component.form.controls.clienteId.setValue(cliente.id);
+    component.cargarBorradorIa({
+      ...iaDraft(),
+      items: [{
+        ...iaDraft().items[1], confianza: 'alta', precioOrigen: 'dictado',
+        precioAproximado: true, faltaPrecio: false, cantidadDudosa: false,
+      }],
+    });
+    component.confirmarSugerenciaIa(0);
+
+    expect(component.puedeCrear()).toBe(true);
+    expect(component.pendientesIa()).toEqual({ precio: 0, cantidad: 0, revision: 0 });
+  });
+
+  it.each(['2,5', '2.5'])('accepts quantity %s with point/comma decimal parsing', (quantity) => {
+    component.form.controls.clienteId.setValue(cliente.id);
+    component.addManualLine();
+    component.manualItems.at(0).patchValue({
+      tareaManual: 'Trabajo manual', cantidad: quantity, precioUnitario: '10,25',
+    });
+    component.actualizarCantidadIa(0);
+
+    expect(component.puedeCrear()).toBe(true);
+  });
+
+  it('explains that typing a new customer name is not enough until the customer is created', () => {
+    component.clienteModo = 'nuevo';
+    component.nombreClienteNuevo = 'Cliente nuevo';
+    component.addManualLine();
+    component.manualItems.at(0).patchValue({
+      tareaManual: 'Trabajo', cantidad: 1, precioUnitario: 10,
+    });
+
+    expect(component.puedeCrear()).toBe(false);
+    expect(component.motivosBloqueoCrear()).toContain('Select or create a customer.');
+
+    component.clienteModo = 'existente';
+    component.form.controls.clienteId.setValue(cliente.id);
+    expect(component.motivosBloqueoCrear()).not.toContain('Select or create a customer.');
+    expect(component.puedeCrear()).toBe(true);
+  });
+
+  it('does not block on IVA defaults or an intentional zero-price manual line', () => {
+    component.form.controls.clienteId.setValue(cliente.id);
+    component.addManualLine();
+    component.manualItems.at(0).patchValue({
+      tareaManual: 'Trabajo gratuito', cantidad: 1, precioUnitario: 0,
+    });
+
+    expect(component.form.controls.ivaHabilitado.value).toBe(true);
+    expect(component.puedeCrear()).toBe(true);
+    expect(component.motivosBloqueoCrear()).toEqual([]);
+  });
+
+  it('identifies invalid active-line quantities beside the disabled submit button', () => {
+    component.form.controls.clienteId.setValue(cliente.id);
+    component.addManualLine();
+    component.manualItems.at(0).patchValue({
+      tareaManual: 'Trabajo', cantidad: '0', precioUnitario: 10,
+    });
+    fixture.detectChanges();
+
+    expect(component.motivosBloqueoCrear()).toContain('Invalid quantity in line 1.');
+    const button = fixture.nativeElement.querySelector('.submit-btn');
+    expect(button.disabled).toBe(true);
+    expect(button.getAttribute('aria-describedby')).toBe('quick-submit-block-reasons');
+    expect(fixture.nativeElement.querySelector('#quick-submit-block-reasons').textContent)
+      .toContain('Invalid quantity in line 1.');
+  });
+
+  it('explains permission and in-flight submission blockers', () => {
+    component.form.controls.clienteId.setValue(cliente.id);
+    component.addManualLine();
+    component.manualItems.at(0).patchValue({
+      tareaManual: 'Trabajo', cantidad: 1, precioUnitario: 10,
+    });
+    vi.spyOn(component.auth, 'canMutate').mockReturnValue(false);
+    expect(component.motivosBloqueoCrear()).toContain('Sin permiso');
+
+    vi.spyOn(component.auth, 'canMutate').mockReturnValue(true);
+    component.loading = true;
+    expect(component.motivosBloqueoCrear()).toContain('Guardando');
+  });
+
+  it('explains that AI generation is still in progress beside the disabled button', () => {
+    component.form.controls.clienteId.setValue(cliente.id);
+    component.addManualLine();
+    component.manualItems.at(0).patchValue({
+      tareaManual: 'Trabajo', cantidad: 1, precioUnitario: 10,
+    });
+    component.iaLoading = true;
+    fixture.detectChanges();
+
+    expect(component.puedeCrear()).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('Espera a que termine la generación con IA.');
   });
 
   it('logs only the permitted per-line AI review fields in development mode', () => {

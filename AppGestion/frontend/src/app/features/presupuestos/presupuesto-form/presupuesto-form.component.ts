@@ -196,7 +196,7 @@ import { PresupuestoIaPriceInfoComponent } from '../../../shared/presupuesto-ia-
                     </mat-form-field>
                     <mat-form-field appearance="outline" class="qty-with-calc">
                       <mat-label>{{ 'factForm.qty' | translate }}</mat-label>
-                      <input matInput type="number" formControlName="cantidad" min="0.001" step="0.01">
+                      <input matInput type="text" inputmode="decimal" formControlName="cantidad" autocomplete="off">
                       <button
                         matSuffix
                         mat-icon-button
@@ -210,7 +210,7 @@ import { PresupuestoIaPriceInfoComponent } from '../../../shared/presupuesto-ia-
                     </mat-form-field>
                     <mat-form-field appearance="outline">
                       <mat-label>{{ 'factForm.unitPrice' | translate }}</mat-label>
-                      <input matInput type="number" formControlName="precioUnitario" min="0" step="0.01">
+                      <input matInput type="text" inputmode="decimal" formControlName="precioUnitario" autocomplete="off">
                     </mat-form-field>
                     <mat-checkbox formControlName="aplicaIva">{{ 'factForm.vatShort' | translate }}</mat-checkbox>
                     <button type="button" mat-icon-button color="warn" (click)="removeMaterialItem(i)" [matTooltip]="'cliList.tooltipDelete' | translate">
@@ -313,7 +313,7 @@ import { PresupuestoIaPriceInfoComponent } from '../../../shared/presupuesto-ia-
                     }
                     <mat-form-field appearance="outline" class="qty-with-calc">
                       <mat-label>{{ 'factForm.qty' | translate }}</mat-label>
-                      <input matInput type="number" formControlName="cantidad" min="0.001" step="0.01" (input)="actualizarCantidadIa(i)">
+                      <input matInput type="text" inputmode="decimal" formControlName="cantidad" autocomplete="off" (input)="actualizarCantidadIa(i)">
                       <button
                         matSuffix
                         mat-icon-button
@@ -327,7 +327,7 @@ import { PresupuestoIaPriceInfoComponent } from '../../../shared/presupuesto-ia-
                     </mat-form-field>
                     <mat-form-field appearance="outline">
                       <mat-label>{{ 'factForm.unitPrice' | translate }}</mat-label>
-                      <input matInput type="number" formControlName="precioUnitario" min="0" step="0.01" (input)="actualizarPrecioIa(i)">
+                      <input matInput type="text" inputmode="decimal" formControlName="precioUnitario" autocomplete="off" (input)="actualizarPrecioIa(i)">
                     </mat-form-field>
                     <mat-checkbox formControlName="aplicaIva">{{ 'factForm.vatShort' | translate }}</mat-checkbox>
                     <button type="button" mat-icon-button color="warn" (click)="removeManualItem(i)" [matTooltip]="'cliList.tooltipDelete' | translate">
@@ -477,10 +477,18 @@ import { PresupuestoIaPriceInfoComponent } from '../../../shared/presupuesto-ia-
                 mat-raised-button
                 color="primary"
                 type="submit"
+                [attr.aria-describedby]="motivosBloqueoCrear().length ? 'budget-submit-block-reasons' : null"
                 [disabled]="botonCrearDeshabilitado()"
               >
                 {{ isEdit ? ('common.save' | translate) : ('common.create' | translate) }}
               </button>
+              @if (motivosBloqueoCrear().length) {
+                <ul id="budget-submit-block-reasons" class="submit-block-reasons" role="status" aria-live="polite">
+                  @for (reason of motivosBloqueoCrear(); track reason) {
+                    <li>{{ reason }}</li>
+                  }
+                </ul>
+              }
             </div>
           </form>
           }
@@ -671,6 +679,7 @@ import { PresupuestoIaPriceInfoComponent } from '../../../shared/presupuesto-ia-
     }
 
     .actions { display: flex; gap: 16px; margin-top: 24px; }
+    .submit-block-reasons { flex-basis: 100%; margin: 0; color: #991b1b; font-weight: 600; }
     .creacion-completada { display: grid; justify-items: start; gap: 12px; padding: 8px 0; }
     .creacion-completada > mat-icon { color: #168447; font-size: 40px; width: 40px; height: 40px; }
     .creacion-completada h2, .creacion-completada p { margin: 0; }
@@ -698,6 +707,7 @@ export class PresupuestoFormComponent implements OnInit {
   iaLoading = false;
   iaStatusMessage = '';
   iaErrorMessage = '';
+  saving = false;
   focusAiOnInit = false;
   confirmacionSegurasAbierta = false;
   resumenConfirmacionSeguras: Array<{ lineId: number; description: string; materialName: string; price: number }> = [];
@@ -727,11 +737,42 @@ export class PresupuestoFormComponent implements OnInit {
     return this.calcularCostesResumen();
   }
 
-  /** El botón no depende de filas vacías: la validación fuerte está en onSubmit. */
   botonCrearDeshabilitado(): boolean {
+    return this.motivosBloqueoCrear().length > 0;
+  }
+
+  motivosBloqueoCrear(): string[] {
+    const reasons: string[] = [];
+    const translate = (key: string, params?: Record<string, unknown>) =>
+      this.translate.instant(`budQuick.ai.submitBlock.${key}`, params);
+    if (!this.auth.canMutate()) reasons.push(translate('permission'));
+    if (this.saving) reasons.push(translate('saving'));
+    if (this.iaLoading) reasons.push(translate('generating'));
+    if (this.form.pending) reasons.push(translate('validationPending'));
+    if (!this.form.get('clienteId')?.value) reasons.push(translate('customer'));
     const pending = this.pendientesIa();
-    return !this.auth.canMutate() || this.form.pending ||
-      pending.precio > 0 || pending.cantidad > 0 || pending.revision > 0;
+    if (pending.revision) reasons.push(translate('review', { count: pending.revision }));
+    let activeLines = 0;
+    let lineNumber = 0;
+    for (const { ctrl } of this.getAllItems()) {
+      const values = ctrl.getRawValue();
+      const active = Boolean(values.materialId) || String(values.tareaManual ?? '').trim().length > 0;
+      if (!active) continue;
+      activeLines++;
+      lineNumber++;
+      const quantity = parsePresupuestoDecimal(values.cantidad);
+      const price = parsePresupuestoDecimal(values.precioUnitario);
+      if (values.cantidadDudosa === true || quantity == null || quantity < 0.001) {
+        reasons.push(translate('invalidQuantity', { line: lineNumber }));
+      }
+      if (values.faltaPrecio === true || price == null || price < 0 ||
+          (values.iaSugerida === true && price <= 0)) {
+        reasons.push(translate('invalidPrice', { line: lineNumber }));
+      }
+    }
+    if (!activeLines) reasons.push(translate('line'));
+    if (this.form.invalid && reasons.length === 0) reasons.push(translate('invalidForm'));
+    return [...new Set(reasons)];
   }
 
   private getIaRevisionDatos(): PresupuestoIaRevisionDatos[] {
@@ -1420,8 +1461,8 @@ export class PresupuestoFormComponent implements OnInit {
       items: allItems.map(({ ctrl }) => {
         const v = ctrl.value;
         return {
-          cantidad: +(v.cantidad ?? 0),
-          precioUnitario: +(v.precioUnitario ?? 0),
+          cantidad: parsePresupuestoDecimal(v.cantidad) ?? 0,
+          precioUnitario: parsePresupuestoDecimal(v.precioUnitario) ?? 0,
           descuentoPorcentaje: +(v.descuentoPorcentaje ?? 0),
           descuentoFijo: +(v.descuentoFijo ?? 0),
           aplicaIva: v.aplicaIva,
@@ -1435,6 +1476,7 @@ export class PresupuestoFormComponent implements OnInit {
   }
 
   onSubmit(): void {
+    if (this.botonCrearDeshabilitado()) return;
     const pending = this.pendientesIa();
     if (pending.precio > 0 || pending.cantidad > 0 || pending.revision > 0) {
       this.form.markAllAsTouched();
@@ -1468,8 +1510,8 @@ export class PresupuestoFormComponent implements OnInit {
       return {
         materialId: it.materialId || undefined,
         tareaManual: it.tareaManual?.trim() || undefined,
-        cantidad: +it.cantidad,
-        precioUnitario: +it.precioUnitario,
+        cantidad: parsePresupuestoDecimal(it.cantidad) ?? 0,
+        precioUnitario: parsePresupuestoDecimal(it.precioUnitario) ?? 0,
         aplicaIva: it.aplicaIva,
         descuentoPorcentaje: it.descuentoPorcentaje ?? 0,
         descuentoFijo: it.descuentoFijo ?? 0,
@@ -1492,8 +1534,10 @@ export class PresupuestoFormComponent implements OnInit {
     const req = this.isEdit && this.id
       ? this.presupuestoService.update(this.id, payload)
       : this.presupuestoService.create(payload);
+    this.saving = true;
     req.subscribe({
       next: (presupuesto) => {
+        this.saving = false;
         this.presupuestoActual = presupuesto;
         this.creacionCompletada = true;
         this.snackBar.open(
@@ -1503,6 +1547,7 @@ export class PresupuestoFormComponent implements OnInit {
         );
       },
       error: (err) => {
+        this.saving = false;
         const raw = err.error?.message || err.error?.error;
         const msg =
           typeof raw === 'string' && String(raw).trim() !== ''

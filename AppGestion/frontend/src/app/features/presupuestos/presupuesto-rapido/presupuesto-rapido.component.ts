@@ -324,10 +324,19 @@ function decimalMin(minimum: number) {
           }
           <div class="total-preview"><span>{{ 'budQuick.total' | translate }}</span><strong>{{ totalPreview() | number:'1.2-2' }} €</strong></div>
         </div>
-        <button mat-raised-button color="primary" type="button" class="submit-btn" (click)="crearYEnviar()" [disabled]="!puedeCrear() || loading || !auth.canMutate()">
+        <button mat-raised-button color="primary" type="button" class="submit-btn" (click)="crearYEnviar()"
+          [attr.aria-describedby]="motivosBloqueoCrear().length ? 'quick-submit-block-reasons' : null"
+          [disabled]="!puedeCrear()">
           @if (loading) { <mat-icon class="spin">sync</mat-icon> } @else { <mat-icon>send</mat-icon> }
           {{ 'budQuick.createAndSend' | translate }}
         </button>
+        @if (motivosBloqueoCrear().length) {
+          <ul id="quick-submit-block-reasons" class="submit-block-reasons" role="status" aria-live="polite">
+            @for (reason of motivosBloqueoCrear(); track reason) {
+              <li>{{ reason }}</li>
+            }
+          </ul>
+        }
       </div>
     }
     @if (confirmacionSegurasAbierta) {
@@ -406,6 +415,7 @@ function decimalMin(minimum: number) {
     .total-preview { display: flex; flex-direction: column; font-size: 13px; color: var(--app-text-secondary, #64748b); }
     .total-preview strong { font-size: 18px; color: var(--app-text-primary, #0f172a); }
     .submit-btn { min-height: 52px; padding: 0 18px; font-weight: 700; }
+    .submit-block-reasons { flex-basis: 100%; margin: 0; padding-left: 20px; color: #991b1b; font-weight: 600; }
     .spin { animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     @media (max-width: 700px) { .rapido-wrap { margin-top: 10px; padding: 0 10px 120px; } .submit-bar { padding-left: 12px; padding-right: 12px; } .submit-btn { min-height: 52px; } .section { padding: 10px; } }
@@ -602,23 +612,42 @@ export class PresupuestoRapidoComponent implements OnInit {
   }
 
   puedeCrear(): boolean {
-    if (this.form.controls.clienteId.value == null || this.loading || this.presupuestoCreado) return false;
+    return this.motivosBloqueoCrear().length === 0;
+  }
+
+  motivosBloqueoCrear(): string[] {
+    const reasons: string[] = [];
+    const translate = (key: string, params?: Record<string, unknown>) =>
+      this.translate.instant(`budQuick.ai.submitBlock.${key}`, params);
+    if (!this.auth.canMutate()) reasons.push(translate('permission'));
+    if (this.loading) reasons.push(translate('saving'));
+    if (this.presupuestoCreado) reasons.push(translate('alreadyCreated'));
+    if (this.iaLoading) reasons.push(translate('generating'));
+    if (this.form.pending) reasons.push(translate('validationPending'));
+    if (this.form.controls.clienteId.value == null) reasons.push(translate('customer'));
+
     const pending = this.pendientesIa();
-    if (pending.precio > 0 || pending.cantidad > 0 || pending.revision > 0) return false;
-    let activeCount = 0;
-    for (const control of this.materialItems.controls) {
+    if (pending.revision) reasons.push(translate('review', { count: pending.revision }));
+    let activeLines = 0;
+    let lineNumber = 0;
+    for (const control of [...this.materialItems.controls, ...this.manualItems.controls]) {
       const values = control.getRawValue();
-      if (!values.materialId) continue;
-      activeCount++;
-      if (!this.validNumericLine(values.cantidad, values.precioUnitario)) return false;
+      const active = Boolean(values.materialId) || String(values.tareaManual ?? '').trim().length > 0;
+      if (!active) continue;
+      activeLines++;
+      lineNumber++;
+      const quantity = parseDecimal(values.cantidad);
+      const price = parseDecimal(values.precioUnitario);
+      if (values.cantidadDudosa === true || quantity == null || quantity < 0.001) {
+        reasons.push(translate('invalidQuantity', { line: lineNumber }));
+      }
+      if (values.faltaPrecio === true || price == null || price < 0 ||
+          (values.iaSugerida === true && price <= 0)) {
+        reasons.push(translate('invalidPrice', { line: lineNumber }));
+      }
     }
-    for (const control of this.manualItems.controls) {
-      const values = control.getRawValue();
-      if (!String(values.tareaManual ?? '').trim()) continue;
-      activeCount++;
-      if (!this.validNumericLine(values.cantidad, values.precioUnitario)) return false;
-    }
-    return activeCount > 0;
+    if (!activeLines) reasons.push(translate('line'));
+    return [...new Set(reasons)];
   }
 
   private validNumericLine(quantity: unknown, price: unknown): boolean {
