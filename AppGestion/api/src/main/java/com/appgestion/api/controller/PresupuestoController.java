@@ -10,11 +10,14 @@ import com.appgestion.api.dto.response.AnticipoResumenDTO;
 import com.appgestion.api.dto.response.FacturaResponse;
 import com.appgestion.api.dto.response.PresupuestoCondicionDisponibleResponse;
 import com.appgestion.api.dto.response.PresupuestoResponse;
+import com.appgestion.api.dto.response.PresupuestoEnlaceCreadoResponse;
+import com.appgestion.api.dto.response.PresupuestoEnlaceEstadoResponse;
 import com.appgestion.api.service.AnticipoService;
 import com.appgestion.api.service.CurrentUserService;
 import com.appgestion.api.service.FacturaService;
 import com.appgestion.api.service.PresupuestoCondicionesService;
 import com.appgestion.api.service.PresupuestoService;
+import com.appgestion.api.service.PublicBudgetLinkService;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
@@ -40,17 +43,44 @@ public class PresupuestoController {
     private final AnticipoService anticipoService;
     private final CurrentUserService currentUserService;
     private final PresupuestoCondicionesService presupuestoCondicionesService;
+    private final PublicBudgetLinkService publicBudgetLinkService;
 
     public PresupuestoController(PresupuestoService presupuestoService,
                                  FacturaService facturaService,
                                  AnticipoService anticipoService,
                                  CurrentUserService currentUserService,
-                                 PresupuestoCondicionesService presupuestoCondicionesService) {
+                                 PresupuestoCondicionesService presupuestoCondicionesService,
+                                 PublicBudgetLinkService publicBudgetLinkService) {
         this.presupuestoService = presupuestoService;
         this.facturaService = facturaService;
         this.anticipoService = anticipoService;
         this.currentUserService = currentUserService;
         this.presupuestoCondicionesService = presupuestoCondicionesService;
+        this.publicBudgetLinkService = publicBudgetLinkService;
+    }
+
+    @PostMapping("/{id}/enlace")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public PresupuestoEnlaceCreadoResponse crearEnlace(@PathVariable Long id) {
+        return publicBudgetLinkService.create(id, currentUserService.getCurrentUsuario().getId());
+    }
+
+    @PostMapping("/{id}/enlace/regenerar")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public PresupuestoEnlaceCreadoResponse regenerarEnlace(@PathVariable Long id) {
+        return publicBudgetLinkService.regenerate(id, currentUserService.getCurrentUsuario().getId());
+    }
+
+    @DeleteMapping("/{id}/enlace")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void revocarEnlace(@PathVariable Long id) {
+        publicBudgetLinkService.revoke(id, currentUserService.getCurrentUsuario().getId());
+    }
+
+    @GetMapping("/{id}/enlace/estado")
+    public PresupuestoEnlaceEstadoResponse estadoEnlace(@PathVariable Long id) {
+        return publicBudgetLinkService.status(id, currentUserService.getCurrentUsuario().getId());
     }
 
     @GetMapping("/condiciones-disponibles")

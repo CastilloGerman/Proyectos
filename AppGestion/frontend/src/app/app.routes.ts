@@ -5,6 +5,7 @@ import { roleMutateGuard } from './core/auth/role-mutate.guard';
 export const routes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: 'invite/:token', loadComponent: () => import('./features/auth/invite-accept/invite-accept.component').then(m => m.InviteAcceptComponent) },
+  { path: 'p/:token', loadComponent: () => import('./features/presupuestos/presupuesto-publico/presupuesto-publico.component').then(m => m.PresupuestoPublicoComponent) },
   { path: 'login', loadComponent: () => import('./features/auth/login/login.component').then(m => m.LoginComponent) },
   { path: 'register', loadComponent: () => import('./features/auth/register/register.component').then(m => m.RegisterComponent) },
   { path: 'forgot-password', loadComponent: () => import('./features/auth/forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent) },

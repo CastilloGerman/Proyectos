@@ -47,7 +47,8 @@ public class SubscriptionCheckFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         String path = request.getRequestURI();
 
-        if (skipSubscriptionCheck || isExcludedPath(path)) {
+        if (skipSubscriptionCheck || isExcludedPath(path)
+                || ("DELETE".equalsIgnoreCase(request.getMethod()) && path.matches(".*/presupuestos/\\d+/enlace"))) {
             if (path.contains("enviar-email")) {
                 log.debug("SubscriptionCheckFilter: ruta excluida o skip-check activo - {}", path);
             }
@@ -88,7 +89,8 @@ public class SubscriptionCheckFilter extends OncePerRequestFilter {
 
     private boolean isExcludedPath(String path) {
         // No excluir /auth/ completo: POST autenticados (p. ej. invitaciones) deben respetar canWrite.
-        return path.contains("/webhook/")
+        return path.contains("/publico/presupuestos/")
+                || path.contains("/webhook/")
                 || path.contains("/subscription/checkout")
                 || path.contains("/subscription/portal")
                 || path.contains("/enviar-email")

@@ -6,6 +6,7 @@ import { Presupuesto } from '../../../core/models/presupuesto.model';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
 import { ClienteService } from '../../../core/services/cliente.service';
 import { AuthService } from '../../../core/auth/auth.service';
+import { firstValueFrom } from 'rxjs';
 
 const COUNTRY_PREFIX: Record<string, string> = {
   ES: '34', ESPANA: '34', SPAIN: '34', FR: '33', FRANCE: '33', PT: '351', PORTUGAL: '351',
@@ -66,6 +67,16 @@ export function construirMensajePresupuesto(p: Presupuesto, contratista: string)
       }
       <button class="tertiary" type="button" (click)="copiarMensaje()">{{ 'budgetShare.copy' | translate }}</button>
       <button class="tertiary" type="button" [disabled]="loading" (click)="descargarPdf()">{{ 'budgetShare.download' | translate }}</button>
+      <div class="public-link-actions">
+        <button class="tertiary" type="button" [disabled]="loading" (click)="crearEnlace()">
+          {{ (publicLink ? 'publicBudget.regenerateLink' : 'publicBudget.createLink') | translate }}
+        </button>
+        @if (publicLink) {
+          <a [href]="publicLink" target="_blank" rel="noopener noreferrer">{{ publicLink }}</a>
+          <button class="tertiary" type="button" (click)="copiarEnlace()">{{ 'publicBudget.copyLink' | translate }}</button>
+          <button class="tertiary" type="button" [disabled]="loading" (click)="revocarEnlace()">{{ 'publicBudget.revokeLink' | translate }}</button>
+        }
+      </div>
       @if (mostrarEmail) {
         <form class="email-form" (ngSubmit)="enviarEmail()">
           <label class="field">{{ 'budgetShare.recipient' | translate }}<input type="email" name="recipient" [(ngModel)]="email" required maxlength="254" /></label>
@@ -112,6 +123,7 @@ export class EnviarPresupuestoComponent implements OnChanges {
   asunto = '';
   mensaje = '';
   feedback = '';
+  publicLink = '';
 
   constructor(
     private readonly presupuestos: PresupuestoService,
@@ -129,6 +141,7 @@ export class EnviarPresupuestoComponent implements OnChanges {
     this.mensaje = construirMensajePresupuesto(this.presupuesto, this.auth.user()?.nombre ?? '');
     this.waUrl = '';
     this.fallbackPendiente = false;
+    this.publicLink = '';
   }
 
   get telefonoNoGuardado(): boolean { return !this.presupuesto?.clienteTelefono?.trim(); }
@@ -137,19 +150,22 @@ export class EnviarPresupuestoComponent implements OnChanges {
     const phone = normalizarTelefonoInternacional(this.telefono, this.presupuesto.clientePais || 'ES');
     if (!phone) { this.feedback = this.translate.instant('budgetShare.phoneRequired'); return; }
     if (this.telefonoNoGuardado && this.guardarTelefono) await this.guardarTelefonoCliente();
+    const publicLink = await this.ensurePublicLink();
+    if (!publicLink) return;
+    const shareText = `${this.mensaje}\n\n${publicLink}`;
     this.loading = true;
     this.presupuestos.downloadPdf(this.presupuesto.id).subscribe({
       next: blob => {
         this.loading = false;
         const file = new File([blob], `Presupuesto-${this.presupuesto.id}.pdf`, { type: 'application/pdf' });
-        const shareData: ShareData = { files: [file], text: this.mensaje };
+        const shareData: ShareData = { files: [file], text: shareText };
         if (typeof navigator.share === 'function' && typeof navigator.canShare === 'function' && navigator.canShare(shareData)) {
           void navigator.share(shareData).then(() => this.registrarEnvio('WHATSAPP')).catch((error: unknown) => {
             if ((error as { name?: string })?.name !== 'AbortError') this.feedback = this.translate.instant('budgetShare.shareFailed');
           });
           return;
         }
-        this.waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(this.mensaje)}`;
+        this.waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(shareText)}`;
         this.fallbackPendiente = true;
         this.saveBlob(file);
         this.feedback = this.translate.instant('budgetShare.fallbackHint');
@@ -174,13 +190,63 @@ export class EnviarPresupuestoComponent implements OnChanges {
     });
   }
 
-  enviarEmail(): void {
+  async enviarEmail(): Promise<void> {
     if (!this.email.trim() || !this.asunto.trim() || !this.mensaje.trim() || /[\r\n]/.test(this.asunto)) return;
+    const publicLink = await this.ensurePublicLink();
+    if (!publicLink) return;
     this.loading = true;
-    this.presupuestos.enviarPorEmail(this.presupuesto.id, { email: this.email.trim(), asunto: this.asunto.trim(), mensaje: this.mensaje }).subscribe({
-      next: () => { this.loading = false; this.feedback = this.translate.instant('budgetShare.emailQueued'); this.registrarEnvio('EMAIL', false, false); },
-      error: () => { this.loading = false; this.feedback = this.translate.instant('budgetShare.emailFailed'); },
+    const body = `${this.mensaje}\n\n${publicLink}`;
+    try {
+      await firstValueFrom(this.presupuestos.enviarPorEmail(this.presupuesto.id, {
+        email: this.email.trim(), asunto: this.asunto.trim(), mensaje: body,
+      }));
+      this.loading = false;
+      this.feedback = this.translate.instant('budgetShare.emailQueued');
+      this.registrarEnvio('EMAIL', false, false);
+    } catch {
+      this.loading = false;
+      this.feedback = this.translate.instant('budgetShare.emailFailed');
+    }
+  }
+
+  async crearEnlace(): Promise<void> {
+    this.loading = true;
+    await this.ensurePublicLink(true);
+    this.loading = false;
+  }
+
+  copiarEnlace(): void {
+    if (!this.publicLink) return;
+    void navigator.clipboard.writeText(this.publicLink)
+      .then(() => this.feedback = this.translate.instant('publicBudget.linkCopied'))
+      .catch(() => this.feedback = this.translate.instant('publicBudget.linkFailed'));
+  }
+
+  revocarEnlace(): void {
+    this.loading = true;
+    this.presupuestos.revocarEnlace(this.presupuesto.id).subscribe({
+      next: () => {
+        this.publicLink = '';
+        this.loading = false;
+        this.feedback = this.translate.instant('publicBudget.linkRevoked');
+      },
+      error: () => {
+        this.loading = false;
+        this.feedback = this.translate.instant('publicBudget.linkFailed');
+      },
     });
+  }
+
+  private async ensurePublicLink(force = false): Promise<string | null> {
+    if (this.publicLink && !force) return this.publicLink;
+    try {
+      const created = await firstValueFrom(this.presupuestos.crearEnlace(this.presupuesto.id));
+      this.publicLink = created.url;
+      return created.url;
+    } catch {
+      this.feedback = this.translate.instant('publicBudget.linkFailed');
+      return null;
+    }
   }
 
   private async guardarTelefonoCliente(): Promise<void> {

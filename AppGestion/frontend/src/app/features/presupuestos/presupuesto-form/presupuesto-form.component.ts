@@ -41,6 +41,7 @@ import { EnviarPresupuestoComponent } from '../enviar-presupuesto/enviar-presupu
 import { PresupuestoIaBorradorResponse } from '../../../core/models/presupuesto-ia.model';
 import { PresupuestoIaPanelComponent, PresupuestoIaPanelState } from '../../../shared/presupuesto-ia-panel/presupuesto-ia-panel.component';
 import { PresupuestoIaPriceInfoComponent } from '../../../shared/presupuesto-ia-panel/presupuesto-ia-price-info.component';
+import { PresupuestoSeguimientoComponent } from '../presupuesto-seguimiento/presupuesto-seguimiento.component';
 
 @Component({
     selector: 'app-presupuesto-form',
@@ -67,6 +68,7 @@ import { PresupuestoIaPriceInfoComponent } from '../../../shared/presupuesto-ia-
         EnviarPresupuestoComponent,
         PresupuestoIaPanelComponent,
         PresupuestoIaPriceInfoComponent,
+        PresupuestoSeguimientoComponent,
     ],
     template: `
     <div class="presupuesto-form">
@@ -81,6 +83,7 @@ import { PresupuestoIaPriceInfoComponent } from '../../../shared/presupuesto-ia-
               <h2>{{ (isEdit ? 'snack.budgetUpdated' : 'snack.budgetSavedCreated') | translate }}</h2>
               <p>{{ 'budgetForm.createdShareHint' | translate }}</p>
               <app-enviar-presupuesto [presupuesto]="presupuestoActual" [mostrarOpcionesAlInicio]="true" (enviado)="presupuestoActual = $event" />
+              <app-presupuesto-seguimiento [presupuestoId]="presupuestoActual.id" [enviadoAt]="presupuestoActual.enviadoAt" [canalEnvio]="presupuestoActual.canalEnvio" />
               <button mat-stroked-button type="button" routerLink="/presupuestos">{{ 'budgetForm.backToBudgets' | translate }}</button>
             </section>
           } @else {
@@ -490,6 +493,9 @@ import { PresupuestoIaPriceInfoComponent } from '../../../shared/presupuesto-ia-
                 </ul>
               }
             </div>
+            @if (isEdit && id) {
+              <app-presupuesto-seguimiento [presupuestoId]="id" [enviadoAt]="presupuestoActual?.enviadoAt" [canalEnvio]="presupuestoActual?.canalEnvio" />
+            }
           </form>
           }
         </mat-card-content>

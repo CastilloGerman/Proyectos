@@ -36,7 +36,8 @@ class PresupuestoEnvioTest {
 
     private PresupuestoService service() {
         return new PresupuestoService(presupuestoRepository, clienteRepository, empresaRepository, materialRepository,
-                facturaRepository, pdfService, emailService, condicionesService, usuarioRepository);
+                facturaRepository, pdfService, emailService, condicionesService, usuarioRepository,
+                mock(com.appgestion.api.repository.PresupuestoEnlaceRepository.class));
     }
 
     @Test

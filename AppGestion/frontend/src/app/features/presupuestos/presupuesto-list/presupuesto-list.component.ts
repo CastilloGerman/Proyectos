@@ -88,7 +88,12 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
         <table mat-table [dataSource]="dataSource" matSort class="full-width">
           <ng-container matColumnDef="clienteNombre">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'budList.colCustomer' | translate }}</th>
-            <td mat-cell *matCellDef="let row">{{ row.clienteNombre }}</td>
+            <td mat-cell *matCellDef="let row">
+              {{ row.clienteNombre }}
+              @if (row.enlacePrimeraVistaAt) {
+                <mat-icon class="viewed-indicator" [matTooltip]="'publicBudget.viewed' | translate:{ date: (row.enlacePrimeraVistaAt | date:'short'), count: row.enlaceNumVistas }">visibility</mat-icon>
+              }
+            </td>
           </ng-container>
           <ng-container matColumnDef="fechaCreacion">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'budList.colDate' | translate }}</th>

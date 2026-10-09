@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpMethod;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -64,6 +65,10 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(HttpMethod.GET, "/publico/presupuestos/*",
+                                "/publico/presupuestos/*/pdf")
+                        .permitAll();
+                    auth.requestMatchers(HttpMethod.POST, "/publico/presupuestos/*/visto").permitAll();
                     auth.requestMatchers("/auth/register", "/auth/login", "/auth/google", "/auth/forgot-password", "/auth/reset-password",
                                 "/auth/invite/**").permitAll()
                         .requestMatchers("/auth/email/oauth/*/callback").permitAll()
@@ -94,7 +99,7 @@ public class SecurityConfig {
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint() {
         return (request, response, authException) -> {
-            log.warn("401 Unauthorized: token inválido o expirado - {} {}", request.getMethod(), request.getRequestURI());
+            log.warn("401 Unauthorized: token inválido o expirado - {} {}", request.getMethod(), safePath(request));
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");
@@ -109,7 +114,7 @@ public class SecurityConfig {
         return (HttpServletRequest request, HttpServletResponse response,
                 org.springframework.security.access.AccessDeniedException accessDeniedException) -> {
             String user = request.getUserPrincipal() != null ? request.getUserPrincipal().getName() : "anonymous";
-            log.warn("403 Forbidden: usuario {} sin permisos para {} {}", user, request.getMethod(), request.getRequestURI());
+            log.warn("403 Forbidden: usuario {} sin permisos para {} {}", user, request.getMethod(), safePath(request));
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");
@@ -117,5 +122,12 @@ public class SecurityConfig {
                     "{\"error\":\"Acceso denegado. No tienes permisos para este recurso.\","
                             + "\"message\":\"Acceso denegado. No tienes permisos para este recurso.\"}");
         };
+    }
+
+    private static String safePath(HttpServletRequest request) {
+        String publicPrefix = request.getContextPath() + "/publico/presupuestos/";
+        return request.getRequestURI().startsWith(publicPrefix)
+                ? publicPrefix + "[redacted]"
+                : request.getRequestURI();
     }
 }

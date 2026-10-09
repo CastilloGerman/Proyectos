@@ -31,6 +31,8 @@ export interface Presupuesto {
   clientePais?: string;
   enviadoAt?: string | null;
   canalEnvio?: 'WHATSAPP' | 'EMAIL' | null;
+  enlacePrimeraVistaAt?: string | null;
+  enlaceNumVistas?: number;
   fechaCreacion: string;
   subtotal: number;
   iva: number;
@@ -52,6 +54,35 @@ export interface Presupuesto {
   anticipoFacturado?: boolean;
   fechaAnticipo?: string | null;
   items: PresupuestoItem[];
+}
+
+export interface PresupuestoEnlaceCreado {
+  url: string;
+  expiraAt: string;
+}
+
+export interface PresupuestoEnlaceEstado {
+  activo: boolean;
+  expiraAt: string | null;
+  primeraVistaAt: string | null;
+  ultimaVistaAt: string | null;
+  numVistas: number;
+  enlacesActivos: number;
+}
+
+export interface PresupuestoPublico {
+  empresaNombre: string | null;
+  empresaLogoBase64: string | null;
+  empresaLogoMimeType: string | null;
+  numero: number;
+  fecha: string;
+  clienteNombre: string;
+  partidas: Array<{ descripcion: string | null; cantidad: number; unidad: string; precioUnitario: number; subtotal: number }>;
+  subtotal: number;
+  iva: number;
+  total: number;
+  notas: string | null;
+  condiciones: string[];
 }
 
 export interface PresupuestoRequest {

@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { PresupuestoCondicionDisponible } from '../models/presupuesto-condiciones.model';
-import { AnticipoRegistroRequest, AnticipoResumen, Presupuesto, PresupuestoRequest } from '../models/presupuesto.model';
+import { AnticipoRegistroRequest, AnticipoResumen, Presupuesto, PresupuestoEnlaceCreado, PresupuestoEnlaceEstado, PresupuestoPublico, PresupuestoRequest } from '../models/presupuesto.model';
 import { Factura } from '../models/factura.model';
 import { environment } from '../../../environments/environment';
 
@@ -64,6 +64,34 @@ export class PresupuestoService {
 
   marcarEnviado(id: number, canal: 'WHATSAPP' | 'EMAIL'): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/${id}/marcar-enviado`, { canal });
+  }
+
+  crearEnlace(id: number): Observable<PresupuestoEnlaceCreado> {
+    return this.http.post<PresupuestoEnlaceCreado>(`${this.apiUrl}/${id}/enlace`, {});
+  }
+
+  regenerarEnlace(id: number): Observable<PresupuestoEnlaceCreado> {
+    return this.http.post<PresupuestoEnlaceCreado>(`${this.apiUrl}/${id}/enlace/regenerar`, {});
+  }
+
+  revocarEnlace(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}/enlace`);
+  }
+
+  estadoEnlace(id: number): Observable<PresupuestoEnlaceEstado> {
+    return this.http.get<PresupuestoEnlaceEstado>(`${this.apiUrl}/${id}/enlace/estado`);
+  }
+
+  getPublico(token: string): Observable<PresupuestoPublico> {
+    return this.http.get<PresupuestoPublico>(`${environment.apiUrl}/publico/presupuestos/${encodeURIComponent(token)}`);
+  }
+
+  marcarPublicoVisto(token: string): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/publico/presupuestos/${encodeURIComponent(token)}/visto`, {});
+  }
+
+  descargarPdfPublico(token: string): Observable<Blob> {
+    return this.http.get(`${environment.apiUrl}/publico/presupuestos/${encodeURIComponent(token)}/pdf`, { responseType: 'blob' });
   }
 
   /** Textos y claves del catálogo (única fuente de verdad en API). */

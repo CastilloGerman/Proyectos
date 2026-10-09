@@ -32,5 +32,7 @@ public record PresupuestoResponse(
         /** Id de factura de venta principal (NORMAL o FINAL_CON_ANTICIPO), si existe. */
         Long facturaId,
         LocalDateTime enviadoAt,
-        String canalEnvio
+        String canalEnvio,
+        java.time.Instant enlacePrimeraVistaAt,
+        Long enlaceNumVistas
 ) {}

@@ -1,0 +1,30 @@
+# Enlace público de presupuestos
+
+## Modelo de amenazas y decisiones
+
+- El token contiene 256 bits aleatorios (`SecureRandom`) codificados Base64 URL-safe. La base de datos solo conserva SHA-256; crear un enlace para cada envío devuelve la URL una única vez y no revoca los enlaces anteriores. Hay hasta 10 enlaces activos por presupuesto por defecto. La acción explícita «Regenerar» revoca todos y crea uno nuevo; «Revocar» invalida todos.
+- Un token desconocido, caducado o revocado obtiene el mismo 404 genérico. Los endpoints anónimos responden con `no-store`, `noindex, nofollow`, `no-referrer` y `nosniff`.
+- La carga pública por `GET` no registra una visita. La interfaz registra la visita mediante `POST` tras 3 segundos con la pestaña visible o en la primera interacción. La transición de primera vista es un `UPDATE ... WHERE primera_vista_at IS NULL`; un marcador atómico en el presupuesto dispara una sola notificación, aunque se visiten varios enlaces o lleguen peticiones concurrentes. Las vistas posteriores de cada enlace se cuentan como máximo una vez por minuto. El bloque de seguimiento agrega todos los enlaces.
+- Los rate limits Caffeine son locales a cada instancia: por defecto 10 000 solicitudes/minuto/IP y 60/minuto/token; el límite por token es el principal. Por defecto la lista de proxies de confianza está vacía y no se confía en `X-Forwarded-For`. Para habilitarlo, la dirección del peer inmediato (`getRemoteAddr()`) debe coincidir con una red configurada en `app.public-links.trusted-proxies`, que se puede establecer mediante `PUBLIC_BUDGET_LINK_TRUSTED_PROXIES` como lista de CIDR separada por comas (por ejemplo, `10.0.0.0/8,2001:db8::/32`). Mantén `server.forward-headers-strategy=none` y configura el proxy para sobrescribir/sanear `X-Forwarded-For` (no anexar a valores proporcionados por el cliente). La IP no se persiste. El supuesto es que el peer inmediato es el proxy de confianza; si el proxy no está en la lista, se usa la dirección del peer.
+- El rate limit en memoria no se comparte entre instancias. En despliegues con varias instancias se requiere un limitador distribuido para límites globales.
+- Un enlace puede reenviarse: no es una prueba de identidad ni impide que quien lo reciba copie el presupuesto. Caduca por defecto a los 60 días y puede revocarse o regenerarse.
+- Los envíos repetidos no rompen URLs ya entregadas. Cada nuevo envío crea otro enlace con contador independiente; el límite evita la acumulación indefinida de URLs activas.
+- Los enlaces existentes siguen disponibles aunque el propietario pierda `canWrite`, para no romper presupuestos compartidos. El borrado del presupuesto elimina el enlace por cascada.
+- Los eventos HTTP del filtro JWT no registran la URI de los endpoints públicos, para evitar incluir el token de ruta en logs. Asegura igualmente que el proxy inverso y la plataforma de hosting no guarden URLs completas de `/p/<token>` ni `/publico/presupuestos/<token>`.
+
+## Datos expuestos
+
+La vista JSON presenta nombre comercial y logo de la empresa, número/fecha, nombre del cliente, líneas visibles del presupuesto, importes, notas y condiciones. No incluye DNI/NIF, email, teléfono, dirección, identificadores internos distintos del número visible, estado comercial ni notas internas. El PDF público reutiliza el documento de presupuesto existente, pero del cliente solo muestra su nombre: no incluye su NIF, teléfono, email, dirección, código postal, provincia ni país. El test `PdfPresupuestoContenidoTest.publicPdfWithCompleteCustomerContainsOnlyTheCustomerName` lo verifica con un cliente que tiene todos esos datos cumplimentados.
+
+Abrir el enlace no prueba que lo haya abierto el destinatario previsto. Se conserva la primera y última fecha de vista y el contador anti-rebote; estos datos están disponibles para el propietario del presupuesto. Texto recomendado para adaptar e incluir en la política de privacidad:
+
+> El cliente puede consultar su presupuesto mediante un enlace público, sin crear una cuenta. Al visualizarlo registramos la fecha de la primera visita y contamos las visitas posteriores para mostrar el seguimiento al titular del presupuesto. El enlace puede ser reenviado y cualquier persona que lo reciba podrá consultar el presupuesto mientras siga vigente; puede revocarse y caduca según el plazo indicado. En la copia PDF pública solo aparece el nombre del cliente, no su NIF, teléfono, email ni dirección. No almacenamos la dirección IP para este seguimiento.
+
+## Endpoints y configuración
+
+- `POST /presupuestos/{id}/enlace`, `DELETE /presupuestos/{id}/enlace` y `GET /presupuestos/{id}/enlace/estado` requieren autenticación y propiedad del presupuesto.
+- `POST /presupuestos/{id}/enlace/regenerar` revoca todos los enlaces activos y crea uno nuevo. `POST /presupuestos/{id}/enlace` crea un enlace adicional sin revocar ninguno; cada envío de WhatsApp/email usa este último.
+- `GET /publico/presupuestos/{token}`, `GET /publico/presupuestos/{token}/pdf` y `POST /publico/presupuestos/{token}/visto` son las únicas rutas públicas de negocio.
+- `app.frontend-url` determina el origen de la URL. `app.public-links.expiry-days` (60), `app.public-links.max-active-links` (10), `app.public-links.trusted-proxies` (vacía por defecto, variable `PUBLIC_BUDGET_LINK_TRUSTED_PROXIES`), `app.public-links.rate-limit-per-ip` (10000) y `app.public-links.rate-limit-per-token` (60) son configurables.
+- El componente Angular publica meta `robots=noindex,nofollow` y `referrer=no-referrer` durante la ruta pública y los restaura al salir. El hosting/CDN del frontend también debe enviar `X-Robots-Tag: noindex, nofollow` y `Referrer-Policy: no-referrer` para `/p/*`, porque las meta etiquetas no controlan la respuesta HTTP.
+- El PDF público muestra del cliente únicamente su nombre; no expone NIF, teléfono, email ni dirección. Revisar la política de privacidad para informar del enlace público y del registro de visitas; arriba se incluye un texto recomendado.

@@ -33,6 +33,7 @@ describe('EnviarPresupuestoComponent', () => {
     const presupuestoApi = {
       downloadPdf: vi.fn(() => of(new Blob(['pdf']))),
       marcarEnviado: vi.fn(() => of(void 0)),
+      crearEnlace: vi.fn(() => of({ url: 'https://example.test/p/token', expiraAt: '2027-01-01T00:00:00Z' })),
     };
     TestBed.configureTestingModule({
       imports: [EnviarPresupuestoComponent, TranslateModule.forRoot()],
@@ -51,6 +52,38 @@ describe('EnviarPresupuestoComponent', () => {
     await component.compartirWhatsApp();
     await Promise.resolve();
     expect(share).toHaveBeenCalled();
+    expect(share.mock.calls[0][0].text).toContain('https://example.test/p/token');
     expect(presupuestoApi.marcarEnviado).toHaveBeenCalledWith(1, 'WHATSAPP');
+  });
+
+  it('adds the public link to the email body while keeping the existing PDF attachment flow', async () => {
+    const sendEmail = vi.fn(() => of(void 0));
+    const presupuestoApi = {
+      crearEnlace: vi.fn(() => of({ url: 'https://example.test/p/mail-token', expiraAt: '2027-01-01T00:00:00Z' })),
+      enviarPorEmail: sendEmail,
+      marcarEnviado: vi.fn(() => of(void 0)),
+    };
+    TestBed.configureTestingModule({
+      imports: [EnviarPresupuestoComponent, TranslateModule.forRoot()],
+      providers: [
+        { provide: PresupuestoService, useValue: presupuestoApi },
+        { provide: ClienteService, useValue: {} },
+        { provide: AuthService, useValue: { user: () => ({ nombre: 'Empresa' }) } },
+      ],
+    });
+    const component = TestBed.createComponent(EnviarPresupuestoComponent).componentInstance;
+    component.presupuesto = {
+      id: 1, clienteId: 2, clienteNombre: 'Ana', fechaCreacion: '', subtotal: 10, iva: 2.1,
+      total: 12.1, ivaHabilitado: true, estado: 'Pendiente', items: [],
+    };
+    component.email = 'ana@example.test';
+    component.asunto = 'Presupuesto';
+    component.mensaje = 'Te envío el presupuesto';
+
+    await component.enviarEmail();
+
+    expect(sendEmail).toHaveBeenCalledWith(1, expect.objectContaining({
+      mensaje: expect.stringContaining('https://example.test/p/mail-token'),
+    }));
   });
 });

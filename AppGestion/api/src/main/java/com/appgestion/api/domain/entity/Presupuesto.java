@@ -47,6 +47,9 @@ public class Presupuesto {
     @Column(name = "canal_envio", length = 20)
     private String canalEnvio;
 
+    @Column(name = "enlace_visto_notificado", nullable = false)
+    private boolean enlaceVistoNotificado;
+
     @Column(name = "descuento_global_porcentaje")
     private Double descuentoGlobalPorcentaje = 0.0;
 
@@ -117,6 +120,8 @@ public class Presupuesto {
 
     public String getCanalEnvio() { return canalEnvio; }
     public void setCanalEnvio(String canalEnvio) { this.canalEnvio = canalEnvio; }
+    public boolean isEnlaceVistoNotificado() { return enlaceVistoNotificado; }
+    public void setEnlaceVistoNotificado(boolean enlaceVistoNotificado) { this.enlaceVistoNotificado = enlaceVistoNotificado; }
 
     public Double getDescuentoGlobalPorcentaje() { return descuentoGlobalPorcentaje; }
     public void setDescuentoGlobalPorcentaje(Double descuentoGlobalPorcentaje) { this.descuentoGlobalPorcentaje = descuentoGlobalPorcentaje; }

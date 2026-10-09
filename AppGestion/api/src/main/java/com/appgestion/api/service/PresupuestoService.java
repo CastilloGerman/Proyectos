@@ -14,6 +14,7 @@ import com.appgestion.api.repository.EmpresaRepository;
 import com.appgestion.api.repository.FacturaRepository;
 import com.appgestion.api.repository.MaterialRepository;
 import com.appgestion.api.repository.PresupuestoRepository;
+import com.appgestion.api.repository.PresupuestoEnlaceRepository;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.appgestion.api.util.EmailCopy;
 import org.springframework.http.HttpStatus;
@@ -37,6 +38,7 @@ public class PresupuestoService {
     private final EmailService emailService;
     private final PresupuestoCondicionesService presupuestoCondicionesService;
     private final UsuarioRepository usuarioRepository;
+    private final PresupuestoEnlaceRepository presupuestoEnlaceRepository;
 
     public PresupuestoService(PresupuestoRepository presupuestoRepository,
                               ClienteRepository clienteRepository,
@@ -46,7 +48,8 @@ public class PresupuestoService {
                               PresupuestoPdfService presupuestoPdfService,
                               EmailService emailService,
                               PresupuestoCondicionesService presupuestoCondicionesService,
-                              UsuarioRepository usuarioRepository) {
+                              UsuarioRepository usuarioRepository,
+                              PresupuestoEnlaceRepository presupuestoEnlaceRepository) {
         this.presupuestoRepository = presupuestoRepository;
         this.clienteRepository = clienteRepository;
         this.empresaRepository = empresaRepository;
@@ -56,6 +59,7 @@ public class PresupuestoService {
         this.emailService = emailService;
         this.presupuestoCondicionesService = presupuestoCondicionesService;
         this.usuarioRepository = usuarioRepository;
+        this.presupuestoEnlaceRepository = presupuestoEnlaceRepository;
     }
 
     @Transactional(readOnly = true)
@@ -305,6 +309,7 @@ public class PresupuestoService {
                 .findFirst()
                 .map(f -> f.getId())
                 .orElse(null);
+        var enlace = presupuestoEnlaceRepository.summarizeViews(presupuesto.getId(), usuarioId);
 
         var cli = presupuesto.getCliente();
         String estadoCliente = cli != null && cli.getEstadoCliente() != null
@@ -336,7 +341,9 @@ public class PresupuestoService {
                 presupuesto.getFechaAnticipo(),
                 facturaId,
                 presupuesto.getEnviadoAt(),
-                presupuesto.getCanalEnvio()
+                presupuesto.getCanalEnvio(),
+                enlace.getPrimeraVistaAt(),
+                enlace.getNumVistas() != null ? enlace.getNumVistas() : 0L
         );
     }
 

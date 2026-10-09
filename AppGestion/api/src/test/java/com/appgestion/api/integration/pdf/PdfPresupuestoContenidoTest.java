@@ -203,6 +203,42 @@ class PdfPresupuestoContenidoTest {
         assertThat(text).contains("<script>nota()</script>");
     }
 
+    @Test
+    void publicPdfWithCompleteCustomerContainsOnlyTheCustomerName() throws Exception {
+        var cliente = clienteRepository.findById(scenario.clienteCompletoId()).orElseThrow();
+        cliente.setNombre("Cliente PDF Publico");
+        cliente.setDni("NIF-CLIENTE-PRUEBA-123");
+        cliente.setTelefono("+34-600-111-222");
+        cliente.setEmail("cliente-pdf@example.test");
+        cliente.setDireccion("Calle Privada 99");
+        cliente.setCodigoPostal("28099");
+        cliente.setProvincia("Provincia Privada");
+        cliente.setPais("Pais Privado");
+        clienteRepository.save(cliente);
+
+        String created = mockMvc.perform(post("/presupuestos")
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(PresupuestoIntegrationTestSupport.presupuestoJson(
+                                scenario.clienteCompletoId(), PresupuestoEstado.PENDIENTE, 100, 1)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        long presupuestoId = objectMapper.readTree(created).get("id").asLong();
+        String linkJson = mockMvc.perform(post("/presupuestos/{id}/enlace", presupuestoId)
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String url = objectMapper.readTree(linkJson).get("url").asText();
+        String token = url.substring(url.lastIndexOf('/') + 1);
+        byte[] pdf = mockMvc.perform(get("/publico/presupuestos/{token}/pdf", token))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        String text = normalize(extractPdfText(pdf));
+
+        assertThat(text).contains("Cliente PDF Publico");
+        assertThat(text).doesNotContain("NIF-CLIENTE-PRUEBA-123", "+34-600-111-222",
+                "cliente-pdf@example.test", "Calle Privada 99", "28099", "Provincia Privada", "Pais Privado");
+    }
+
     private String descargarTextoPresupuestoPdf(long presupuestoId) throws Exception {
         MvcResult result = mockMvc.perform(get("/presupuestos/{id}/pdf", presupuestoId)
                         .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService)))

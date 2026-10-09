@@ -1,6 +1,7 @@
 package com.appgestion.api.service;
 
 import com.appgestion.api.domain.entity.Notificacion;
+import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.domain.enums.NotificacionSeveridad;
 import com.appgestion.api.domain.enums.NotificacionTipo;
 import com.appgestion.api.dto.response.NotificacionResponse;
@@ -34,6 +35,7 @@ public class NotificacionService {
         if (notificacionRepository.countByUsuarioId(uid) > 0) {
             return;
         }
+
         Notificacion n = new Notificacion();
         n.setUsuario(usuarioRepository.getReferenceById(uid));
         n.setTipo(NotificacionTipo.SISTEMA);
@@ -45,6 +47,32 @@ public class NotificacionService {
         n.setLeida(false);
         n.setActionPath("/cuenta/suscripcion");
         notificacionRepository.save(n);
+    }
+
+    @Transactional
+    public void presupuestoVisto(Usuario owner, String clientName, Long budgetNumber) {
+        String locale = owner.getUiLocale();
+        String language = locale == null ? "es" : locale.split("[-_]")[0];
+        Notificacion notification = new Notificacion();
+        notification.setUsuario(owner);
+        notification.setTipo(NotificacionTipo.SISTEMA);
+        notification.setSeveridad(NotificacionSeveridad.INFO);
+        notification.setTitulo(switch (language) {
+            case "en" -> "Estimate viewed";
+            case "fr" -> "Devis consulté";
+            case "ro" -> "Ofertă vizualizată";
+            case "uk" -> "Кошторис переглянуто";
+            default -> "Presupuesto visto";
+        });
+        notification.setResumen(switch (language) {
+            case "en" -> "Your customer " + clientName + " viewed estimate no. " + budgetNumber;
+            case "fr" -> "Votre client " + clientName + " a consulté le devis nº " + budgetNumber;
+            case "ro" -> "Clientul " + clientName + " a văzut oferta nr. " + budgetNumber;
+            case "uk" -> "Ваш клієнт " + clientName + " переглянув кошторис № " + budgetNumber;
+            default -> "Tu cliente " + clientName + " ha visto el presupuesto Nº " + budgetNumber;
+        });
+        notification.setActionPath("/presupuestos/" + budgetNumber);
+        notificacionRepository.save(notification);
     }
 
     @Transactional(readOnly = true)

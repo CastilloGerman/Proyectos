@@ -19,20 +19,22 @@ import { isLegalPath } from './legal/legal-paths';
     CookieBannerComponent,
   ],
   template: `
-    @if (auth.isAuthenticated() && !isLegalRoute()) {
+    @if (auth.isAuthenticated() && !isLegalRoute() && !isPublicBudgetRoute()) {
       <app-authenticated-shell />
     }
-    @if (!auth.isAuthenticated()) {
+    @if (!auth.isAuthenticated() || isPublicBudgetRoute()) {
       <div class="app-public-shell">
-        <header class="app-public-topbar">
-          @if (isLegalRoute()) {
+        @if (!isPublicBudgetRoute()) {
+          <header class="app-public-topbar">
+            @if (isLegalRoute()) {
             <a routerLink="/login" class="app-topbar-logo" aria-label="Volver al inicio de sesión">
               <img src="assets/noemi-logo.png" alt="Noemi" />
             </a>
-          }
-          <span class="app-public-topbar__spacer"></span>
-          <app-language-switcher />
-        </header>
+            }
+            <span class="app-public-topbar__spacer"></span>
+            <app-language-switcher />
+          </header>
+        }
         <router-outlet></router-outlet>
       </div>
     }
@@ -116,6 +118,7 @@ export class AppComponent implements OnInit {
 
   private readonly currentUrl = signal(this.router.url);
   readonly isLegalRoute = computed(() => isLegalPath(this.currentUrl()));
+  readonly isPublicBudgetRoute = computed(() => this.currentUrl().startsWith('/p/'));
 
   ngOnInit(): void {
     if (this.auth.isAuthenticated()) {

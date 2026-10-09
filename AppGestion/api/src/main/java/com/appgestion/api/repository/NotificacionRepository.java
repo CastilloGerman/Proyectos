@@ -16,6 +16,8 @@ public interface NotificacionRepository extends JpaRepository<Notificacion, Long
 
     long countByUsuarioId(Long usuarioId);
 
+    void deleteByUsuarioId(Long usuarioId);
+
     @Query("SELECT n FROM Notificacion n WHERE n.usuario.id = :uid AND (:read IS NULL OR n.leida = :read)")
     Page<Notificacion> findForUsuario(
             @Param("uid") Long usuarioId,

@@ -2,7 +2,11 @@
 
 DocumentaciÃ³n de IA para presupuestos: [docs/IA-PRESUPUESTOS.md](docs/IA-PRESUPUESTOS.md).
 
-**Documentación adicional:** [Despliegue en producción](docs/DEPLOY.md) · [OAuth correo Gmail/Microsoft (local)](docs/EMAIL-OAUTH-SETUP.md) · [Modelo organización / tenant](docs/TENANT-MODEL.md) · [Dependencias](docs/DEPENDENCIES.md) · [Frontend](frontend/README.md) · [Diagnóstico recuperación de contraseña / correo](docs/TROUBLESHOOTING-PASSWORD-RESET.md)
+**Documentación adicional:** [Despliegue en producción](docs/DEPLOY.md) · [Enlace público de presupuestos](docs/ENLACE-PUBLICO.md) · [OAuth correo Gmail/Microsoft (local)](docs/EMAIL-OAUTH-SETUP.md) · [Modelo organización / tenant](docs/TENANT-MODEL.md) · [Dependencias](docs/DEPENDENCIES.md) · [Frontend](frontend/README.md) · [Diagnóstico recuperación de contraseña / correo](docs/TROUBLESHOOTING-PASSWORD-RESET.md)
+
+### Enlaces públicos de presupuestos
+
+La API ofrece `POST /presupuestos/{id}/enlace` para crear otro enlace por envío, `POST /presupuestos/{id}/enlace/regenerar` para revocarlos todos y crear uno, `DELETE /presupuestos/{id}/enlace` para revocarlos todos y `GET /presupuestos/{id}/enlace/estado` (autenticados), además de `GET /publico/presupuestos/{token}`, `GET /publico/presupuestos/{token}/pdf` y `POST /publico/presupuestos/{token}/visto` (anónimos). Hay un máximo configurable de 10 enlaces activos por presupuesto; volver a enviar no invalida los anteriores. Configura `app.frontend-url`, `app.public-links.expiry-days` (60 días), `app.public-links.max-active-links` (10), `app.public-links.trusted-proxies`, `app.public-links.rate-limit-per-ip` (10000/minuto) y `app.public-links.rate-limit-per-token` (60/minuto). Por defecto no se confía en `X-Forwarded-For`; configura la lista CIDR de proxies con `app.public-links.trusted-proxies` o `PUBLIC_BUDGET_LINK_TRUSTED_PROXIES`. Configura el proxy para sobrescribir `X-Forwarded-For`; el limitador Caffeine es local por instancia. El PDF público solo muestra el nombre del cliente, sin NIF, teléfono, email ni dirección. El hosting frontend debe enviar `X-Robots-Tag: noindex, nofollow` y `Referrer-Policy: no-referrer` en `/p/*`. Consulta [el modelo de amenazas, límites, datos expuestos y texto recomendado para privacidad](docs/ENLACE-PUBLICO.md).
 
 ---
 
