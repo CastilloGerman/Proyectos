@@ -96,6 +96,13 @@ export const routes: Routes = [
           import('./features/cuenta/metodos-pago/metodos-pago.component').then((m) => m.MetodosPagoComponent),
       },
       {
+        path: 'cuenta/seguimiento-presupuestos',
+        loadComponent: () =>
+          import('./features/cuenta/seguimiento-presupuestos/seguimiento-presupuestos.component').then(
+            (m) => m.SeguimientoPresupuestosComponent,
+          ),
+      },
+      {
         path: 'cuenta/historial-suscripcion',
         loadComponent: () =>
           import('./features/cuenta/historial-suscripcion/historial-suscripcion.component').then(

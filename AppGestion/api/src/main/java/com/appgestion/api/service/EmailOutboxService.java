@@ -81,6 +81,13 @@ public class EmailOutboxService {
         saveJob(usuarioId, idempotencyKey, payload);
     }
 
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void enqueueHtmlUsuario(Long usuarioId, String to, String subject, String htmlBody, String idempotencyKey) {
+        EmailJobPayload payload = new EmailJobPayload(
+                EmailJobPayload.KIND_HTML_CLIENT, to, subject, htmlBody, null, null, null, null);
+        saveJob(usuarioId, idempotencyKey, payload);
+    }
+
     @Transactional
     public void enqueueSoporte(
             Long usuarioId,

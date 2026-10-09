@@ -70,9 +70,11 @@ export interface HintStep {
     }
 
     .hint-close {
-      width: 28px;
-      height: 28px;
-      line-height: 28px;
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      min-height: 44px;
+      line-height: 44px;
     }
 
     .hint-close mat-icon {

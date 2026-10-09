@@ -34,5 +34,8 @@ public record PresupuestoResponse(
         LocalDateTime enviadoAt,
         String canalEnvio,
         java.time.Instant enlacePrimeraVistaAt,
-        Long enlaceNumVistas
+        Long enlaceNumVistas,
+        long seguimientoAvisosEnviados,
+        java.time.Instant seguimientoUltimoAvisoAt,
+        boolean seguimientoSilenciado
 ) {}

@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Pageable;
 
 import jakarta.persistence.LockModeType;
 import java.util.List;
@@ -17,6 +18,9 @@ public interface PresupuestoRepository extends JpaRepository<Presupuesto, Long> 
     List<Presupuesto> findByUsuarioIdAndClienteIdOrderByFechaCreacionDesc(Long usuarioId, Long clienteId);
 
     Optional<Presupuesto> findByIdAndUsuarioId(Long id, Long usuarioId);
+
+    List<Presupuesto> findByUsuarioIdAndEnviadoAtIsNotNullAndSeguimientoSilenciadoFalseAndIdGreaterThanOrderByIdAsc(
+            Long usuarioId, Long lastId, Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Presupuesto p where p.id = :id and p.usuario.id = :usuarioId")

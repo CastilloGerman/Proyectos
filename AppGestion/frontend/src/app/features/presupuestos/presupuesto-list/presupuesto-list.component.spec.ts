@@ -46,4 +46,15 @@ describe('PresupuestoListComponent AI create action', () => {
     expect(aiLink.getAttribute('href')).toContain('/presupuestos/nuevo');
     expect(aiLink.getAttribute('href')).toContain('ia=1');
   });
+
+  it('shows a subtle follow-up indicator only for budgets with a pending reminder', () => {
+    fixture.componentInstance.dataSource.data = [
+      { id: 1, clienteNombre: 'Pending', estado: 'Pendiente', seguimientoAvisosEnviados: 1, seguimientoSilenciado: false } as never,
+      { id: 2, clienteNombre: 'Clear', estado: 'Pendiente', seguimientoAvisosEnviados: 1, seguimientoSilenciado: true } as never,
+      { id: 3, clienteNombre: 'Resolved', estado: 'Aceptado', seguimientoAvisosEnviados: 1, seguimientoSilenciado: false } as never,
+    ];
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('.follow-up-indicator')).toHaveLength(1);
+  });
 });

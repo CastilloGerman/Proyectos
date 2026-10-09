@@ -33,6 +33,9 @@ export interface Presupuesto {
   canalEnvio?: 'WHATSAPP' | 'EMAIL' | null;
   enlacePrimeraVistaAt?: string | null;
   enlaceNumVistas?: number;
+  seguimientoAvisosEnviados?: number;
+  seguimientoUltimoAvisoAt?: string | null;
+  seguimientoSilenciado?: boolean;
   fechaCreacion: string;
   subtotal: number;
   iva: number;

@@ -8,6 +8,8 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "empresas")
+@org.hibernate.annotations.Check(constraints =
+        "seguimiento_dias_espera BETWEEN 1 AND 30 AND seguimiento_max_avisos BETWEEN 1 AND 5")
 public class Empresa {
 
     @Id
@@ -141,6 +143,18 @@ public class Empresa {
     @Column(name = "recordatorio_cliente_dias", nullable = false, length = 32)
     private String recordatorioClienteDias = "7,15,30";
 
+    @Column(name = "seguimiento_activo", nullable = false)
+    private boolean seguimientoActivo = true;
+
+    @Column(name = "seguimiento_dias_espera", nullable = false)
+    private int seguimientoDiasEspera = 3;
+
+    @Column(name = "seguimiento_max_avisos", nullable = false)
+    private int seguimientoMaxAvisos = 2;
+
+    @Column(name = "seguimiento_email_resumen", nullable = false)
+    private boolean seguimientoEmailResumen;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -265,4 +279,12 @@ public class Empresa {
     public void setRecordatorioClienteDias(String recordatorioClienteDias) {
         this.recordatorioClienteDias = recordatorioClienteDias != null ? recordatorioClienteDias : "7,15,30";
     }
+    public boolean isSeguimientoActivo() { return seguimientoActivo; }
+    public void setSeguimientoActivo(boolean seguimientoActivo) { this.seguimientoActivo = seguimientoActivo; }
+    public int getSeguimientoDiasEspera() { return seguimientoDiasEspera; }
+    public void setSeguimientoDiasEspera(int seguimientoDiasEspera) { this.seguimientoDiasEspera = seguimientoDiasEspera; }
+    public int getSeguimientoMaxAvisos() { return seguimientoMaxAvisos; }
+    public void setSeguimientoMaxAvisos(int seguimientoMaxAvisos) { this.seguimientoMaxAvisos = seguimientoMaxAvisos; }
+    public boolean isSeguimientoEmailResumen() { return seguimientoEmailResumen; }
+    public void setSeguimientoEmailResumen(boolean seguimientoEmailResumen) { this.seguimientoEmailResumen = seguimientoEmailResumen; }
 }

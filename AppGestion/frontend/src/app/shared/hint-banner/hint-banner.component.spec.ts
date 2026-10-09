@@ -29,7 +29,7 @@ describe('HintBannerComponent', () => {
     expect(banner.textContent).toContain('Existing banner title');
     expect(banner.textContent).toContain('Existing banner step');
     expect(banner.querySelector('.hint-note')).toBeNull();
-    expect(getComputedStyle(closeButton).width).toBe('28px');
+    expect(getComputedStyle(closeButton).width).toBe('44px');
 
     closeButton.click();
     fixture.detectChanges();

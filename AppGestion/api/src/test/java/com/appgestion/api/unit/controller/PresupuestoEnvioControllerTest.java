@@ -21,7 +21,7 @@ class PresupuestoEnvioControllerTest {
         when(currentUser.getCurrentUsuario()).thenReturn(usuario);
         PresupuestoController controller = new PresupuestoController(presupuestos, mock(FacturaService.class),
                 mock(AnticipoService.class), currentUser, mock(PresupuestoCondicionesService.class),
-                mock(PublicBudgetLinkService.class));
+                mock(PublicBudgetLinkService.class), mock(PresupuestoSeguimientoService.class));
 
         controller.marcarEnviado(4L, new MarcarPresupuestoEnviadoRequest(CanalEnvio.EMAIL));
 

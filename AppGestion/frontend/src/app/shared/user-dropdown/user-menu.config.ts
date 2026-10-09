@@ -59,6 +59,13 @@ export const USER_MENU_SECTIONS: UserMenuSection[] = [
         kind: 'route',
         route: '/cuenta/notificaciones',
       },
+      {
+        id: 'seguimiento-presupuestos',
+        label: 'Seguimiento de presupuestos',
+        icon: 'notifications_active',
+        kind: 'route',
+        route: '/cuenta/seguimiento-presupuestos',
+      },
     ],
   },
   {

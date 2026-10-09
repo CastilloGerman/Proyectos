@@ -83,7 +83,17 @@ import { PresupuestoSeguimientoComponent } from '../presupuesto-seguimiento/pres
               <h2>{{ (isEdit ? 'snack.budgetUpdated' : 'snack.budgetSavedCreated') | translate }}</h2>
               <p>{{ 'budgetForm.createdShareHint' | translate }}</p>
               <app-enviar-presupuesto [presupuesto]="presupuestoActual" [mostrarOpcionesAlInicio]="true" (enviado)="presupuestoActual = $event" />
-              <app-presupuesto-seguimiento [presupuestoId]="presupuestoActual.id" [enviadoAt]="presupuestoActual.enviadoAt" [canalEnvio]="presupuestoActual.canalEnvio" />
+              <app-presupuesto-seguimiento
+                [presupuestoId]="presupuestoActual.id"
+                [enviadoAt]="presupuestoActual.enviadoAt"
+                [canalEnvio]="presupuestoActual.canalEnvio"
+                [alertCount]="presupuestoActual.seguimientoAvisosEnviados ?? 0"
+                [lastAlertAt]="presupuestoActual.seguimientoUltimoAvisoAt"
+                [silenced]="presupuestoActual.seguimientoSilenciado ?? false"
+                [clientPhone]="presupuestoActual.clienteTelefono"
+                [clientCountry]="presupuestoActual.clientePais"
+                (resend)="abrirPanelEnvio()"
+              />
               <button mat-stroked-button type="button" routerLink="/presupuestos">{{ 'budgetForm.backToBudgets' | translate }}</button>
             </section>
           } @else {
@@ -494,9 +504,26 @@ import { PresupuestoSeguimientoComponent } from '../presupuesto-seguimiento/pres
               }
             </div>
             @if (isEdit && id) {
-              <app-presupuesto-seguimiento [presupuestoId]="id" [enviadoAt]="presupuestoActual?.enviadoAt" [canalEnvio]="presupuestoActual?.canalEnvio" />
+              <app-presupuesto-seguimiento
+                [presupuestoId]="id"
+                [enviadoAt]="presupuestoActual?.enviadoAt"
+                [canalEnvio]="presupuestoActual?.canalEnvio"
+                [alertCount]="presupuestoActual?.seguimientoAvisosEnviados ?? 0"
+                [lastAlertAt]="presupuestoActual?.seguimientoUltimoAvisoAt"
+                [silenced]="presupuestoActual?.seguimientoSilenciado ?? false"
+                [clientPhone]="presupuestoActual?.clienteTelefono"
+                [clientCountry]="presupuestoActual?.clientePais"
+                (resend)="abrirPanelEnvio()"
+              />
             }
           </form>
+          @if (isEdit && presupuestoActual && mostrarPanelReenvio) {
+            <app-enviar-presupuesto
+              [presupuesto]="presupuestoActual"
+              [mostrarOpcionesAlInicio]="true"
+              (enviado)="presupuestoActual = $event"
+            />
+          }
           }
         </mat-card-content>
       </mat-card>
@@ -706,6 +733,7 @@ export class PresupuestoFormComponent implements OnInit {
   id?: number;
   presupuestoActual: import('../../../core/models/presupuesto.model').Presupuesto | null = null;
   creacionCompletada = false;
+  mostrarPanelReenvio = false;
   /** existente: desplegable; nuevo: solo nombre y alta rápida. */
   clienteModo: 'existente' | 'nuevo' = 'existente';
   nombreClienteNuevo = '';
@@ -733,6 +761,10 @@ export class PresupuestoFormComponent implements OnInit {
 
   get materialItems(): FormArray {
     return this.form.get('materialItems') as FormArray;
+  }
+
+  abrirPanelEnvio(): void {
+    this.mostrarPanelReenvio = true;
   }
 
   get manualItems(): FormArray {

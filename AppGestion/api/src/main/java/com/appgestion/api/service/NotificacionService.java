@@ -75,6 +75,41 @@ public class NotificacionService {
         notificacionRepository.save(notification);
     }
 
+    @Transactional
+    public void presupuestoSeguimiento(Usuario owner, String clientName, Long budgetNumber, String tipo, long days) {
+        String locale = owner.getUiLocale();
+        String language = locale == null ? "es" : locale.split("[-_]")[0].toLowerCase();
+        boolean viewed = "ABIERTO_SIN_RESPUESTA".equals(tipo);
+        String title = switch (language) {
+            case "en" -> viewed ? "Estimate awaiting your follow-up" : "Estimate not viewed yet";
+            case "fr" -> viewed ? "Devis consulté, sans réponse" : "Devis pas encore consulté";
+            case "ro" -> viewed ? "Oferta vizualizată, fără răspuns" : "Oferta nu a fost încă vizualizată";
+            case "uk" -> viewed ? "Кошторис переглянуто, відповіді немає" : "Кошторис ще не переглянули";
+            default -> viewed ? "Presupuesto visto, sin respuesta" : "Presupuesto aún no visto";
+        };
+        String summary = switch (language) {
+            case "en" -> "Your customer " + clientName + " has not replied to estimate no. " + budgetNumber
+                    + " after " + days + " days.";
+            case "fr" -> "Votre client " + clientName + " n’a pas répondu au devis nº " + budgetNumber
+                    + " après " + days + " jours.";
+            case "ro" -> "Clientul " + clientName + " nu a răspuns la oferta nr. " + budgetNumber
+                    + " după " + days + " zile.";
+            case "uk" -> "Клієнт " + clientName + " не відповів на кошторис № " + budgetNumber
+                    + " протягом " + days + " днів.";
+            default -> "Tu cliente " + clientName + " no ha respondido al presupuesto Nº " + budgetNumber
+                    + " después de " + days + " días.";
+        };
+        Notificacion notification = new Notificacion();
+        notification.setUsuario(owner);
+        notification.setTipo(NotificacionTipo.SISTEMA);
+        notification.setSeveridad(NotificacionSeveridad.INFO);
+        notification.setTitulo(title);
+        notification.setResumen(summary);
+        notification.setActionPath("/presupuestos/" + budgetNumber);
+        notification.setLeida(false);
+        notificacionRepository.save(notification);
+    }
+
     @Transactional(readOnly = true)
     public Page<NotificacionResponse> listForCurrentUser(Long usuarioId, Boolean readFilter, int page, int size) {
         int p = Math.max(0, page);

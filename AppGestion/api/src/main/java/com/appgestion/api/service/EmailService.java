@@ -70,4 +70,11 @@ public class EmailService {
         String key = "support-" + usuarioId + "-" + UUID.randomUUID();
         emailOutboxService.enqueueSoporte(usuarioId, to, asunto, cuerpoHtml, adjuntos, replyToEmail, key);
     }
+
+    public void enviarResumenSeguimiento(Long usuarioId, String to, String asunto, String html, String idempotencyKey) {
+        if (to == null || to.isBlank()) {
+            throw new IllegalArgumentException("El usuario no tiene email registrado");
+        }
+        emailOutboxService.enqueueHtmlUsuario(usuarioId, to, asunto, html, idempotencyKey);
+    }
 }

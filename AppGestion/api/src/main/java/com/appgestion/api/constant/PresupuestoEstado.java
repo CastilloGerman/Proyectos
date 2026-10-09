@@ -14,4 +14,8 @@ public final class PresupuestoEstado {
     /** Con tilde (UI) y sin tilde (variante legada). */
     public static final String EN_EJECUCION = "En ejecución";
     public static final String EN_EJECUCION_SIN_TILDE = "En ejecucion";
+
+    public static boolean isUnresolved(String estado) {
+        return estado != null && PENDIENTE.equalsIgnoreCase(estado.strip());
+    }
 }

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { Empresa } from '../models/empresa.model';
 import { environment } from '../../../environments/environment';
 
@@ -26,6 +26,36 @@ export class ConfigService {
 
   patchRecordatoriosCobro(body: RecordatoriosCobroPayload): Observable<Empresa> {
     return this.http.patch<Empresa>(`${this.apiUrl}/empresa/recordatorios-cobro`, body);
+  }
+
+  getSeguimientoPresupuestos(): Observable<SeguimientoPresupuestosConfig> {
+    return this.http.get<SeguimientoPresupuestosApiDto>(`${this.apiUrl}/empresa/seguimiento-presupuestos`).pipe(
+      map(config => ({
+        seguimientoActivo: config.seguimientoActivo,
+        diasEspera: config.seguimientoDiasEspera,
+        maxAvisos: config.seguimientoMaxAvisos,
+        emailResumen: config.seguimientoEmailResumen,
+      })),
+    );
+  }
+
+  patchSeguimientoPresupuestos(body: SeguimientoPresupuestosConfig): Observable<SeguimientoPresupuestosConfig> {
+    return this.http.patch<SeguimientoPresupuestosApiDto>(
+      `${this.apiUrl}/empresa/seguimiento-presupuestos`,
+      {
+        seguimientoActivo: body.seguimientoActivo,
+        seguimientoDiasEspera: body.diasEspera,
+        seguimientoMaxAvisos: body.maxAvisos,
+        seguimientoEmailResumen: body.emailResumen,
+      },
+    ).pipe(
+      map(config => ({
+        seguimientoActivo: config.seguimientoActivo,
+        diasEspera: config.seguimientoDiasEspera,
+        maxAvisos: config.seguimientoMaxAvisos,
+        emailResumen: config.seguimientoEmailResumen,
+      })),
+    );
   }
 
   patchDatosFiscales(body: DatosFiscalesPayload): Observable<Empresa> {
@@ -83,6 +113,20 @@ export interface MetodosCobroPayload {
 export interface RecordatoriosCobroPayload {
   recordatorioClienteActivo: boolean;
   recordatorioClienteDias: number[];
+}
+
+export interface SeguimientoPresupuestosConfig {
+  seguimientoActivo: boolean;
+  diasEspera: number;
+  maxAvisos: number;
+  emailResumen: boolean;
+}
+
+export interface SeguimientoPresupuestosApiDto {
+  seguimientoActivo: boolean;
+  seguimientoDiasEspera: number;
+  seguimientoMaxAvisos: number;
+  seguimientoEmailResumen: boolean;
 }
 
 export interface DatosFiscalesPayload {

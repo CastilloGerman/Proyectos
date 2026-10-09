@@ -18,6 +18,7 @@ import com.appgestion.api.service.FacturaService;
 import com.appgestion.api.service.PresupuestoCondicionesService;
 import com.appgestion.api.service.PresupuestoService;
 import com.appgestion.api.service.PublicBudgetLinkService;
+import com.appgestion.api.service.PresupuestoSeguimientoService;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
@@ -44,19 +45,36 @@ public class PresupuestoController {
     private final CurrentUserService currentUserService;
     private final PresupuestoCondicionesService presupuestoCondicionesService;
     private final PublicBudgetLinkService publicBudgetLinkService;
+    private final PresupuestoSeguimientoService presupuestoSeguimientoService;
 
     public PresupuestoController(PresupuestoService presupuestoService,
                                  FacturaService facturaService,
                                  AnticipoService anticipoService,
                                  CurrentUserService currentUserService,
                                  PresupuestoCondicionesService presupuestoCondicionesService,
-                                 PublicBudgetLinkService publicBudgetLinkService) {
+                                 PublicBudgetLinkService publicBudgetLinkService,
+                                 PresupuestoSeguimientoService presupuestoSeguimientoService) {
         this.presupuestoService = presupuestoService;
         this.facturaService = facturaService;
         this.anticipoService = anticipoService;
         this.currentUserService = currentUserService;
         this.presupuestoCondicionesService = presupuestoCondicionesService;
         this.publicBudgetLinkService = publicBudgetLinkService;
+        this.presupuestoSeguimientoService = presupuestoSeguimientoService;
+    }
+
+    @PostMapping("/{id}/seguimiento/silenciar")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void silenciarSeguimiento(@PathVariable Long id) {
+        presupuestoSeguimientoService.setSilenced(id, currentUserService.getCurrentUsuario().getId(), true);
+    }
+
+    @DeleteMapping("/{id}/seguimiento/silenciar")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reactivarSeguimiento(@PathVariable Long id) {
+        presupuestoSeguimientoService.setSilenced(id, currentUserService.getCurrentUsuario().getId(), false);
     }
 
     @PostMapping("/{id}/enlace")

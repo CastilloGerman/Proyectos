@@ -82,6 +82,14 @@ export class PresupuestoService {
     return this.http.get<PresupuestoEnlaceEstado>(`${this.apiUrl}/${id}/enlace/estado`);
   }
 
+  silenciarSeguimiento(id: number): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${id}/seguimiento/silenciar`, {});
+  }
+
+  reactivarSeguimiento(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}/seguimiento/silenciar`);
+  }
+
   getPublico(token: string): Observable<PresupuestoPublico> {
     return this.http.get<PresupuestoPublico>(`${environment.apiUrl}/publico/presupuestos/${encodeURIComponent(token)}`);
   }

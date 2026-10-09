@@ -8,8 +8,11 @@ import com.appgestion.api.dto.request.PlantillasPdfPatchRequest;
 import com.appgestion.api.dto.request.RecordatorioCobroPatchRequest;
 import com.appgestion.api.dto.request.PlantillasPdfPreviewRequest;
 import com.appgestion.api.dto.response.EmpresaResponse;
+import com.appgestion.api.dto.request.SeguimientoPresupuestosPatchRequest;
+import com.appgestion.api.dto.response.SeguimientoPresupuestosResponse;
 import com.appgestion.api.service.CurrentUserService;
 import com.appgestion.api.service.EmpresaService;
+import com.appgestion.api.service.PresupuestoSeguimientoService;
 import com.appgestion.api.service.PlantillasPdfPreviewService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
@@ -27,14 +30,17 @@ public class ConfigController {
     private final EmpresaService empresaService;
     private final CurrentUserService currentUserService;
     private final PlantillasPdfPreviewService plantillasPdfPreviewService;
+    private final PresupuestoSeguimientoService presupuestoSeguimientoService;
 
     public ConfigController(
             EmpresaService empresaService,
             CurrentUserService currentUserService,
-            PlantillasPdfPreviewService plantillasPdfPreviewService) {
+            PlantillasPdfPreviewService plantillasPdfPreviewService,
+            PresupuestoSeguimientoService presupuestoSeguimientoService) {
         this.empresaService = empresaService;
         this.currentUserService = currentUserService;
         this.plantillasPdfPreviewService = plantillasPdfPreviewService;
+        this.presupuestoSeguimientoService = presupuestoSeguimientoService;
     }
 
     @GetMapping("/empresa")
@@ -64,6 +70,18 @@ public class ConfigController {
     public EmpresaResponse actualizarRecordatoriosCobro(@Valid @RequestBody RecordatorioCobroPatchRequest request) {
         Usuario usuario = currentUserService.getCurrentUsuario();
         return empresaService.actualizarRecordatoriosCobro(request, usuario);
+    }
+
+    @GetMapping("/empresa/seguimiento-presupuestos")
+    public SeguimientoPresupuestosResponse obtenerSeguimientoPresupuestos() {
+        return presupuestoSeguimientoService.getSettings(currentUserService.getCurrentUsuario().getId());
+    }
+
+    @PatchMapping("/empresa/seguimiento-presupuestos")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public SeguimientoPresupuestosResponse actualizarSeguimientoPresupuestos(
+            @Valid @RequestBody SeguimientoPresupuestosPatchRequest request) {
+        return presupuestoSeguimientoService.patchSettings(currentUserService.getCurrentUsuario().getId(), request);
     }
 
     @PatchMapping("/empresa/datos-fiscales")

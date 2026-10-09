@@ -28,6 +28,9 @@ public interface PresupuestoEnlaceRepository extends JpaRepository<PresupuestoEn
     PresupuestoEnlaceResumen summarizeViews(@Param("presupuestoId") Long presupuestoId,
                                              @Param("usuarioId") Long usuarioId);
 
+    @Query("select max(e.ultimaVistaAt) from PresupuestoEnlace e where e.presupuesto.id = :presupuestoId")
+    Instant latestViewAt(@Param("presupuestoId") Long presupuestoId);
+
     @Modifying
     @Query("update PresupuestoEnlace e set e.revocado = true where e.presupuesto.id = :presupuestoId and e.presupuesto.usuario.id = :usuarioId and e.revocado = false")
     int revokeAll(@Param("presupuestoId") Long presupuestoId, @Param("usuarioId") Long usuarioId);

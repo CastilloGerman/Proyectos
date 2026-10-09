@@ -50,6 +50,9 @@ public class Presupuesto {
     @Column(name = "enlace_visto_notificado", nullable = false)
     private boolean enlaceVistoNotificado;
 
+    @Column(name = "seguimiento_silenciado", nullable = false)
+    private boolean seguimientoSilenciado;
+
     @Column(name = "descuento_global_porcentaje")
     private Double descuentoGlobalPorcentaje = 0.0;
 
@@ -122,6 +125,8 @@ public class Presupuesto {
     public void setCanalEnvio(String canalEnvio) { this.canalEnvio = canalEnvio; }
     public boolean isEnlaceVistoNotificado() { return enlaceVistoNotificado; }
     public void setEnlaceVistoNotificado(boolean enlaceVistoNotificado) { this.enlaceVistoNotificado = enlaceVistoNotificado; }
+    public boolean isSeguimientoSilenciado() { return seguimientoSilenciado; }
+    public void setSeguimientoSilenciado(boolean seguimientoSilenciado) { this.seguimientoSilenciado = seguimientoSilenciado; }
 
     public Double getDescuentoGlobalPorcentaje() { return descuentoGlobalPorcentaje; }
     public void setDescuentoGlobalPorcentaje(Double descuentoGlobalPorcentaje) { this.descuentoGlobalPorcentaje = descuentoGlobalPorcentaje; }

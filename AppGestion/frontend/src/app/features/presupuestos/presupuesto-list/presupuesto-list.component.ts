@@ -93,6 +93,9 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
               @if (row.enlacePrimeraVistaAt) {
                 <mat-icon class="viewed-indicator" [matTooltip]="'publicBudget.viewed' | translate:{ date: (row.enlacePrimeraVistaAt | date:'short'), count: row.enlaceNumVistas }">visibility</mat-icon>
               }
+              @if (row.estado === 'Pendiente' && (row.seguimientoAvisosEnviados ?? 0) > 0 && !row.seguimientoSilenciado) {
+                <mat-icon class="follow-up-indicator" [matTooltip]="'budgetFollowSettings.pendingAlert' | translate" [attr.aria-label]="'budgetFollowSettings.pendingAlert' | translate">notifications_active</mat-icon>
+              }
             </td>
           </ng-container>
           <ng-container matColumnDef="fechaCreacion">
@@ -264,6 +267,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
     .anticipo-cell { font-size: 0.875rem; }
     .anticipo-ok { font-size: 16px; width: 16px; height: 16px; vertical-align: middle; color: #1565c0; }
+    .follow-up-indicator { width:16px; height:16px; font-size:16px; margin-left:6px; vertical-align:middle; color:#a65b00; }
     .text-muted { color: rgba(0,0,0,0.38); }
   `]
 })

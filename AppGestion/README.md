@@ -2,11 +2,13 @@
 
 DocumentaciÃ³n de IA para presupuestos: [docs/IA-PRESUPUESTOS.md](docs/IA-PRESUPUESTOS.md).
 
-**Documentación adicional:** [Despliegue en producción](docs/DEPLOY.md) · [Enlace público de presupuestos](docs/ENLACE-PUBLICO.md) · [OAuth correo Gmail/Microsoft (local)](docs/EMAIL-OAUTH-SETUP.md) · [Modelo organización / tenant](docs/TENANT-MODEL.md) · [Dependencias](docs/DEPENDENCIES.md) · [Frontend](frontend/README.md) · [Diagnóstico recuperación de contraseña / correo](docs/TROUBLESHOOTING-PASSWORD-RESET.md)
+**Documentación adicional:** [Despliegue en producción](docs/DEPLOY.md) · [Enlace público de presupuestos](docs/ENLACE-PUBLICO.md) · [Seguimiento automático de presupuestos](docs/SEGUIMIENTO-PRESUPUESTOS.md) · [OAuth correo Gmail/Microsoft (local)](docs/EMAIL-OAUTH-SETUP.md) · [Modelo organización / tenant](docs/TENANT-MODEL.md) · [Dependencias](docs/DEPENDENCIES.md) · [Frontend](frontend/README.md) · [Diagnóstico recuperación de contraseña / correo](docs/TROUBLESHOOTING-PASSWORD-RESET.md)
 
 ### Enlaces públicos de presupuestos
 
 La API ofrece `POST /presupuestos/{id}/enlace` para crear otro enlace por envío, `POST /presupuestos/{id}/enlace/regenerar` para revocarlos todos y crear uno, `DELETE /presupuestos/{id}/enlace` para revocarlos todos y `GET /presupuestos/{id}/enlace/estado` (autenticados), además de `GET /publico/presupuestos/{token}`, `GET /publico/presupuestos/{token}/pdf` y `POST /publico/presupuestos/{token}/visto` (anónimos). Hay un máximo configurable de 10 enlaces activos por presupuesto; volver a enviar no invalida los anteriores. Configura `app.frontend-url`, `app.public-links.expiry-days` (60 días), `app.public-links.max-active-links` (10), `app.public-links.trusted-proxies`, `app.public-links.rate-limit-per-ip` (10000/minuto) y `app.public-links.rate-limit-per-token` (60/minuto). Por defecto no se confía en `X-Forwarded-For`; configura la lista CIDR de proxies con `app.public-links.trusted-proxies` o `PUBLIC_BUDGET_LINK_TRUSTED_PROXIES`. Configura el proxy para sobrescribir `X-Forwarded-For`; el limitador Caffeine es local por instancia. El PDF público solo muestra el nombre del cliente, sin NIF, teléfono, email ni dirección. El hosting frontend debe enviar `X-Robots-Tag: noindex, nofollow` y `Referrer-Policy: no-referrer` en `/p/*`. Consulta [el modelo de amenazas, límites, datos expuestos y texto recomendado para privacidad](docs/ENLACE-PUBLICO.md).
+
+La API también crea avisos privados de seguimiento para presupuestos enviados y sin resolver. El job se ejecuta cada día a las 09:00 Europe/Madrid; ajusta `APP_PRESUPUESTO_SEGUIMIENTO_CRON` para cambiar la hora. Consulta [Seguimiento automático de presupuestos](docs/SEGUIMIENTO-PRESUPUESTOS.md) para criterios, preferencias de email y la ejecución manual local.
 
 ---
 
@@ -22,7 +24,7 @@ En el código se apoya en:
 - **Panel cliente:** resumen de presupuestos y facturas por cliente (endpoint dedicado).
 - **Suscripción:** integración **Stripe** (checkout, portal de cliente, facturas, webhook). Para usuarios de prueba, se recomienda activar premium editando directamente el estado del usuario en PostgreSQL.
 - **Soporte y avisos:** contacto a buzón interno (multipart), notificaciones in-app.
-- **Tareas programadas:** recordatorios de factura, caducidad de trial, limpieza de sesiones y de auditoría.
+- **Tareas programadas:** recordatorios de factura y seguimiento de presupuestos, caducidad de trial, limpieza de sesiones y de auditoría.
 
 No hay `docker-compose` ni `Dockerfile` en el repositorio; el arranque es local con PostgreSQL, API Maven y frontend npm.
 
@@ -94,7 +96,7 @@ AppGestion/
 │       └── service/
 │   └── src/main/resources/
 │       ├── application.yml
-│       └── db/migration/        # Flyway V1..V36
+│       └── db/migration/        # Flyway V1..V42
 ├── frontend/
 │   ├── package.json
 │   ├── angular.json
@@ -218,6 +220,8 @@ Esta tabla es una referencia de nombres que reconoce la aplicación. Los comando
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY` | Stripe (`stripe.*` + validación en prod) |
 | `STRIPE_SUCCESS_URL`, `STRIPE_CANCEL_URL`, `STRIPE_PORTAL_RETURN_URL` | URLs de retorno Stripe |
 | `FRONTEND_URL` | URL del front (`app.frontend-url`); en producción: `https://noemiweb.com` |
+| `APP_PRESUPUESTO_SEGUIMIENTO_CRON` | Cron diario (`0 0 9 * * ?` por defecto); siempre se interpreta en Europe/Madrid |
+| `APP_PRESUPUESTO_SEGUIMIENTO_LOCAL_DAYS_OVERRIDE` | Solo perfil `local`: días de espera al ejecutar manualmente (por defecto `0`) |
 | `SUPPORT_INBOX_EMAIL` | Buzón para formulario de soporte (`app.support.inbox-email`) |
 | `TOTP_ISSUER` | Nombre del emisor en apps TOTP |
 | `SESSIONS_CLEANUP_*`, `AUDIT_*` | Limpieza de sesiones y auditoría |
@@ -349,6 +353,8 @@ Registro manual de compras/gastos con IVA soportado. La cuota IVA de los gastos 
 |--------|------|-------------------|
 | GET | `/presupuestos` | Listar |
 | GET | `/presupuestos/{id}` | Detalle |
+| POST | `/presupuestos/{id}/seguimiento/silenciar` | Silenciar avisos de seguimiento |
+| DELETE | `/presupuestos/{id}/seguimiento/silenciar` | Reactivar seguimiento |
 | GET | `/presupuestos/{id}/pdf` | PDF |
 | POST | `/presupuestos/{id}/enviar-email` | Enviar por email |
 | POST | `/presupuestos/ia/borrador` | Generar borrador editable desde texto; sin persistencia y con precios solo desde el catálogo del usuario |
@@ -380,6 +386,8 @@ Registro manual de compras/gastos con IVA soportado. La cuota IVA de los gastos 
 | PUT | `/config/empresa` | Actualizar empresa |
 | PATCH | `/config/empresa/metodos-cobro` | Métodos de cobro |
 | PATCH | `/config/empresa/recordatorios-cobro` | Recordatorios cobro |
+| GET | `/config/empresa/seguimiento-presupuestos` | Preferencias de seguimiento |
+| PATCH | `/config/empresa/seguimiento-presupuestos` | Actualizar preferencias de seguimiento |
 | PATCH | `/config/empresa/datos-fiscales` | Datos fiscales |
 | PATCH | `/config/empresa/plantillas-pdf` | Plantillas PDF |
 | POST | `/config/empresa/plantillas-pdf/preview` | Vista previa PDF plantillas |
@@ -442,10 +450,10 @@ Servicios Spring (`@Service`) y utilidades clave:
 
 ## 🗄️ Base de datos (Flyway)
 
-Migraciones en `api/src/main/resources/db/migration/` (**V1** a **V36**), incluyendo entre otras:
+Migraciones en `api/src/main/resources/db/migration/` (**V1** a **V42**), incluyendo entre otras:
 
 - **V1:** esquema inicial (`usuarios`, `empresas`, `clientes`, `materiales`, `presupuestos`, `presupuesto_items`, `facturas`, `factura_items`, …)
-- Evolución posterior: reset password, recordatorios, cobros, organizaciones/membresías, invitaciones, datos fiscales, logo, métodos de cobro, TOTP, notificaciones, sesiones, auditoría de accesos, rubro autónomo, recordatorios cliente, anticipo fiscal, email híbrido/outbox, Stripe billing, índices de rendimiento, etc.
+- Evolución posterior: reset password, recordatorios, cobros, organizaciones/membresías, invitaciones, datos fiscales, logo, métodos de cobro, TOTP, notificaciones, sesiones, auditoría de accesos, rubro autónomo, recordatorios cliente, anticipo fiscal, email híbrido/outbox, Stripe billing, seguimiento de presupuestos, índices de rendimiento, etc.
 
 Hibernate `ddl-auto`: **`validate`** por defecto y en `prod`; **`update`** solo en perfil **`local`**.
 
