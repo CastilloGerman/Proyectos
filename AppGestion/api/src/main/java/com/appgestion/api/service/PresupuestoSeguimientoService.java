@@ -78,7 +78,7 @@ public class PresupuestoSeguimientoService {
     public SeguimientoPresupuestosResponse getSettings(Long usuarioId) {
         return empresaRepository.findByUsuarioId(usuarioId)
                 .map(this::toResponse)
-                .orElseGet(() -> new SeguimientoPresupuestosResponse(true, 3, 2, false));
+                .orElseGet(() -> new SeguimientoPresupuestosResponse(true, 3, 2, false, true));
     }
 
     @Transactional
@@ -102,6 +102,9 @@ public class PresupuestoSeguimientoService {
         if (request.seguimientoDiasEspera() != null) empresa.setSeguimientoDiasEspera(request.seguimientoDiasEspera());
         if (request.seguimientoMaxAvisos() != null) empresa.setSeguimientoMaxAvisos(request.seguimientoMaxAvisos());
         if (request.seguimientoEmailResumen() != null) empresa.setSeguimientoEmailResumen(request.seguimientoEmailResumen());
+        if (request.permitirRespuestaCliente() != null) {
+            empresa.setPermitirRespuestaCliente(request.permitirRespuestaCliente());
+        }
         return toResponse(empresaRepository.save(empresa));
     }
 
@@ -137,7 +140,8 @@ public class PresupuestoSeguimientoService {
                 Presupuesto presupuesto = presupuestoRepository.findOwnedForUpdate(candidate.getId(), usuarioId).orElse(null);
                 if (presupuesto == null || presupuesto.isSeguimientoSilenciado()
                         || presupuesto.getEnviadoAt() == null
-                        || !PresupuestoEstado.isUnresolved(presupuesto.getEstado())) continue;
+                        || !PresupuestoEstado.isUnresolved(presupuesto.getEstado())
+                        || presupuesto.getRespuestaCliente() != null) continue;
 
                 Instant latestView = enlaceRepository.latestViewAt(presupuesto.getId());
                 String type = latestView == null ? "NO_ABIERTO" : "ABIERTO_SIN_RESPUESTA";
@@ -218,7 +222,8 @@ public class PresupuestoSeguimientoService {
     private SeguimientoPresupuestosResponse toResponse(Empresa empresa) {
         return new SeguimientoPresupuestosResponse(
                 empresa.isSeguimientoActivo(), empresa.getSeguimientoDiasEspera(),
-                empresa.getSeguimientoMaxAvisos(), empresa.isSeguimientoEmailResumen());
+                empresa.getSeguimientoMaxAvisos(), empresa.isSeguimientoEmailResumen(),
+                empresa.isPermitirRespuestaCliente());
     }
 
     private Digest digest(String locale, List<NewAlert> alerts) {

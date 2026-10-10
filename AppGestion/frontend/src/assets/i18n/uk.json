@@ -37,7 +37,26 @@
     "hint3": "Ми повідомимо вас, коли клієнт перегляне його.",
     "sent": "Надіслано {{date}} через {{channel}}.",
     "email": "електронну пошту",
-    "whatsapp": "WhatsApp"
+    "whatsapp": "WhatsApp",
+    "responseTitle": "Що ви думаєте про цей кошторис?",
+    "responseSaved": "Сповіщення надіслано.",
+    "currentResponse": "Ваше поточне сповіщення: ",
+    "responsePrompt": "Повідомте компанію, якщо вас цікавить або маєте запитання.",
+    "optionINTERESA": "Мене цікавить",
+    "optionDUDAS": "Маю запитання",
+    "interested": "Мене цікавить",
+    "haveQuestions": "Маю запитання",
+    "nonContractual": "Це сповіщення не є договором. Деталі узгоджуються безпосередньо з компанією.",
+    "responseDialogTitle": "Надіслати сповіщення компанії",
+    "responseDialogDescription": "Ви вкажете, що {{option}}. Статус кошторису не зміниться, доки компанія не оновить його.",
+    "optionalMessage": "Необов'язкове повідомлення для компанії",
+    "messageCount": "{{count}} / 500 символів",
+    "cancelResponse": "Скасувати",
+    "sendResponse": "Надіслати сповіщення",
+    "sendingResponse": "Надсилається…",
+    "responseUnavailable": "Це посилання більше недоступне.",
+    "responseRateLimited": "Зачекайте кілька хвилин, перш ніж змінити сповіщення.",
+    "responseFailed": "Не вдалося надіслати сповіщення. Спробуйте ще раз."
   },
   "nav": {
     "dashboard": "Панель",
@@ -1654,6 +1673,10 @@
     "silenceSuccess": "Нагадування вимкнено.",
     "reactivateSuccess": "Нагадування знову ввімкнено.",
     "actionError": "Не вдалося змінити нагадування. Спробуйте ще раз.",
-    "pendingAlert": "Потрібно опрацювати нагадування."
+    "pendingAlert": "Потрібно опрацювати нагадування.",
+    "clientResponseTitle": "Відповідь клієнта",
+    "clientResponse": "Клієнт вказав «{{option}}» {{date}}.",
+    "clientMessage": "Повідомлення клієнта:",
+    "clientResponses": "Дозволити клієнту повідомляти мене з посилання"
   }
 }

@@ -53,6 +53,15 @@ public class Presupuesto {
     @Column(name = "seguimiento_silenciado", nullable = false)
     private boolean seguimientoSilenciado;
 
+    @Column(name = "respuesta_cliente", length = 10)
+    private String respuestaCliente;
+
+    @Column(name = "respuesta_cliente_at")
+    private java.time.Instant respuestaClienteAt;
+
+    @Column(name = "respuesta_cliente_mensaje", length = 500)
+    private String respuestaClienteMensaje;
+
     @Column(name = "descuento_global_porcentaje")
     private Double descuentoGlobalPorcentaje = 0.0;
 
@@ -127,6 +136,12 @@ public class Presupuesto {
     public void setEnlaceVistoNotificado(boolean enlaceVistoNotificado) { this.enlaceVistoNotificado = enlaceVistoNotificado; }
     public boolean isSeguimientoSilenciado() { return seguimientoSilenciado; }
     public void setSeguimientoSilenciado(boolean seguimientoSilenciado) { this.seguimientoSilenciado = seguimientoSilenciado; }
+    public String getRespuestaCliente() { return respuestaCliente; }
+    public void setRespuestaCliente(String respuestaCliente) { this.respuestaCliente = respuestaCliente; }
+    public java.time.Instant getRespuestaClienteAt() { return respuestaClienteAt; }
+    public void setRespuestaClienteAt(java.time.Instant respuestaClienteAt) { this.respuestaClienteAt = respuestaClienteAt; }
+    public String getRespuestaClienteMensaje() { return respuestaClienteMensaje; }
+    public void setRespuestaClienteMensaje(String respuestaClienteMensaje) { this.respuestaClienteMensaje = respuestaClienteMensaje; }
 
     public Double getDescuentoGlobalPorcentaje() { return descuentoGlobalPorcentaje; }
     public void setDescuentoGlobalPorcentaje(Double descuentoGlobalPorcentaje) { this.descuentoGlobalPorcentaje = descuentoGlobalPorcentaje; }

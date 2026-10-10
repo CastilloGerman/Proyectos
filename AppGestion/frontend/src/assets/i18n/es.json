@@ -37,7 +37,26 @@
     "hint3": "Te avisamos cuando lo vea.",
     "sent": "Enviado el {{date}} por {{channel}}.",
     "email": "email",
-    "whatsapp": "WhatsApp"
+    "whatsapp": "WhatsApp",
+    "responseTitle": "¿Qué opinas de este presupuesto?",
+    "responseSaved": "Aviso enviado.",
+    "currentResponse": "Tu aviso actual: ",
+    "responsePrompt": "Avisa a la empresa si te interesa o si tienes dudas.",
+    "optionINTERESA": "Me interesa",
+    "optionDUDAS": "Tengo dudas",
+    "interested": "Me interesa",
+    "haveQuestions": "Tengo dudas",
+    "nonContractual": "Este aviso no constituye un contrato. Los detalles se acuerdan directamente con la empresa.",
+    "responseDialogTitle": "Enviar aviso a la empresa",
+    "responseDialogDescription": "Vas a indicar que {{option}}. El estado del presupuesto no cambiará hasta que la empresa lo actualice.",
+    "optionalMessage": "Mensaje opcional para la empresa",
+    "messageCount": "{{count}} / 500 caracteres",
+    "cancelResponse": "Cancelar",
+    "sendResponse": "Enviar aviso",
+    "sendingResponse": "Enviando…",
+    "responseUnavailable": "Este enlace ya no está disponible.",
+    "responseRateLimited": "Espera unos minutos antes de cambiar tu aviso.",
+    "responseFailed": "No se pudo enviar el aviso. Inténtalo de nuevo."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -1654,6 +1673,10 @@
     "silenceSuccess": "Seguimiento silenciado.",
     "reactivateSuccess": "Seguimiento reactivado.",
     "actionError": "No se pudo actualizar el seguimiento. Inténtalo de nuevo.",
-    "pendingAlert": "Hay un aviso de seguimiento pendiente."
+    "pendingAlert": "Hay un aviso de seguimiento pendiente.",
+    "clientResponseTitle": "Respuesta del cliente",
+    "clientResponse": "El cliente indicó '{{option}}' el {{date}}.",
+    "clientMessage": "Mensaje del cliente:",
+    "clientResponses": "Permitir que el cliente me avise desde el enlace"
   }
 }

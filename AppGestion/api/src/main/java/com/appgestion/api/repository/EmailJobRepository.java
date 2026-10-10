@@ -19,4 +19,5 @@ public interface EmailJobRepository extends JpaRepository<EmailJob, Long> {
             ORDER BY j.createdAt ASC
             """)
     List<EmailJob> findDuePending(@Param("pending") EmailJobStatus pending, @Param("now") Instant now, Pageable pageable);
+
 }

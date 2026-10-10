@@ -355,7 +355,10 @@ public class PresupuestoService {
                 enlace.getNumVistas() != null ? enlace.getNumVistas() : 0L,
                 alertCount,
                 latestAlert,
-                presupuesto.isSeguimientoSilenciado()
+                presupuesto.isSeguimientoSilenciado(),
+                presupuesto.getRespuestaCliente(),
+                presupuesto.getRespuestaClienteAt(),
+                presupuesto.getRespuestaClienteMensaje()
         );
     }
 

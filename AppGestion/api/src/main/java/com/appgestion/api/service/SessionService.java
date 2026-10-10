@@ -10,6 +10,7 @@ import com.appgestion.api.repository.UsuarioSesionRepository;
 import com.appgestion.api.security.JwtService;
 import com.appgestion.api.security.SecurityUtils;
 import com.appgestion.api.util.ClientMetadataParser;
+import com.appgestion.api.util.TrustedClientAddressResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -36,6 +37,8 @@ public class SessionService {
     private final UsuarioRepository usuarioRepository;
     private final JwtService jwtService;
     private final AuditAccessService auditAccessService;
+    private final TrustedClientAddressResolver.ClientIpMode clientIpMode;
+    private final List<TrustedClientAddressResolver.Cidr> trustedProxies;
 
     @Value("${app.jwt.expiration-ms}")
     private long expirationMs;
@@ -43,16 +46,30 @@ public class SessionService {
     public SessionService(UsuarioSesionRepository sesionRepository,
                           UsuarioRepository usuarioRepository,
                           JwtService jwtService,
-                          AuditAccessService auditAccessService) {
+                          AuditAccessService auditAccessService,
+                          @Value("${app.security.client-ip-mode:none}") String clientIpMode,
+                          @Value("${app.security.trusted-proxies:}") String trustedProxyList) {
         this.sesionRepository = sesionRepository;
         this.usuarioRepository = usuarioRepository;
         this.jwtService = jwtService;
         this.auditAccessService = auditAccessService;
+        this.clientIpMode = parseClientIpMode(clientIpMode);
+        this.trustedProxies = TrustedClientAddressResolver.Cidr.parseList(trustedProxyList);
+    }
+
+    private static TrustedClientAddressResolver.ClientIpMode parseClientIpMode(String value) {
+        if (value == null) return TrustedClientAddressResolver.ClientIpMode.NONE;
+        try {
+            String normalized = value.trim().toUpperCase().replace('-', '_');
+            return TrustedClientAddressResolver.ClientIpMode.valueOf(normalized);
+        } catch (IllegalArgumentException e) {
+            return TrustedClientAddressResolver.ClientIpMode.NONE;
+        }
     }
 
     @Transactional
     public UsuarioSesion createSession(Usuario usuario, HttpServletRequest request, DeviceClientInfoRequest clientInfo) {
-        ClientMetadataParser.Snapshot snap = ClientMetadataParser.parse(request, clientInfo);
+        ClientMetadataParser.Snapshot snap = ClientMetadataParser.parse(request, clientInfo, clientIpMode, trustedProxies);
         Instant now = Instant.now();
         UsuarioSesion s = new UsuarioSesion();
         s.setId(UUID.randomUUID().toString());

@@ -35,6 +35,7 @@ export class ConfigService {
         diasEspera: config.seguimientoDiasEspera,
         maxAvisos: config.seguimientoMaxAvisos,
         emailResumen: config.seguimientoEmailResumen,
+        permitirRespuestaCliente: config.permitirRespuestaCliente ?? true,
       })),
     );
   }
@@ -47,6 +48,7 @@ export class ConfigService {
         seguimientoDiasEspera: body.diasEspera,
         seguimientoMaxAvisos: body.maxAvisos,
         seguimientoEmailResumen: body.emailResumen,
+        permitirRespuestaCliente: body.permitirRespuestaCliente,
       },
     ).pipe(
       map(config => ({
@@ -54,6 +56,7 @@ export class ConfigService {
         diasEspera: config.seguimientoDiasEspera,
         maxAvisos: config.seguimientoMaxAvisos,
         emailResumen: config.seguimientoEmailResumen,
+        permitirRespuestaCliente: config.permitirRespuestaCliente ?? true,
       })),
     );
   }
@@ -120,6 +123,7 @@ export interface SeguimientoPresupuestosConfig {
   diasEspera: number;
   maxAvisos: number;
   emailResumen: boolean;
+  permitirRespuestaCliente: boolean;
 }
 
 export interface SeguimientoPresupuestosApiDto {
@@ -127,6 +131,7 @@ export interface SeguimientoPresupuestosApiDto {
   seguimientoDiasEspera: number;
   seguimientoMaxAvisos: number;
   seguimientoEmailResumen: boolean;
+  permitirRespuestaCliente?: boolean;
 }
 
 export interface DatosFiscalesPayload {

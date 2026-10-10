@@ -4,5 +4,6 @@ public record SeguimientoPresupuestosResponse(
         boolean seguimientoActivo,
         int seguimientoDiasEspera,
         int seguimientoMaxAvisos,
-        boolean seguimientoEmailResumen
+        boolean seguimientoEmailResumen,
+        boolean permitirRespuestaCliente
 ) {}

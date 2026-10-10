@@ -1,7 +1,9 @@
 package com.appgestion.api.config.migration;
 
+import com.appgestion.api.domain.entity.AppMigrationState;
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.domain.enums.SubscriptionStatus;
+import com.appgestion.api.repository.AppMigrationStateRepository;
 import com.appgestion.api.repository.UsuarioRepository;
 import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
@@ -13,27 +15,53 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Migra usuarios existentes al nuevo modelo de suscripción.
- * Ejecuta una sola vez al arrancar la aplicación.
+ * Ejecuta una sola vez al arrancar la aplicación, controlado por un flag en {@code app_migration_state}.
+ * Si la fila con key {@code subscription_migration_v1} existe, se omite la migración (arranques en frío posteriores).
  */
 @Component
 public class SubscriptionMigrationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(SubscriptionMigrationRunner.class);
+    private static final String MIGRATION_KEY = "subscription_migration_v1";
 
     private final UsuarioRepository usuarioRepository;
+    private final AppMigrationStateRepository appMigrationStateRepository;
     private final EntityManager entityManager;
 
-    public SubscriptionMigrationRunner(UsuarioRepository usuarioRepository, EntityManager entityManager) {
+    public SubscriptionMigrationRunner(UsuarioRepository usuarioRepository,
+                                       AppMigrationStateRepository appMigrationStateRepository,
+                                       EntityManager entityManager) {
         this.usuarioRepository = usuarioRepository;
+        this.appMigrationStateRepository = appMigrationStateRepository;
         this.entityManager = entityManager;
     }
 
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void migrateExistingUsers() {
+        // Guard: si ya se ejecutó, saltar (evita cargar todos los usuarios en cada arranque en frío).
+        Optional<AppMigrationState> existing;
+        try {
+            existing = appMigrationStateRepository.findByKey(MIGRATION_KEY);
+        } catch (Exception e) {
+            // Si la tabla app_migration_state no existe, es un error de despliegue.
+            throw new IllegalStateException(
+                    "SubscriptionMigrationRunner: la tabla 'app_migration_state' no existe. "
+                            + "Ejecuta las migraciones de Flyway antes del primer arranque. "
+                            + "Procedimiento: arranca el JAR con SPRING_PROFILES_ACTIVE=prod (sin perfil serverless) "
+                            + "y las variables de conexión a la BD, o ejecuta 'mvn flyway:migrate' con la misma configuración. "
+                            + "Detalle: " + e.getMessage(),
+                    e);
+        }
+        if (existing.isPresent()) {
+            log.debug("SubscriptionMigrationRunner: migración ya ejecutada ({}), omitiendo", MIGRATION_KEY);
+            return;
+        }
+
         List<Usuario> usuarios = usuarioRepository.findAll();
         int updated = 0;
         for (Usuario u : usuarios) {
@@ -46,6 +74,8 @@ public class SubscriptionMigrationRunner {
         if (updated > 0) {
             log.info("SubscriptionMigrationRunner: migrados {} usuarios al nuevo modelo de suscripción", updated);
         }
+        // Marcar como ejecutada para los siguientes arranques.
+        appMigrationStateRepository.save(new AppMigrationState(MIGRATION_KEY, String.valueOf(updated)));
     }
 
     private boolean needsMigration(Usuario u) {

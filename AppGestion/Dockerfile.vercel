@@ -1,0 +1,30 @@
+# ── Etapa 1: Build con Maven wrapper ──
+FROM maven:3.9-eclipse-temurin-21-alpine AS build
+WORKDIR /build
+
+# Copiar pom padre + hijo para resolver dependencias primero (caché de capas)
+COPY pom.xml pom.xml
+COPY api/pom.xml api/pom.xml
+RUN mvn -B -f api/pom.xml dependency:resolve
+
+# Copiar fuente y compilar
+COPY api/src api/src
+RUN mvn -B -Pprod -f api/pom.xml package -DskipTests
+
+# ── Etapa 2: JRE ligero ──
+FROM eclipse-temurin:21-jre-alpine
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+COPY --from=build /build/api/target/appgestion-api.jar /app/app.jar
+
+USER appuser
+WORKDIR /app
+
+# Vercel inyecta PORT (default 80); local usa 8080.
+# La app ya lee server.port: ${PORT:8080} en application.yml.
+EXPOSE 80
+
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200" \
+    SPRING_PROFILES_ACTIVE="prod,serverless"
+
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

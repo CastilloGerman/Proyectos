@@ -110,6 +110,36 @@ public class NotificacionService {
         notificacionRepository.save(notification);
     }
 
+    @Transactional
+    public void respuestaClientePresupuesto(Usuario owner, String clientName, Long budgetNumber, String opcion) {
+        String locale = owner.getUiLocale();
+        String language = locale == null ? "es" : locale.split("[-_]")[0].toLowerCase();
+        boolean interested = "INTERESA".equals(opcion);
+        String title = switch (language) {
+            case "en" -> "Your customer replied";
+            case "fr" -> "Votre client a répondu";
+            case "ro" -> "Clientul a răspuns";
+            case "uk" -> "Клієнт відповів";
+            default -> "Tu cliente ha respondido";
+        };
+        String summary = switch (language) {
+            case "en" -> clientName + (interested ? " is interested in estimate no. " : " has questions about estimate no. ") + budgetNumber;
+            case "fr" -> clientName + (interested ? " est intéressé par le devis nº " : " a des questions sur le devis nº ") + budgetNumber;
+            case "ro" -> clientName + (interested ? " este interesat de oferta nr. " : " are întrebări despre oferta nr. ") + budgetNumber;
+            case "uk" -> clientName + (interested ? " зацікавлений у кошторисі № " : " має запитання щодо кошторису № ") + budgetNumber;
+            default -> clientName + (interested ? " ha indicado que le interesa el presupuesto Nº " : " tiene dudas sobre el presupuesto Nº ") + budgetNumber;
+        };
+        Notificacion notification = new Notificacion();
+        notification.setUsuario(owner);
+        notification.setTipo(NotificacionTipo.SISTEMA);
+        notification.setSeveridad(NotificacionSeveridad.INFO);
+        notification.setTitulo(title);
+        notification.setResumen(summary);
+        notification.setActionPath("/presupuestos/" + budgetNumber);
+        notification.setLeida(false);
+        notificacionRepository.save(notification);
+    }
+
     @Transactional(readOnly = true)
     public Page<NotificacionResponse> listForCurrentUser(Long usuarioId, Boolean readFilter, int page, int size) {
         int p = Math.max(0, page);

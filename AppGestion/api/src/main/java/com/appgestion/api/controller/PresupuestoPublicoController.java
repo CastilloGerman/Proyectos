@@ -1,10 +1,14 @@
 package com.appgestion.api.controller;
 
 import com.appgestion.api.dto.response.PresupuestoPublicoResponse;
+import com.appgestion.api.dto.request.RespuestaClienteRequest;
+import com.appgestion.api.dto.response.RespuestaClienteConfirmacionResponse;
 import com.appgestion.api.service.PublicBudgetLinkService;
+import com.appgestion.api.service.PresupuestoRespuestaClienteService;
 import com.appgestion.api.service.PublicLinkRateLimiter;
 import com.appgestion.api.service.PublicClientAddressResolver;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -19,12 +23,16 @@ import java.util.Map;
 public class PresupuestoPublicoController {
     private static final String UNAVAILABLE = "Este enlace no está disponible";
     private final PublicBudgetLinkService linkService;
+    private final PresupuestoRespuestaClienteService respuestaClienteService;
     private final PublicLinkRateLimiter rateLimiter;
     private final PublicClientAddressResolver clientAddressResolver;
 
-    public PresupuestoPublicoController(PublicBudgetLinkService linkService, PublicLinkRateLimiter rateLimiter,
+    public PresupuestoPublicoController(PublicBudgetLinkService linkService,
+                                        PresupuestoRespuestaClienteService respuestaClienteService,
+                                        PublicLinkRateLimiter rateLimiter,
                                         PublicClientAddressResolver clientAddressResolver) {
         this.linkService = linkService;
+        this.respuestaClienteService = respuestaClienteService;
         this.rateLimiter = rateLimiter;
         this.clientAddressResolver = clientAddressResolver;
     }
@@ -61,6 +69,26 @@ public class PresupuestoPublicoController {
             linkService.registerView(token);
             return ResponseEntity.noContent().headers(publicHeaders()).build();
         } catch (ResponseStatusException ex) {
+            return unavailable();
+        }
+    }
+
+    @PostMapping("/{token}/responder")
+    public ResponseEntity<?> respond(@PathVariable String token, @Valid @RequestBody RespuestaClienteRequest body,
+                                      HttpServletRequest request) {
+        ResponseEntity<?> limited = rateLimit(token, request);
+        if (limited != null) return limited;
+        try {
+            respuestaClienteService.respond(token, body);
+            return ResponseEntity.ok().headers(publicHeaders())
+                    .body(new RespuestaClienteConfirmacionResponse("Tu aviso se ha enviado a la empresa."));
+        } catch (ResponseStatusException ex) {
+            if (ex.getStatusCode() == HttpStatus.NOT_FOUND) return unavailable();
+            if (ex.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).headers(publicHeaders())
+                        .header(HttpHeaders.RETRY_AFTER, "300")
+                        .body(Map.of("error", "Espera unos minutos antes de cambiar tu aviso."));
+            }
             return unavailable();
         }
     }

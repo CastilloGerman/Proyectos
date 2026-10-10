@@ -1,0 +1,14 @@
+# Dependencias de build (no se copian al contexto final)
+.mvn/wrapper/maven-wrapper.jar
+.idea/
+*.iml
+*.ipr
+*.iws
+target/
+*.class
+*.log
+node_modules/
+.git/
+.gitignore
+*.swp
+*~

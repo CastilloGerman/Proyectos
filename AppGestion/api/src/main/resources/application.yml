@@ -35,6 +35,7 @@ spring:
   flyway:
     baseline-on-migrate: true
     baseline-version: 1
+    validate-on-migrate: false
     locations: classpath:db/migration
 
   jpa:
@@ -128,6 +129,14 @@ app:
       enabled: true
       capacity: 30
       refill-minutes: 15
+    # Modo de resolución de la IP del cliente:
+    #   none           = ignora cabeceras proxy, usa IP peer (default, seguro en local).
+    #   trusted-proxies = valida peer contra app.security.trusted-proxies (CIDR) antes de leer X-Forwarded-For.
+    #   vercel         = usa x-vercel-forwarded-for / X-Forwarded-For (Vercel sobrescribe X-Forwarded-For con anti-spoofing).
+    client-ip-mode: ${APP_SECURITY_CLIENT_IP_MODE:none}
+    # Proxies de confianza para modo trusted-proxies (lista CIDR separada por comas).
+    # Se ignora en modo none y vercel.
+    trusted-proxies: ${APP_SECURITY_TRUSTED_PROXIES:}
   # Sesiones JWT persistidas (dispositivos): purga automática de filas muy antiguas.
   sessions:
     cleanup:
@@ -248,3 +257,33 @@ logging:
     '[com.appgestion]': INFO
     '[org.springframework.web]': WARN
     '[org.hibernate.SQL]': WARN
+
+---
+spring:
+  config:
+    activate:
+      on-profile: serverless
+  # En serverless (Vercel), las migraciones se ejecutan fuera de la API.
+  # La API solo valida que el schema sea correcto.
+  flyway:
+    enabled: false
+  datasource:
+    hikari:
+      # Con pooler transaccional de Neon, Hikari añade una capa innecesaria.
+      # Pool mínimo: el pooler gestiona las conexiones reales.
+      maximum-pool-size: 2
+      minimum-idle: 0
+      connection-timeout: 10000
+app:
+  # Desactivar @Scheduled en serverless (no hay proceso persistente).
+  # Los jobs se dispararán mediante endpoints externos (fase siguiente).
+  sessions:
+    cleanup:
+      enabled: false
+  audit:
+    access:
+      cleanup:
+        enabled: false
+  security:
+    # En Vercel, usa x-vercel-forwarded-for (anti-spoofing).
+    client-ip-mode: vercel

@@ -37,5 +37,8 @@ public record PresupuestoResponse(
         Long enlaceNumVistas,
         long seguimientoAvisosEnviados,
         java.time.Instant seguimientoUltimoAvisoAt,
-        boolean seguimientoSilenciado
+        boolean seguimientoSilenciado,
+        String respuestaCliente,
+        java.time.Instant respuestaClienteAt,
+        String respuestaClienteMensaje
 ) {}

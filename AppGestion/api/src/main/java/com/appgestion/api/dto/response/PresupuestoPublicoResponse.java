@@ -15,7 +15,9 @@ public record PresupuestoPublicoResponse(
         Double iva,
         Double total,
         String notas,
-        List<String> condiciones
+        List<String> condiciones,
+        boolean permiteResponder,
+        String respuestaCliente
 ) {
     public record PartidaPublica(String descripcion, Double cantidad, String unidad, Double precioUnitario, Double subtotal) {}
 }

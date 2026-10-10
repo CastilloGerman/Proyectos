@@ -10,6 +10,7 @@ import com.appgestion.api.repository.AuditAccessEventRepository;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.appgestion.api.util.ClientMetadataParser;
 import com.appgestion.api.util.IpAnonymizer;
+import com.appgestion.api.util.TrustedClientAddressResolver;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
@@ -52,6 +53,8 @@ public class AuditAccessService {
     private final UsuarioRepository usuarioRepository;
     private final CurrentUserService currentUserService;
     private final ObjectMapper objectMapper;
+    private final TrustedClientAddressResolver.ClientIpMode clientIpMode;
+    private final List<TrustedClientAddressResolver.Cidr> trustedProxies;
 
     @Value("${app.audit.access.anonymize-ip:true}")
     private boolean anonymizeIp;
@@ -59,11 +62,25 @@ public class AuditAccessService {
     public AuditAccessService(AuditAccessEventRepository auditAccessEventRepository,
                               UsuarioRepository usuarioRepository,
                               CurrentUserService currentUserService,
-                              ObjectMapper objectMapper) {
+                              ObjectMapper objectMapper,
+                              @Value("${app.security.client-ip-mode:none}") String clientIpMode,
+                              @Value("${app.security.trusted-proxies:}") String trustedProxyList) {
         this.auditAccessEventRepository = auditAccessEventRepository;
         this.usuarioRepository = usuarioRepository;
         this.currentUserService = currentUserService;
         this.objectMapper = objectMapper;
+        this.clientIpMode = parseClientIpMode(clientIpMode);
+        this.trustedProxies = TrustedClientAddressResolver.Cidr.parseList(trustedProxyList);
+    }
+
+    private static TrustedClientAddressResolver.ClientIpMode parseClientIpMode(String value) {
+        if (value == null) return TrustedClientAddressResolver.ClientIpMode.NONE;
+        try {
+            String normalized = value.trim().toUpperCase().replace('-', '_');
+            return TrustedClientAddressResolver.ClientIpMode.valueOf(normalized);
+        } catch (IllegalArgumentException e) {
+            return TrustedClientAddressResolver.ClientIpMode.NONE;
+        }
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -112,7 +129,7 @@ public class AuditAccessService {
         }
         ClientMetadataParser.Snapshot snap = request == null
                 ? new ClientMetadataParser.Snapshot("", "", "Desconocido", "Desconocido", "UNKNOWN", "—")
-                : ClientMetadataParser.parse(request, null);
+                : ClientMetadataParser.parse(request, null, clientIpMode, trustedProxies);
         String rawIp = snap.ipAddress();
         boolean anon = anonymizeIp && StringUtils.hasText(rawIp);
         String ip = anon ? IpAnonymizer.anonymize(rawIp) : rawIp;

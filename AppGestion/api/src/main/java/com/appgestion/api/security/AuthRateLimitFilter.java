@@ -1,5 +1,6 @@
 package com.appgestion.api.security;
 
+import com.appgestion.api.util.TrustedClientAddressResolver;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -10,12 +11,15 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Limita peticiones por IP en rutas de autenticación (fuerza bruta / abuso).
  * Se registra solo en {@link com.appgestion.api.config.SecurityConfig} (no como bean de filtro servlet suelto).
+ *
+ * Usa {@link TrustedClientAddressResolver} para resolver la IP del cliente según el modo configurado.
  */
 public class AuthRateLimitFilter extends OncePerRequestFilter {
 
@@ -23,11 +27,17 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
     private final boolean enabled;
     private final int capacity;
     private final int refillMinutes;
+    private final TrustedClientAddressResolver.ClientIpMode mode;
+    private final List<TrustedClientAddressResolver.Cidr> trustedProxies;
 
-    public AuthRateLimitFilter(boolean enabled, int capacity, int refillMinutes) {
+    public AuthRateLimitFilter(boolean enabled, int capacity, int refillMinutes,
+                               TrustedClientAddressResolver.ClientIpMode mode,
+                               List<TrustedClientAddressResolver.Cidr> trustedProxies) {
         this.enabled = enabled;
         this.capacity = capacity;
         this.refillMinutes = refillMinutes;
+        this.mode = mode;
+        this.trustedProxies = trustedProxies;
     }
 
     @Override
@@ -72,11 +82,7 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
                 .build();
     }
 
-    private static String clientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
-        }
-        return request.getRemoteAddr() != null ? request.getRemoteAddr() : "unknown";
+    private String clientIp(HttpServletRequest request) {
+        return TrustedClientAddressResolver.resolveStatic(request, mode, trustedProxies);
     }
 }

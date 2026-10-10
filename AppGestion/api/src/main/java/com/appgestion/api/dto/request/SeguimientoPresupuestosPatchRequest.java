@@ -7,5 +7,6 @@ public record SeguimientoPresupuestosPatchRequest(
         Boolean seguimientoActivo,
         @Min(1) @Max(30) Integer seguimientoDiasEspera,
         @Min(1) @Max(5) Integer seguimientoMaxAvisos,
-        Boolean seguimientoEmailResumen
+        Boolean seguimientoEmailResumen,
+        Boolean permitirRespuestaCliente
 ) {}

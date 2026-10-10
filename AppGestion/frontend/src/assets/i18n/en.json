@@ -37,7 +37,26 @@
     "hint3": "We notify you when they view it.",
     "sent": "Sent {{date}} via {{channel}}.",
     "email": "email",
-    "whatsapp": "WhatsApp"
+    "whatsapp": "WhatsApp",
+    "responseTitle": "What do you think of this estimate?",
+    "responseSaved": "Notice sent.",
+    "currentResponse": "Your current notice: ",
+    "responsePrompt": "Let the company know if you're interested or have questions.",
+    "optionINTERESA": "I'm interested",
+    "optionDUDAS": "I have questions",
+    "interested": "I'm interested",
+    "haveQuestions": "I have questions",
+    "nonContractual": "This notice does not constitute a contract. Details are agreed directly with the company.",
+    "responseDialogTitle": "Send notice to the company",
+    "responseDialogDescription": "You will indicate that {{option}}. The estimate status will not change until the company updates it.",
+    "optionalMessage": "Optional message for the company",
+    "messageCount": "{{count}} / 500 characters",
+    "cancelResponse": "Cancel",
+    "sendResponse": "Send notice",
+    "sendingResponse": "Sending…",
+    "responseUnavailable": "This link is no longer available.",
+    "responseRateLimited": "Wait a few minutes before changing your notice.",
+    "responseFailed": "Notice could not be sent. Please try again."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -1654,6 +1673,10 @@
     "silenceSuccess": "Follow-up silenced.",
     "reactivateSuccess": "Follow-up reactivated.",
     "actionError": "Follow-up could not be updated. Please try again.",
-    "pendingAlert": "A follow-up reminder is pending."
+    "pendingAlert": "A follow-up reminder is pending.",
+    "clientResponseTitle": "Client response",
+    "clientResponse": "The client indicated '{{option}}' on {{date}}.",
+    "clientMessage": "Client message:",
+    "clientResponses": "Allow the client to notify me from the link"
   }
 }

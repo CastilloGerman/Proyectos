@@ -2,6 +2,7 @@ package com.appgestion.api.service;
 
 import com.appgestion.api.domain.entity.Presupuesto;
 import com.appgestion.api.domain.entity.PresupuestoEnlace;
+import com.appgestion.api.constant.PresupuestoEstado;
 import com.appgestion.api.dto.response.PresupuestoEnlaceCreadoResponse;
 import com.appgestion.api.dto.response.PresupuestoEnlaceEstadoResponse;
 import com.appgestion.api.dto.response.PresupuestoPublicoResponse;
@@ -142,11 +143,15 @@ public class PublicBudgetLinkService {
         List<String> condiciones = condicionesService.desdeJson(presupuesto.getCondicionesActivasJson()).stream()
                 .map(key -> labels.getOrDefault(key, key))
                 .toList();
+        boolean permiteResponder = (empresa == null || empresa.isPermitirRespuestaCliente())
+                && presupuesto.getEnviadoAt() != null
+                && PresupuestoEstado.isUnresolved(presupuesto.getEstado());
         return new PresupuestoPublicoResponse(empresa != null ? empresa.getNombre() : null, logo,
                 empresa != null && empresa.getLogoImagen() != null ? logoMimeType(empresa.getLogoImagen()) : null,
                 presupuesto.getId(),
                 presupuesto.getFechaCreacion(), presupuesto.getCliente().getNombre(), items, presupuesto.getSubtotal(),
-                presupuesto.getIva(), presupuesto.getTotal(), presupuesto.getNotaAdicional(), condiciones);
+                presupuesto.getIva(), presupuesto.getTotal(), presupuesto.getNotaAdicional(), condiciones,
+                permiteResponder, presupuesto.getRespuestaCliente());
     }
 
     @Transactional(readOnly = true)

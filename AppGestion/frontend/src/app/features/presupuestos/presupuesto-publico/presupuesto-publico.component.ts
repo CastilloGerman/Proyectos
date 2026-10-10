@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
-import { PresupuestoPublico } from '../../../core/models/presupuesto.model';
+import { PresupuestoPublico, PresupuestoRespuestaClienteOpcion } from '../../../core/models/presupuesto.model';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
 
 @Component({
@@ -44,6 +44,47 @@ import { PresupuestoService } from '../../../core/services/presupuesto.service';
         @if (budget.notas) { <section><h2>{{ 'publicBudget.notes' | translate }}</h2><p>{{ budget.notas }}</p></section> }
         @if (budget.condiciones.length) { <section><h2>{{ 'publicBudget.conditions' | translate }}</h2><p>{{ budget.condiciones.join(', ') }}</p></section> }
         <p class="privacy-note">{{ 'publicBudget.privacy' | translate }}</p>
+        @if (budget.permiteResponder) {
+          <section class="client-response" aria-labelledby="response-title">
+            <h2 id="response-title">{{ 'publicBudget.responseTitle' | translate }}</h2>
+            @if (budget.respuestaCliente) {
+              <p role="status">{{ 'publicBudget.responseSaved' | translate }}</p>
+              <p>{{ 'publicBudget.currentResponse' | translate }} {{ ('publicBudget.option' + budget.respuestaCliente) | translate }}</p>
+            } @else {
+              <p>{{ 'publicBudget.responsePrompt' | translate }}</p>
+            }
+            <div class="response-actions">
+              <button type="button" [disabled]="responseSubmitting" [attr.aria-pressed]="budget.respuestaCliente === 'INTERESA'" (click)="openResponseDialog('INTERESA', $event)">
+                {{ 'publicBudget.interested' | translate }}
+              </button>
+              <button type="button" [disabled]="responseSubmitting" [attr.aria-pressed]="budget.respuestaCliente === 'DUDAS'" (click)="openResponseDialog('DUDAS', $event)">
+                {{ 'publicBudget.haveQuestions' | translate }}
+              </button>
+            </div>
+            <p class="legal-note">{{ 'publicBudget.nonContractual' | translate }}</p>
+            @if (responseError) { <p class="response-error" role="alert">{{ responseError | translate }}</p> }
+          </section>
+        }
+        @if (responseDialogOpen) {
+          <div class="dialog-backdrop" (click)="onDialogBackdrop($event)">
+            <section #responseDialog class="response-dialog" role="dialog" aria-modal="true"
+              [attr.aria-labelledby]="'response-dialog-title'" [attr.aria-describedby]="'response-dialog-description'">
+              <h2 id="response-dialog-title">{{ 'publicBudget.responseDialogTitle' | translate }}</h2>
+              <p id="response-dialog-description">{{ 'publicBudget.responseDialogDescription' | translate:{ option: (('publicBudget.option' + selectedOption) | translate) } }}</p>
+              <label for="response-message">{{ 'publicBudget.optionalMessage' | translate }}</label>
+              <textarea #responseMessage id="response-message" maxlength="500" rows="4" [value]="messageDraft"
+                [disabled]="responseSubmitting" (input)="updateMessage($event)"></textarea>
+              <p class="character-count">{{ 'publicBudget.messageCount' | translate:{ count: messageDraft.length } }}</p>
+              @if (responseError) { <p class="response-error" role="alert">{{ responseError | translate }}</p> }
+              <div class="dialog-actions">
+                <button type="button" class="secondary" [disabled]="responseSubmitting" (click)="closeResponseDialog()">{{ 'publicBudget.cancelResponse' | translate }}</button>
+                <button type="button" [disabled]="responseSubmitting" (click)="submitResponse()">
+                  {{ (responseSubmitting ? 'publicBudget.sendingResponse' : 'publicBudget.sendResponse') | translate }}
+                </button>
+              </div>
+            </section>
+          </div>
+        }
         <button type="button" class="download" [disabled]="downloading" (click)="download()">{{ 'publicBudget.download' | translate }}</button>
         @if (downloadError) { <p role="alert">{{ 'publicBudget.downloadError' | translate }}</p> }
         @if (viewRegistrationError) { <p role="status">{{ 'publicBudget.viewRegistrationError' | translate }}</p> }
@@ -63,6 +104,20 @@ import { PresupuestoService } from '../../../core/services/presupuesto.service';
     .download { width:100%; min-height:54px; color:white; background:#176b45; border:0; border-radius:10px; font:inherit; font-weight:700; cursor:pointer; }
     .download:disabled { opacity:.6; }
     .privacy-note { margin-top:24px; color:#536071; font-size:.9rem; }
+    .client-response { display:grid; gap:12px; margin:24px 0; padding:16px; border:1px solid #dbe1ea; border-radius:12px; background:#f8fafc; }
+    .client-response h2,.client-response p { margin:0; }
+    .response-actions,.dialog-actions { display:flex; flex-wrap:wrap; gap:10px; }
+    .response-actions button,.dialog-actions button { flex:1 1 180px; min-height:48px; padding:10px 14px; border:1px solid #176b45; border-radius:8px; color:#fff; background:#176b45; font:inherit; font-weight:700; cursor:pointer; }
+    .response-actions button[aria-pressed="true"] { outline:3px solid #a7d7bf; outline-offset:2px; }
+    .response-actions button:disabled,.dialog-actions button:disabled { opacity:.6; cursor:not-allowed; }
+    .legal-note,.character-count { color:#536071; font-size:.9rem; }
+    .response-error { color:#b42318; }
+    .dialog-backdrop { position:fixed; z-index:1000; inset:0; display:grid; place-items:center; padding:16px; background:rgba(15,23,42,.6); }
+    .response-dialog { box-sizing:border-box; width:min(100%,480px); display:grid; gap:12px; padding:22px; border-radius:14px; background:#fff; box-shadow:0 18px 50px rgba(0,0,0,.25); }
+    .response-dialog h2,.response-dialog p { margin:0; }
+    .response-dialog textarea { box-sizing:border-box; width:100%; min-height:110px; padding:10px; border:1px solid #87909d; border-radius:8px; font:inherit; resize:vertical; }
+    .response-dialog label { font-weight:700; }
+    .dialog-actions button.secondary { color:#172033; border-color:#9aa4b2; background:#fff; }
     h1 { font-size:1.5rem; }
   `],
 })
@@ -77,6 +132,13 @@ export class PresupuestoPublicoComponent implements OnInit, OnDestroy {
   downloading = false;
   downloadError = false;
   viewRegistrationError = false;
+  responseDialogOpen = false;
+  responseSubmitting = false;
+  responseError = '';
+  messageDraft = '';
+  selectedOption: PresupuestoRespuestaClienteOpcion = 'INTERESA';
+  @ViewChild('responseMessage') private responseMessage?: ElementRef<HTMLTextAreaElement>;
+  private responseTrigger: HTMLElement | null = null;
   private token = '';
   private viewTimer: ReturnType<typeof setTimeout> | null = null;
   private viewRecorded = false;
@@ -88,6 +150,11 @@ export class PresupuestoPublicoComponent implements OnInit, OnDestroy {
     else this.clearViewTimer();
   };
   private readonly onFirstInteraction = (): void => this.recordView();
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.responseDialogOpen && !this.responseSubmitting) this.closeResponseDialog();
+  }
 
   ngOnInit(): void {
     this.previousRobots = this.meta.getTag('name="robots"')?.content ?? null;
@@ -148,6 +215,58 @@ export class PresupuestoPublicoComponent implements OnInit, OnDestroy {
   private restoreMeta(name: string, content: string | null): void {
     if (content === null) this.meta.removeTag(`name="${name}"`);
     else this.meta.updateTag({ name, content });
+  }
+
+  openResponseDialog(option: PresupuestoRespuestaClienteOpcion, event: MouseEvent): void {
+    if (this.responseSubmitting || !this.budget?.permiteResponder) return;
+    this.selectedOption = option;
+    this.messageDraft = '';
+    this.responseError = '';
+    this.responseTrigger = event.currentTarget as HTMLElement;
+    this.responseDialogOpen = true;
+    setTimeout(() => this.responseMessage?.nativeElement.focus());
+  }
+
+  updateMessage(event: Event): void {
+    this.messageDraft = (event.target as HTMLTextAreaElement).value.slice(0, 500);
+  }
+
+  onDialogBackdrop(event: MouseEvent): void {
+    if (event.target === event.currentTarget && !this.responseSubmitting) this.closeResponseDialog();
+  }
+
+  closeResponseDialog(): void {
+    if (this.responseSubmitting) return;
+    this.responseDialogOpen = false;
+    this.responseTrigger?.focus();
+    this.responseTrigger = null;
+  }
+
+  submitResponse(): void {
+    if (this.responseSubmitting || !this.responseDialogOpen) return;
+    this.responseSubmitting = true;
+    this.responseError = '';
+    const message = this.messageDraft.trim();
+    this.service.responderPublico(this.token, {
+      opcion: this.selectedOption,
+      ...(message ? { mensaje: message } : {}),
+    }).subscribe({
+      next: () => {
+        if (this.budget) this.budget = { ...this.budget, respuestaCliente: this.selectedOption };
+        this.responseSubmitting = false;
+        this.responseDialogOpen = false;
+        this.responseTrigger?.focus();
+        this.responseTrigger = null;
+      },
+      error: error => {
+        this.responseSubmitting = false;
+        this.responseError = error.status === 404
+          ? 'publicBudget.responseUnavailable'
+          : error.status === 429
+            ? 'publicBudget.responseRateLimited'
+            : 'publicBudget.responseFailed';
+      },
+    });
   }
 
   download(): void {

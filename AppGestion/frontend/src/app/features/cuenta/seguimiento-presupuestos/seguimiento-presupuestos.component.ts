@@ -63,6 +63,11 @@ import { HintBannerComponent } from '../../../shared/hint-banner/hint-banner.com
             <span>{{ 'budgetFollowSettings.emailDigest' | translate }}</span>
           </label>
 
+          <label class="toggle">
+            <input type="checkbox" formControlName="permitirRespuestaCliente" />
+            <span>{{ 'budgetFollowSettings.clientResponses' | translate }}</span>
+          </label>
+
           <div class="actions">
             <button type="submit" [disabled]="saving || form.invalid || form.pristine">
               {{ saving ? ('budgetFollowSettings.saving' | translate) : ('budgetFollowSettings.save' | translate) }}
@@ -103,6 +108,7 @@ export class SeguimientoPresupuestosComponent implements OnInit {
     diasEspera: [3, [Validators.required, Validators.min(1), Validators.max(30), Validators.pattern(/^\d+$/)]],
     maxAvisos: [2, [Validators.required, Validators.min(1), Validators.max(5), Validators.pattern(/^\d+$/)]],
     emailResumen: [false],
+    permitirRespuestaCliente: [true],
   });
   loading = true;
   saving = false;

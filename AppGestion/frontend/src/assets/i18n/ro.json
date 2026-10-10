@@ -37,7 +37,26 @@
     "hint3": "Te anunțăm când îl vede.",
     "sent": "Trimis la {{date}} prin {{channel}}.",
     "email": "email",
-    "whatsapp": "WhatsApp"
+    "whatsapp": "WhatsApp",
+    "responseTitle": "Ce părere ai despre această ofertă?",
+    "responseSaved": "Notificare trimisă.",
+    "currentResponse": "Notificarea ta actuală: ",
+    "responsePrompt": "Anunță firma dacă te interesează sau ai întrebări.",
+    "optionINTERESA": "Mă interesează",
+    "optionDUDAS": "Am întrebări",
+    "interested": "Mă interesează",
+    "haveQuestions": "Am întrebări",
+    "nonContractual": "Această notificare nu constituie un contract. Detaliile se acordă direct cu firma.",
+    "responseDialogTitle": "Trimite notificare firmei",
+    "responseDialogDescription": "Vei indica că {{option}}. Starea ofertei nu se va schimba până când firma o actualizează.",
+    "optionalMessage": "Mesaj opțional pentru firmă",
+    "messageCount": "{{count}} / 500 caractere",
+    "cancelResponse": "Anulează",
+    "sendResponse": "Trimite notificare",
+    "sendingResponse": "Se trimite…",
+    "responseUnavailable": "Acest link nu mai este disponibil.",
+    "responseRateLimited": "Așteaptă câteva minute înainte de a-ți modifica notificarea.",
+    "responseFailed": "Notificarea nu a putut fi trimisă. Încearcă din nou."
   },
   "nav": {
     "dashboard": "Tablou de bord",
@@ -1654,6 +1673,10 @@
     "silenceSuccess": "Urmărirea a fost dezactivată.",
     "reactivateSuccess": "Urmărirea a fost reactivată.",
     "actionError": "Urmărirea nu a putut fi actualizată. Încearcă din nou.",
-    "pendingAlert": "Există un avertisment de urmărire în așteptare."
+    "pendingAlert": "Există un avertisment de urmărire în așteptare.",
+    "clientResponseTitle": "Răspunsul clientului",
+    "clientResponse": "Clientul a indicat «{{option}}» la {{date}}.",
+    "clientMessage": "Mesajul clientului:",
+    "clientResponses": "Permite clientului să mă anunțe din link"
   }
 }

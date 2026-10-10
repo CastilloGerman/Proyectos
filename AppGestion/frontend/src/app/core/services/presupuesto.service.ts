@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { PresupuestoCondicionDisponible } from '../models/presupuesto-condiciones.model';
-import { AnticipoRegistroRequest, AnticipoResumen, Presupuesto, PresupuestoEnlaceCreado, PresupuestoEnlaceEstado, PresupuestoPublico, PresupuestoRequest } from '../models/presupuesto.model';
+import { AnticipoRegistroRequest, AnticipoResumen, Presupuesto, PresupuestoEnlaceCreado, PresupuestoEnlaceEstado, PresupuestoPublico, PresupuestoRequest, PresupuestoRespuestaClienteRequest } from '../models/presupuesto.model';
 import { Factura } from '../models/factura.model';
 import { environment } from '../../../environments/environment';
 
@@ -96,6 +96,10 @@ export class PresupuestoService {
 
   marcarPublicoVisto(token: string): Observable<void> {
     return this.http.post<void>(`${environment.apiUrl}/publico/presupuestos/${encodeURIComponent(token)}/visto`, {});
+  }
+
+  responderPublico(token: string, body: PresupuestoRespuestaClienteRequest): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/publico/presupuestos/${encodeURIComponent(token)}/responder`, body);
   }
 
   descargarPdfPublico(token: string): Observable<Blob> {

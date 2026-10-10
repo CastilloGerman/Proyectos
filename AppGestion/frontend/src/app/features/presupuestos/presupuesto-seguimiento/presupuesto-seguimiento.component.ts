@@ -35,7 +35,7 @@ import { normalizarTelefonoInternacional } from '../enviar-presupuesto/enviar-pr
         } @else {
           <p>{{ 'publicBudget.notViewed' | translate }}</p>
         }
-        @if (alertCount > 0 || lastAlertAt || silenced) {
+        @if (alertCount > 0 || lastAlertAt || silenced || respuestaCliente) {
           <section class="follow-up-alerts" aria-label="{{ 'budgetFollowSettings.alertsTitle' | translate }}">
             <h3>{{ 'budgetFollowSettings.alertsTitle' | translate }}</h3>
             <p>{{ 'budgetFollowSettings.alertCount' | translate:{ count: alertCount } }}</p>
@@ -44,6 +44,16 @@ import { normalizarTelefonoInternacional } from '../enviar-presupuesto/enviar-pr
             }
             @if (silenced) {
               <p>{{ 'budgetFollowSettings.silenced' | translate }}</p>
+            }
+            @if (respuestaCliente) {
+              <div class="client-response-notice" role="status">
+                <h4>{{ 'budgetFollowSettings.clientResponseTitle' | translate }}</h4>
+                <p>{{ 'budgetFollowSettings.clientResponse' | translate:{ option: (('publicBudget.option' + respuestaCliente) | translate), date: (respuestaClienteAt ? (respuestaClienteAt | date:'short') : '') } }}</p>
+                @if (respuestaClienteMensaje) {
+                  <p class="response-message">{{ 'budgetFollowSettings.clientMessage' | translate }}</p>
+                  <blockquote>{{ respuestaClienteMensaje }}</blockquote>
+                }
+              </div>
             }
           </section>
         }
@@ -82,6 +92,10 @@ import { normalizarTelefonoInternacional } from '../enviar-presupuesto/enviar-pr
     .notice { color:#596579; font-size:.92rem; }
     .follow-up-alerts { display:grid; gap:8px; padding:12px; border-left:3px solid #d97706; background:rgba(217,119,6,.06); }
     .follow-up-alerts h3, .follow-up-alerts p { margin:0; }
+    .client-response-notice { display:grid; gap:6px; padding-top:8px; }
+    .client-response-notice h4 { margin:0; }
+    .client-response-notice blockquote { margin:0; padding-left:12px; border-left:2px solid #94a3b8; overflow-wrap:anywhere; white-space:pre-wrap; }
+    .response-message { font-weight:600; }
     .actions { display:flex; flex-wrap:wrap; gap:8px; }
     .actions button, .actions a { display:inline-flex; align-items:center; min-height:44px; padding:8px 12px; border:1px solid #718096; border-radius:7px; background:transparent; color:inherit; font:inherit; cursor:pointer; }
     .actions a { text-decoration:none; }
@@ -95,6 +109,9 @@ export class PresupuestoSeguimientoComponent implements OnInit {
   @Input() alertCount = 0;
   @Input() lastAlertAt: string | null | undefined;
   @Input() silenced = false;
+  @Input() respuestaCliente: 'INTERESA' | 'DUDAS' | null | undefined;
+  @Input() respuestaClienteAt: string | null | undefined;
+  @Input() respuestaClienteMensaje: string | null | undefined;
   @Input() clientPhone: string | null | undefined;
   @Input() clientCountry: string | null | undefined;
   @Output() resend = new EventEmitter<void>();

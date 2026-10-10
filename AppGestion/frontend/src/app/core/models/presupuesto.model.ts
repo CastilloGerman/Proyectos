@@ -36,6 +36,9 @@ export interface Presupuesto {
   seguimientoAvisosEnviados?: number;
   seguimientoUltimoAvisoAt?: string | null;
   seguimientoSilenciado?: boolean;
+  respuestaCliente?: 'INTERESA' | 'DUDAS' | null;
+  respuestaClienteAt?: string | null;
+  respuestaClienteMensaje?: string | null;
   fechaCreacion: string;
   subtotal: number;
   iva: number;
@@ -86,6 +89,15 @@ export interface PresupuestoPublico {
   total: number;
   notas: string | null;
   condiciones: string[];
+  permiteResponder: boolean;
+  respuestaCliente?: 'INTERESA' | 'DUDAS' | null;
+}
+
+export type PresupuestoRespuestaClienteOpcion = 'INTERESA' | 'DUDAS';
+
+export interface PresupuestoRespuestaClienteRequest {
+  opcion: PresupuestoRespuestaClienteOpcion;
+  mensaje?: string;
 }
 
 export interface PresupuestoRequest {

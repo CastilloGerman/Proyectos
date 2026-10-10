@@ -99,10 +99,20 @@ class PostgresFlywayValidationTest {
                 where t.relname = 'presupuesto_seguimiento_aviso'
                   and c.contype = 'f' and c.confdeltype = 'c'
                 """, Integer.class));
-        assertEquals("42", jdbc.queryForObject("""
+        assertEquals("43", jdbc.queryForObject("""
                 select version from flyway_schema_history
                 where success = true order by installed_rank desc limit 1
                 """, String.class));
+        assertEquals(3, jdbc.queryForObject("""
+                select count(*) from information_schema.columns
+                where table_name = 'presupuestos' and column_name in (
+                    'respuesta_cliente', 'respuesta_cliente_at', 'respuesta_cliente_mensaje')
+                """, Integer.class));
+        assertEquals(1, jdbc.queryForObject("""
+                select count(*) from information_schema.columns
+                where table_name = 'empresas' and column_name = 'permitir_respuesta_cliente'
+                  and data_type = 'boolean' and column_default like 'true%'
+                """, Integer.class));
     }
 
     @Test

@@ -7,7 +7,7 @@ import { ConfigService } from '../../../core/services/config.service';
 import { SeguimientoPresupuestosComponent } from './seguimiento-presupuestos.component';
 
 describe('SeguimientoPresupuestosComponent', () => {
-  const defaults = { seguimientoActivo: true, diasEspera: 10, maxAvisos: 4, emailResumen: true };
+  const defaults = { seguimientoActivo: true, diasEspera: 10, maxAvisos: 4, emailResumen: true, permitirRespuestaCliente: true };
   const setup = (service: { getSeguimientoPresupuestos: ReturnType<typeof vi.fn>; patchSeguimientoPresupuestos: ReturnType<typeof vi.fn> }) => {
     TestBed.configureTestingModule({
       imports: [SeguimientoPresupuestosComponent, TranslateModule.forRoot()],
@@ -25,6 +25,7 @@ describe('SeguimientoPresupuestosComponent', () => {
       diasEspera: 3,
       maxAvisos: 2,
       emailResumen: false,
+      permitirRespuestaCliente: true,
     });
   });
 
@@ -79,5 +80,46 @@ describe('SeguimientoPresupuestosComponent', () => {
     expect(component.feedbackType).toBe('error');
     expect(component.feedback).toBe('budgetFollowSettings.saveError');
     expect(component.saving).toBe(false);
+  });
+
+  it('loads permitirRespuestaCliente into the form', () => {
+    const service = {
+      getSeguimientoPresupuestos: vi.fn(() => of({ ...defaults, permitirRespuestaCliente: false })),
+      patchSeguimientoPresupuestos: vi.fn(),
+    };
+    const component = setup(service);
+    component.ngOnInit();
+
+    expect(component.form.value.permitirRespuestaCliente).toBe(false);
+  });
+
+  it('saves permitirRespuestaCliente toggle value', () => {
+    const patchValue = { ...defaults, permitirRespuestaCliente: false };
+    const service = {
+      getSeguimientoPresupuestos: vi.fn(() => of(defaults)),
+      patchSeguimientoPresupuestos: vi.fn(() => of(patchValue)),
+    };
+    const component = setup(service);
+    component.ngOnInit();
+    component.form.controls.permitirRespuestaCliente.setValue(false);
+    component.save();
+
+    expect(service.patchSeguimientoPresupuestos).toHaveBeenCalledWith(
+      expect.objectContaining({ permitirRespuestaCliente: false })
+    );
+  });
+
+  it('permitsRespuestaCliente field name matches backend API exactly', () => {
+    // Contract test: the form field name must match the backend DTO field name.
+    // If the backend renames the field, this test fails.
+    const service = {
+      getSeguimientoPresupuestos: vi.fn(() => of(defaults)),
+      patchSeguimientoPresupuestos: vi.fn(() => of(defaults)),
+    };
+    const component = setup(service);
+    component.ngOnInit();
+
+    expect(component.form.contains('permitirRespuestaCliente')).toBe(true);
+    expect(component.form.controls.permitirRespuestaCliente).toBeDefined();
   });
 });

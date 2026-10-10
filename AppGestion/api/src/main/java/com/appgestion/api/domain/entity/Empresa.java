@@ -155,6 +155,9 @@ public class Empresa {
     @Column(name = "seguimiento_email_resumen", nullable = false)
     private boolean seguimientoEmailResumen;
 
+    @Column(name = "permitir_respuesta_cliente", nullable = false)
+    private boolean permitirRespuestaCliente = true;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -287,4 +290,6 @@ public class Empresa {
     public void setSeguimientoMaxAvisos(int seguimientoMaxAvisos) { this.seguimientoMaxAvisos = seguimientoMaxAvisos; }
     public boolean isSeguimientoEmailResumen() { return seguimientoEmailResumen; }
     public void setSeguimientoEmailResumen(boolean seguimientoEmailResumen) { this.seguimientoEmailResumen = seguimientoEmailResumen; }
+    public boolean isPermitirRespuestaCliente() { return permitirRespuestaCliente; }
+    public void setPermitirRespuestaCliente(boolean permitirRespuestaCliente) { this.permitirRespuestaCliente = permitirRespuestaCliente; }
 }

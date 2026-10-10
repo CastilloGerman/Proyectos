@@ -4,8 +4,13 @@ import com.appgestion.api.dto.request.DeviceClientInfoRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
+
 /**
  * Extrae IP y heurísticas de navegador/SO/tipo de dispositivo a partir de cabeceras HTTP.
+ *
+ * Para resolver la IP del cliente, usa {@link #resolveClientIp(HttpServletRequest, TrustedClientAddressResolver.ClientIpMode, List)}
+ * con el modo configurado y una lista de proxies de confianza.
  */
 public final class ClientMetadataParser {
 
@@ -21,7 +26,18 @@ public final class ClientMetadataParser {
     ) {}
 
     public static Snapshot parse(HttpServletRequest request, DeviceClientInfoRequest clientInfo) {
-        String ip = resolveClientIp(request);
+        return parse(request, clientInfo, TrustedClientAddressResolver.ClientIpMode.NONE, List.of());
+    }
+
+    public static Snapshot parse(HttpServletRequest request, DeviceClientInfoRequest clientInfo,
+                                 List<TrustedClientAddressResolver.Cidr> trustedProxies) {
+        return parse(request, clientInfo, TrustedClientAddressResolver.ClientIpMode.NONE, trustedProxies);
+    }
+
+    public static Snapshot parse(HttpServletRequest request, DeviceClientInfoRequest clientInfo,
+                                 TrustedClientAddressResolver.ClientIpMode mode,
+                                 List<TrustedClientAddressResolver.Cidr> trustedProxies) {
+        String ip = resolveClientIp(request, mode, trustedProxies);
         String ua = request.getHeader("User-Agent");
         if (!StringUtils.hasText(ua)) {
             ua = "";
@@ -38,19 +54,27 @@ public final class ClientMetadataParser {
         return new Snapshot(ip, ua, browser, os, deviceType, label);
     }
 
+    /**
+     * Resuelve la IP del cliente sin validar proxies de confianza (compatibilidad).
+     * Preferir {@link #resolveClientIp(HttpServletRequest, TrustedClientAddressResolver.ClientIpMode, List)} con modo configurado.
+     */
     public static String resolveClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (StringUtils.hasText(xff)) {
-            String first = xff.split(",")[0].trim();
-            if (!first.isEmpty()) {
-                return truncate(first, 45);
-            }
-        }
-        String real = request.getHeader("X-Real-IP");
-        if (StringUtils.hasText(real)) {
-            return truncate(real.trim(), 45);
-        }
-        return truncate(request.getRemoteAddr(), 45);
+        return resolveClientIp(request, TrustedClientAddressResolver.ClientIpMode.NONE, List.of());
+    }
+
+    /**
+     * Resuelve la IP del cliente con el modo y proxies de confianza.
+     *
+     * @param request petición HTTP
+     * @param modo modo de resolución (none, trusted-proxies, vercel)
+     * @param trustedProxies lista de CIDR de proxies de confianza (usado solo en modo TRUSTED_PROXIES)
+     * @return IP del cliente truncada a 45 caracteres
+     */
+    public static String resolveClientIp(HttpServletRequest request,
+                                         TrustedClientAddressResolver.ClientIpMode modo,
+                                         List<TrustedClientAddressResolver.Cidr> trustedProxies) {
+        String ip = TrustedClientAddressResolver.resolveStatic(request, modo, trustedProxies);
+        return truncate(ip, 45);
     }
 
     private static String buildDisplayLabel(DeviceClientInfoRequest info, String browser, String os, String deviceType) {

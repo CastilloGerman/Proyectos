@@ -147,6 +147,16 @@ class PresupuestoSeguimientoServiceTest {
     }
 
     @Test
+    void clientResponseSuppressesFollowupWhileBudgetRemainsPending() {
+        budget.setRespuestaCliente("DUDAS");
+
+        assertThat(service.processOwner(OWNER_ID, null)).isZero();
+
+        verify(avisoRepository, never()).insertIfAbsent(anyLong(), anyString(), anyInt(), any());
+        verifyNoInteractions(notificacionService, emailService);
+    }
+
+    @Test
     void excludesDisabledSettingExpiredOrDeletedOwners() {
         settings.setSeguimientoActivo(false);
         assertThat(service.processOwner(OWNER_ID, null)).isZero();
@@ -319,10 +329,10 @@ class PresupuestoSeguimientoServiceTest {
         when(empresaRepository.findByUsuarioId(OWNER_ID)).thenReturn(Optional.empty());
         when(usuarioRepository.findById(OWNER_ID)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.patchSettings(OWNER_ID,
-                new SeguimientoPresupuestosPatchRequest(true, 0, 2, false)))
+                new SeguimientoPresupuestosPatchRequest(true, 0, 2, false, null)))
                 .isInstanceOf(ResponseStatusException.class);
         assertThatThrownBy(() -> service.patchSettings(OWNER_ID,
-                new SeguimientoPresupuestosPatchRequest(true, -1, 2, false)))
+                new SeguimientoPresupuestosPatchRequest(true, -1, 2, false, null)))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(error -> assertThat(((ResponseStatusException) error).getStatusCode())
                         .isEqualTo(HttpStatus.BAD_REQUEST));
@@ -343,12 +353,13 @@ class PresupuestoSeguimientoServiceTest {
         when(empresaRepository.save(any(Empresa.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         var settings = service.patchSettings(99L,
-                new SeguimientoPresupuestosPatchRequest(false, 30, 5, true));
+                new SeguimientoPresupuestosPatchRequest(false, 30, 5, true, false));
 
         assertThat(settings.seguimientoActivo()).isFalse();
         assertThat(settings.seguimientoDiasEspera()).isEqualTo(30);
         assertThat(settings.seguimientoMaxAvisos()).isEqualTo(5);
         assertThat(settings.seguimientoEmailResumen()).isTrue();
+        assertThat(settings.permitirRespuestaCliente()).isFalse();
         verify(empresaRepository).findByUsuarioId(99L);
         verify(empresaRepository, never()).findByUsuarioId(OWNER_ID);
     }

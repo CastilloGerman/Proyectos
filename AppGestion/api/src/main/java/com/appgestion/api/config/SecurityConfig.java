@@ -3,6 +3,7 @@ package com.appgestion.api.config;
 import com.appgestion.api.security.AuthRateLimitFilter;
 import com.appgestion.api.security.JwtAuthenticationFilter;
 import com.appgestion.api.security.SubscriptionCheckFilter;
+import com.appgestion.api.util.TrustedClientAddressResolver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -24,6 +25,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
@@ -37,19 +40,35 @@ public class SecurityConfig {
     private final boolean authRateLimitEnabled;
     private final int authRateLimitCapacity;
     private final int authRateLimitRefillMinutes;
+    private final TrustedClientAddressResolver.ClientIpMode clientIpMode;
+    private final List<TrustedClientAddressResolver.Cidr> trustedProxies;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
                           SubscriptionCheckFilter subscriptionCheckFilter,
                           CorsConfigurationSource corsConfigurationSource,
                           @Value("${app.security.auth-rate-limit.enabled:true}") boolean authRateLimitEnabled,
                           @Value("${app.security.auth-rate-limit.capacity:30}") int authRateLimitCapacity,
-                          @Value("${app.security.auth-rate-limit.refill-minutes:15}") int authRateLimitRefillMinutes) {
+                          @Value("${app.security.auth-rate-limit.refill-minutes:15}") int authRateLimitRefillMinutes,
+                          @Value("${app.security.client-ip-mode:none}") String clientIpMode,
+                          @Value("${app.security.trusted-proxies:}") String trustedProxyList) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.subscriptionCheckFilter = subscriptionCheckFilter;
         this.corsConfigurationSource = corsConfigurationSource;
         this.authRateLimitEnabled = authRateLimitEnabled;
         this.authRateLimitCapacity = authRateLimitCapacity;
         this.authRateLimitRefillMinutes = authRateLimitRefillMinutes;
+        this.clientIpMode = parseClientIpMode(clientIpMode);
+        this.trustedProxies = TrustedClientAddressResolver.Cidr.parseList(trustedProxyList);
+    }
+
+    private static TrustedClientAddressResolver.ClientIpMode parseClientIpMode(String value) {
+        if (value == null) return TrustedClientAddressResolver.ClientIpMode.NONE;
+        try {
+            String normalized = value.trim().toUpperCase().replace('-', '_');
+            return TrustedClientAddressResolver.ClientIpMode.valueOf(normalized);
+        } catch (IllegalArgumentException e) {
+            return TrustedClientAddressResolver.ClientIpMode.NONE;
+        }
     }
 
     @Bean
@@ -68,7 +87,8 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.GET, "/publico/presupuestos/*",
                                 "/publico/presupuestos/*/pdf")
                         .permitAll();
-                    auth.requestMatchers(HttpMethod.POST, "/publico/presupuestos/*/visto").permitAll();
+                    auth.requestMatchers(HttpMethod.POST, "/publico/presupuestos/*/visto",
+                            "/publico/presupuestos/*/responder").permitAll();
                     auth.requestMatchers("/auth/register", "/auth/login", "/auth/google", "/auth/forgot-password", "/auth/reset-password",
                                 "/auth/invite/**").permitAll()
                         .requestMatchers("/auth/email/oauth/*/callback").permitAll()
@@ -84,7 +104,7 @@ public class SecurityConfig {
                 // (Spring Security 6.5+: el filtro de referencia ha de tener orden en cadena).
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(
-                        new AuthRateLimitFilter(authRateLimitEnabled, authRateLimitCapacity, authRateLimitRefillMinutes),
+                        new AuthRateLimitFilter(authRateLimitEnabled, authRateLimitCapacity, authRateLimitRefillMinutes, clientIpMode, trustedProxies),
                         JwtAuthenticationFilter.class)
                 .addFilterAfter(subscriptionCheckFilter, JwtAuthenticationFilter.class);
 

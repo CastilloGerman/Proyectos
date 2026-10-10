@@ -37,7 +37,26 @@
     "hint3": "Nous vous avertissons lorsqu’il le consulte.",
     "sent": "Envoyé le {{date}} par {{channel}}.",
     "email": "e-mail",
-    "whatsapp": "WhatsApp"
+    "whatsapp": "WhatsApp",
+    "responseTitle": "Que pensez-vous de ce devis ?",
+    "responseSaved": "Avis envoyé.",
+    "currentResponse": "Votre avis actuel : ",
+    "responsePrompt": "Prévenez l'entreprise si cela vous intéresse ou si vous avez des questions.",
+    "optionINTERESA": "Ça m'intéresse",
+    "optionDUDAS": "J'ai des questions",
+    "interested": "Ça m'intéresse",
+    "haveQuestions": "J'ai des questions",
+    "nonContractual": "Cet avis ne constitue pas un contrat. Les détails sont convenus directement avec l'entreprise.",
+    "responseDialogTitle": "Envoyer un avis à l'entreprise",
+    "responseDialogDescription": "Vous allez indiquer que {{option}}. Le statut du devis ne changera pas tant que l'entreprise ne le mettra pas à jour.",
+    "optionalMessage": "Message optionnel pour l'entreprise",
+    "messageCount": "{{count}} / 500 caractères",
+    "cancelResponse": "Annuler",
+    "sendResponse": "Envoyer l'avis",
+    "sendingResponse": "Envoi en cours…",
+    "responseUnavailable": "Ce lien n'est plus disponible.",
+    "responseRateLimited": "Attendez quelques minutes avant de modifier votre avis.",
+    "responseFailed": "L'avis n'a pas pu être envoyé. Réessayez."
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -1654,6 +1673,10 @@
     "silenceSuccess": "Suivi suspendu.",
     "reactivateSuccess": "Suivi réactivé.",
     "actionError": "Impossible de mettre à jour le suivi. Réessayez.",
-    "pendingAlert": "Un rappel de suivi est en attente."
+    "pendingAlert": "Un rappel de suivi est en attente.",
+    "clientResponseTitle": "Réponse du client",
+    "clientResponse": "Le client a indiqué « {{option}} » le {{date}}.",
+    "clientMessage": "Message du client :",
+    "clientResponses": "Permettre au client de me prévenir depuis le lien"
   }
 }

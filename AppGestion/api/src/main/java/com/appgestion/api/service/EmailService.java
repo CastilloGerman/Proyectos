@@ -77,4 +77,11 @@ public class EmailService {
         }
         emailOutboxService.enqueueHtmlUsuario(usuarioId, to, asunto, html, idempotencyKey);
     }
+
+    public void enviarRespuestaCliente(Long usuarioId, String to, String asunto, String html, String idempotencyKey) {
+        if (to == null || to.isBlank()) {
+            throw new IllegalArgumentException("El usuario no tiene email registrado");
+        }
+        emailOutboxService.enqueueHtmlUsuario(usuarioId, to, asunto, html, idempotencyKey);
+    }
 }
