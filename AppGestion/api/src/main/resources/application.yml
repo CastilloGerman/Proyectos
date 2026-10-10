@@ -1,3 +1,13 @@
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+
 spring:
   # Para desarrollo local: --spring.profiles.active=local (ver spring-boot-maven-plugin en pom.xml)
   # Producción: SPRING_PROFILES_ACTIVE=prod y variables JWT_SECRET, CORS, Stripe, etc.
