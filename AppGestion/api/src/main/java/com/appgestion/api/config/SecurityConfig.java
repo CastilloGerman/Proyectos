@@ -84,6 +84,8 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
+                    // Solo estado basico; otros endpoints Actuator siguen protegidos.
+                    auth.requestMatchers(HttpMethod.GET, "/actuator/health").permitAll();
                     auth.requestMatchers(HttpMethod.GET, "/publico/presupuestos/*",
                                 "/publico/presupuestos/*/pdf")
                         .permitAll();
