@@ -1634,10 +1634,10 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       this.cdr.detectChanges();
     });
     forkJoin({
-      presupuestos: this.presupuestoService.getAll().pipe(catchError(() => of<Presupuesto[]>([]))),
-      facturas: this.facturaService.getAll().pipe(catchError(() => of<Factura[]>([]))),
-      materiales: this.materialService.getTopUsados().pipe(catchError(() => of<Material[]>([]))),
-      gastos: this.gastoService.getAll().pipe(catchError(() => of<Gasto[]>([]))),
+      presupuestos: this.presupuestoService.getAll().pipe(catchError(() => this.emptyAfterLoadFail<Presupuesto>('snack.estimatesLoadFail'))),
+      facturas: this.facturaService.getAll().pipe(catchError(() => this.emptyAfterLoadFail<Factura>('snack.invoiceLoadFail'))),
+      materiales: this.materialService.getTopUsados().pipe(catchError(() => this.emptyAfterLoadFail<Material>('snack.materialsLoadFail'))),
+      gastos: this.gastoService.getAll().pipe(catchError(() => this.emptyAfterLoadFail<Gasto>('gastos.loadFail'))),
     }).subscribe({
       next: ({ presupuestos, facturas, materiales, gastos }) => {
         this.allPresupuestos = presupuestos;
@@ -1708,6 +1708,11 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit(): void {
     this.scheduleLayoutRefresh();
+  }
+
+  private emptyAfterLoadFail<T>(key: string) {
+    this.snackBar.open(this.translate.instant(key), this.translate.instant('common.close'), { duration: 5000 });
+    return of<T[]>([]);
   }
 
   /**

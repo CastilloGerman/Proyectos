@@ -44,8 +44,8 @@ public class GastoService {
     @Transactional(readOnly = true)
     public List<GastoResponse> listar(Long usuarioId, Long presupuestoId) {
         List<Gasto> gastos = presupuestoId == null
-                ? gastoRepository.findByUsuarioIdOrderByFechaDesc(usuarioId)
-                : gastoRepository.findByUsuarioIdAndPresupuestoIdOrderByFechaDesc(usuarioId, presupuestoId);
+                ? gastoRepository.findByUsuarioIdForList(usuarioId)
+                : gastoRepository.findByUsuarioIdAndPresupuestoIdForList(usuarioId, presupuestoId);
         return gastos.stream()
                 .map(this::toResponse)
                 .toList();

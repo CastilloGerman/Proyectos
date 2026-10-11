@@ -106,6 +106,8 @@ describe('PresupuestoRapidoComponent', () => {
         confirmAllSafe: 'Confirmar todas',
         cancelSafe: 'Cancelar',
       } },
+      budgetForm: { createdShareHint: 'Elige cómo quieres compartirlo con tu cliente.' },
+      budgetShare: { title: 'Compartir presupuesto', whatsapp: 'WhatsApp', email: 'Email', copy: 'Copiar', download: 'Descargar PDF' },
     });
     translate.setFallbackLang('es');
     translate.use('es');
@@ -205,6 +207,16 @@ describe('PresupuestoRapidoComponent', () => {
     expect(presupuestoService.create).toHaveBeenCalledOnce();
     expect(window.localStorage.getItem(key)).toBeNull();
     expect(component.presupuestoCreado?.id).toBe(22);
+  });
+
+  it('shows share options after creating a quick estimate', () => {
+    component.form.controls.clienteId.setValue(cliente.id);
+    component.materialItems.at(0).patchValue({ materialId: material.id, cantidad: 2, precioUnitario: 10 });
+    component.crearYEnviar();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-enviar-presupuesto')).toBeTruthy();
+    expect(fixture.nativeElement.textContent).toContain('WhatsApp');
+    expect(fixture.nativeElement.querySelector('form')).toBeNull();
   });
 
   it('persists AI line data and review flags in the local draft but never the dictated text', () => {

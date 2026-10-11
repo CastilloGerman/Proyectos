@@ -16,8 +16,42 @@ public interface FacturaRepository extends JpaRepository<Factura, Long> {
 
     List<Factura> findByUsuarioIdOrderByFechaCreacionDesc(Long usuarioId);
 
-    @Query("SELECT f FROM Factura f WHERE f.usuario.id = :uid AND (:incluirAnuladas = true OR f.anulada = false) ORDER BY f.fechaCreacion DESC")
-    List<Factura> findByUsuarioIdForList(@Param("uid") Long uid, @Param("incluirAnuladas") boolean incluirAnuladas);
+    @Query("""
+            select f.id from Factura f
+            where f.usuario.id = :uid
+              and (:incluirAnuladas = true or f.anulada = false)
+            order by f.fechaCreacion desc
+            """)
+    List<Long> findIdsByUsuarioIdForList(@Param("uid") Long uid, @Param("incluirAnuladas") boolean incluirAnuladas);
+
+    /** Grafo de listado: cliente, presupuesto, anticipo, partidas y material en una sola consulta. */
+    @Query("""
+            select distinct f from Factura f
+            join fetch f.cliente
+            left join fetch f.presupuesto
+            left join fetch f.facturaAnticipoReferencia
+            left join fetch f.items i
+            left join fetch i.material
+            where f.id in :ids
+            """)
+    List<Factura> findForListByIds(@Param("ids") Collection<Long> ids);
+
+    /**
+     * Id de la venta principal (la de mayor id) por presupuesto.
+     * Misma regla que {@link #findVentasPrincipalesPorPresupuesto}.
+     */
+    @Query("""
+            select f.presupuesto.id, max(f.id) from Factura f
+            where f.usuario.id = :uid
+              and f.presupuesto.id in :ids
+              and (f.tipoFactura is null or f.tipoFactura = :normal or f.tipoFactura = :finalConAnticipo)
+            group by f.presupuesto.id
+            """)
+    List<Object[]> findVentaPrincipalIdPorPresupuestos(
+            @Param("uid") Long usuarioId,
+            @Param("ids") Collection<Long> presupuestoIds,
+            @Param("normal") TipoFactura normal,
+            @Param("finalConAnticipo") TipoFactura finalConAnticipo);
 
     @Query("SELECT COALESCE(MAX(f.numeroSecuencial), 0) FROM Factura f WHERE f.usuario.id = :uid AND f.anioFactura = :anio")
     int maxNumeroSecuencialByUsuarioAndAnio(@Param("uid") Long uid, @Param("anio") int anio);

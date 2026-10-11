@@ -107,7 +107,8 @@
     "create": "Crear",
     "edit": "Editar",
     "delete": "Eliminar",
-    "back": "Volver"
+    "back": "Volver",
+    "loading": "Cargando…"
   },
   "invite": {
     "dialogTitle": "Invitación por correo",

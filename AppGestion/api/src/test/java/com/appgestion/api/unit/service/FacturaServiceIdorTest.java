@@ -17,6 +17,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -90,10 +91,11 @@ class FacturaServiceIdorTest {
 
     @Test
     void listar_consultaSoloFacturasDelUsuario() {
-        when(facturaRepository.findByUsuarioIdForList(42L, false)).thenReturn(List.of());
+        when(facturaRepository.findIdsByUsuarioIdForList(42L, false)).thenReturn(List.of());
 
         facturaService.listar(42L, null, false);
 
-        verify(facturaRepository).findByUsuarioIdForList(42L, false);
+        verify(facturaRepository).findIdsByUsuarioIdForList(42L, false);
+        verify(facturaRepository, never()).findForListByIds(any());
     }
 }

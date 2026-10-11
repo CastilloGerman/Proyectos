@@ -23,7 +23,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -82,8 +86,32 @@ public class PresupuestoService {
 
     @Transactional(readOnly = true)
     public List<PresupuestoResponse> listar(Long usuarioId, String q) {
-        var stream = presupuestoRepository.findByUsuarioIdOrderByFechaCreacionDesc(usuarioId).stream()
-                .map(this::toResponse);
+        List<Long> ids = presupuestoRepository.findIdsByUsuarioIdOrderByFechaCreacionDesc(usuarioId);
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, Presupuesto> byId = new LinkedHashMap<>();
+        for (Presupuesto presupuesto : presupuestoRepository.findForListByIds(ids)) {
+            byId.putIfAbsent(presupuesto.getId(), presupuesto);
+        }
+        Map<Long, Long> facturaIds = facturaPrincipalPorPresupuesto(usuarioId, ids);
+        Map<Long, EnlaceResumen> enlaces = enlacesPorPresupuesto(usuarioId, ids);
+        Map<Long, AvisoResumen> avisos = avisosPorPresupuesto(ids);
+
+        var stream = ids.stream()
+                .map(byId::get)
+                .filter(Objects::nonNull)
+                .map(p -> {
+                    EnlaceResumen enlace = enlaces.get(p.getId());
+                    AvisoResumen aviso = avisos.get(p.getId());
+                    return buildResponse(
+                            p,
+                            facturaIds.get(p.getId()),
+                            enlace != null ? enlace.primeraVistaAt() : null,
+                            enlace != null ? enlace.numVistas() : 0L,
+                            aviso != null ? aviso.count() : 0L,
+                            aviso != null ? aviso.ultimo() : null);
+                });
         if (q != null && !q.isBlank()) {
             String lower = q.strip().toLowerCase();
             stream = stream.filter(p ->
@@ -293,6 +321,35 @@ public class PresupuestoService {
     }
 
     private PresupuestoResponse toResponse(Presupuesto presupuesto) {
+        Long usuarioId = Objects.requireNonNull(presupuesto.getUsuario()).getId();
+        Long facturaId = facturaRepository.findVentasPrincipalesPorPresupuesto(
+                        presupuesto.getId(), usuarioId, TipoFactura.NORMAL, TipoFactura.FINAL_CON_ANTICIPO)
+                .stream()
+                .findFirst()
+                .map(Factura::getId)
+                .orElse(null);
+        var enlace = presupuestoEnlaceRepository.summarizeViews(presupuesto.getId(), usuarioId);
+        long alertCount = presupuestoSeguimientoAvisoRepository.countByPresupuestoId(presupuesto.getId());
+        Instant latestAlert = presupuestoSeguimientoAvisoRepository
+                .findTopByPresupuestoIdOrderByCreadoAtDesc(presupuesto.getId())
+                .map(PresupuestoSeguimientoAviso::getCreadoAt)
+                .orElse(null);
+        Long numVistas = enlace.getNumVistas();
+        return buildResponse(
+                presupuesto,
+                facturaId,
+                enlace.getPrimeraVistaAt(),
+                numVistas != null ? numVistas : 0L,
+                alertCount,
+                latestAlert);
+    }
+
+    private PresupuestoResponse buildResponse(Presupuesto presupuesto,
+                                               Long facturaId,
+                                               Instant primeraVistaAt,
+                                               long numVistas,
+                                               long alertCount,
+                                               Instant latestAlert) {
         List<PresupuestoItemResponse> items = presupuesto.getItems().stream()
                 .map(item -> new PresupuestoItemResponse(
                         item.getId(),
@@ -305,20 +362,6 @@ public class PresupuestoService {
                         Optional.ofNullable(item.getVisiblePdf()).orElse(true)
                 ))
                 .toList();
-
-        Long usuarioId = Objects.requireNonNull(presupuesto.getUsuario()).getId();
-        Long facturaId = facturaRepository.findVentasPrincipalesPorPresupuesto(
-                        presupuesto.getId(), usuarioId, TipoFactura.NORMAL, TipoFactura.FINAL_CON_ANTICIPO)
-                .stream()
-                .findFirst()
-                .map(f -> f.getId())
-                .orElse(null);
-        var enlace = presupuestoEnlaceRepository.summarizeViews(presupuesto.getId(), usuarioId);
-        long alertCount = presupuestoSeguimientoAvisoRepository.countByPresupuestoId(presupuesto.getId());
-        var latestAlert = presupuestoSeguimientoAvisoRepository
-                .findTopByPresupuestoIdOrderByCreadoAtDesc(presupuesto.getId())
-                .map(com.appgestion.api.domain.entity.PresupuestoSeguimientoAviso::getCreadoAt)
-                .orElse(null);
 
         var cli = presupuesto.getCliente();
         String estadoCliente = cli != null && cli.getEstadoCliente() != null
@@ -351,8 +394,8 @@ public class PresupuestoService {
                 facturaId,
                 presupuesto.getEnviadoAt(),
                 presupuesto.getCanalEnvio(),
-                enlace.getPrimeraVistaAt(),
-                enlace.getNumVistas() != null ? enlace.getNumVistas() : 0L,
+                primeraVistaAt,
+                numVistas,
                 alertCount,
                 latestAlert,
                 presupuesto.isSeguimientoSilenciado(),
@@ -362,9 +405,40 @@ public class PresupuestoService {
         );
     }
 
+    private Map<Long, Long> facturaPrincipalPorPresupuesto(Long usuarioId, List<Long> ids) {
+        Map<Long, Long> map = new HashMap<>();
+        for (Object[] row : facturaRepository.findVentaPrincipalIdPorPresupuestos(
+                usuarioId, ids, TipoFactura.NORMAL, TipoFactura.FINAL_CON_ANTICIPO)) {
+            map.put((Long) row[0], (Long) row[1]);
+        }
+        return map;
+    }
+
+    private Map<Long, EnlaceResumen> enlacesPorPresupuesto(Long usuarioId, List<Long> ids) {
+        Map<Long, EnlaceResumen> map = new HashMap<>();
+        for (Object[] row : presupuestoEnlaceRepository.summarizeViewsForPresupuestos(usuarioId, ids)) {
+            long vistas = row[2] instanceof Number number ? number.longValue() : 0L;
+            map.put((Long) row[0], new EnlaceResumen((Instant) row[1], vistas));
+        }
+        return map;
+    }
+
+    private Map<Long, AvisoResumen> avisosPorPresupuesto(List<Long> ids) {
+        Map<Long, AvisoResumen> map = new HashMap<>();
+        for (Object[] row : presupuestoSeguimientoAvisoRepository.resumenPorPresupuestoIds(ids)) {
+            long count = row[1] instanceof Number number ? number.longValue() : 0L;
+            map.put((Long) row[0], new AvisoResumen(count, (Instant) row[2]));
+        }
+        return map;
+    }
+
     private Presupuesto requireOwned(Long id, Long usuarioId) {
         return presupuestoRepository.findByIdAndUsuarioId(id, usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
     }
+
+    private record EnlaceResumen(Instant primeraVistaAt, long numVistas) {}
+
+    private record AvisoResumen(long count, Instant ultimo) {}
 
 }

@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
@@ -39,11 +40,15 @@ describe('PresupuestoFormComponent AI review', () => {
           getCondicionesDisponibles: () => of([]),
           getMisCondicionesPredeterminadas: () => of([]),
           getResumenAnticipo: () => of(null),
+          estadoEnlace: () => of(null),
+          update: () => of(null),
+          create: () => of(null),
         } },
         { provide: ClienteService, useValue: { getAll: () => of([]) } },
         { provide: MaterialService, useValue: { getAll: () => of([]), getTopUsados: () => of([]) } },
         { provide: PresupuestoIaService, useValue: iaService },
         { provide: MatSnackBar, useValue: snackBar },
+        DatePipe,
         { provide: MatDialog, useValue: { open: vi.fn() } },
       ],
     }).compileComponents();
@@ -75,7 +80,16 @@ describe('PresupuestoFormComponent AI review', () => {
     }, aiPendingBlock: 'Revisa antes de guardar', aiHelp: {
       title: 'Cómo funciona Crear con IA', step1: 'Describe la obra', step2: 'La IA crea un borrador',
       step3: 'Revisa los precios', note: 'No incluyas datos personales',
-    } }, budgetForm: { manualTasksTitle: 'Trabajos manuales' } });
+    } },
+      budgetForm: {
+        manualTasksTitle: 'Trabajos manuales',
+        createdShareHint: 'Elige cómo quieres compartirlo con tu cliente.',
+        backToBudgets: 'Volver a presupuestos',
+        edit: 'Editar presupuesto',
+      },
+      snack: { budgetUpdated: 'Presupuesto actualizado.' },
+      budgetShare: { title: 'Compartir presupuesto', whatsapp: 'WhatsApp', email: 'Email', copy: 'Copiar', download: 'Descargar PDF' },
+    });
     translate.use('es');
     fixture = TestBed.createComponent(PresupuestoFormComponent);
     component = fixture.componentInstance;
@@ -260,6 +274,24 @@ describe('PresupuestoFormComponent AI review', () => {
     component.abrirConfirmacionSeguras();
     expect(component.confirmacionSegurasAbierta).toBe(true);
     expect(component.resumenConfirmacionSeguras[0].description).toBe('Pintura');
+  });
+
+  it('shows share options after saving instead of an empty edit screen', () => {
+    component.isEdit = true;
+    component.creacionCompletada = true;
+    component.presupuestoActual = {
+      id: 19, clienteId: 7, clienteNombre: 'Cliente', fechaCreacion: '', subtotal: 800, iva: 168, total: 968,
+      ivaHabilitado: true, estado: 'Pendiente', items: [],
+    } satisfies Presupuesto;
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Elige cómo quieres compartirlo con tu cliente.');
+    expect(text).toContain('WhatsApp');
+    expect(text).toContain('Email');
+    expect(fixture.nativeElement.querySelector('app-enviar-presupuesto')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.send-buttons')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.actions')).toBeNull();
   });
 
   it('renders translated AI help and its privacy note in the standard form', () => {

@@ -160,7 +160,15 @@ export class EnviarPresupuestoComponent implements OnChanges {
   private readonly fb = inject(FormBuilder);
 
   @Input({ required: true }) presupuesto!: Presupuesto;
-  @Input() mostrarOpcionesAlInicio = false;
+  @Input()
+  set mostrarOpcionesAlInicio(value: boolean) {
+    this._mostrarOpcionesAlInicio = value;
+    if (value) this.expanded = true;
+  }
+  get mostrarOpcionesAlInicio(): boolean {
+    return this._mostrarOpcionesAlInicio;
+  }
+  private _mostrarOpcionesAlInicio = false;
   @Output() enviado = new EventEmitter<Presupuesto>();
   expanded = false;
   loading = false;
@@ -182,7 +190,7 @@ export class EnviarPresupuestoComponent implements OnChanges {
   ) {}
 
   ngOnChanges(): void {
-    if (this.mostrarOpcionesAlInicio) this.expanded = true;
+    if (this._mostrarOpcionesAlInicio) this.expanded = true;
     if (!this.presupuesto) return;
     this.telefono = this.presupuesto.clienteTelefono ?? '';
     this.email = this.presupuesto.clienteEmail ?? '';

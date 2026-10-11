@@ -107,7 +107,8 @@
     "create": "Create",
     "edit": "Edit",
     "delete": "Delete",
-    "back": "Back"
+    "back": "Back",
+    "loading": "Loading…"
   },
   "invite": {
     "dialogTitle": "Email invitation",

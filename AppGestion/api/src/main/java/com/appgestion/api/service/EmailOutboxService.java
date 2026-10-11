@@ -2,6 +2,7 @@ package com.appgestion.api.service;
 
 import com.appgestion.api.domain.entity.EmailJob;
 import com.appgestion.api.domain.entity.Usuario;
+import com.appgestion.api.domain.enums.EmailJobStatus;
 import com.appgestion.api.dto.email.EmailJobPayload;
 import com.appgestion.api.dto.support.AdjuntoCorreo;
 import com.appgestion.api.repository.EmailJobRepository;
@@ -9,6 +10,7 @@ import com.appgestion.api.repository.UsuarioRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Base64;
@@ -16,7 +18,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Encola correos en {@code email_jobs}; el worker envía de forma asíncrona.
+ * Encola el correo y lo envía en la misma petición.
+ * En Vercel no hay un proceso persistente: el worker {@code @Scheduled} no llega a ejecutarse.
  */
 @Service
 public class EmailOutboxService {
@@ -24,17 +27,20 @@ public class EmailOutboxService {
     private final EmailJobRepository emailJobRepository;
     private final UsuarioRepository usuarioRepository;
     private final ObjectMapper objectMapper;
+    private final EmailJobProcessor emailJobProcessor;
 
     public EmailOutboxService(
             EmailJobRepository emailJobRepository,
             UsuarioRepository usuarioRepository,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            EmailJobProcessor emailJobProcessor) {
         this.emailJobRepository = emailJobRepository;
         this.usuarioRepository = usuarioRepository;
         this.objectMapper = objectMapper;
+        this.emailJobProcessor = emailJobProcessor;
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void enqueueHtmlPdf(
             Long usuarioId,
             String to,
@@ -57,7 +63,7 @@ public class EmailOutboxService {
         saveJob(usuarioId, idempotencyKey, payload);
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void enqueueHtmlCliente(
             Long usuarioId,
             String to,
@@ -88,7 +94,7 @@ public class EmailOutboxService {
         saveJob(usuarioId, idempotencyKey, payload);
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void enqueueSoporte(
             Long usuarioId,
             String to,
@@ -128,9 +134,18 @@ public class EmailOutboxService {
             job.setUsuario(usuario);
             job.setIdempotencyKey(idempotencyKey);
             job.setPayloadJson(objectMapper.writeValueAsString(payload));
-            emailJobRepository.save(job);
+            EmailJob saved = emailJobRepository.saveAndFlush(job);
+            emailJobProcessor.process(saved.getId());
+            EmailJob updated = emailJobRepository.findById(saved.getId()).orElse(saved);
+            if (updated.getStatus() != EmailJobStatus.SENT) {
+                String reason = updated.getLastError();
+                throw new IllegalStateException(
+                        reason != null && !reason.isBlank() ? reason : "No se pudo enviar el correo");
+            }
         } catch (DataIntegrityViolationException dup) {
             // idempotencia: mismo trabajo ya encolado
+        } catch (IllegalStateException e) {
+            throw e;
         } catch (Exception e) {
             throw new IllegalStateException("No se pudo encolar el correo", e);
         }

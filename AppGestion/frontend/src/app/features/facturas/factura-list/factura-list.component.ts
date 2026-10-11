@@ -620,10 +620,13 @@ export class FacturaListComponent implements OnInit {
         queueMicrotask(() => {
           this.connectSortPaginator();
           this.updateFilter();
+          this.cdr.detectChanges();
         });
       },
       error: () => {
         this.isLoading = false;
+        queueMicrotask(() => this.cdr.detectChanges());
+        this.snackBar.open(this.translate.instant('snack.invoiceLoadFail'), this.snackClose(), { duration: 5000 });
       },
     });
   }

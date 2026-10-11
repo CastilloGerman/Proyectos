@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.List;
 
@@ -27,6 +28,16 @@ public interface PresupuestoEnlaceRepository extends JpaRepository<PresupuestoEn
             """)
     PresupuestoEnlaceResumen summarizeViews(@Param("presupuestoId") Long presupuestoId,
                                              @Param("usuarioId") Long usuarioId);
+
+    /** Fila: presupuestoId, primeraVistaAt, numVistas. */
+    @Query("""
+            select e.presupuesto.id, min(e.primeraVistaAt), coalesce(sum(e.numVistas), 0)
+            from PresupuestoEnlace e
+            where e.presupuesto.usuario.id = :usuarioId and e.presupuesto.id in :ids
+            group by e.presupuesto.id
+            """)
+    List<Object[]> summarizeViewsForPresupuestos(@Param("usuarioId") Long usuarioId,
+                                                  @Param("ids") Collection<Long> ids);
 
     @Query("select max(e.ultimaVistaAt) from PresupuestoEnlace e where e.presupuesto.id = :presupuestoId")
     Instant latestViewAt(@Param("presupuestoId") Long presupuestoId);

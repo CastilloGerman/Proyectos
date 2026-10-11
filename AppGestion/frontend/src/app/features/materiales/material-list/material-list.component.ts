@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
@@ -12,7 +12,7 @@ import { MaterialService } from '../../../core/services/material.service';
 import { Material } from '../../../core/models/material.model';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { HintBannerComponent } from '../../../shared/hint-banner/hint-banner.component';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-material-list',
@@ -25,6 +25,7 @@ import { TranslateService } from '@ngx-translate/core';
         MatSnackBarModule,
         MatTooltipModule,
         HintBannerComponent,
+        TranslateModule,
     ],
     template: `
     <div class="material-list">
@@ -76,7 +77,7 @@ import { TranslateService } from '@ngx-translate/core';
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
           <tr class="mat-row" *matNoDataRow>
-            <td class="mat-cell" colspan="4">No hay materiales. Crea uno para empezar.</td>
+            <td class="mat-cell" colspan="4">{{ cargando ? ('common.loading' | translate) : 'No hay materiales. Crea uno para empezar.' }}</td>
           </tr>
         </table>
       </div>
@@ -102,6 +103,8 @@ import { TranslateService } from '@ngx-translate/core';
 export class MaterialListComponent implements OnInit {
   displayedColumns = ['nombre', 'precioUnitario', 'unidadMedida', 'actions'];
   dataSource = new MatTableDataSource<Material>([]);
+  cargando = false;
+  private readonly cdr = inject(ChangeDetectorRef);
 
   constructor(
     public auth: AuthService,
@@ -116,8 +119,20 @@ export class MaterialListComponent implements OnInit {
   }
 
   load(): void {
-    this.materialService.getAll().subscribe((data) => {
-      this.dataSource.data = data;
+    this.cargando = true;
+    this.materialService.getAll().subscribe({
+      next: (data) => {
+        this.dataSource.data = data;
+        this.cargando = false;
+        queueMicrotask(() => this.cdr.detectChanges());
+      },
+      error: () => {
+        this.cargando = false;
+        queueMicrotask(() => this.cdr.detectChanges());
+        this.snackBar.open(this.translate.instant('snack.materialsLoadFail'), this.translate.instant('common.close'), {
+          duration: 5000,
+        });
+      },
     });
   }
 

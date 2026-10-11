@@ -8,12 +8,27 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Pageable;
 
 import jakarta.persistence.LockModeType;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 public interface PresupuestoRepository extends JpaRepository<Presupuesto, Long> {
 
     List<Presupuesto> findByUsuarioIdOrderByFechaCreacionDesc(Long usuarioId);
+
+    @Query("select p.id from Presupuesto p where p.usuario.id = :usuarioId order by p.fechaCreacion desc")
+    List<Long> findIdsByUsuarioIdOrderByFechaCreacionDesc(@Param("usuarioId") Long usuarioId);
+
+    /** Grafo de listado: cliente, usuario, partidas y material en una sola consulta. */
+    @Query("""
+            select distinct p from Presupuesto p
+            join fetch p.cliente
+            join fetch p.usuario
+            left join fetch p.items i
+            left join fetch i.material
+            where p.id in :ids
+            """)
+    List<Presupuesto> findForListByIds(@Param("ids") Collection<Long> ids);
 
     List<Presupuesto> findByUsuarioIdAndClienteIdOrderByFechaCreacionDesc(Long usuarioId, Long clienteId);
 

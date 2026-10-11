@@ -80,11 +80,11 @@ class GastoServiceIdorTest {
 
     @Test
     void listar_consultaSoloGastosDelUsuario() {
-        when(gastoRepository.findByUsuarioIdOrderByFechaDesc(42L)).thenReturn(List.of());
+        when(gastoRepository.findByUsuarioIdForList(42L)).thenReturn(List.of());
 
         gastoService.listar(42L);
 
-        verify(gastoRepository).findByUsuarioIdOrderByFechaDesc(42L);
+        verify(gastoRepository).findByUsuarioIdForList(42L);
     }
 
     @Test

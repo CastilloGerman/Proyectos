@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
@@ -89,7 +89,7 @@ import { HintBannerComponent } from '../../../shared/hint-banner/hint-banner.com
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
           <tr class="mat-row" *matNoDataRow>
-            <td class="mat-cell" colspan="7">{{ 'gastos.empty' | translate }}</td>
+            <td class="mat-cell" colspan="7">{{ (cargando ? 'common.loading' : 'gastos.empty') | translate }}</td>
           </tr>
         </table>
       </div>
@@ -115,6 +115,8 @@ import { HintBannerComponent } from '../../../shared/hint-banner/hint-banner.com
 export class GastoListComponent implements OnInit {
   displayedColumns = ['fecha', 'proveedor', 'concepto', 'baseImponible', 'cuotaIva', 'categoria', 'actions'];
   dataSource = new MatTableDataSource<Gasto>([]);
+  cargando = false;
+  private readonly cdr = inject(ChangeDetectorRef);
 
   constructor(
     public auth: AuthService,
@@ -129,8 +131,20 @@ export class GastoListComponent implements OnInit {
   }
 
   load(): void {
-    this.gastoService.getAll().subscribe((data) => {
-      this.dataSource.data = data;
+    this.cargando = true;
+    this.gastoService.getAll().subscribe({
+      next: (data) => {
+        this.dataSource.data = data;
+        this.cargando = false;
+        queueMicrotask(() => this.cdr.detectChanges());
+      },
+      error: () => {
+        this.cargando = false;
+        queueMicrotask(() => this.cdr.detectChanges());
+        this.snackBar.open(this.translate.instant('gastos.loadFail'), this.translate.instant('common.close'), {
+          duration: 5000,
+        });
+      },
     });
   }
 

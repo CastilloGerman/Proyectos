@@ -107,7 +107,8 @@
     "create": "Créer",
     "edit": "Modifier",
     "delete": "Supprimer",
-    "back": "Retour"
+    "back": "Retour",
+    "loading": "Chargement…"
   },
   "invite": {
     "dialogTitle": "Invitation par e-mail",

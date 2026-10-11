@@ -28,7 +28,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -82,7 +84,17 @@ public class FacturaService {
 
     @Transactional(readOnly = true)
     public List<FacturaResponse> listar(Long usuarioId, String q, boolean incluirAnuladas) {
-        var stream = facturaRepository.findByUsuarioIdForList(usuarioId, incluirAnuladas).stream()
+        List<Long> ids = facturaRepository.findIdsByUsuarioIdForList(usuarioId, incluirAnuladas);
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, Factura> byId = new LinkedHashMap<>();
+        for (Factura factura : facturaRepository.findForListByIds(ids)) {
+            byId.putIfAbsent(factura.getId(), factura);
+        }
+        var stream = ids.stream()
+                .map(byId::get)
+                .filter(Objects::nonNull)
                 .map(f -> facturaResponseMapper.toResponse(f, List.of()));
         if (q != null && !q.isBlank()) {
             String lower = q.strip().toLowerCase();

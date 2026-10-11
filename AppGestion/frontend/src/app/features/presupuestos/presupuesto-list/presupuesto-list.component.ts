@@ -167,7 +167,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
           <tr class="mat-row" *matNoDataRow>
-            <td class="mat-cell" [attr.colspan]="displayedColumns.length">{{ 'budList.emptyFilter' | translate }}</td>
+            <td class="mat-cell" [attr.colspan]="displayedColumns.length">{{ (cargando ? 'common.loading' : 'budList.emptyFilter') | translate }}</td>
           </tr>
         </table>
         <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons></mat-paginator>
@@ -288,6 +288,7 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
   displayedColumns = ['clienteNombre', 'fechaCreacion', 'estado', 'anticipo', 'total', 'actions'];
   dataSource = new MatTableDataSource<Presupuesto>([]);
   actualizandoEstadoPresupuestoId: number | null = null;
+  cargando = false;
 
   @ViewChild(MatSort) sort!: MatSort;
   @ViewChild(MatPaginator) paginator!: MatPaginator;
@@ -334,9 +335,16 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
   }
 
   load(): void {
+    this.cargando = true;
     this.presupuestoService.getAll().subscribe({
-      next: (data) => this.dataSource.data = data,
+      next: (data) => {
+        this.dataSource.data = data;
+        this.cargando = false;
+        queueMicrotask(() => this.cdr.detectChanges());
+      },
       error: (err) => {
+        this.cargando = false;
+        queueMicrotask(() => this.cdr.detectChanges());
         const msg =
           err.status === 403
             ? this.translate.instant('snack.estimatesLoadForbidden')

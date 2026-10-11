@@ -107,7 +107,8 @@
     "create": "Creează",
     "edit": "Editează",
     "delete": "Șterge",
-    "back": "Înapoi"
+    "back": "Înapoi",
+    "loading": "Se încarcă…"
   },
   "invite": {
     "dialogTitle": "Invitație pe e-mail",

@@ -86,6 +86,10 @@ function decimalMin(minimum: number) {
           <mat-card-subtitle>{{ 'budQuick.subtitle' | translate }}</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
+          @if (presupuestoCreado) {
+            <p>{{ 'budgetForm.createdShareHint' | translate }}</p>
+            <app-enviar-presupuesto [presupuesto]="presupuestoCreado" [mostrarOpcionesAlInicio]="true" (enviado)="presupuestoCreado = $event" />
+          } @else {
           <form [formGroup]="form" (ngSubmit)="crearYEnviar()">
             <section class="cliente-block" aria-labelledby="cliente-title">
               <h2 id="cliente-title" class="section-title">{{ 'budQuick.clientLabel' | translate }}</h2>
@@ -302,9 +306,6 @@ function decimalMin(minimum: number) {
               <p class="error-message" role="alert">{{ errorMessage }}</p>
             }
           </form>
-
-          @if (presupuestoCreado) {
-            <app-enviar-presupuesto [presupuesto]="presupuestoCreado" [mostrarOpcionesAlInicio]="true" (enviado)="presupuestoCreado = $event" />
           }
         </mat-card-content>
       </mat-card>

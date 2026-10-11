@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * API de envío de correo: solo encola trabajos; el worker envía de forma asíncrona.
+ * API de envío de correo. Encola el trabajo y lo entrega en la misma petición.
  */
 @Service
 public class EmailService {

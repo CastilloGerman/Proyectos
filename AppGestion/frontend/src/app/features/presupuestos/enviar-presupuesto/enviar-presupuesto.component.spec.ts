@@ -27,6 +27,26 @@ describe('EnviarPresupuestoComponent', () => {
     expect(msg).toContain('Reformas Sol');
   });
 
+  it('expands share buttons when mostrarOpcionesAlInicio is set', () => {
+    TestBed.configureTestingModule({
+      imports: [EnviarPresupuestoComponent, TranslateModule.forRoot()],
+      providers: [
+        { provide: PresupuestoService, useValue: {} },
+        { provide: ClienteService, useValue: {} },
+        { provide: AuthService, useValue: { user: () => ({ nombre: 'Empresa' }) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(EnviarPresupuestoComponent);
+    fixture.componentInstance.presupuesto = {
+      id: 1, clienteId: 2, clienteNombre: 'Ana', fechaCreacion: '', subtotal: 10, iva: 2.1,
+      total: 12.1, ivaHabilitado: true, estado: 'Pendiente', items: [],
+    };
+    fixture.componentInstance.mostrarOpcionesAlInicio = true;
+    fixture.detectChanges();
+    expect(fixture.componentInstance.expanded).toBe(true);
+    expect(fixture.nativeElement.querySelector('.send-buttons')).toBeTruthy();
+  });
+
   it('comparte el PDF con navigator.share y registra WhatsApp al completarse', async () => {
     const share = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal('navigator', { share, canShare: () => true, clipboard: { writeText: vi.fn() } });

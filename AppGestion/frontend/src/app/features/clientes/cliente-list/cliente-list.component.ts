@@ -100,10 +100,14 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
             <td class="mat-cell" colspan="5">
               <div class="empty-state">
                 <mat-icon class="empty-illus" aria-hidden="true">groups</mat-icon>
-                <p class="empty-title">{{ 'cliList.emptyTitle' | translate }}</p>
-                <p class="empty-text">{{ 'cliList.emptyText' | translate }}</p>
-                @if (auth.canMutate()) {
-                <a mat-stroked-button color="primary" routerLink="/clientes/nuevo">{{ 'cliList.newClient' | translate }}</a>
+                @if (cargando) {
+                  <p class="empty-title">{{ 'common.loading' | translate }}</p>
+                } @else {
+                  <p class="empty-title">{{ 'cliList.emptyTitle' | translate }}</p>
+                  <p class="empty-text">{{ 'cliList.emptyText' | translate }}</p>
+                  @if (auth.canMutate()) {
+                  <a mat-stroked-button color="primary" routerLink="/clientes/nuevo">{{ 'cliList.newClient' | translate }}</a>
+                  }
                 }
               </div>
             </td>
@@ -187,6 +191,7 @@ export class ClienteListComponent implements OnInit {
   displayedColumns = ['nombre', 'estadoPanel', 'email', 'telefono', 'actions'];
   dataSource = new MatTableDataSource<Cliente>([]);
   provisionalesCount = 0;
+  cargando = false;
 
   constructor(
     public auth: AuthService,
@@ -201,9 +206,23 @@ export class ClienteListComponent implements OnInit {
   }
 
   load(): void {
-    this.clienteService.getAll().subscribe((data) => {
-      this.dataSource.data = data;
-      this.provisionalesCount = data.filter((c) => c.estadoCliente === 'PROVISIONAL').length;
+    this.cargando = true;
+    this.clienteService.getAll().subscribe({
+      next: (data) => {
+        this.dataSource.data = data;
+        this.provisionalesCount = data.filter((c) => c.estadoCliente === 'PROVISIONAL').length;
+        this.cargando = false;
+        queueMicrotask(() => this.cdr.detectChanges());
+      },
+      error: () => {
+        this.cargando = false;
+        queueMicrotask(() => this.cdr.detectChanges());
+        this.snackBar.open(
+          this.translate.instant('snack.clientsLoadFail'),
+          this.translate.instant('common.close'),
+          { duration: 5000 },
+        );
+      },
     });
   }
 
