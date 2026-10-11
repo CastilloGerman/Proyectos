@@ -41,7 +41,6 @@ import { EnviarPresupuestoComponent } from '../enviar-presupuesto/enviar-presupu
 import { PresupuestoIaBorradorResponse } from '../../../core/models/presupuesto-ia.model';
 import { PresupuestoIaPanelComponent, PresupuestoIaPanelState } from '../../../shared/presupuesto-ia-panel/presupuesto-ia-panel.component';
 import { PresupuestoIaPriceInfoComponent } from '../../../shared/presupuesto-ia-panel/presupuesto-ia-price-info.component';
-import { PresupuestoSeguimientoComponent } from '../presupuesto-seguimiento/presupuesto-seguimiento.component';
 
 @Component({
     selector: 'app-presupuesto-form',
@@ -68,7 +67,6 @@ import { PresupuestoSeguimientoComponent } from '../presupuesto-seguimiento/pres
         EnviarPresupuestoComponent,
         PresupuestoIaPanelComponent,
         PresupuestoIaPriceInfoComponent,
-        PresupuestoSeguimientoComponent,
     ],
     template: `
     <div class="presupuesto-form">
@@ -485,7 +483,6 @@ import { PresupuestoSeguimientoComponent } from '../presupuesto-seguimiento/pres
             </div>
             @if (presupuestoActual && (creacionCompletada || mostrarPanelReenvio)) {
               <section #shareAfterSave class="post-save-share" role="status">
-                <h2>{{ 'budgetShare.title' | translate }}</h2>
                 <p>{{ 'budgetForm.createdShareHint' | translate }}</p>
                 <app-enviar-presupuesto
                   [presupuesto]="presupuestoActual"
@@ -493,22 +490,6 @@ import { PresupuestoSeguimientoComponent } from '../presupuesto-seguimiento/pres
                   (enviado)="presupuestoActual = $event"
                 />
               </section>
-            }
-            @if (isEdit && id) {
-              <app-presupuesto-seguimiento
-                [presupuestoId]="id"
-                [enviadoAt]="presupuestoActual?.enviadoAt"
-                [canalEnvio]="presupuestoActual?.canalEnvio"
-                [alertCount]="presupuestoActual?.seguimientoAvisosEnviados ?? 0"
-                [lastAlertAt]="presupuestoActual?.seguimientoUltimoAvisoAt"
-                [silenced]="presupuestoActual?.seguimientoSilenciado ?? false"
-                [respuestaCliente]="presupuestoActual?.respuestaCliente"
-                [respuestaClienteAt]="presupuestoActual?.respuestaClienteAt"
-                [respuestaClienteMensaje]="presupuestoActual?.respuestaClienteMensaje"
-                [clientPhone]="presupuestoActual?.clienteTelefono"
-                [clientCountry]="presupuestoActual?.clientePais"
-                (resend)="abrirPanelEnvio()"
-              />
             }
           </form>
         </mat-card-content>

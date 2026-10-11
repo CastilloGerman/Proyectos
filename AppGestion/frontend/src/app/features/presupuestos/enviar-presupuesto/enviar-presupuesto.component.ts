@@ -72,7 +72,11 @@ export function construirMensajePresupuesto(p: Presupuesto, contratista: string)
       <div class="send-buttons">
         <button mat-raised-button color="primary" type="button" [disabled]="loading" (click)="compartirWhatsApp()"
           [matTooltip]="'budgetShare.whatsapp' | translate">
-          @if (loading) { <mat-icon class="spin">sync</mat-icon> } @else { <mat-icon class="wa-icon">chat</mat-icon> }
+          @if (loading) {
+            <mat-icon class="spin">sync</mat-icon>
+          } @else {
+            <img class="wa-logo" src="assets/whatsapp-logo.svg" alt="" width="20" height="20" />
+          }
           {{ 'budgetShare.whatsapp' | translate }}
         </button>
         <button mat-stroked-button type="button" [disabled]="loading" (click)="mostrarEmail = !mostrarEmail">
@@ -139,9 +143,10 @@ export function construirMensajePresupuesto(p: Presupuesto, contratista: string)
     h2 { margin: 0 0 4px; font-size: 1.15rem; font-weight: 600; }
     .sent-state { margin: 0; display: flex; align-items: center; gap: 6px; color: var(--app-text-secondary); font-size: 0.875rem; }
     .channel-icon { font-size: 18px; width: 18px; height: 18px; }
-    .send-buttons { display: flex; flex-wrap: wrap; gap: var(--app-space-sm); }
+    .send-buttons { display: flex; flex-wrap: wrap; gap: var(--app-space-sm); align-items: center; }
+    .send-buttons button { display: inline-flex; align-items: center; gap: 8px; }
     .secondary-buttons { display: flex; flex-wrap: wrap; gap: var(--app-space-sm); }
-    .wa-icon { color: #25D366 !important; }
+    .wa-logo { width: 20px; height: 20px; display: block; flex-shrink: 0; }
     .full-width { width: 100%; }
     .email-form { display: grid; gap: var(--app-space-sm); padding-top: var(--app-space-sm); }
     .spin { animation: spin 1s linear infinite; }
