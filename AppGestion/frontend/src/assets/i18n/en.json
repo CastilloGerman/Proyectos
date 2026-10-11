@@ -380,7 +380,10 @@
       "budPending": "Pending",
       "budAccepted": "Accepted",
       "budRejected": "Rejected",
-      "budInProgress": "In progress"
+      "budInProgress": "In progress",
+      "budSent": "Sent",
+      "budViewed": "Viewed",
+      "budExpired": "Expired"
     },
     "tip": {
       "payPaid": "Collected in full",
@@ -389,9 +392,16 @@
       "budPending": "Awaiting customer response",
       "budAccepted": "Estimate accepted",
       "budRejected": "Estimate rejected",
-      "budInProgress": "Work in progress"
+      "budInProgress": "Work in progress",
+      "budSent": "Budget sent",
+      "budViewed": "The client has viewed the budget",
+      "budExpired": "The link has expired"
     },
     "pressToChange": "Tap to change"
+  },
+  "hintBanner": {
+    "ariaLabel": "Usage tip",
+    "titleDefault": "How it works"
   },
   "invType": {
     "ANTICIPO": "Deposit invoice",

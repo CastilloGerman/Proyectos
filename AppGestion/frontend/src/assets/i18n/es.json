@@ -581,7 +581,10 @@
       "budPending": "Pendiente",
       "budAccepted": "Aceptado",
       "budRejected": "Rechazado",
-      "budInProgress": "En ejecución"
+      "budInProgress": "En ejecución",
+      "budSent": "Enviado",
+      "budViewed": "Visto",
+      "budExpired": "Caducado"
     },
     "tip": {
       "payPaid": "Cobrada",
@@ -590,9 +593,16 @@
       "budPending": "Pendiente de respuesta",
       "budAccepted": "Presupuesto aceptado",
       "budRejected": "Presupuesto rechazado",
-      "budInProgress": "Obra en curso"
+      "budInProgress": "Obra en curso",
+      "budSent": "Presupuesto enviado",
+      "budViewed": "El cliente ha visto el presupuesto",
+      "budExpired": "El enlace ha caducado"
     },
     "pressToChange": "Pulsa para cambiar"
+  },
+  "hintBanner": {
+    "ariaLabel": "Consejo de uso",
+    "titleDefault": "¿Cómo funciona?"
   },
   "invType": {
     "ANTICIPO": "Anticipo",

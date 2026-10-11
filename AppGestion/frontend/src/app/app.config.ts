@@ -6,9 +6,21 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { provideTranslateLoader, TranslateModule } from '@ngx-translate/core';
 import { TranslateHttpLoader, TRANSLATE_HTTP_LOADER_CONFIG } from '@ngx-translate/http-loader';
+import { registerLocaleData } from '@angular/common';
+import localeEs from '@angular/common/locales/es';
+import localeEn from '@angular/common/locales/en';
+import localeFr from '@angular/common/locales/fr';
+import localeRo from '@angular/common/locales/ro';
+import localeUk from '@angular/common/locales/uk';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth.interceptor';
 import { LanguageService } from './core/i18n/language.service';
+
+registerLocaleData(localeEs, 'es');
+registerLocaleData(localeEn, 'en');
+registerLocaleData(localeFr, 'fr');
+registerLocaleData(localeRo, 'ro');
+registerLocaleData(localeUk, 'uk');
 
 function initLanguage(languageService: LanguageService): () => Promise<void> {
   return () => languageService.init();

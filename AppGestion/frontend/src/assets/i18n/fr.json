@@ -380,7 +380,10 @@
       "budPending": "En attente",
       "budAccepted": "Accepté",
       "budRejected": "Refusé",
-      "budInProgress": "En cours"
+      "budInProgress": "En cours",
+      "budSent": "Envoyé",
+      "budViewed": "Vu",
+      "budExpired": "Expiré"
     },
     "tip": {
       "payPaid": "Encaissée intégralement",
@@ -389,9 +392,16 @@
       "budPending": "En attente de réponse du client",
       "budAccepted": "Devis accepté",
       "budRejected": "Devis refusé",
-      "budInProgress": "Chantier en cours"
+      "budInProgress": "Chantier en cours",
+      "budSent": "Devis envoyé",
+      "budViewed": "Le client a vu le devis",
+      "budExpired": "Le lien a expiré"
     },
     "pressToChange": "Appuyez pour changer"
+  },
+  "hintBanner": {
+    "ariaLabel": "Conseil d'utilisation",
+    "titleDefault": "Comment ça marche"
   },
   "invType": {
     "ANTICIPO": "Acompte",

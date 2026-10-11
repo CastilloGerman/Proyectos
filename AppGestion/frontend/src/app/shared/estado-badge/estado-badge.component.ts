@@ -23,7 +23,10 @@ type EstadoTipoId =
   | 'budPending'
   | 'budAccepted'
   | 'budRejected'
-  | 'budInProgress';
+  | 'budInProgress'
+  | 'budSent'
+  | 'budViewed'
+  | 'budExpired';
 
 interface BadgeStyle {
   cssClass: string;
@@ -40,6 +43,9 @@ const ESTADO_VISUAL: Record<string, BadgeStyle> = {
   rechazado: { cssClass: 'badge-rechazado', icon: 'thumb_down' },
   'en ejecución': { cssClass: 'badge-ejecucion', icon: 'construction' },
   'en ejecucion': { cssClass: 'badge-ejecucion', icon: 'construction' },
+  enviado: { cssClass: 'badge-enviado', icon: 'send' },
+  visto: { cssClass: 'badge-visto', icon: 'visibility' },
+  caducado: { cssClass: 'badge-caducado', icon: 'event_busy' },
 };
 
 /** Misma normalización que en el dashboard para “En ejecución”. */
@@ -60,6 +66,9 @@ const ESTADO_LABEL_ID: Record<string, EstadoTipoId> = {
   rechazado: 'budRejected',
   'en ejecución': 'budInProgress',
   'en ejecucion': 'budInProgress',
+  enviado: 'budSent',
+  visto: 'budViewed',
+  caducado: 'budExpired',
 };
 
 @Component({
@@ -170,6 +179,18 @@ const ESTADO_LABEL_ID: Record<string, EstadoTipoId> = {
     .badge-ejecucion {
       background: #ffedd5;
       color: #c2410c;
+    }
+    .badge-enviado {
+      background: #e0e7ff;
+      color: #3730a3;
+    }
+    .badge-visto {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    .badge-caducado {
+      background: #fef3c7;
+      color: #92400e;
     }
   `,
 })

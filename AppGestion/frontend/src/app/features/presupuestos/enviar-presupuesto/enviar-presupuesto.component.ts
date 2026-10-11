@@ -1,7 +1,14 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnChanges, Output } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, EventEmitter, Input, OnChanges, Output, inject } from '@angular/core';
+import { FormsModule, ReactiveFormsModule, FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { Presupuesto } from '../../../core/models/presupuesto.model';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
 import { ClienteService } from '../../../core/services/cliente.service';
@@ -40,75 +47,118 @@ export function construirMensajePresupuesto(p: Presupuesto, contratista: string)
 @Component({
   selector: 'app-enviar-presupuesto',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
+  imports: [
+    CommonModule, FormsModule, ReactiveFormsModule, TranslateModule,
+    MatButtonModule, MatIconModule, MatTooltipModule,
+    MatFormFieldModule, MatInputModule, MatCheckboxModule,
+  ],
   template: `
-    <div class="share-actions">
-      <button class="share-trigger" type="button" (click)="expanded = !expanded" [attr.aria-expanded]="expanded">
-        {{ 'invite.shareTooltip' | translate }}
-      </button>
-    </div>
     @if (expanded) {
-    <section class="share-panel" aria-labelledby="share-title">
+    <section class="send-section" aria-labelledby="share-title">
       <h2 id="share-title">{{ 'budgetShare.title' | translate }}</h2>
       @if (presupuesto.enviadoAt) {
-        <p class="sent-state">{{ 'budgetShare.sent' | translate }} · {{ presupuesto.enviadoAt | date:'short' }} ({{ presupuesto.canalEnvio }})</p>
+        <p class="sent-state">
+          <mat-icon class="channel-icon">{{ presupuesto.canalEnvio === 'WHATSAPP' ? 'chat' : 'email' }}</mat-icon>
+          {{ 'budgetShare.sent' | translate }} · {{ presupuesto.enviadoAt | date:'short' }}
+          ({{ presupuesto.canalEnvio === 'WHATSAPP' ? ('publicBudget.whatsapp' | translate) : ('publicBudget.email' | translate) }})
+        </p>
       }
       @if (telefonoNoGuardado) {
-        <label class="field">{{ 'budgetShare.phone' | translate }}
-          <input type="tel" [(ngModel)]="telefono" autocomplete="tel" />
-        </label>
-        <label class="save-phone"><input type="checkbox" [(ngModel)]="guardarTelefono" /> {{ 'budgetShare.savePhone' | translate }}</label>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>{{ 'budgetShare.phone' | translate }}</mat-label>
+          <input matInput type="tel" [(ngModel)]="telefono" autocomplete="tel" />
+        </mat-form-field>
+        <mat-checkbox [(ngModel)]="guardarTelefono">{{ 'budgetShare.savePhone' | translate }}</mat-checkbox>
       }
-      <button class="primary" type="button" [disabled]="loading" (click)="compartirWhatsApp()">{{ 'budgetShare.whatsapp' | translate }}</button>
-      <button class="secondary" type="button" [disabled]="loading" (click)="mostrarEmail = !mostrarEmail">{{ 'budgetShare.email' | translate }}</button>
-      @if (waUrl) {
-        <a class="tertiary" [href]="waUrl" target="_blank" rel="noopener" (click)="prepararFallback()">{{ 'budgetShare.openWhatsApp' | translate }}</a>
-        @if (fallbackPendiente) { <button class="tertiary" type="button" (click)="confirmarEnviado()">{{ 'budgetShare.alreadySent' | translate }}</button> }
-      }
-      <button class="tertiary" type="button" (click)="copiarMensaje()">{{ 'budgetShare.copy' | translate }}</button>
-      <button class="tertiary" type="button" [disabled]="loading" (click)="descargarPdf()">{{ 'budgetShare.download' | translate }}</button>
-      <div class="public-link-actions">
-        <button class="tertiary" type="button" [disabled]="loading" (click)="crearEnlace()">
-          {{ (publicLink ? 'publicBudget.regenerateLink' : 'publicBudget.createLink') | translate }}
+      <div class="send-buttons">
+        <button mat-raised-button color="primary" type="button" [disabled]="loading" (click)="compartirWhatsApp()"
+          [matTooltip]="'budgetShare.whatsapp' | translate">
+          @if (loading) { <mat-icon class="spin">sync</mat-icon> } @else { <mat-icon class="wa-icon">chat</mat-icon> }
+          {{ 'budgetShare.whatsapp' | translate }}
         </button>
-        @if (publicLink) {
-          <a [href]="publicLink" target="_blank" rel="noopener noreferrer">{{ publicLink }}</a>
-          <button class="tertiary" type="button" (click)="copiarEnlace()">{{ 'publicBudget.copyLink' | translate }}</button>
-          <button class="tertiary" type="button" [disabled]="loading" (click)="revocarEnlace()">{{ 'publicBudget.revokeLink' | translate }}</button>
+        <button mat-stroked-button type="button" [disabled]="loading" (click)="mostrarEmail = !mostrarEmail">
+          <mat-icon>email</mat-icon>
+          {{ 'budgetShare.email' | translate }}
+        </button>
+      </div>
+      @if (waUrl) {
+        <a [href]="waUrl" target="_blank" rel="noopener" (click)="prepararFallback()">
+          {{ 'budgetShare.openWhatsApp' | translate }}
+        </a>
+        @if (fallbackPendiente) {
+          <button mat-button type="button" (click)="confirmarEnviado()">
+            <mat-icon>check</mat-icon>{{ 'budgetShare.alreadySent' | translate }}
+          </button>
         }
+      }
+      <div class="secondary-buttons">
+        <button mat-button type="button" (click)="copiarMensaje()">
+          <mat-icon>content_copy</mat-icon>{{ 'budgetShare.copy' | translate }}
+        </button>
+        <button mat-button type="button" [disabled]="loading" (click)="descargarPdf()">
+          @if (loading) { <mat-icon class="spin">sync</mat-icon> } @else { <mat-icon>download</mat-icon> }
+          {{ 'budgetShare.download' | translate }}
+        </button>
       </div>
       @if (mostrarEmail) {
-        <form class="email-form" (ngSubmit)="enviarEmail()">
-          <label class="field">{{ 'budgetShare.recipient' | translate }}<input type="email" name="recipient" [(ngModel)]="email" required maxlength="254" /></label>
-          <label class="field">{{ 'budgetShare.subject' | translate }}<input name="subject" [(ngModel)]="asunto" required maxlength="200" /></label>
-          <label class="field">{{ 'budgetShare.message' | translate }}<textarea name="message" [(ngModel)]="mensaje" required maxlength="5000" rows="5"></textarea></label>
-          <button class="primary email-submit" type="submit" [disabled]="loading || !email.trim() || !asunto.trim() || !mensaje.trim()">{{ 'budgetShare.sendEmail' | translate }}</button>
+        <form [formGroup]="emailForm" (ngSubmit)="enviarEmail()" class="email-form">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>{{ 'budgetShare.recipient' | translate }}</mat-label>
+            <input matInput formControlName="recipient" type="email" maxlength="254" />
+            @if (emailForm.get('recipient')?.hasError('required') && emailForm.get('recipient')?.touched) {
+              <mat-error>{{ 'budgetForm.pickCustomerErr' | translate }}</mat-error>
+            }
+            @if (emailForm.get('recipient')?.hasError('email')) {
+              <mat-error>{{ 'auth.login.emailInvalid' | translate }}</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>{{ 'budgetShare.subject' | translate }}</mat-label>
+            <input matInput formControlName="subject" maxlength="200" />
+            @if (emailForm.get('subject')?.hasError('required') && emailForm.get('subject')?.touched) {
+              <mat-error>{{ 'budgetShare.subject' | translate }} {{ 'budgetForm.nameRequired' | translate }}</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>{{ 'budgetShare.message' | translate }}</mat-label>
+            <textarea matInput formControlName="message" maxlength="5000" rows="5"></textarea>
+            @if (emailForm.get('message')?.hasError('required') && emailForm.get('message')?.touched) {
+              <mat-error>{{ 'budgetShare.message' | translate }} {{ 'budgetForm.nameRequired' | translate }}</mat-error>
+            }
+          </mat-form-field>
+          <button mat-raised-button color="primary" type="submit"
+            [disabled]="loading || emailForm.invalid">
+            @if (loading) { <mat-icon class="spin">sync</mat-icon> }
+            {{ 'budgetShare.sendEmail' | translate }}
+          </button>
         </form>
       }
-      @if (feedback) { <p role="status" class="feedback">{{ feedback }}</p> }
     </section>
     }
   `,
   styles: [`
-    .share-actions { margin-top:20px; }
-    .share-trigger { min-height:44px; padding:8px 18px; border:0; border-radius:8px; background:var(--app-primary,#2563eb); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
-    .share-panel { display:grid; gap:12px; padding:16px; margin:12px 0 0; border:1px solid var(--app-border,#d1d5db); border-radius:12px; }
-    h2 { margin:0 0 4px; font-size:1.15rem; }
-    button { min-height:48px; padding:10px 16px; border-radius:8px; font:inherit; cursor:pointer; }
-    button:disabled { opacity:.55; cursor:wait; }
-    .primary { color:#fff; background:#128c4a; border:0; font-weight:700; }
-    .secondary { background:transparent; border:1px solid currentColor; font-weight:600; }
-    .tertiary { min-height:44px; border:0; background:transparent; text-align:left; color:inherit; text-decoration:underline; }
-    .field { display:grid; gap:6px; font-weight:600; }
-    input,textarea { box-sizing:border-box; width:100%; min-height:44px; padding:10px; border:1px solid #87909d; border-radius:6px; font:inherit; }
-    textarea { resize:vertical; }
-    .save-phone { display:flex; align-items:center; gap:8px; }
-    .save-phone input { width:22px; min-height:22px; }
-    .email-form { display:grid; gap:12px; padding-top:8px; }
-    .feedback, .sent-state { margin:0; }
+    .send-section { display: grid; gap: var(--app-space-md); }
+    h2 { margin: 0 0 4px; font-size: 1.15rem; font-weight: 600; }
+    .sent-state { margin: 0; display: flex; align-items: center; gap: 6px; color: var(--app-text-secondary); font-size: 0.875rem; }
+    .channel-icon { font-size: 18px; width: 18px; height: 18px; }
+    .send-buttons { display: flex; flex-wrap: wrap; gap: var(--app-space-sm); }
+    .secondary-buttons { display: flex; flex-wrap: wrap; gap: var(--app-space-sm); }
+    .wa-icon { color: #25D366 !important; }
+    .full-width { width: 100%; }
+    .email-form { display: grid; gap: var(--app-space-sm); padding-top: var(--app-space-sm); }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 768px) {
+      .send-buttons, .secondary-buttons { flex-direction: column; }
+      .send-buttons button, .secondary-buttons button { width: 100%; justify-content: center; }
+    }
   `],
 })
 export class EnviarPresupuestoComponent implements OnChanges {
+  private readonly translate = inject(TranslateService);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly fb = inject(FormBuilder);
+
   @Input({ required: true }) presupuesto!: Presupuesto;
   @Input() mostrarOpcionesAlInicio = false;
   @Output() enviado = new EventEmitter<Presupuesto>();
@@ -122,14 +172,13 @@ export class EnviarPresupuestoComponent implements OnChanges {
   email = '';
   asunto = '';
   mensaje = '';
-  feedback = '';
   publicLink = '';
+  emailForm!: FormGroup;
 
   constructor(
     private readonly presupuestos: PresupuestoService,
     private readonly clientes: ClienteService,
     private readonly auth: AuthService,
-    private readonly translate: TranslateService,
   ) {}
 
   ngOnChanges(): void {
@@ -142,13 +191,18 @@ export class EnviarPresupuestoComponent implements OnChanges {
     this.waUrl = '';
     this.fallbackPendiente = false;
     this.publicLink = '';
+    this.emailForm = this.fb.group({
+      recipient: [this.email, [Validators.required, Validators.email]],
+      subject: [this.asunto, [Validators.required]],
+      message: [this.mensaje, [Validators.required]],
+    });
   }
 
   get telefonoNoGuardado(): boolean { return !this.presupuesto?.clienteTelefono?.trim(); }
 
   async compartirWhatsApp(): Promise<void> {
     const phone = normalizarTelefonoInternacional(this.telefono, this.presupuesto.clientePais || 'ES');
-    if (!phone) { this.feedback = this.translate.instant('budgetShare.phoneRequired'); return; }
+    if (!phone) { this.snackBar.open(this.translate.instant('budgetShare.phoneRequired'), this.translate.instant('common.close'), { duration: 3000 }); return; }
     if (this.telefonoNoGuardado && this.guardarTelefono) await this.guardarTelefonoCliente();
     const publicLink = await this.ensurePublicLink();
     if (!publicLink) return;
@@ -161,16 +215,16 @@ export class EnviarPresupuestoComponent implements OnChanges {
         const shareData: ShareData = { files: [file], text: shareText };
         if (typeof navigator.share === 'function' && typeof navigator.canShare === 'function' && navigator.canShare(shareData)) {
           void navigator.share(shareData).then(() => this.registrarEnvio('WHATSAPP')).catch((error: unknown) => {
-            if ((error as { name?: string })?.name !== 'AbortError') this.feedback = this.translate.instant('budgetShare.shareFailed');
+            if ((error as { name?: string })?.name !== 'AbortError') this.snackBar.open(this.translate.instant('budgetShare.shareFailed'), this.translate.instant('common.close'), { duration: 3000 });
           });
           return;
         }
         this.waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(shareText)}`;
         this.fallbackPendiente = true;
         this.saveBlob(file);
-        this.feedback = this.translate.instant('budgetShare.fallbackHint');
+        this.snackBar.open(this.translate.instant('budgetShare.fallbackHint'), this.translate.instant('common.close'), { duration: 5000 });
       },
-      error: () => { this.loading = false; this.feedback = this.translate.instant('budgetShare.pdfFailed'); },
+      error: () => { this.loading = false; this.snackBar.open(this.translate.instant('budgetShare.pdfFailed'), this.translate.instant('common.close'), { duration: 3000 }); },
     });
   }
 
@@ -179,62 +233,37 @@ export class EnviarPresupuestoComponent implements OnChanges {
   confirmarEnviado(): void { this.registrarEnvio('WHATSAPP'); }
 
   copiarMensaje(): void {
-    void navigator.clipboard?.writeText(this.mensaje).then(() => this.feedback = this.translate.instant('budgetShare.copied'));
+    void navigator.clipboard?.writeText(this.mensaje).then(() =>
+      this.snackBar.open(this.translate.instant('budgetShare.copied'), this.translate.instant('common.close'), { duration: 3000 }));
   }
 
   descargarPdf(): void {
     this.loading = true;
     this.presupuestos.downloadPdf(this.presupuesto.id).subscribe({
       next: blob => { this.loading = false; this.saveBlob(new File([blob], `Presupuesto-${this.presupuesto.id}.pdf`, { type: 'application/pdf' })); },
-      error: () => { this.loading = false; this.feedback = this.translate.instant('budgetShare.pdfFailed'); },
+      error: () => { this.loading = false; this.snackBar.open(this.translate.instant('budgetShare.pdfFailed'), this.translate.instant('common.close'), { duration: 3000 }); },
     });
   }
 
   async enviarEmail(): Promise<void> {
-    if (!this.email.trim() || !this.asunto.trim() || !this.mensaje.trim() || /[\r\n]/.test(this.asunto)) return;
+    if (this.emailForm.invalid) return;
+    const { recipient, subject, message } = this.emailForm.value;
+    if (!recipient || !subject || !message || /[\r\n]/.test(subject)) return;
     const publicLink = await this.ensurePublicLink();
     if (!publicLink) return;
     this.loading = true;
-    const body = `${this.mensaje}\n\n${publicLink}`;
+    const body = `${message}\n\n${publicLink}`;
     try {
       await firstValueFrom(this.presupuestos.enviarPorEmail(this.presupuesto.id, {
-        email: this.email.trim(), asunto: this.asunto.trim(), mensaje: body,
+        email: recipient.trim(), asunto: subject.trim(), mensaje: body,
       }));
       this.loading = false;
-      this.feedback = this.translate.instant('budgetShare.emailQueued');
+      this.snackBar.open(this.translate.instant('budgetShare.emailQueued'), this.translate.instant('common.close'), { duration: 3000 });
       this.registrarEnvio('EMAIL', false, false);
     } catch {
       this.loading = false;
-      this.feedback = this.translate.instant('budgetShare.emailFailed');
+      this.snackBar.open(this.translate.instant('budgetShare.emailFailed'), this.translate.instant('common.close'), { duration: 3000 });
     }
-  }
-
-  async crearEnlace(): Promise<void> {
-    this.loading = true;
-    await this.ensurePublicLink(true);
-    this.loading = false;
-  }
-
-  copiarEnlace(): void {
-    if (!this.publicLink) return;
-    void navigator.clipboard.writeText(this.publicLink)
-      .then(() => this.feedback = this.translate.instant('publicBudget.linkCopied'))
-      .catch(() => this.feedback = this.translate.instant('publicBudget.linkFailed'));
-  }
-
-  revocarEnlace(): void {
-    this.loading = true;
-    this.presupuestos.revocarEnlace(this.presupuesto.id).subscribe({
-      next: () => {
-        this.publicLink = '';
-        this.loading = false;
-        this.feedback = this.translate.instant('publicBudget.linkRevoked');
-      },
-      error: () => {
-        this.loading = false;
-        this.feedback = this.translate.instant('publicBudget.linkFailed');
-      },
-    });
   }
 
   private async ensurePublicLink(force = false): Promise<string | null> {
@@ -244,7 +273,7 @@ export class EnviarPresupuestoComponent implements OnChanges {
       this.publicLink = created.url;
       return created.url;
     } catch {
-      this.feedback = this.translate.instant('publicBudget.linkFailed');
+      this.snackBar.open(this.translate.instant('publicBudget.linkFailed'), this.translate.instant('common.close'), { duration: 3000 });
       return null;
     }
   }
@@ -253,7 +282,7 @@ export class EnviarPresupuestoComponent implements OnChanges {
     try {
       const client = await this.clientes.getById(this.presupuesto.clienteId).toPromise();
       if (client) await this.clientes.update(client.id, { ...client, telefono: this.telefono.trim() }).toPromise();
-    } catch { this.feedback = this.translate.instant('budgetShare.phoneSaveFailed'); }
+    } catch { this.snackBar.open(this.translate.instant('budgetShare.phoneSaveFailed'), this.translate.instant('common.close'), { duration: 3000 }); }
   }
 
   private registrarEnvio(canal: 'WHATSAPP' | 'EMAIL', announce = true, persist = true): void {
@@ -266,13 +295,13 @@ export class EnviarPresupuestoComponent implements OnChanges {
         this.actualizarEnvioLocal(canal, announce);
         this.fallbackPendiente = false;
       },
-      error: () => { this.feedback = this.translate.instant('budgetShare.markFailed'); },
+      error: () => { this.snackBar.open(this.translate.instant('budgetShare.markFailed'), this.translate.instant('common.close'), { duration: 3000 }); },
     });
   }
 
   private actualizarEnvioLocal(canal: 'WHATSAPP' | 'EMAIL', announce: boolean): void {
     this.presupuesto = { ...this.presupuesto, canalEnvio: canal, enviadoAt: new Date().toISOString() };
-    if (announce) this.feedback = this.translate.instant('budgetShare.sent');
+    if (announce) this.snackBar.open(this.translate.instant('budgetShare.sent'), this.translate.instant('common.close'), { duration: 3000 });
     this.enviado.emit(this.presupuesto);
     this.fallbackPendiente = false;
   }

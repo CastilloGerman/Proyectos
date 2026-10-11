@@ -304,7 +304,7 @@ function decimalMin(minimum: number) {
           </form>
 
           @if (presupuestoCreado) {
-            <app-enviar-presupuesto [presupuesto]="presupuestoCreado" (enviado)="presupuestoCreado = $event" />
+            <app-enviar-presupuesto [presupuesto]="presupuestoCreado" [mostrarOpcionesAlInicio]="true" (enviado)="presupuestoCreado = $event" />
           }
         </mat-card-content>
       </mat-card>

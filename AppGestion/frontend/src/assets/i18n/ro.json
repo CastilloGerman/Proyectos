@@ -380,7 +380,10 @@
       "budPending": "În așteptare",
       "budAccepted": "Acceptat",
       "budRejected": "Respins",
-      "budInProgress": "În lucru"
+      "budInProgress": "În lucru",
+      "budSent": "Trimis",
+      "budViewed": "Văzut",
+      "budExpired": "Expirat"
     },
     "tip": {
       "payPaid": "Încasată integral",
@@ -389,9 +392,16 @@
       "budPending": "În așteptarea răspunsului clientului",
       "budAccepted": "Ofertă acceptată",
       "budRejected": "Ofertă respinsă",
-      "budInProgress": "Lucrare în curs"
+      "budInProgress": "Lucrare în curs",
+      "budSent": "Ofertă trimisă",
+      "budViewed": "Clientul a văzut oferta",
+      "budExpired": "Link-ul a expirat"
     },
     "pressToChange": "Apasă pentru a schimba"
+  },
+  "hintBanner": {
+    "ariaLabel": "Sfat de utilizare",
+    "titleDefault": "Cum funcționează"
   },
   "invType": {
     "ANTICIPO": "Avans",

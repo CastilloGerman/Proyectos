@@ -1,8 +1,8 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 export interface HintStep {
   icon: string;
@@ -15,22 +15,22 @@ export interface HintStep {
   standalone: true,
   imports: [CommonModule, MatIconModule, MatButtonModule, TranslateModule],
   template: `
-    <div class="hint-banner" *ngIf="visible" role="note" aria-label="Consejo de uso">
-      <div class="hint-header">
+    <div class="hint-banner" role="note" [attr.aria-label]="ariaLabel">
+      <button type="button" class="hint-header" [attr.aria-expanded]="!collapsed" [attr.aria-controls]="'hintBody_' + storageKey" (click)="toggle()">
         <mat-icon class="hint-icon">tips_and_updates</mat-icon>
         <span class="hint-title">{{ title }}</span>
-        <button mat-icon-button class="hint-close" (click)="dismiss()" aria-label="Cerrar consejo">
-          <mat-icon>close</mat-icon>
-        </button>
+        <mat-icon class="hint-chevron">{{ collapsed ? 'expand_less' : 'expand_more' }}</mat-icon>
+      </button>
+      <div #hintBody class="hint-body" [id]="'hintBody_' + storageKey" *ngIf="!collapsed">
+        <ol class="hint-steps">
+          <li *ngFor="let step of steps; let i = index" class="hint-step">
+            <span class="step-number">{{ i + 1 }}</span>
+            <mat-icon class="step-icon">{{ step.icon }}</mat-icon>
+            <span class="step-text">{{ step.textKey ? (step.textKey | translate) : step.text }}</span>
+          </li>
+        </ol>
+        <p class="hint-note" *ngIf="note">{{ note }}</p>
       </div>
-      <ol class="hint-steps">
-        <li *ngFor="let step of steps; let i = index" class="hint-step">
-          <span class="step-number">{{ i + 1 }}</span>
-          <mat-icon class="step-icon">{{ step.icon }}</mat-icon>
-          <span class="step-text">{{ step.textKey ? (step.textKey | translate) : step.text }}</span>
-        </li>
-      </ol>
-      <p class="hint-note" *ngIf="note">{{ note }}</p>
     </div>
   `,
   styles: [`
@@ -38,8 +38,8 @@ export interface HintStep {
       margin-bottom: 20px;
       padding: 16px 20px;
       border-radius: 12px;
-      background: rgba(107, 63, 160, 0.07);
-      border: 1px solid rgba(107, 63, 160, 0.22);
+      background: color-mix(in srgb, var(--app-primary) 6%, var(--app-bg-card));
+      border: 1px solid color-mix(in srgb, var(--app-primary) 20%, transparent);
       animation: hint-in 0.3s ease;
     }
 
@@ -52,11 +52,19 @@ export interface HintStep {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 12px;
+      margin: 0;
+      padding: 0;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+      font: inherit;
+      color: inherit;
     }
 
     .hint-icon {
-      color: #6B3FA0;
+      color: var(--app-primary);
       font-size: 20px;
       width: 20px;
       height: 20px;
@@ -66,23 +74,20 @@ export interface HintStep {
       flex: 1;
       font-size: 14px;
       font-weight: 600;
-      color: #6B3FA0;
+      color: var(--app-primary);
     }
 
-    .hint-close {
-      width: 44px;
-      height: 44px;
-      min-width: 44px;
-      min-height: 44px;
-      line-height: 44px;
-    }
-
-    .hint-close mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-      color: #6B3FA0;
+    .hint-chevron {
+      color: var(--app-primary);
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
       opacity: 0.7;
+      transition: transform 0.2s ease;
+    }
+
+    .hint-body {
+      padding-top: 12px;
     }
 
     .hint-steps {
@@ -109,8 +114,8 @@ export interface HintStep {
       width: 22px;
       height: 22px;
       border-radius: 50%;
-      background: rgba(107, 63, 160, 0.15);
-      color: #6B3FA0;
+      background: color-mix(in srgb, var(--app-primary) 15%, transparent);
+      color: var(--app-primary);
       font-size: 11px;
       font-weight: 700;
       flex-shrink: 0;
@@ -120,7 +125,7 @@ export interface HintStep {
       font-size: 17px;
       width: 17px;
       height: 17px;
-      color: #6B3FA0;
+      color: var(--app-primary);
       opacity: 0.75;
       flex-shrink: 0;
     }
@@ -135,42 +140,36 @@ export interface HintStep {
       line-height: 1.4;
       color: var(--app-text-secondary, #64748b);
     }
-
-    :host-context(html.app-dark-theme) .hint-banner {
-      background: rgba(107, 63, 160, 0.14);
-      border-color: rgba(107, 63, 160, 0.38);
-    }
-    :host-context(html.app-dark-theme) .hint-title,
-    :host-context(html.app-dark-theme) .hint-icon,
-    :host-context(html.app-dark-theme) .step-number,
-    :host-context(html.app-dark-theme) .step-icon {
-      color: #c4a0e8;
-    }
-    :host-context(html.app-dark-theme) .step-number {
-      background: rgba(196, 160, 232, 0.18);
-    }
-    :host-context(html.app-dark-theme) .hint-close mat-icon {
-      color: #c4a0e8;
-    }
   `]
 })
 export class HintBannerComponent implements OnInit {
+  private readonly translate = inject(TranslateService);
+
   /** Clave única para localStorage — cada pantalla tiene la suya */
   @Input() storageKey!: string;
   /** Título del banner */
-  @Input() title: string = '¿Cómo funciona?';
+  @Input() title: string = '';
   /** Máximo 3 pasos */
   @Input() steps: HintStep[] = [];
   @Input() note = '';
+  /** Aria-label traducido */
+  @Input() ariaLabel: string = '';
 
-  visible = false;
+  collapsed = false;
 
   ngOnInit(): void {
-    this.visible = localStorage.getItem(this.storageKey) !== 'dismissed';
+    const stored = localStorage.getItem(this.storageKey);
+    this.collapsed = stored === 'dismissed' || stored === 'collapsed';
+    if (!this.title) {
+      this.title = this.translate.instant('hintBanner.titleDefault');
+    }
+    if (!this.ariaLabel) {
+      this.ariaLabel = this.translate.instant('hintBanner.ariaLabel');
+    }
   }
 
-  dismiss(): void {
-    this.visible = false;
-    localStorage.setItem(this.storageKey, 'dismissed');
+  toggle(): void {
+    this.collapsed = !this.collapsed;
+    localStorage.setItem(this.storageKey, this.collapsed ? 'collapsed' : 'expanded');
   }
 }
