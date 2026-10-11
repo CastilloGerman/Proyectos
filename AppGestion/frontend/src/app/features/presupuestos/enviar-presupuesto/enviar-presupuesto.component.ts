@@ -53,7 +53,6 @@ export function construirMensajePresupuesto(p: Presupuesto, contratista: string)
     MatFormFieldModule, MatInputModule, MatCheckboxModule,
   ],
   template: `
-    @if (expanded) {
     <section class="send-section" aria-labelledby="share-title">
       <h2 id="share-title">{{ 'budgetShare.title' | translate }}</h2>
       @if (presupuesto.enviadoAt) {
@@ -134,7 +133,6 @@ export function construirMensajePresupuesto(p: Presupuesto, contratista: string)
         </form>
       }
     </section>
-    }
   `,
   styles: [`
     .send-section { display: grid; gap: var(--app-space-md); }

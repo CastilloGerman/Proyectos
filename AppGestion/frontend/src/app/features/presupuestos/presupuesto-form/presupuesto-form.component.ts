@@ -74,50 +74,9 @@ import { PresupuestoSeguimientoComponent } from '../presupuesto-seguimiento/pres
     <div class="presupuesto-form">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>{{
-            creacionCompletada
-              ? ((isEdit ? 'snack.budgetUpdated' : 'snack.budgetSavedCreated') | translate)
-              : (isEdit ? ('budgetForm.edit' | translate) : ('budgetForm.new' | translate))
-          }}</mat-card-title>
+          <mat-card-title>{{ isEdit ? ('budgetForm.edit' | translate) : ('budgetForm.new' | translate) }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
-          @if (creacionCompletada && presupuestoActual) {
-            <div class="send-tracking-grid" role="status">
-              <div class="send-tracking-card">
-                <div class="send-tracking-header">
-                  <span class="check-circle"><mat-icon>check_circle</mat-icon></span>
-                  <div>
-                    <h2>{{ (isEdit ? 'snack.budgetUpdated' : 'snack.budgetSavedCreated') | translate }}</h2>
-                    <p>{{ 'budgetForm.createdShareHint' | translate }}</p>
-                  </div>
-                </div>
-                <app-enviar-presupuesto
-                  [presupuesto]="presupuestoActual"
-                  [mostrarOpcionesAlInicio]="true"
-                  (enviado)="presupuestoActual = $event"
-                />
-              </div>
-              <div class="send-tracking-card">
-                <app-presupuesto-seguimiento
-                  [presupuestoId]="presupuestoActual.id"
-                  [enviadoAt]="presupuestoActual.enviadoAt"
-                  [canalEnvio]="presupuestoActual.canalEnvio"
-                  [alertCount]="presupuestoActual.seguimientoAvisosEnviados ?? 0"
-                  [lastAlertAt]="presupuestoActual.seguimientoUltimoAvisoAt"
-                  [silenced]="presupuestoActual.seguimientoSilenciado ?? false"
-                  [respuestaCliente]="presupuestoActual.respuestaCliente"
-                  [respuestaClienteAt]="presupuestoActual.respuestaClienteAt"
-                  [respuestaClienteMensaje]="presupuestoActual.respuestaClienteMensaje"
-                  [clientPhone]="presupuestoActual.clienteTelefono"
-                  [clientCountry]="presupuestoActual.clientePais"
-                  (resend)="abrirPanelEnvio()"
-                />
-              </div>
-            </div>
-            <div class="send-tracking-back">
-              <button mat-stroked-button type="button" routerLink="/presupuestos">{{ 'budgetForm.backToBudgets' | translate }}</button>
-            </div>
-          } @else {
           @if (!isEdit) {
             <app-hint-banner
               storageKey="hint_presupuesto_form_v2"
@@ -524,6 +483,17 @@ import { PresupuestoSeguimientoComponent } from '../presupuesto-seguimiento/pres
                 </ul>
               }
             </div>
+            @if (presupuestoActual && (creacionCompletada || mostrarPanelReenvio)) {
+              <section #shareAfterSave class="post-save-share" role="status">
+                <h2>{{ 'budgetShare.title' | translate }}</h2>
+                <p>{{ 'budgetForm.createdShareHint' | translate }}</p>
+                <app-enviar-presupuesto
+                  [presupuesto]="presupuestoActual"
+                  [mostrarOpcionesAlInicio]="true"
+                  (enviado)="presupuestoActual = $event"
+                />
+              </section>
+            }
             @if (isEdit && id) {
               <app-presupuesto-seguimiento
                 [presupuestoId]="id"
@@ -541,14 +511,6 @@ import { PresupuestoSeguimientoComponent } from '../presupuesto-seguimiento/pres
               />
             }
           </form>
-          @if (isEdit && presupuestoActual && mostrarPanelReenvio) {
-            <app-enviar-presupuesto
-              [presupuesto]="presupuestoActual"
-              [mostrarOpcionesAlInicio]="true"
-              (enviado)="presupuestoActual = $event"
-            />
-          }
-          }
         </mat-card-content>
       </mat-card>
     </div>
@@ -735,64 +697,17 @@ import { PresupuestoSeguimientoComponent } from '../presupuesto-seguimiento/pres
       border-top-color: rgba(129, 199, 132, 0.4);
     }
 
-    .actions { display: flex; gap: 16px; margin-top: 24px; }
+    .actions { display: flex; gap: 16px; margin-top: 24px; flex-wrap: wrap; }
     .submit-block-reasons { flex-basis: 100%; margin: 0; color: #991b1b; font-weight: 600; }
-   .send-tracking-grid {
-     display: grid;
-     grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-     gap: var(--app-space-lg, 24px);
-     align-items: start;
-     width: 100%;
-     margin: 0;
-     padding: 0;
-   }
-   .send-tracking-card {
-     background: transparent;
-     border: 0;
-     box-shadow: none;
-     padding: 0;
-   }
-   .send-tracking-header {
-     display: flex;
-     align-items: center;
-     gap: var(--app-space-md);
-     margin-bottom: var(--app-space-md);
-   }
-   .check-circle {
-     display: flex;
-     align-items: center;
-     justify-content: center;
-     width: 40px;
-     height: 40px;
-     border-radius: 50%;
-     background: var(--app-success-bg);
-     flex-shrink: 0;
-   }
-   .check-circle mat-icon {
-     color: var(--app-success);
-     font-size: 24px;
-     width: 24px;
-     height: 24px;
-   }
-   .send-tracking-header h2 {
-     margin: 0;
-     font-size: 1.15rem;
-     font-weight: 600;
-   }
-   .send-tracking-header p {
-     margin: 4px 0 0;
-     color: var(--app-text-secondary);
-     font-size: 0.875rem;
-   }
-   .send-tracking-back {
-     margin-top: var(--app-space-md, 16px);
-     padding: 0;
-   }
-   @media (max-width: 768px) {
-     .send-tracking-grid {
-       grid-template-columns: 1fr;
-     }
-   }
+    .post-save-share {
+      margin-top: 24px;
+      padding: 20px;
+      border-radius: 12px;
+      background: rgba(30, 58, 138, 0.05);
+      border: 1px solid rgba(30, 58, 138, 0.18);
+    }
+    .post-save-share h2 { margin: 0 0 4px; font-size: 1.15rem; font-weight: 600; }
+    .post-save-share p { margin: 0 0 16px; color: var(--app-text-secondary, #64748b); }
   `]
 })
 export class PresupuestoFormComponent implements OnInit {
@@ -825,6 +740,7 @@ export class PresupuestoFormComponent implements OnInit {
   @ViewChild(PresupuestoIaPanelComponent) private iaPanel?: PresupuestoIaPanelComponent;
   @ViewChild('safeConfirmationDialog') private safeConfirmationDialog?: ElementRef<HTMLDialogElement>;
   @ViewChild('safeConfirmTrigger') private safeConfirmTrigger?: ElementRef<HTMLButtonElement>;
+  @ViewChild('shareAfterSave') private shareAfterSave?: ElementRef<HTMLElement>;
   private nextIaLineId = 1;
 
   /** Resumen API del flujo de anticipo (solo presupuesto Aceptado en edición). */
@@ -1653,9 +1569,15 @@ export class PresupuestoFormComponent implements OnInit {
     req.subscribe({
       next: (presupuesto) => {
         this.saving = false;
-        this.presupuestoActual = presupuesto;
+        this.presupuestoActual = presupuesto ?? this.presupuestoActual;
+        if (this.presupuestoActual?.id) {
+          this.id = this.presupuestoActual.id;
+          this.isEdit = true;
+        }
         this.creacionCompletada = true;
+        this.mostrarPanelReenvio = true;
         this.cdr.detectChanges();
+        this.shareAfterSave?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         this.snackBar.open(
           this.translate.instant(this.isEdit ? 'snack.budgetUpdated' : 'snack.budgetSavedCreated'),
           this.translate.instant('common.close'),

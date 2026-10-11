@@ -27,7 +27,7 @@ describe('EnviarPresupuestoComponent', () => {
     expect(msg).toContain('Reformas Sol');
   });
 
-  it('expands share buttons when mostrarOpcionesAlInicio is set', () => {
+  it('renders share buttons without needing an expand flag', () => {
     TestBed.configureTestingModule({
       imports: [EnviarPresupuestoComponent, TranslateModule.forRoot()],
       providers: [
@@ -41,9 +41,7 @@ describe('EnviarPresupuestoComponent', () => {
       id: 1, clienteId: 2, clienteNombre: 'Ana', fechaCreacion: '', subtotal: 10, iva: 2.1,
       total: 12.1, ivaHabilitado: true, estado: 'Pendiente', items: [],
     };
-    fixture.componentInstance.mostrarOpcionesAlInicio = true;
     fixture.detectChanges();
-    expect(fixture.componentInstance.expanded).toBe(true);
     expect(fixture.nativeElement.querySelector('.send-buttons')).toBeTruthy();
   });
 

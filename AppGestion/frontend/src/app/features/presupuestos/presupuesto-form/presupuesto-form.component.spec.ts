@@ -276,7 +276,7 @@ describe('PresupuestoFormComponent AI review', () => {
     expect(component.resumenConfirmacionSeguras[0].description).toBe('Pintura');
   });
 
-  it('shows share options after saving instead of an empty edit screen', () => {
+  it('shows share options after saving without hiding the form', () => {
     component.isEdit = true;
     component.creacionCompletada = true;
     component.presupuestoActual = {
@@ -291,7 +291,7 @@ describe('PresupuestoFormComponent AI review', () => {
     expect(text).toContain('Email');
     expect(fixture.nativeElement.querySelector('app-enviar-presupuesto')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('.send-buttons')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('.actions')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.actions')).toBeTruthy();
   });
 
   it('renders translated AI help and its privacy note in the standard form', () => {

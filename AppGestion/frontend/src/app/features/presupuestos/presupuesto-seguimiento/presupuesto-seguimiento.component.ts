@@ -26,6 +26,7 @@ const LOCALE_MAP: Record<string, string> = {
     CommonModule, RouterLink, TranslateModule, HintBannerComponent, EstadoBadgeComponent,
     MatButtonModule, MatIconModule, MatTooltipModule, MatDividerModule, MatDialogModule,
   ],
+  providers: [DatePipe],
   template: `
     <section class="tracking" aria-labelledby="tracking-title">
       <h2 id="tracking-title">{{ 'publicBudget.tracking' | translate }}</h2>
