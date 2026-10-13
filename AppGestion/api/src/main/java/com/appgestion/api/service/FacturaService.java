@@ -8,6 +8,7 @@ import com.appgestion.api.domain.entity.*;
 import com.appgestion.api.domain.enums.TipoFactura;
 import com.appgestion.api.service.factura.FacturaNumeroManualParser;
 import com.appgestion.api.service.factura.FacturaNumeroResuelto;
+import com.appgestion.api.dto.request.EstadoPagoFacturaRequest;
 import com.appgestion.api.dto.request.FacturaCobroRequest;
 import com.appgestion.api.dto.request.FacturaItemRequest;
 import com.appgestion.api.dto.request.FacturaRequest;
@@ -201,6 +202,57 @@ public class FacturaService {
         calcularTotales(factura);
         factura = facturaRepository.save(factura);
         return facturaResponseMapper.toResponse(factura, facturaCobroRepository.findByFacturaIdOrderByFechaDescCreatedAtDesc(factura.getId()));
+    }
+
+    /**
+     * Estado de pago desde el listado. No sustituye líneas ni llama a {@link #calcularTotales}:
+     * subtotal, IVA y total se quedan como están. En Pagada o Parcial actualiza la fecha del
+     * último cobro (o crea uno si no había) para el criterio por fecha de cobro.
+     * <p>
+     * Ese criterio imputa la factura pagada al trimestre de {@code MAX(factura_cobros.fecha)}.
+     * Este método no pasa por el aviso de confirmación previsto para cuando cambien importes,
+     * líneas, tipos o fechas de una factura cuyo trimestre ya venció: el cobro queda fuera de
+     * esa puerta, y el aviso no está implementado. Consecuencias, sin bloquearlas:
+     * <ul>
+     *   <li>Si llega {@code fechaCobro}, se mueve la fecha del último cobro y el IVA puede salir
+     *       de un trimestre ya vencido y entrar en otro.</li>
+     *   <li>El listado no envía fecha. Si no había cobros, se crea uno con la fecha de hoy, que
+     *       cae en el trimestre en curso y no reescribe uno ya vencido. Si ya había cobros y no
+     *       llega fecha, la fecha no se toca.</li>
+     *   <li>Pasar de Pagada a No Pagada o Parcial saca la factura del trimestre de su último cobro
+     *       aunque ese plazo ya haya vencido, porque «Por fecha de cobro» solo suma Pagada.</li>
+     * </ul>
+     * Registrar un cobro desde el formulario mueve el mismo trimestre y tampoco pasa por el aviso.
+     */
+    @Transactional
+    public FacturaResponse actualizarEstadoPago(Long id, Long usuarioId, EstadoPagoFacturaRequest request) {
+        Factura factura = facturaRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Factura no encontrada"));
+        if (Boolean.TRUE.equals(factura.getAnulada())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede editar una factura anulada");
+        }
+
+        String estado = normalizarEstadoPago(request.estadoPago());
+        factura.setEstadoPago(estado);
+
+        List<FacturaCobro> cobros = new java.util.ArrayList<>(
+                facturaCobroRepository.findByFacturaIdOrderByFechaDescCreatedAtDesc(factura.getId()));
+        if (FacturaEstadoPago.PARCIAL.equals(estado)) {
+            if (request.montoCobrado() == null || request.montoCobrado() <= 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indica el importe cobrado");
+            }
+            factura.setMontoCobrado(request.montoCobrado());
+            aplicarFechaCobro(factura, cobros, request.fechaCobro(), request.montoCobrado());
+        } else if (FacturaEstadoPago.PAGADA.equals(estado)) {
+            double totalGuardado = factura.getTotal() == null ? 0.0 : factura.getTotal();
+            boolean cobroNuevo = aplicarFechaCobro(factura, cobros, request.fechaCobro(), totalGuardado);
+            if (cobroNuevo) {
+                factura.setMontoCobrado(totalGuardado);
+            }
+        }
+
+        facturaRepository.save(factura);
+        return facturaResponseMapper.toResponse(factura, cobros);
     }
 
     @Transactional
@@ -434,6 +486,47 @@ public class FacturaService {
 
             factura.getItems().add(item);
         }
+    }
+
+    /**
+     * @return true si no había cobros y se ha creado uno. No modifica importes de cobros ya existentes:
+     *         solo su fecha.
+     */
+    private boolean aplicarFechaCobro(Factura factura, List<FacturaCobro> cobros, LocalDate fechaPedida, double importeSiNuevo) {
+        if (!cobros.isEmpty()) {
+            if (fechaPedida != null) {
+                FacturaCobro ultimo = cobros.get(0);
+                ultimo.setFecha(fechaPedida);
+                facturaCobroRepository.save(ultimo);
+            }
+            return false;
+        }
+        LocalDate fecha = fechaPedida != null ? fechaPedida : LocalDate.now();
+        FacturaCobro cobro = new FacturaCobro();
+        cobro.setFactura(factura);
+        cobro.setImporte(importeSiNuevo);
+        cobro.setFecha(fecha);
+        cobro.setMetodo(factura.getMetodoPago());
+        cobro.setNotas("Cambio de estado de pago");
+        cobros.add(facturaCobroRepository.save(cobro));
+        return true;
+    }
+
+    private static String normalizarEstadoPago(String raw) {
+        if (raw == null || raw.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El estado de pago es obligatorio");
+        }
+        String texto = raw.trim();
+        if (texto.equalsIgnoreCase(FacturaEstadoPago.PAGADA)) {
+            return FacturaEstadoPago.PAGADA;
+        }
+        if (texto.equalsIgnoreCase(FacturaEstadoPago.NO_PAGADA)) {
+            return FacturaEstadoPago.NO_PAGADA;
+        }
+        if (texto.equalsIgnoreCase(FacturaEstadoPago.PARCIAL)) {
+            return FacturaEstadoPago.PARCIAL;
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado de pago no válido");
     }
 
     private void calcularTotales(Factura factura) {

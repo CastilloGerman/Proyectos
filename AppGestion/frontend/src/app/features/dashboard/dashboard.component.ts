@@ -18,7 +18,7 @@ import { MaterialService } from '../../core/services/material.service';
 import { GastoService } from '../../core/services/gasto.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { Presupuesto, PresupuestoItemRequest, PresupuestoRequest } from '../../core/models/presupuesto.model';
-import { Factura, FacturaItemRequest, FacturaRequest } from '../../core/models/factura.model';
+import { Factura } from '../../core/models/factura.model';
 import { Material } from '../../core/models/material.model';
 import { Gasto } from '../../core/models/gasto.model';
 import { EstadoBadgeComponent } from '../../shared/estado-badge/estado-badge.component';
@@ -2039,8 +2039,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   private ejecutarActualizacionEstadoFactura(f: Factura, nuevo: string, montoParcial?: number): void {
     this.actualizandoFacturaId = f.id;
-    const payload = this.buildFacturaUpdateRequest(f, nuevo, montoParcial);
-    this.facturaService.update(f.id, payload).subscribe({
+    this.facturaService.actualizarEstadoPago(f.id, nuevo, montoParcial).subscribe({
       next: (updated) => {
         this.actualizandoFacturaId = null;
         this.patchFacturaReciente(updated);
@@ -2083,41 +2082,6 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       descuentoAntesIva: p.descuentoAntesIva ?? true,
       condicionesActivas: p.condicionesActivas ?? [],
       notaAdicional: p.notaAdicional ?? undefined,
-    };
-  }
-
-  private buildFacturaUpdateRequest(f: Factura, estadoPago: string, montoParcialExplicito?: number): FacturaRequest {
-    const items: FacturaItemRequest[] = (f.items ?? []).map((it) => {
-      const manual = it.esTareaManual === true;
-      return {
-        materialId: manual ? undefined : it.materialId,
-        tareaManual: manual ? (it.descripcion?.trim() || undefined) : undefined,
-        cantidad: it.cantidad,
-        precioUnitario: it.precioUnitario,
-        aplicaIva: it.aplicaIva,
-      };
-    });
-    const fechaCreacionIso = f.fechaCreacion ? f.fechaCreacion.split('T')[0] : '';
-    const fechaExp =
-      typeof f.fechaExpedicion === 'string' ? f.fechaExpedicion : f.fechaExpedicion ?? fechaCreacionIso;
-    return {
-      clienteId: f.clienteId,
-      items,
-      presupuestoId: f.presupuestoId,
-      numeroFactura: f.numeroFactura,
-      fechaExpedicion: fechaExp || new Date().toISOString().split('T')[0],
-      fechaOperacion: f.fechaOperacion,
-      fechaVencimiento: f.fechaVencimiento,
-      regimenFiscal: f.regimenFiscal,
-      condicionesPago: f.condicionesPago,
-      metodoPago: f.metodoPago,
-      estadoPago,
-      montoCobrado:
-        estadoPago === 'Parcial'
-          ? (montoParcialExplicito != null ? montoParcialExplicito : f.montoCobrado != null ? +f.montoCobrado : undefined)
-          : undefined,
-      notas: f.notas,
-      ivaHabilitado: f.ivaHabilitado,
     };
   }
 

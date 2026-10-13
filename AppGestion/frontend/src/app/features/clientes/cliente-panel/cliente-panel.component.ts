@@ -18,7 +18,6 @@ import { EstadoBadgeComponent } from '../../../shared/estado-badge/estado-badge.
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
 import { FacturaService } from '../../../core/services/factura.service';
 import { Presupuesto, PresupuestoItemRequest, PresupuestoRequest } from '../../../core/models/presupuesto.model';
-import { Factura, FacturaItemRequest, FacturaRequest } from '../../../core/models/factura.model';
 import { FacturaParcialImporteDialogComponent } from '../../../shared/factura-parcial-importe-dialog/factura-parcial-importe-dialog.component';
 
 @Component({
@@ -594,8 +593,7 @@ export class ClientePanelComponent implements OnInit {
           this.actualizandoFacturaId = null;
           return;
         }
-        const payload = this.buildFacturaUpdateRequestFromRow(f, nuevo, montoParcial);
-        this.facturaService.update(id, payload).subscribe({
+        this.facturaService.actualizarEstadoPago(id, nuevo, montoParcial).subscribe({
           next: (updated) => {
             this.actualizandoFacturaId = null;
             this.refrescarPanel();
@@ -639,41 +637,6 @@ export class ClientePanelComponent implements OnInit {
       descuentoAntesIva: p.descuentoAntesIva ?? true,
       condicionesActivas: p.condicionesActivas ?? [],
       notaAdicional: p.notaAdicional ?? undefined,
-    };
-  }
-
-  private buildFacturaUpdateRequestFromRow(f: Factura, estadoPago: string, montoParcialExplicito?: number): FacturaRequest {
-    const items: FacturaItemRequest[] = (f.items ?? []).map((it) => {
-      const manual = it.esTareaManual === true;
-      return {
-        materialId: manual ? undefined : it.materialId,
-        tareaManual: manual ? (it.descripcion?.trim() || undefined) : undefined,
-        cantidad: it.cantidad,
-        precioUnitario: it.precioUnitario,
-        aplicaIva: it.aplicaIva,
-      };
-    });
-    const fechaCreacionIso = f.fechaCreacion ? f.fechaCreacion.split('T')[0] : '';
-    const fechaExp =
-      typeof f.fechaExpedicion === 'string' ? f.fechaExpedicion : f.fechaExpedicion ?? fechaCreacionIso;
-    return {
-      clienteId: f.clienteId,
-      items,
-      presupuestoId: f.presupuestoId,
-      numeroFactura: f.numeroFactura,
-      fechaExpedicion: fechaExp || new Date().toISOString().split('T')[0],
-      fechaOperacion: f.fechaOperacion,
-      fechaVencimiento: f.fechaVencimiento,
-      regimenFiscal: f.regimenFiscal,
-      condicionesPago: f.condicionesPago,
-      metodoPago: f.metodoPago,
-      estadoPago,
-      montoCobrado:
-        estadoPago === 'Parcial'
-          ? (montoParcialExplicito != null ? montoParcialExplicito : f.montoCobrado != null ? +f.montoCobrado : undefined)
-          : undefined,
-      notas: f.notas,
-      ivaHabilitado: f.ivaHabilitado,
     };
   }
 

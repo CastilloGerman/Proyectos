@@ -30,6 +30,15 @@ export class FacturaService {
     return this.http.put<Factura>(`${this.apiUrl}/${id}`, data);
   }
 
+  /** Solo estado de pago y, si no había cobro, la fecha de cobro. No reenvía líneas. */
+  actualizarEstadoPago(id: number, estadoPago: string, montoCobrado?: number, fechaCobro?: string): Observable<Factura> {
+    return this.http.patch<Factura>(`${this.apiUrl}/${id}/estado-pago`, {
+      estadoPago,
+      montoCobrado,
+      fechaCobro,
+    });
+  }
+
   anular(id: number, motivo?: string | null): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/${id}/anular`, { motivo: motivo ?? null });
   }

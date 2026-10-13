@@ -73,6 +73,22 @@ describe('FacturaService', () => {
     });
   });
 
+  describe('actualizarEstadoPago', () => {
+    it('PATCHes only payment status, without invoice lines', () => {
+      service.actualizarEstadoPago(5, 'Pagada', undefined, '2026-02-10').subscribe();
+
+      const req = http.expectOne(`${API}/5/estado-pago`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({
+        estadoPago: 'Pagada',
+        montoCobrado: undefined,
+        fechaCobro: '2026-02-10',
+      });
+      expect(req.request.body.items).toBeUndefined();
+      req.flush({ id: 5, estadoPago: 'Pagada', subtotal: 100.1, iva: 21.02, total: 121.12, items: [] });
+    });
+  });
+
   describe('registrarCobro', () => {
     it('POSTs cobro to /facturas/:id/cobros', () => {
       const cobro = { importe: 250, fecha: '2026-02-01', metodo: 'Transferencia' };
