@@ -129,6 +129,18 @@ describe('PresupuestoService', () => {
     });
   });
 
+  describe('actualizarEstado', () => {
+    it('PATCHes only the status and does not send items', () => {
+      service.actualizarEstado(5, 'Aceptado').subscribe((p) => expect(p.total).toBe(77.77));
+
+      const req = http.expectOne(`${API}/5/estado`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ estado: 'Aceptado' });
+      expect(req.request.body.items).toBeUndefined();
+      req.flush({ id: 5, estado: 'Aceptado', total: 77.77, items: [] });
+    });
+  });
+
   describe('delete', () => {
     it('DELETEs /presupuestos/:id', () => {
       service.delete(9).subscribe();
