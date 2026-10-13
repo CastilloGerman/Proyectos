@@ -1,5 +1,6 @@
 package com.appgestion.api.unit.fiscal;
 
+import com.appgestion.api.fiscal.CalculoFactura;
 import com.appgestion.api.fiscal.DataQualityIssues;
 import com.appgestion.api.fiscal.DataQualityIssues.ExpenseSnapshot;
 import com.appgestion.api.fiscal.DataQualityIssues.InvoiceSnapshot;
@@ -72,23 +73,63 @@ class DataQualityIssuesTest {
         });
     }
 
+    /**
+     * Diez líneas de 10,01 €. El IVA de cabecera es 21,02 € y la suma de cuotas
+     * redondeadas por línea es 21,00 €: 0,02 € de desvío. Cabe en 0,01 € × 10 líneas
+     * y no cabe en un tope único de 0,01 €.
+     */
     @Test
-    void diezLineas_admiteHastaDiezCentimosDeIva_noUnCentimoTotal() {
-        InvoiceSnapshot dentro = factura(10L, "F-10", 1L, "100.00", "21.00", "100.00", "21.10", 10);
-        InvoiceSnapshot fuera = factura(11L, "F-11", 1L, "100.00", "21.00", "100.00", "21.11", 10);
+    void diezLineas_redondeoLegitimoPorLinea_noSeMarca() {
+        List<CalculoFactura.LineaEntrada> lineas = new java.util.ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            lineas.add(new CalculoFactura.LineaEntrada(new BigDecimal("10.01"), 21));
+        }
+        CalculoFactura.Resultado totales = CalculoFactura.calcular(lineas, true, null);
+        BigDecimal sumaCuotas = totales.cuotas().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        assertThat(DataQualityIssues.getDataQualityIssues(List.of(dentro), List.of())).isEmpty();
-        assertThat(DataQualityIssues.getDataQualityIssues(List.of(fuera), List.of()))
+        assertThat(totales.iva()).isEqualByComparingTo("21.02");
+        assertThat(sumaCuotas).isEqualByComparingTo("21.00");
+        assertThat(totales.iva().subtract(sumaCuotas).abs()).isGreaterThan(new BigDecimal("0.01"));
+
+        InvoiceSnapshot factura = new InvoiceSnapshot(
+                10L, "F-10", 1L, totales.subtotal(), totales.iva(), totales.subtotal(), sumaCuotas, 10);
+
+        assertThat(DataQualityIssues.getDataQualityIssues(List.of(factura), List.of())).isEmpty();
+    }
+
+    @Test
+    void grupos21Y10_siguenUsandoLaToleranciaPorLinea() {
+        List<CalculoFactura.LineaEntrada> lineas = List.of(
+                new CalculoFactura.LineaEntrada(new BigDecimal("10.01"), 21),
+                new CalculoFactura.LineaEntrada(new BigDecimal("10.01"), 10)
+        );
+        CalculoFactura.Resultado totales = CalculoFactura.calcular(lineas, true, null);
+        BigDecimal sumaCuotas = totales.cuotas().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        InvoiceSnapshot factura = new InvoiceSnapshot(
+                13L, "F-13", 1L, totales.subtotal(), totales.iva(), totales.subtotal(), sumaCuotas, 2);
+
+        assertThat(DataQualityIssues.getDataQualityIssues(List.of(factura), List.of())).isEmpty();
+    }
+
+    @Test
+    void diezLineas_unCentimoDeMasSobreLaToleranciaAcumulada_seMarca() {
+        InvoiceSnapshot factura = factura(11L, "F-11", 1L, "100.10", "21.02", "100.10", "20.91", 10);
+
+        assertThat(DataQualityIssues.getDataQualityIssues(List.of(factura), List.of()))
                 .extracting(QualityIssue::tipo)
                 .containsExactly(DataQualityIssues.LINEAS_NO_CUADRAN);
     }
 
     @Test
     void descuentoGlobalSoloEnCabecera_seMarcaAunqueElIvaQuepaEnLaTolerancia() {
-        InvoiceSnapshot factura = factura(12L, "F-12", 1L, "99.99", "21.00", "100.00", "21.00", 10);
+        BigDecimal sumaLineas = new BigDecimal("100.10");
+        BigDecimal ivaLineas = new BigDecimal("21.00");
+        BigDecimal baseConDescuento = sumaLineas.multiply(new BigDecimal("0.90")).setScale(2, java.math.RoundingMode.HALF_UP);
+        InvoiceSnapshot factura = new InvoiceSnapshot(12L, "F-12", 1L, baseConDescuento, ivaLineas, sumaLineas, ivaLineas, 10);
 
         List<QualityIssue> issues = DataQualityIssues.getDataQualityIssues(List.of(factura), List.of());
 
+        assertThat(baseConDescuento).isEqualByComparingTo("90.09");
         assertThat(issues).singleElement().satisfies(issue -> {
             assertThat(issue.tipo()).isEqualTo(DataQualityIssues.LINEAS_NO_CUADRAN);
             assertThat(issue.etiqueta()).contains("F-12");

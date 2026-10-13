@@ -160,6 +160,57 @@ public interface FiscalQueryRepository extends Repository<Factura, Long> {
     );
 
     /**
+     * Bases y cuotas de línea del trimestre (devengo), agrupadas por tipo de IVA.
+     * Mismos filtros que {@link #aggregateVentasModelo303Devengo}.
+     */
+    @Query(value = """
+            SELECT i.tipo_iva,
+                   CAST(COALESCE(SUM(i.subtotal), 0) AS numeric),
+                   CAST(COALESCE(SUM(COALESCE(i.cuota_iva, 0)), 0) AS numeric)
+            FROM facturas f
+            INNER JOIN factura_items i ON i.factura_id = f.id
+            WHERE f.usuario_id = :usuarioId
+              AND COALESCE(f.fecha_expedicion, f.fecha_operacion, CAST(f.fecha_creacion AS date)) BETWEEN :desde AND :hasta
+              AND (NOT :soloPagadas OR TRIM(f.estado_pago) = :estadoPagada)
+            GROUP BY i.tipo_iva
+            ORDER BY i.tipo_iva DESC
+            """, nativeQuery = true)
+    List<Object[]> findDesgloseIvaDevengo(
+            @Param("usuarioId") Long usuarioId,
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta,
+            @Param("soloPagadas") boolean soloPagadas,
+            @Param("estadoPagada") String estadoPagada
+    );
+
+    /**
+     * Igual que {@link #findDesgloseIvaDevengo} con el filtro de último cobro (criterio por fecha de cobro).
+     */
+    @Query(value = """
+            SELECT i.tipo_iva,
+                   CAST(COALESCE(SUM(i.subtotal), 0) AS numeric),
+                   CAST(COALESCE(SUM(COALESCE(i.cuota_iva, 0)), 0) AS numeric)
+            FROM facturas f
+            INNER JOIN (
+                SELECT factura_id, MAX(fecha) AS ultima_fecha
+                FROM factura_cobros
+                GROUP BY factura_id
+            ) cob ON cob.factura_id = f.id
+            INNER JOIN factura_items i ON i.factura_id = f.id
+            WHERE f.usuario_id = :usuarioId
+              AND TRIM(f.estado_pago) = :estadoPagada
+              AND cob.ultima_fecha BETWEEN :desde AND :hasta
+            GROUP BY i.tipo_iva
+            ORDER BY i.tipo_iva DESC
+            """, nativeQuery = true)
+    List<Object[]> findDesgloseIvaCaja(
+            @Param("usuarioId") Long usuarioId,
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta,
+            @Param("estadoPagada") String estadoPagada
+    );
+
+    /**
      * Gastos del trimestre y, si los hubiera, gastos sin fecha (no entran en ningún trimestre).
      */
     @Query(value = """

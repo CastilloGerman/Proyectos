@@ -7,6 +7,8 @@ export interface FacturaItem {
   precioUnitario: number;
   subtotal?: number;
   aplicaIva?: boolean;
+  /** 21, 10, 4 o 0. El 0 mezcla exento y gravado al 0 %. */
+  tipoIva?: number;
 }
 
 export interface FacturaItemRequest {
@@ -15,6 +17,7 @@ export interface FacturaItemRequest {
   cantidad: number;
   precioUnitario: number;
   aplicaIva?: boolean;
+  tipoIva?: number;
 }
 
 export interface FacturaCobro {

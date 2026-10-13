@@ -2,11 +2,14 @@ package com.appgestion.api.service;
 
 import com.appgestion.api.constant.FacturaEstadoPago;
 import com.appgestion.api.domain.enums.FiscalCriterioImputacion;
+import com.appgestion.api.dto.response.DesgloseIvaFilaResponse;
 import com.appgestion.api.dto.response.IncidenciaCalidadResponse;
 import com.appgestion.api.dto.response.Modelo303ResumenResponse;
 import com.appgestion.api.dto.response.Modelo347ClienteResponse;
 import com.appgestion.api.dto.response.Modelo347ResumenResponse;
 import com.appgestion.api.fiscal.DataQualityIssues;
+import com.appgestion.api.fiscal.DesgloseIvaRepercutido;
+import com.appgestion.api.fiscal.TipoIva;
 import com.appgestion.api.fiscal.DataQualityIssues.ExpenseSnapshot;
 import com.appgestion.api.fiscal.DataQualityIssues.InvoiceSnapshot;
 import com.appgestion.api.fiscal.DataQualityIssues.QualityIssue;
@@ -125,6 +128,13 @@ public class FiscalService {
                 .map(i -> new IncidenciaCalidadResponse(i.tipo(), i.id(), i.etiqueta(), i.ruta()))
                 .toList();
         String resumenContexto = DataQualityIssues.textoContexto(numFacturas, numeroGastos, incidencias.size());
+        DesgloseIvaRepercutido.Desglose desglose = DesgloseIvaRepercutido.calcular(
+                mapLineasDesglose(usuarioId, desde, hasta, criterio, soloFacturasPagadas),
+                ivaRep
+        );
+        List<DesgloseIvaFilaResponse> filasDesglose = desglose.filas().stream()
+                .map(fila -> new DesgloseIvaFilaResponse(fila.tipoIva(), fila.etiqueta(), fila.base(), fila.cuota()))
+                .toList();
 
         return new Modelo303ResumenResponse(
                 anio,
@@ -145,7 +155,9 @@ public class FiscalService {
                 incidencias,
                 resumenContexto,
                 List.copyOf(advertencias),
-                AVISO_LEGAL_303.trim().replace("            ", " ")
+                AVISO_LEGAL_303.trim().replace("            ", " "),
+                filasDesglose,
+                desglose.ajusteRedondeo()
         );
     }
 
@@ -246,6 +258,32 @@ public class FiscalService {
                     toMoney(row[6]),
                     row[7] == null ? 0 : ((Number) row[7]).intValue()
             ));
+        }
+        return out;
+    }
+
+    private List<DesgloseIvaRepercutido.Linea> mapLineasDesglose(
+            Long usuarioId,
+            LocalDate desde,
+            LocalDate hasta,
+            FiscalCriterioImputacion criterio,
+            boolean soloFacturasPagadas
+    ) {
+        List<Object[]> rows = criterio == FiscalCriterioImputacion.CAJA
+                ? fiscalQueryRepository.findDesgloseIvaCaja(usuarioId, desde, hasta, FacturaEstadoPago.PAGADA)
+                : fiscalQueryRepository.findDesgloseIvaDevengo(
+                        usuarioId, desde, hasta, soloFacturasPagadas, FacturaEstadoPago.PAGADA);
+        List<DesgloseIvaRepercutido.Linea> out = new ArrayList<>();
+        if (rows == null) {
+            return out;
+        }
+        for (Object[] raw : rows) {
+            Object[] row = unwrapNativeTupleRow(raw);
+            if (row == null || row.length < 3 || row[0] == null) {
+                continue;
+            }
+            int tipo = TipoIva.exigir(((Number) row[0]).intValue());
+            out.add(new DesgloseIvaRepercutido.Linea(tipo, toMoney(row[1]), toMoney(row[2])));
         }
         return out;
     }

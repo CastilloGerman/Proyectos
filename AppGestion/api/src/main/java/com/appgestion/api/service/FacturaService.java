@@ -2,7 +2,8 @@ package com.appgestion.api.service;
 
 import com.appgestion.api.constant.FacturaEstadoPago;
 import com.appgestion.api.constant.PresupuestoEstado;
-import com.appgestion.api.constant.TaxConstants;
+import com.appgestion.api.fiscal.CalculoFactura;
+import com.appgestion.api.fiscal.TipoIva;
 import com.appgestion.api.dto.FacturaNumeroGenerado;
 import com.appgestion.api.domain.entity.*;
 import com.appgestion.api.domain.enums.TipoFactura;
@@ -414,7 +415,9 @@ public class FacturaService {
             BigDecimal st = cant.multiply(precio).setScale(SCALE, ROUNDING);
             item.setSubtotal(st.doubleValue());
             item.setCuotaIva(0.0);
-            item.setAplicaIva(Optional.ofNullable(pi.getAplicaIva()).orElse(true));
+            boolean aplica = !Boolean.FALSE.equals(pi.getAplicaIva());
+            item.setAplicaIva(aplica);
+            item.setTipoIva(aplica ? TipoIva.GENERAL : TipoIva.CERO);
             factura.getItems().add(item);
         }
     }
@@ -468,7 +471,14 @@ public class FacturaService {
             BigDecimal precioUnitario = BigDecimal.valueOf(Optional.ofNullable(req.precioUnitario()).orElse(0.0));
             item.setCantidad(cantidad.doubleValue());
             item.setPrecioUnitario(precioUnitario.doubleValue());
-            item.setAplicaIva(Optional.ofNullable(req.aplicaIva()).orElse(true));
+            int tipo;
+            try {
+                tipo = TipoIva.resolver(req.tipoIva(), req.aplicaIva());
+            } catch (IllegalArgumentException ex) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+            }
+            item.setTipoIva(tipo);
+            item.setAplicaIva(tipo != TipoIva.CERO);
 
             if (req.materialId() != null) {
                 Long uid = Objects.requireNonNull(factura.getUsuario()).getId();
@@ -530,38 +540,29 @@ public class FacturaService {
     }
 
     private void calcularTotales(Factura factura) {
-        BigDecimal subtotal = BigDecimal.ZERO;
-        BigDecimal baseIva = BigDecimal.ZERO;
-
+        boolean ivaHabilitado = Boolean.TRUE.equals(factura.getIvaHabilitado());
+        List<CalculoFactura.LineaEntrada> entradas = new java.util.ArrayList<>();
         for (FacturaItem item : factura.getItems()) {
-            BigDecimal itemSubtotal = BigDecimal.valueOf(item.getSubtotal()).setScale(SCALE, ROUNDING);
-            subtotal = subtotal.add(itemSubtotal);
-            if (Boolean.TRUE.equals(item.getAplicaIva())) {
-                baseIva = baseIva.add(itemSubtotal);
-            }
+            entradas.add(new CalculoFactura.LineaEntrada(
+                    BigDecimal.valueOf(item.getSubtotal() == null ? 0.0 : item.getSubtotal()),
+                    TipoIva.resolver(item.getTipoIva(), item.getAplicaIva())
+            ));
         }
+        BigDecimal anticipo = factura.getTipoFactura() == TipoFactura.FINAL_CON_ANTICIPO
+                ? factura.getImporteAnticipoDescontado()
+                : null;
+        CalculoFactura.Resultado totales = CalculoFactura.calcular(entradas, ivaHabilitado, anticipo);
+        factura.setSubtotal(totales.subtotal().doubleValue());
+        factura.setIva(totales.iva().doubleValue());
+        factura.setTotal(totales.total().doubleValue());
 
-        factura.setSubtotal(subtotal.setScale(SCALE, ROUNDING).doubleValue());
-
-        BigDecimal cuotaIvaTotal = Boolean.TRUE.equals(factura.getIvaHabilitado())
-                ? baseIva.multiply(TaxConstants.IVA_RATE).setScale(SCALE, ROUNDING)
-                : BigDecimal.ZERO;
-        factura.setIva(cuotaIvaTotal.doubleValue());
-        BigDecimal bruto = subtotal.add(cuotaIvaTotal).setScale(SCALE, ROUNDING);
-        if (factura.getTipoFactura() == TipoFactura.FINAL_CON_ANTICIPO && factura.getImporteAnticipoDescontado() != null) {
-            factura.setTotal(bruto.subtract(factura.getImporteAnticipoDescontado()).setScale(SCALE, ROUNDING).doubleValue());
-        } else {
-            factura.setTotal(bruto.doubleValue());
-        }
-
-        if (Boolean.TRUE.equals(factura.getIvaHabilitado()) && baseIva.compareTo(BigDecimal.ZERO) > 0) {
-            for (FacturaItem item : factura.getItems()) {
-                if (Boolean.TRUE.equals(item.getAplicaIva())) {
-                    BigDecimal proporcion = BigDecimal.valueOf(item.getSubtotal()).divide(baseIva, 10, ROUNDING);
-                    BigDecimal cuotaIva = cuotaIvaTotal.multiply(proporcion).setScale(SCALE, ROUNDING);
-                    item.setCuotaIva(cuotaIva.doubleValue());
-                }
-            }
+        List<FacturaItem> items = factura.getItems();
+        for (int i = 0; i < items.size(); i++) {
+            FacturaItem item = items.get(i);
+            int tipo = totales.tipos().get(i);
+            item.setTipoIva(tipo);
+            item.setAplicaIva(tipo != TipoIva.CERO);
+            item.setCuotaIva(totales.cuotas().get(i).doubleValue());
         }
     }
 

@@ -118,6 +118,18 @@
               <span class="dh-k">IVA repercutido</span>
               <span class="dh-v">{{ r.ivaRepercutido | number : '1.2-2' : 'es' }} €</span>
             </div>
+            @for (fila of r.desgloseIva; track fila.tipoIva) {
+              <div class="dh-row dh-row--muted">
+                <span class="dh-k">{{ fila.etiqueta }}</span>
+                <span class="dh-v">{{ fila.cuota | number : '1.2-2' : 'es' }} €</span>
+              </div>
+            }
+            @if (r.ajusteRedondeo) {
+              <div class="dh-row dh-row--muted">
+                <span class="dh-k">Ajuste por redondeo</span>
+                <span class="dh-v">{{ r.ajusteRedondeo | number : '1.2-2' : 'es' }} €</span>
+              </div>
+            }
             <div class="dh-row dh-row--muted">
               <span class="dh-k">IVA soportado <span class="dh-tag">desde gastos</span></span>
               <span class="dh-v">{{ r.ivaSoportado | number : '1.2-2' : 'es' }} €</span>
@@ -171,7 +183,7 @@
               <mat-panel-title>IVA repercutido, IVA soportado y “resultado”</mat-panel-title>
             </mat-expansion-panel-header>
             <p>
-              El <strong>IVA repercutido</strong> es el de tus facturas de venta. El <strong>IVA soportado</strong> es el de los gastos con fecha de compra en el trimestre.
+              El <strong>IVA repercutido</strong> es el de tus facturas de venta. El desglose separa 21 %, 10 %, 4 % y 0 %. El 0 % junta exento y gravado al 0 %; las casillas oficiales los distinguen y esta pantalla todavía no. Si la suma de las cuotas de línea no coincide con el IVA de la factura, la diferencia sale como ajuste por redondeo. El <strong>IVA soportado</strong> es el de los gastos con fecha de compra en el trimestre.
               <a routerLink="../gastos">Gastos</a>
             </p>
           </mat-expansion-panel>

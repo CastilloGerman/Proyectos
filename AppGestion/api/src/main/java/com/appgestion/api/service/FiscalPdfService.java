@@ -87,6 +87,14 @@ public class FiscalPdfService {
             addHeaderRow(table, "Concepto", "Importe (€)", headFont);
             addBodyRow(table, "Base imponible total (ventas)", eur(r.baseImponibleTotal()), bodyFont);
             addBodyRow(table, "IVA repercutido", eur(r.ivaRepercutido()), bodyFont);
+            if (r.desgloseIva() != null) {
+                for (var fila : r.desgloseIva()) {
+                    addBodyRow(table, fila.etiqueta(), eur(fila.cuota()), bodyFont);
+                }
+            }
+            if (r.ajusteRedondeo() != null && r.ajusteRedondeo().signum() != 0) {
+                addBodyRow(table, "Ajuste por redondeo", eur(r.ajusteRedondeo()), bodyFont);
+            }
             addBodyRow(table, "IVA soportado (compras)", eur(r.ivaSoportado()), bodyFont);
             if (!sinDatos) {
                 addBodyRow(table, resultadoLabel, eur(resultado.abs()), bodyFont);

@@ -22,6 +22,7 @@ import { Cliente } from '../../../core/models/cliente.model';
 import { Presupuesto } from '../../../core/models/presupuesto.model';
 import { Material } from '../../../core/models/material.model';
 import { Factura, FacturaCobro, FacturaItemRequest, FacturaRequest } from '../../../core/models/factura.model';
+import { MemoriaTipoIva } from './factura-iva-cabecera';
 import { startWith } from 'rxjs';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { EnviarFacturaComponent } from '../enviar-factura/enviar-factura.component';
@@ -177,7 +178,15 @@ import { EnviarFacturaComponent } from '../enviar-factura/enviar-factura.compone
                     <mat-label>{{ 'factForm.unitPrice' | translate }}</mat-label>
                     <input matInput type="number" formControlName="precioUnitario" min="0" step="0.01">
                   </mat-form-field>
-                  <mat-checkbox formControlName="aplicaIva">{{ 'factForm.vatShort' | translate }}</mat-checkbox>
+                  <mat-form-field appearance="outline" class="tipo-iva">
+                    <mat-label>{{ 'factForm.vatShort' | translate }}</mat-label>
+                    <mat-select formControlName="tipoIva">
+                      <mat-option [value]="21">21 %</mat-option>
+                      <mat-option [value]="10">10 %</mat-option>
+                      <mat-option [value]="4">4 %</mat-option>
+                      <mat-option [value]="0">0 %</mat-option>
+                    </mat-select>
+                  </mat-form-field>
                   <button type="button" mat-icon-button color="warn" (click)="removeItem(i)">
                     <mat-icon>delete</mat-icon>
                   </button>
@@ -340,6 +349,11 @@ import { EnviarFacturaComponent } from '../enviar-factura/enviar-factura.compone
       margin: 0 8px;
     }
 
+    .item-row .tipo-iva {
+      flex: 0 0 120px;
+      min-width: 120px;
+    }
+
     .actions {
       display: flex;
       gap: 16px;
@@ -461,6 +475,8 @@ export class FacturaFormComponent implements OnInit {
 
   /** NIF de la empresa (emisor), para no facturar a uno mismo como cliente. */
   empresaNif: string | null = null;
+  /** Tipo de cada línea antes de desmarcar el IVA, para restaurarlo al volver a marcarlo. */
+  private readonly memoriaTipoIva = new MemoriaTipoIva();
 
   get facturaTotal(): number {
     return this.facturaTotalSnapshot;
@@ -534,6 +550,10 @@ export class FacturaFormComponent implements OnInit {
     });
     this.presupuestoService.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data) => (this.presupuestos = data));
     this.materialService.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data) => (this.materiales = data));
+    this.form
+      .get('ivaHabilitado')!
+      .valueChanges.pipe(startWith(this.form.get('ivaHabilitado')!.value), takeUntilDestroyed(this.destroyRef))
+      .subscribe((ivaOn) => this.aplicarIvaCabecera(ivaOn !== false));
     this.form
       .get('clienteId')!
       .valueChanges.pipe(startWith(this.form.get('clienteId')!.value), takeUntilDestroyed(this.destroyRef))
@@ -645,12 +665,14 @@ export class FacturaFormComponent implements OnInit {
               cantidad: [it.cantidad, [Validators.required, Validators.min(0.001)]],
               precioUnitario: [it.precioUnitario, [Validators.required, Validators.min(0)]],
               aplicaIva: [it.aplicaIva ?? true],
+              tipoIva: [this.tipoDeLinea(it)],
             })
           )
         );
         if (itemList.length === 0) {
           this.addItem();
         }
+        this.aplicarIvaCabecera(f.ivaHabilitado !== false);
         this.applyFacturaCobrosSnapshot(f);
         this.validateClienteNifVsEmpresa();
       },
@@ -674,8 +696,35 @@ export class FacturaFormComponent implements OnInit {
         cantidad: [1, [Validators.required, Validators.min(0.001)]],
         precioUnitario: [0, [Validators.required, Validators.min(0)]],
         aplicaIva: [true],
+        tipoIva: [{ value: this.form.get('ivaHabilitado')?.value === false ? 0 : 21, disabled: this.form.get('ivaHabilitado')?.value === false }],
       })
     );
+  }
+
+  private tipoDeLinea(it: { tipoIva?: number; aplicaIva?: boolean }): number {
+    if (it.tipoIva === 21 || it.tipoIva === 10 || it.tipoIva === 4 || it.tipoIva === 0) {
+      return it.tipoIva;
+    }
+    return it.aplicaIva === false ? 0 : 21;
+  }
+
+  private aplicarIvaCabecera(ivaOn: boolean): void {
+    for (const control of this.items.controls) {
+      const tipo = control.get('tipoIva');
+      if (!tipo) {
+        continue;
+      }
+      if (ivaOn) {
+        const restaurado = this.memoriaTipoIva.encender(control, tipo.disabled);
+        if (restaurado != null) {
+          tipo.setValue(restaurado, { emitEvent: false });
+        }
+        tipo.enable({ emitEvent: false });
+      } else {
+        tipo.setValue(this.memoriaTipoIva.apagar(control, Number(tipo.value)), { emitEvent: false });
+        tipo.disable({ emitEvent: false });
+      }
+    }
   }
 
   removeItem(index: number): void {
@@ -793,21 +842,27 @@ export class FacturaFormComponent implements OnInit {
       });
       return;
     }
-    const value = this.form.value;
+    const value = this.form.getRawValue();
     const rowItems = (value.items ?? []) as Array<{
       materialId?: number | null;
       tareaManual?: string;
       cantidad: number | string;
       precioUnitario: number | string;
       aplicaIva?: boolean;
+      tipoIva?: number;
     }>;
-    const items: FacturaItemRequest[] = rowItems.map((it) => ({
-      materialId: it.materialId || undefined,
-      tareaManual: it.tareaManual || undefined,
-      cantidad: +it.cantidad,
-      precioUnitario: +it.precioUnitario,
-      aplicaIva: it.aplicaIva,
-    }));
+    const ivaOn = value.ivaHabilitado !== false;
+    const items: FacturaItemRequest[] = rowItems.map((it) => {
+      const tipoIva = ivaOn ? (it.tipoIva ?? 21) : 0;
+      return {
+        materialId: it.materialId || undefined,
+        tareaManual: it.tareaManual || undefined,
+        cantidad: +it.cantidad,
+        precioUnitario: +it.precioUnitario,
+        aplicaIva: tipoIva !== 0,
+        tipoIva,
+      };
+    });
     const payload: FacturaRequest = {
       clienteId: value.clienteId as number,
       items,

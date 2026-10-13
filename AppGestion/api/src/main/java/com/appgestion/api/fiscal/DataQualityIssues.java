@@ -70,6 +70,8 @@ public final class DataQualityIssues {
      * global aplicado solo en la cabecera, aunque sea de 0,01 €, cuenta como descuadre.
      * En el IVA la tolerancia es {@code 0,01 € × número de líneas}: cada cuota se
      * redondea por separado y el error se acumula. No es un margen fijo de 0,01 €.
+     * Agrupar el cálculo por tipo no cambia ese margen: con un solo tipo el desvío
+     * es el de antes, y con varios tipos sigue contando el número de líneas de la factura.
      */
     public static List<QualityIssue> getDataQualityIssues(
             List<InvoiceSnapshot> invoices,

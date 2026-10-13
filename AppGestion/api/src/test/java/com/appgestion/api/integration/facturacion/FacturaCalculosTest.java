@@ -30,7 +30,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Cálculos de factura según {@link com.appgestion.api.service.FacturaService#calcularTotales}.
  * <p>
- * El tipo reducido IVA 10% no está modelado: solo existe {@link TaxConstants#IVA_RATE} (21%).
+ * El 21 % y el exento deben dar los mismos totales que antes de agrupar por tipo.
+ * El 10 % redondea su propio grupo.
  */
 @SpringBootTest(classes = AppGestionApiApplication.class)
 @ActiveProfiles("test")
@@ -73,6 +74,36 @@ class FacturaCalculosTest {
                 .andExpect(jsonPath("$.subtotal").value(100.0))
                 .andExpect(jsonPath("$.iva").value(21.0))
                 .andExpect(jsonPath("$.total").value(121.0));
+    }
+
+    @Test
+    void facturaIva10_baseMasIvaIgualTotal() throws Exception {
+        String body = """
+                {
+                  "clienteId": %d,
+                  "presupuestoId": null,
+                  "items": [{"materialId": null, "tareaManual": "Reducido", "cantidad": 1.0, "precioUnitario": 100.0, "aplicaIva": true, "tipoIva": 10}],
+                  "numeroFactura": null,
+                  "fechaExpedicion": "%s",
+                  "fechaOperacion": null,
+                  "fechaVencimiento": null,
+                  "regimenFiscal": null,
+                  "condicionesPago": null,
+                  "metodoPago": "Transferencia",
+                  "montoCobrado": null,
+                  "notas": null,
+                  "ivaHabilitado": true
+                }
+                """.formatted(scenario.clienteCompletoId(), LocalDate.now());
+        mockMvc.perform(post("/facturas")
+                        .with(FacturacionAuth.asUsuarioFacturacion(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.subtotal").value(100.0))
+                .andExpect(jsonPath("$.iva").value(10.0))
+                .andExpect(jsonPath("$.total").value(110.0))
+                .andExpect(jsonPath("$.items[0].tipoIva").value(10));
     }
 
     @Test

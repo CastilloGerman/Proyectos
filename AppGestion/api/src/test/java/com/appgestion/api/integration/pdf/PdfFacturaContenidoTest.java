@@ -72,6 +72,86 @@ class PdfFacturaContenidoTest {
     }
 
     @Test
+    void pdfFacturaEmitida_conservaImportesDeCabecera() throws Exception {
+        String body = """
+                {
+                  "clienteId": %d,
+                  "presupuestoId": null,
+                  "items": [
+                    {"materialId": null, "tareaManual": "L1", "cantidad": 1.0, "precioUnitario": 10.01, "aplicaIva": true, "tipoIva": 21},
+                    {"materialId": null, "tareaManual": "L2", "cantidad": 1.0, "precioUnitario": 10.01, "aplicaIva": true, "tipoIva": 21},
+                    {"materialId": null, "tareaManual": "L3", "cantidad": 1.0, "precioUnitario": 10.01, "aplicaIva": true, "tipoIva": 21},
+                    {"materialId": null, "tareaManual": "L4", "cantidad": 1.0, "precioUnitario": 10.01, "aplicaIva": true, "tipoIva": 21},
+                    {"materialId": null, "tareaManual": "L5", "cantidad": 1.0, "precioUnitario": 10.01, "aplicaIva": true, "tipoIva": 21},
+                    {"materialId": null, "tareaManual": "L6", "cantidad": 1.0, "precioUnitario": 10.01, "aplicaIva": true, "tipoIva": 21},
+                    {"materialId": null, "tareaManual": "L7", "cantidad": 1.0, "precioUnitario": 10.01, "aplicaIva": true, "tipoIva": 21},
+                    {"materialId": null, "tareaManual": "L8", "cantidad": 1.0, "precioUnitario": 10.01, "aplicaIva": true, "tipoIva": 21},
+                    {"materialId": null, "tareaManual": "L9", "cantidad": 1.0, "precioUnitario": 10.01, "aplicaIva": true, "tipoIva": 21},
+                    {"materialId": null, "tareaManual": "L10", "cantidad": 1.0, "precioUnitario": 10.01, "aplicaIva": true, "tipoIva": 21}
+                  ],
+                  "numeroFactura": null,
+                  "fechaExpedicion": "%s",
+                  "fechaOperacion": null,
+                  "fechaVencimiento": null,
+                  "regimenFiscal": null,
+                  "condicionesPago": null,
+                  "metodoPago": "Transferencia",
+                  "montoCobrado": null,
+                  "notas": null,
+                  "ivaHabilitado": true
+                }
+                """.formatted(factScenario.clienteCompletoId(), LocalDate.of(2026, 2, 2));
+        String json = mockMvc.perform(post("/facturas")
+                        .with(FacturacionAuth.asUsuarioFacturacion(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        long facturaId = objectMapper.readTree(json).get("id").asLong();
+
+        String text = descargarTextoFacturaPdf(facturaId);
+
+        assertThat(text).containsPattern("100[.,]10");
+        assertThat(text).containsPattern("21[.,]02");
+        assertThat(text).containsPattern("121[.,]12");
+        assertThat(text).contains("IVA (21%):");
+    }
+
+    @Test
+    void pdfFacturaExenta_noInventaCuota() throws Exception {
+        String body = """
+                {
+                  "clienteId": %d,
+                  "presupuestoId": null,
+                  "items": [{"materialId": null, "tareaManual": "Exenta", "cantidad": 1.0, "precioUnitario": 80.0, "aplicaIva": false, "tipoIva": 0}],
+                  "numeroFactura": null,
+                  "fechaExpedicion": "%s",
+                  "fechaOperacion": null,
+                  "fechaVencimiento": null,
+                  "regimenFiscal": null,
+                  "condicionesPago": null,
+                  "metodoPago": "Transferencia",
+                  "montoCobrado": null,
+                  "notas": null,
+                  "ivaHabilitado": true
+                }
+                """.formatted(factScenario.clienteCompletoId(), LocalDate.of(2026, 2, 3));
+        String json = mockMvc.perform(post("/facturas")
+                        .with(FacturacionAuth.asUsuarioFacturacion(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        long facturaId = objectMapper.readTree(json).get("id").asLong();
+
+        String text = descargarTextoFacturaPdf(facturaId);
+
+        assertThat(text).containsPattern("80[.,]00");
+        assertThat(text).doesNotContain("IVA (21%):");
+        assertThat(text).contains("0%");
+    }
+
+    @Test
     void pdfFactura_contieneFechaExpedicion_formatoDdMmYyyy() throws Exception {
         LocalDate fecha = LocalDate.of(2026, 4, 14);
         long facturaId = crearFacturaBasica(factScenario.clienteCompletoId(), fecha);

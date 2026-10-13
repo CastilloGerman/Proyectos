@@ -39,6 +39,12 @@ public class FacturaItem {
     @Column(name = "aplica_iva")
     private Boolean aplicaIva = true;
 
+    /**
+     * 21, 10, 4 o 0. El 0 mezcla exento y gravado al 0 %; ver {@link com.appgestion.api.fiscal.TipoIva}.
+     */
+    @Column(name = "tipo_iva", nullable = false)
+    private Integer tipoIva = 21;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -68,4 +74,7 @@ public class FacturaItem {
 
     public Boolean getAplicaIva() { return aplicaIva; }
     public void setAplicaIva(Boolean aplicaIva) { this.aplicaIva = aplicaIva; }
+
+    public Integer getTipoIva() { return tipoIva; }
+    public void setTipoIva(Integer tipoIva) { this.tipoIva = tipoIva; }
 }

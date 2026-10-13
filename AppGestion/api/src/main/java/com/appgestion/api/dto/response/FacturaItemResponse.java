@@ -8,5 +8,6 @@ public record FacturaItemResponse(
         Double cantidad,
         Double precioUnitario,
         Double subtotal,
-        Boolean aplicaIva
+        Boolean aplicaIva,
+        Integer tipoIva
 ) {}

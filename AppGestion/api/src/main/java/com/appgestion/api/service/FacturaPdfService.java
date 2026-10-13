@@ -1,6 +1,6 @@
 package com.appgestion.api.service;
 
-import com.appgestion.api.constant.TaxConstants;
+import com.appgestion.api.fiscal.TipoIva;
 import com.appgestion.api.domain.entity.*;
 import com.appgestion.api.domain.enums.TipoFactura;
 import com.appgestion.api.util.IbanValidator;
@@ -301,6 +301,43 @@ public class FacturaPdfService {
         table.addCell(cellValue);
     }
 
+    /**
+     * Una factura de un solo tipo positivo mantiene la etiqueta histórica {@code IVA (21%):}.
+     * Varios tipos positivos no caben en un único porcentaje: la columna de cada línea lleva el suyo.
+     */
+    private static String etiquetaIvaCabecera(Factura factura) {
+        Integer unico = null;
+        for (FacturaItem item : factura.getItems()) {
+            int tipo = tipoDeLinea(item, true);
+            if (tipo == TipoIva.CERO) {
+                continue;
+            }
+            if (unico == null) {
+                unico = tipo;
+            } else if (unico != tipo) {
+                return "IVA:";
+            }
+        }
+        if (unico == null) {
+            return "IVA:";
+        }
+        return "IVA (" + TipoIva.etiquetaLinea(unico) + "):";
+    }
+
+    private static String etiquetaIvaLinea(FacturaItem item, boolean ivaHabilitado) {
+        return TipoIva.etiquetaLinea(tipoDeLinea(item, ivaHabilitado));
+    }
+
+    private static int tipoDeLinea(FacturaItem item, boolean ivaHabilitado) {
+        if (!ivaHabilitado) {
+            return TipoIva.CERO;
+        }
+        if (item.getTipoIva() != null) {
+            return TipoIva.exigir(item.getTipoIva());
+        }
+        return Boolean.FALSE.equals(item.getAplicaIva()) ? TipoIva.CERO : TipoIva.GENERAL;
+    }
+
     private void addTableHeader(PdfPTable table, Font font) {
         String[] headers = {"Descripción", "Cantidad", "P. Unit.", "IVA", "Importe"};
         for (String header : headers) {
@@ -320,7 +357,7 @@ public class FacturaPdfService {
         double cantidad = Optional.ofNullable(item.getCantidad()).orElse(0.0);
         double precioUnit = Optional.ofNullable(item.getPrecioUnitario()).orElse(0.0);
         double subtotal = Optional.ofNullable(item.getSubtotal()).orElse(cantidad * precioUnit);
-        String ivaStr = ivaHabilitado && Boolean.TRUE.equals(item.getAplicaIva()) ? TaxConstants.IVA_PERCENT_LABEL : "0%";
+        String ivaStr = etiquetaIvaLinea(item, ivaHabilitado);
 
         PdfPCell[] cells = {
                 new PdfPCell(new Phrase(descripcion, font)),
@@ -354,7 +391,7 @@ public class FacturaPdfService {
         totalesTable.addCell(new Phrase("Base imponible:", cellFont));
         totalesTable.addCell(new Phrase(String.format("%.2f €", subtotal), cellFont));
         if (Boolean.TRUE.equals(factura.getIvaHabilitado()) && iva > 0) {
-            totalesTable.addCell(new Phrase("IVA (" + TaxConstants.IVA_PERCENT_LABEL + "):", cellFont));
+            totalesTable.addCell(new Phrase(etiquetaIvaCabecera(factura), cellFont));
             totalesTable.addCell(new Phrase(String.format("%.2f €", iva), cellFont));
         }
         Font boldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.DARK_GRAY);

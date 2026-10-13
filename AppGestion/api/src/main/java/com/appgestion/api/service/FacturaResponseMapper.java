@@ -23,7 +23,8 @@ public class FacturaResponseMapper {
                         item.getCantidad(),
                         item.getPrecioUnitario(),
                         item.getSubtotal(),
-                        Boolean.TRUE.equals(item.getAplicaIva()) || item.getAplicaIva() == null
+                        Boolean.TRUE.equals(item.getAplicaIva()) || item.getAplicaIva() == null,
+                        item.getTipoIva() != null ? item.getTipoIva() : (Boolean.FALSE.equals(item.getAplicaIva()) ? 0 : 21)
                 ))
                 .toList();
 

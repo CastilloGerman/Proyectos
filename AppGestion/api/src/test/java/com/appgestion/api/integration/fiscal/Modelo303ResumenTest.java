@@ -36,8 +36,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Agregación DEVENGO del resumen orientativo 303.
  * <p>
- * La API actual solo calcula IVA al 21 % ({@link TaxConstants#IVA_RATE}); no existe desglose por tipos
- * 10 % / 4 % en el resumen. Los tests con bases distintas verifican la suma global.
+ * La suma global sigue siendo {@code facturas.iva}. El desglose por tipo cuadra con ese total
+ * más el ajuste por redondeo.
  */
 @SpringBootTest(classes = AppGestionApiApplication.class)
 @ActiveProfiles("test")

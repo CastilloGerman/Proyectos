@@ -114,6 +114,7 @@ public class PlantillasPdfPreviewService {
         it.setPrecioUnitario(pu);
         it.setSubtotal(subtotal);
         it.setAplicaIva(aplicaIva);
+        it.setTipoIva(aplicaIva ? com.appgestion.api.fiscal.TipoIva.GENERAL : com.appgestion.api.fiscal.TipoIva.CERO);
         return it;
     }
 

@@ -29,5 +29,7 @@ public record Modelo303ResumenResponse(
         List<IncidenciaCalidadResponse> incidencias,
         String resumenContexto,
         List<String> advertencias,
-        String avisoLegal
+        String avisoLegal,
+        List<DesgloseIvaFilaResponse> desgloseIva,
+        BigDecimal ajusteRedondeo
 ) {}

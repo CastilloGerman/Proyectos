@@ -20,6 +20,13 @@ export interface IncidenciaCalidad {
   ruta: string;
 }
 
+export interface DesgloseIvaFila {
+  tipoIva: number;
+  etiqueta: string;
+  base: number;
+  cuota: number;
+}
+
 export interface Modelo303Resumen {
   anio: number;
   trimestre: number;
@@ -40,6 +47,8 @@ export interface Modelo303Resumen {
   resumenContexto: string;
   advertencias: string[];
   avisoLegal: string;
+  desgloseIva: DesgloseIvaFila[];
+  ajusteRedondeo: number;
 }
 
 export interface Modelo347Cliente {

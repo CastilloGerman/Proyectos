@@ -123,6 +123,7 @@ public class AnticipoService {
         linea.setPrecioUnitario(baseAnticipo.doubleValue());
         linea.setSubtotal(baseAnticipo.doubleValue());
         linea.setAplicaIva(true);
+        linea.setTipoIva(com.appgestion.api.fiscal.TipoIva.GENERAL);
         linea.setCuotaIva(0.0);
         f.getItems().add(linea);
 
@@ -295,6 +296,7 @@ public class AnticipoService {
             linea.setPrecioUnitario(baseRestanteObjetivo);
             linea.setSubtotal(baseRestanteObjetivo);
             linea.setAplicaIva(true);
+            linea.setTipoIva(com.appgestion.api.fiscal.TipoIva.GENERAL);
             linea.setCuotaIva(0.0);
             factura.getItems().add(linea);
             return;
@@ -329,6 +331,7 @@ public class AnticipoService {
             fi.setPrecioUnitario(pu);
             fi.setSubtotal(parte.doubleValue());
             fi.setAplicaIva(true);
+            fi.setTipoIva(com.appgestion.api.fiscal.TipoIva.GENERAL);
             fi.setCuotaIva(0.0);
             factura.getItems().add(fi);
         }

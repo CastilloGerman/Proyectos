@@ -10,7 +10,8 @@ public record FacturaItemRequest(
         Double cantidad,
         @NotNull @DecimalMin("0")
         Double precioUnitario,
-        Boolean aplicaIva
+        Boolean aplicaIva,
+        Integer tipoIva
 ) {
     public FacturaItemRequest {
         if (aplicaIva == null) aplicaIva = true;
