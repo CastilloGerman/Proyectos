@@ -1,9 +1,11 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.constant.PresupuestoEstado;
 import com.appgestion.api.constant.TaxConstants;
 import com.appgestion.api.domain.entity.*;
 import com.appgestion.api.domain.enums.TipoFactura;
 import com.appgestion.api.domain.enums.CanalEnvio;
+import com.appgestion.api.dto.request.EstadoPresupuestoRequest;
 import com.appgestion.api.dto.request.PresupuestoItemRequest;
 import com.appgestion.api.dto.request.PresupuestoRequest;
 import com.appgestion.api.dto.request.EnviarEmailRequest;
@@ -200,6 +202,19 @@ public class PresupuestoService {
         return toResponse(presupuesto);
     }
 
+    /**
+     * Estado desde el listado, el panel y el inicio. No sustituye líneas ni llama a
+     * {@link #calcularTotales}: subtotal, IVA, total y descuentos se quedan como están.
+     */
+    @Transactional
+    public PresupuestoResponse actualizarEstado(Long id, EstadoPresupuestoRequest request, Long usuarioId) {
+        Presupuesto presupuesto = presupuestoRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Presupuesto no encontrado"));
+        presupuesto.setEstado(normalizarEstado(request.estado()));
+        presupuesto = presupuestoRepository.save(presupuesto);
+        return toResponse(presupuesto);
+    }
+
     @Transactional
     public void eliminar(Long id, Long usuarioId) {
         if (!presupuestoRepository.existsByIdAndUsuarioId(Objects.requireNonNull(id), Objects.requireNonNull(usuarioId))) {
@@ -255,6 +270,27 @@ public class PresupuestoService {
     private static String escapeHtml(String value) {
         return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
                 .replace("\"", "&quot;").replace("'", "&#39;");
+    }
+
+    private static String normalizarEstado(String raw) {
+        if (raw == null || raw.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El estado es obligatorio");
+        }
+        String texto = raw.trim();
+        if (texto.equalsIgnoreCase(PresupuestoEstado.PENDIENTE)) {
+            return PresupuestoEstado.PENDIENTE;
+        }
+        if (texto.equalsIgnoreCase(PresupuestoEstado.ACEPTADO)) {
+            return PresupuestoEstado.ACEPTADO;
+        }
+        if (texto.equalsIgnoreCase(PresupuestoEstado.RECHAZADO)) {
+            return PresupuestoEstado.RECHAZADO;
+        }
+        if (texto.equalsIgnoreCase(PresupuestoEstado.EN_EJECUCION)
+                || texto.equalsIgnoreCase(PresupuestoEstado.EN_EJECUCION_SIN_TILDE)) {
+            return PresupuestoEstado.EN_EJECUCION;
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado de presupuesto no válido");
     }
 
     private void mapItems(List<PresupuestoItemRequest> itemRequests, Presupuesto presupuesto) {

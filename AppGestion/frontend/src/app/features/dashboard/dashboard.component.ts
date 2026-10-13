@@ -17,7 +17,7 @@ import { FacturaService } from '../../core/services/factura.service';
 import { MaterialService } from '../../core/services/material.service';
 import { GastoService } from '../../core/services/gasto.service';
 import { AuthService } from '../../core/auth/auth.service';
-import { Presupuesto, PresupuestoItemRequest, PresupuestoRequest } from '../../core/models/presupuesto.model';
+import { Presupuesto } from '../../core/models/presupuesto.model';
 import { Factura } from '../../core/models/factura.model';
 import { Material } from '../../core/models/material.model';
 import { Gasto } from '../../core/models/gasto.model';
@@ -1994,8 +1994,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     if (this.equivalentesEstadoEjecucionUi(nuevo, actual)) return;
 
     this.actualizandoPresupuestoId = p.id;
-    const payload = this.buildPresupuestoUpdateRequest(p, nuevo);
-    this.presupuestoService.update(p.id, payload).subscribe({
+    this.presupuestoService.actualizarEstado(p.id, nuevo).subscribe({
       next: (updated) => {
         this.actualizandoPresupuestoId = null;
         this.patchPresupuestoReciente(updated);
@@ -2059,30 +2058,6 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     const lb = b.trim().toLowerCase();
     if (ej.includes(la) && ej.includes(lb)) return true;
     return la === lb;
-  }
-
-  private buildPresupuestoUpdateRequest(p: Presupuesto, estado: string): PresupuestoRequest {
-    const items: PresupuestoItemRequest[] = (p.items ?? []).map((it) => {
-      const manual = it.esTareaManual === true;
-      return {
-        materialId: manual ? undefined : it.materialId,
-        tareaManual: manual ? (it.descripcion?.trim() || undefined) : undefined,
-        cantidad: it.cantidad,
-        precioUnitario: it.precioUnitario,
-        visiblePdf: it.visiblePdf,
-      };
-    });
-    return {
-      clienteId: p.clienteId,
-      items,
-      ivaHabilitado: p.ivaHabilitado,
-      estado,
-      descuentoGlobalPorcentaje: p.descuentoGlobalPorcentaje,
-      descuentoGlobalFijo: p.descuentoGlobalFijo,
-      descuentoAntesIva: p.descuentoAntesIva ?? true,
-      condicionesActivas: p.condicionesActivas ?? [],
-      notaAdicional: p.notaAdicional ?? undefined,
-    };
   }
 
   private patchPresupuestoReciente(updated: Presupuesto): void {

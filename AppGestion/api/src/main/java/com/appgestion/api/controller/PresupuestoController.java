@@ -5,6 +5,7 @@ import com.appgestion.api.dto.request.EnviarEmailRequest;
 import com.appgestion.api.dto.request.MarcarPresupuestoEnviadoRequest;
 import com.appgestion.api.dto.request.PresupuestoCondicionesPredeterminadasRequest;
 import com.appgestion.api.dto.request.AnticipoRegistroRequest;
+import com.appgestion.api.dto.request.EstadoPresupuestoRequest;
 import com.appgestion.api.dto.request.PresupuestoRequest;
 import com.appgestion.api.dto.response.AnticipoResumenDTO;
 import com.appgestion.api.dto.response.FacturaResponse;
@@ -218,6 +219,13 @@ public class PresupuestoController {
     public PresupuestoResponse crear(@Valid @RequestBody PresupuestoRequest request) {
         Usuario usuario = currentUserService.getCurrentUsuario();
         return presupuestoService.crear(request, usuario);
+    }
+
+    @PatchMapping("/{id}/estado")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    public PresupuestoResponse actualizarEstado(@PathVariable Long id, @Valid @RequestBody EstadoPresupuestoRequest request) {
+        Long usuarioId = currentUserService.getCurrentUsuario().getId();
+        return presupuestoService.actualizarEstado(id, request, usuarioId);
     }
 
     @PutMapping("/{id}")
