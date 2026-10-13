@@ -1,10 +1,11 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
+import { MatSelect, MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -12,10 +13,13 @@ import { MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatExpansionModule } from '@angular/material/expansion';
+import { MatAccordion, MatExpansionModule } from '@angular/material/expansion';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
+import { EMPTY, Subject, catchError } from 'rxjs';
 import { FiscalService } from '../../../core/services/fiscal.service';
 import { FiscalCriterio, Modelo303Resumen, Modelo347Resumen } from '../../../core/models/fiscal.model';
+import { FiltroModelo303, observacionesModelo303 } from './hacienda-carga';
 import { FiscalAlertaBannerComponent } from '../fiscal-alerta-banner/fiscal-alerta-banner.component';
 import { TranslateService } from '@ngx-translate/core';
 
@@ -37,6 +41,7 @@ const DEFAULT_DOC_TITLE = 'Noemí - Web de Gestión';
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatExpansionModule,
+    MatTooltipModule,
     RouterLink,
     FiscalAlertaBannerComponent,
   ],
@@ -48,6 +53,8 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
   private readonly snackBar = inject(MatSnackBar);
   private readonly title = inject(Title);
   private readonly translate = inject(TranslateService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly carga303$ = new Subject<FiltroModelo303>();
 
   readonly loading = signal(false);
   readonly loading347 = signal(false);
@@ -63,23 +70,42 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
   readonly trimestres = [1, 2, 3, 4] as const;
   readonly displayedColumns347 = ['nombre', 'dni', 'base'] as const;
 
-  cargar303(): void {
-    this.loading.set(true);
-    this.fiscal.getModelo303(this.year, this.trimestre, this.criterio, this.soloPagadas).subscribe({
-      next: (r) => {
-        this.resumen.set(r);
-        this.loading.set(false);
-      },
-      error: (err) => {
-        this.loading.set(false);
-        const raw = err.error?.message ?? err.error?.detail;
-        const msg =
-          typeof raw === 'string' && String(raw).trim() !== ''
-            ? String(raw).trim()
-            : this.translate.instant('snack.tax303SummaryLoadFail');
-        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
-      },
-    });
+  onYearChange(year: number): void {
+    this.year = year;
+    this.programarCarga303();
+    this.cargar347();
+  }
+
+  onTrimestreChange(trimestre: number): void {
+    this.trimestre = trimestre;
+    this.programarCarga303();
+  }
+
+  onCriterioChange(criterio: FiscalCriterio): void {
+    this.criterio = criterio;
+    if (criterio === 'CAJA') {
+      this.soloPagadas = false;
+    }
+    this.programarCarga303();
+  }
+
+  onSoloPagadasChange(soloPagadas: boolean): void {
+    this.soloPagadas = soloPagadas;
+    this.programarCarga303();
+  }
+
+  cambiarTrimestre(select: MatSelect): void {
+    select.focus();
+    select.open();
+  }
+
+  abrirExplicaciones(accordion: MatAccordion, host: HTMLElement): void {
+    accordion.openAll();
+    host.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  importeDestacado(valor: number): number {
+    return Math.abs(valor ?? 0);
   }
 
   cargar347(): void {
@@ -122,20 +148,48 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
     });
   }
 
-  onCriterioChange(): void {
-    if (this.criterio === 'CAJA') {
-      this.soloPagadas = false;
-    }
-  }
-
   ngOnInit(): void {
     this.title.setTitle('Hacienda');
-    this.cargar303();
+    observacionesModelo303(this.carga303$, (filtro) => {
+      this.loading.set(true);
+      return this.fiscal.getModelo303(filtro.year, filtro.trimestre, filtro.criterio, filtro.soloPagadas).pipe(
+        catchError((err) => {
+          this.loading.set(false);
+          this.avisarError303(err);
+          return EMPTY;
+        }),
+      );
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((r) => {
+        this.resumen.set(r);
+        this.loading.set(false);
+      });
+    this.programarCarga303();
     this.cargar347();
   }
 
   ngOnDestroy(): void {
     this.title.setTitle(DEFAULT_DOC_TITLE);
+  }
+
+  private programarCarga303(): void {
+    this.loading.set(true);
+    this.carga303$.next({
+      year: this.year,
+      trimestre: this.trimestre,
+      criterio: this.criterio,
+      soloPagadas: this.soloPagadas,
+    });
+  }
+
+  private avisarError303(err: { error?: { message?: unknown; detail?: unknown } }): void {
+    const raw = err.error?.message ?? err.error?.detail;
+    const msg =
+      typeof raw === 'string' && String(raw).trim() !== ''
+        ? String(raw).trim()
+        : this.translate.instant('snack.tax303SummaryLoadFail');
+    this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
   }
 
   private trimestreActual(): number {

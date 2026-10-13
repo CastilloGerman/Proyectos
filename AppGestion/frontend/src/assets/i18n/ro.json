@@ -1630,6 +1630,7 @@
     "subject": "Subiect",
     "emailQueued": "E-mailul a fost pus în coada de trimitere cu PDF-ul atașat.",
     "shareFailed": "Nu s-a putut deschide meniul de partajare.",
+    "popupBlocked": "Browserul a blocat WhatsApp. Apasă „Deschide WhatsApp” pentru a trimite mesajul.",
     "phoneRequired": "Introdu un număr de telefon valid cu prefix internațional.",
     "savePhone": "Salvează numărul de telefon al clientului",
     "title": "Trimite oferta",

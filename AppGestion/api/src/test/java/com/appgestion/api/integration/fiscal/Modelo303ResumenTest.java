@@ -102,6 +102,8 @@ class Modelo303ResumenTest {
         assertThat(new BigDecimal(root.get("baseImponibleTotal").asText())).isEqualByComparingTo(baseEsperada);
         assertThat(new BigDecimal(root.get("ivaRepercutido").asText())).isEqualByComparingTo(ivaEsperado);
         assertThat(root.get("numeroFacturas").asLong()).isEqualTo(3L);
+        assertThat(root.get("incidencias")).isEmpty();
+        assertThat(root.get("resumenContexto").asText()).isEqualTo("3 facturas · 0 gastos · 0 incidencias");
     }
 
     /**
@@ -142,6 +144,9 @@ class Modelo303ResumenTest {
         assertThat(new BigDecimal(root.get("ivaRepercutido").asText()))
                 .isEqualByComparingTo(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
         assertThat(root.get("numeroFacturas").asLong()).isZero();
+        assertThat(root.get("numeroGastos").asLong()).isZero();
+        assertThat(root.get("incidencias")).isEmpty();
+        assertThat(root.get("resumenContexto").asText()).isEqualTo("0 facturas · 0 gastos · 0 incidencias");
     }
 
     private JsonNode getModelo303(int year, int trimestre) throws Exception {

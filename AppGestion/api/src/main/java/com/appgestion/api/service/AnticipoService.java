@@ -135,7 +135,7 @@ public class AnticipoService {
         cobro.setImporte(importe.doubleValue());
         cobro.setFecha(fecha);
         cobro.setMetodo("Transferencia");
-        cobro.setNotas("Cobro del anticipo (criterio caja: fecha de cobro)");
+        cobro.setNotas("Cobro del anticipo (por fecha de cobro)");
         facturaCobroRepository.save(cobro);
         f.setMontoCobrado(importe.doubleValue());
         facturaRepository.save(f);

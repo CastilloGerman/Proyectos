@@ -35,6 +35,10 @@ export function normalizarTelefonoInternacional(phone: string, country = 'ES'): 
   return digits.length >= 8 && digits.length <= 15 ? digits : '';
 }
 
+export function construirUrlWhatsApp(phone: string, text: string): string {
+  return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+}
+
 export function construirMensajePresupuesto(p: Presupuesto, contratista: string): string {
   const items = p.items?.map(i => i.descripcion).filter(Boolean).slice(0, 3).join(', ');
   const resumen = items || 'los trabajos indicados';
@@ -213,30 +217,30 @@ export class EnviarPresupuestoComponent implements OnChanges {
 
   async compartirWhatsApp(): Promise<void> {
     const phone = normalizarTelefonoInternacional(this.telefono, this.presupuesto.clientePais || 'ES');
-    if (!phone) { this.snackBar.open(this.translate.instant('budgetShare.phoneRequired'), this.translate.instant('common.close'), { duration: 3000 }); return; }
+    if (!phone) {
+      this.snackBar.open(this.translate.instant('budgetShare.phoneRequired'), this.translate.instant('common.close'), { duration: 3000 });
+      return;
+    }
+    // Open synchronously in the click so the browser does not treat WhatsApp as a blocked popup.
+    const preview = window.open('about:blank', '_blank');
     if (this.telefonoNoGuardado && this.guardarTelefono) await this.guardarTelefonoCliente();
-    const publicLink = await this.ensurePublicLink();
-    if (!publicLink) return;
-    const shareText = `${this.mensaje}\n\n${publicLink}`;
     this.loading = true;
-    this.presupuestos.downloadPdf(this.presupuesto.id).subscribe({
-      next: blob => {
-        this.loading = false;
-        const file = new File([blob], `Presupuesto-${this.presupuesto.id}.pdf`, { type: 'application/pdf' });
-        const shareData: ShareData = { files: [file], text: shareText };
-        if (typeof navigator.share === 'function' && typeof navigator.canShare === 'function' && navigator.canShare(shareData)) {
-          void navigator.share(shareData).then(() => this.registrarEnvio('WHATSAPP')).catch((error: unknown) => {
-            if ((error as { name?: string })?.name !== 'AbortError') this.snackBar.open(this.translate.instant('budgetShare.shareFailed'), this.translate.instant('common.close'), { duration: 3000 });
-          });
-          return;
-        }
-        this.waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(shareText)}`;
-        this.fallbackPendiente = true;
-        this.saveBlob(file);
-        this.snackBar.open(this.translate.instant('budgetShare.fallbackHint'), this.translate.instant('common.close'), { duration: 5000 });
-      },
-      error: () => { this.loading = false; this.snackBar.open(this.translate.instant('budgetShare.pdfFailed'), this.translate.instant('common.close'), { duration: 3000 }); },
-    });
+    const publicLink = await this.ensurePublicLink();
+    this.loading = false;
+    if (!publicLink) {
+      preview?.close();
+      return;
+    }
+    const shareText = `${this.mensaje}\n\n${publicLink}`;
+    this.waUrl = construirUrlWhatsApp(phone, shareText);
+    if (preview && !preview.closed) {
+      preview.opener = null;
+      preview.location.replace(this.waUrl);
+      this.registrarEnvio('WHATSAPP');
+      return;
+    }
+    this.fallbackPendiente = true;
+    this.snackBar.open(this.translate.instant('budgetShare.popupBlocked'), this.translate.instant('common.close'), { duration: 5000 });
   }
 
   prepararFallback(): void { this.fallbackPendiente = true; }

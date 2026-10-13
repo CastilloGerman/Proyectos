@@ -1630,6 +1630,7 @@
     "subject": "Subject",
     "emailQueued": "Email queued with the PDF attached.",
     "shareFailed": "Could not open the sharing menu.",
+    "popupBlocked": "The browser blocked WhatsApp. Tap “Open WhatsApp” to send the message.",
     "phoneRequired": "Enter a valid phone number with an international dialing code.",
     "savePhone": "Save the client's phone number",
     "title": "Send estimate",

@@ -25,6 +25,9 @@ public record Modelo303ResumenResponse(
         BigDecimal resultadoIva,
         boolean resultadoEsIngreso,
         long numeroFacturas,
+        long numeroGastos,
+        List<IncidenciaCalidadResponse> incidencias,
+        String resumenContexto,
         List<String> advertencias,
         String avisoLegal
 ) {}

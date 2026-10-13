@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ClienteService } from '../../../core/services/cliente.service';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
 import { AuthService } from '../../../core/auth/auth.service';
-import { construirMensajePresupuesto, EnviarPresupuestoComponent, normalizarTelefonoInternacional } from './enviar-presupuesto.component';
+import { construirMensajePresupuesto, construirUrlWhatsApp, EnviarPresupuestoComponent, normalizarTelefonoInternacional } from './enviar-presupuesto.component';
 
 describe('EnviarPresupuestoComponent', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -45,11 +45,12 @@ describe('EnviarPresupuestoComponent', () => {
     expect(fixture.nativeElement.querySelector('.send-buttons')).toBeTruthy();
   });
 
-  it('comparte el PDF con navigator.share y registra WhatsApp al completarse', async () => {
-    const share = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal('navigator', { share, canShare: () => true, clipboard: { writeText: vi.fn() } });
+  it('abre WhatsApp con el teléfono, el mensaje y el enlace público, sin el selector del sistema', async () => {
+    const opened = { opener: window, closed: false, location: { replace: vi.fn() } } as unknown as Window & {
+      location: { replace: ReturnType<typeof vi.fn> };
+    };
+    const open = vi.spyOn(window, 'open').mockReturnValue(opened);
     const presupuestoApi = {
-      downloadPdf: vi.fn(() => of(new Blob(['pdf']))),
       marcarEnviado: vi.fn(() => of(void 0)),
       crearEnlace: vi.fn(() => of({ url: 'https://example.test/p/token', expiraAt: '2027-01-01T00:00:00Z' })),
     };
@@ -68,10 +69,17 @@ describe('EnviarPresupuestoComponent', () => {
     };
     component.ngOnChanges();
     await component.compartirWhatsApp();
-    await Promise.resolve();
-    expect(share).toHaveBeenCalled();
-    expect(share.mock.calls[0][0].text).toContain('https://example.test/p/token');
+    expect(open).toHaveBeenCalledOnce();
+    expect(open.mock.calls[0][0]).toBe('about:blank');
+    expect(opened.location.replace).toHaveBeenCalledWith(expect.stringContaining('https://wa.me/34600111222?text='));
+    expect(decodeURIComponent(String(opened.location.replace.mock.calls[0][0]))).toContain('https://example.test/p/token');
+    expect(opened.opener).toBeNull();
     expect(presupuestoApi.marcarEnviado).toHaveBeenCalledWith(1, 'WHATSAPP');
+  });
+
+  it('builds a click-to-chat URL for WhatsApp', () => {
+    expect(construirUrlWhatsApp('34600111222', 'Hola\nhttps://example.test/p/x'))
+      .toBe('https://wa.me/34600111222?text=Hola%0Ahttps%3A%2F%2Fexample.test%2Fp%2Fx');
   });
 
   it('adds the public link to the email body while keeping the existing PDF attachment flow', async () => {

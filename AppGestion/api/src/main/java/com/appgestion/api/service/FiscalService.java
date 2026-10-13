@@ -2,9 +2,14 @@ package com.appgestion.api.service;
 
 import com.appgestion.api.constant.FacturaEstadoPago;
 import com.appgestion.api.domain.enums.FiscalCriterioImputacion;
+import com.appgestion.api.dto.response.IncidenciaCalidadResponse;
 import com.appgestion.api.dto.response.Modelo303ResumenResponse;
 import com.appgestion.api.dto.response.Modelo347ClienteResponse;
 import com.appgestion.api.dto.response.Modelo347ResumenResponse;
+import com.appgestion.api.fiscal.DataQualityIssues;
+import com.appgestion.api.fiscal.DataQualityIssues.ExpenseSnapshot;
+import com.appgestion.api.fiscal.DataQualityIssues.InvoiceSnapshot;
+import com.appgestion.api.fiscal.DataQualityIssues.QualityIssue;
 import com.appgestion.api.repository.FiscalQueryRepository;
 import org.springframework.stereotype.Service;
 
@@ -67,12 +72,13 @@ public class FiscalService {
             row = fiscalQueryRepository.aggregateVentasModelo303Caja(
                     usuarioId, desde, hasta, FacturaEstadoPago.PAGADA);
             advertencias.add(
-                    "Criterio caja: solo entran facturas marcadas como Pagada con al menos un cobro registrado; " +
-                            "la fecha usada es la del último cobro (MAX) por factura."
+                    "Por fecha de cobro: no es el régimen especial de criterio de caja (RECC). " +
+                            "No se prorratean los cobros parciales; la factura entera se imputa a la fecha del último cobro " +
+                            "y solo entran facturas marcadas como Pagada con al menos un cobro registrado."
             );
             advertencias.add(
                     "Factura de anticipo: al generarla se registra un cobro automático con la fecha del anticipo " +
-                            "para que el criterio caja pueda imputar el IVA en el trimestre del cobro."
+                            "para poder imputar el IVA en el trimestre de ese cobro."
             );
         } else {
             soloPagadasEnRespuesta = soloFacturasPagadas;
@@ -96,8 +102,8 @@ public class FiscalService {
         BigDecimal ivaSop = aggregateIvaSoportadoGastos(usuarioId, desde, hasta, criterio);
         if (criterio == FiscalCriterioImputacion.CAJA) {
             advertencias.add(
-                    "IVA soportado (gastos): en criterio caja se imputa por la fecha del gasto; " +
-                            "aún no hay fecha de pago registrada en compras."
+                    "IVA soportado (gastos): con «Por fecha de cobro» se imputa por la fecha del gasto; " +
+                            "las compras no tienen fecha de pago."
             );
         } else {
             advertencias.add(
@@ -108,6 +114,17 @@ public class FiscalService {
                 ? NOTA_IVA_SOPORTADO_CON_GASTOS.trim()
                 : NOTA_IVA_SOPORTADO.trim();
         BigDecimal resultado = ivaRep.subtract(ivaSop).setScale(2, RoundingMode.HALF_UP);
+
+        List<InvoiceSnapshot> facturas = mapFacturasCalidad(usuarioId, desde, hasta, criterio, soloFacturasPagadas);
+        List<ExpenseSnapshot> gastos = mapGastosCalidad(usuarioId, desde, hasta);
+        long numeroGastos = gastos.stream()
+                .filter(g -> g.fecha() != null && !g.fecha().isBefore(desde) && !g.fecha().isAfter(hasta))
+                .count();
+        List<QualityIssue> issues = DataQualityIssues.getDataQualityIssues(facturas, gastos);
+        List<IncidenciaCalidadResponse> incidencias = issues.stream()
+                .map(i -> new IncidenciaCalidadResponse(i.tipo(), i.id(), i.etiqueta(), i.ruta()))
+                .toList();
+        String resumenContexto = DataQualityIssues.textoContexto(numFacturas, numeroGastos, incidencias.size());
 
         return new Modelo303ResumenResponse(
                 anio,
@@ -124,6 +141,9 @@ public class FiscalService {
                 resultado,
                 resultado.compareTo(BigDecimal.ZERO) >= 0,
                 numFacturas,
+                numeroGastos,
+                incidencias,
+                resumenContexto,
                 List.copyOf(advertencias),
                 AVISO_LEGAL_303.trim().replace("            ", " ")
         );
@@ -193,6 +213,79 @@ public class FiscalService {
                 ? fiscalQueryRepository.aggregateGastosModelo303Caja(usuarioId, desde, hasta)
                 : fiscalQueryRepository.aggregateGastosModelo303Devengo(usuarioId, desde, hasta);
         return toMoney(raw);
+    }
+
+    private List<InvoiceSnapshot> mapFacturasCalidad(
+            Long usuarioId,
+            LocalDate desde,
+            LocalDate hasta,
+            FiscalCriterioImputacion criterio,
+            boolean soloFacturasPagadas
+    ) {
+        List<Object[]> rows = criterio == FiscalCriterioImputacion.CAJA
+                ? fiscalQueryRepository.findFacturasCalidadCaja(usuarioId, desde, hasta, FacturaEstadoPago.PAGADA)
+                : fiscalQueryRepository.findFacturasCalidadDevengo(
+                        usuarioId, desde, hasta, soloFacturasPagadas, FacturaEstadoPago.PAGADA);
+        List<InvoiceSnapshot> out = new ArrayList<>();
+        if (rows == null) {
+            return out;
+        }
+        for (Object[] raw : rows) {
+            Object[] row = unwrapNativeTupleRow(raw);
+            if (row == null || row.length < 8 || row[0] == null) {
+                continue;
+            }
+            Long clienteId = row[2] == null ? null : ((Number) row[2]).longValue();
+            out.add(new InvoiceSnapshot(
+                    ((Number) row[0]).longValue(),
+                    row[1] != null ? row[1].toString() : "",
+                    clienteId,
+                    toMoney(row[3]),
+                    toMoney(row[4]),
+                    toMoney(row[5]),
+                    toMoney(row[6]),
+                    row[7] == null ? 0 : ((Number) row[7]).intValue()
+            ));
+        }
+        return out;
+    }
+
+    private List<ExpenseSnapshot> mapGastosCalidad(Long usuarioId, LocalDate desde, LocalDate hasta) {
+        List<Object[]> rows = fiscalQueryRepository.findGastosCalidad(usuarioId, desde, hasta);
+        List<ExpenseSnapshot> out = new ArrayList<>();
+        if (rows == null) {
+            return out;
+        }
+        for (Object[] raw : rows) {
+            Object[] row = unwrapNativeTupleRow(raw);
+            if (row == null || row.length < 4 || row[0] == null) {
+                continue;
+            }
+            out.add(new ExpenseSnapshot(
+                    ((Number) row[0]).longValue(),
+                    toLocalDate(row[1]),
+                    row[2] != null ? row[2].toString() : null,
+                    row[3] != null ? row[3].toString() : null
+            ));
+        }
+        return out;
+    }
+
+    private static LocalDate toLocalDate(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof LocalDate date) {
+            return date;
+        }
+        if (value instanceof java.sql.Date date) {
+            return date.toLocalDate();
+        }
+        String text = value.toString();
+        if (text.length() >= 10) {
+            return LocalDate.parse(text.substring(0, 10));
+        }
+        return LocalDate.parse(text);
     }
 
     private static BigDecimal toMoney(Object value) {

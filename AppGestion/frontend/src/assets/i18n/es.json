@@ -1624,6 +1624,7 @@
     "subject": "Asunto",
     "emailQueued": "Email encolado para su envío con el PDF adjunto.",
     "shareFailed": "No se pudo abrir el selector para compartir.",
+    "popupBlocked": "El navegador bloqueó WhatsApp. Pulsa «Abrir WhatsApp» para enviar el mensaje.",
     "phoneRequired": "Introduce un teléfono válido con prefijo internacional.",
     "savePhone": "Guardar el teléfono en el cliente",
     "title": "Enviar presupuesto",

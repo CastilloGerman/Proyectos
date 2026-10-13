@@ -87,6 +87,9 @@ class GastoIvaSoportado303Test {
         assertThat(new BigDecimal(root.get("ivaSoportado").asText())).isEqualByComparingTo(ivaEsperado);
         assertThat(root.get("ivaSoportadoCalculado").asBoolean()).isTrue();
         assertThat(root.get("ivaSoportadoNota").asText()).contains("gastos registrados");
+        assertThat(root.get("numeroGastos").asLong()).isEqualTo(2L);
+        assertThat(root.get("incidencias")).isEmpty();
+        assertThat(root.get("resumenContexto").asText()).isEqualTo("0 facturas · 2 gastos · 0 incidencias");
     }
 
     @Test
@@ -96,6 +99,8 @@ class GastoIvaSoportado303Test {
                 .isEqualByComparingTo(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
         assertThat(root.get("ivaSoportadoCalculado").asBoolean()).isTrue();
         assertThat(root.get("ivaSoportadoNota").asText()).contains("no está registrado");
+        assertThat(root.get("numeroGastos").asLong()).isZero();
+        assertThat(root.get("resumenContexto").asText()).isEqualTo("0 facturas · 0 gastos · 0 incidencias");
     }
 
     @Test
@@ -113,6 +118,9 @@ class GastoIvaSoportado303Test {
         BigDecimal ivaSop = new BigDecimal(root.get("ivaSoportado").asText());
         BigDecimal resultado = new BigDecimal(root.get("resultadoIva").asText());
         assertThat(resultado).isEqualByComparingTo(ivaRep.subtract(ivaSop).setScale(2, RoundingMode.HALF_UP));
+        assertThat(root.get("numeroFacturas").asLong()).isEqualTo(1L);
+        assertThat(root.get("numeroGastos").asLong()).isEqualTo(1L);
+        assertThat(root.get("incidencias")).isEmpty();
     }
 
     @Test

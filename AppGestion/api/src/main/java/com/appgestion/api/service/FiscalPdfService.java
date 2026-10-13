@@ -47,8 +47,30 @@ public class FiscalPdfService {
                     "Período: " + r.fechaDesde() + " — " + r.fechaHasta() + "  |  Año " + r.anio() + ", trimestre " + r.trimestre(),
                     bodyFont
             ));
-            document.add(new Paragraph("Criterio: " + r.criterio() + (r.soloFacturasPagadas() ? " (solo facturas pagadas)" : ""), bodyFont));
-            document.add(new Paragraph("Facturas incluidas: " + r.numeroFacturas(), bodyFont));
+            document.add(new Paragraph(
+                    "Criterio: " + etiquetaCriterio(r) + (r.soloFacturasPagadas() ? " (solo facturas pagadas)" : ""),
+                    bodyFont
+            ));
+            if (r.resumenContexto() != null && !r.resumenContexto().isBlank()) {
+                document.add(new Paragraph(r.resumenContexto(), bodyFont));
+            }
+
+            java.math.BigDecimal resultado = r.resultadoIva() == null ? java.math.BigDecimal.ZERO : r.resultadoIva();
+            boolean aIngresar = resultado.signum() >= 0;
+            Font heroFont = FontFactory.getFont(
+                    FontFactory.HELVETICA_BOLD,
+                    16,
+                    aIngresar ? new Color(30, 58, 138) : new Color(184, 115, 51)
+            );
+            String resultadoLabel = aIngresar ? "IVA estimado a ingresar" : "IVA estimado a compensar";
+            Paragraph hero = new Paragraph(resultadoLabel + ": " + eur(resultado.abs()) + " €", heroFont);
+            hero.setSpacingBefore(10);
+            hero.setSpacingAfter(4);
+            document.add(hero);
+            document.add(new Paragraph(
+                    "IVA repercutido " + eur(r.ivaRepercutido()) + " € menos IVA soportado " + eur(r.ivaSoportado()) + " €",
+                    bodyFont
+            ));
             document.add(new Paragraph(" ", bodyFont));
 
             PdfPTable table = new PdfPTable(2);
@@ -59,16 +81,17 @@ public class FiscalPdfService {
             addBodyRow(table, "Base imponible total (ventas)", eur(r.baseImponibleTotal()), bodyFont);
             addBodyRow(table, "IVA repercutido", eur(r.ivaRepercutido()), bodyFont);
             addBodyRow(table, "IVA soportado (compras)", eur(r.ivaSoportado()), bodyFont);
-            String resLabel = r.resultadoEsIngreso() ? "Resultado (a ingresar, orientativo)" : "Resultado (compensación / a favor, orientativo)";
-            addBodyRow(table, resLabel, eur(r.resultadoIva().abs()), bodyFont);
+            addBodyRow(table, resultadoLabel, eur(resultado.abs()), bodyFont);
 
             document.add(table);
 
             document.add(new Paragraph(" ", smallFont));
             document.add(new Paragraph("Nota IVA soportado: " + r.ivaSoportadoNota(), smallFont));
 
-            for (String adv : r.advertencias()) {
-                document.add(new Paragraph("• " + adv, smallFont));
+            if (r.advertencias() != null) {
+                for (String adv : r.advertencias()) {
+                    document.add(new Paragraph("• " + adv, smallFont));
+                }
             }
 
             document.add(new Paragraph(" ", smallFont));
@@ -100,6 +123,13 @@ public class FiscalPdfService {
         c2.setHorizontalAlignment(Element.ALIGN_RIGHT);
         table.addCell(c1);
         table.addCell(c2);
+    }
+
+    private static String etiquetaCriterio(Modelo303ResumenResponse r) {
+        if (r.criterio() != null && "CAJA".equals(r.criterio().name())) {
+            return "Por fecha de cobro";
+        }
+        return "Devengo (fecha de expedición)";
     }
 
     private static String eur(java.math.BigDecimal v) {

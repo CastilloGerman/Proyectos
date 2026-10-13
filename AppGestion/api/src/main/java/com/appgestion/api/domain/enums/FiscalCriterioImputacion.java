@@ -6,6 +6,10 @@ package com.appgestion.api.domain.enums;
 public enum FiscalCriterioImputacion {
     /** Fecha de expedición (o operación / creación como respaldo). */
     DEVENGO,
-    /** Fecha del último cobro registrado; solo facturas marcadas como Pagada. */
+    /**
+     * Valor de API. En pantalla y PDF se muestra como «Por fecha de cobro».
+     * No es el régimen especial de criterio de caja (RECC): usa la fecha del último
+     * cobro y no prorratea cobros parciales.
+     */
     CAJA
 }

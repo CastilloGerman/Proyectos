@@ -1630,6 +1630,7 @@
     "subject": "Objet",
     "emailQueued": "E-mail mis en file d’envoi avec le PDF en pièce jointe.",
     "shareFailed": "Impossible d’ouvrir le menu de partage.",
+    "popupBlocked": "Le navigateur a bloqué WhatsApp. Cliquez sur « Ouvrir WhatsApp » pour envoyer le message.",
     "phoneRequired": "Saisissez un numéro valide avec l’indicatif international.",
     "savePhone": "Enregistrer le téléphone du client",
     "title": "Envoyer le devis",

@@ -18,73 +18,146 @@
   font-size: 0.95rem;
 }
 
-.dh-alert {
-  display: flex;
-  gap: 14px;
-  padding: 14px 16px;
-  margin-bottom: var(--app-space-md, 16px);
+.dh-hero {
+  margin: 4px 0 12px;
+  padding: 20px 22px;
   border-radius: var(--app-radius-md, 12px);
-  border: 1px solid transparent;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  color: var(--app-text-primary, #0f172a);
+  background: rgba(30, 58, 138, 0.06);
+  border: 1px solid rgba(30, 58, 138, 0.16);
 }
 
-.dh-alert p {
-  margin: 0 0 10px;
+.dh-hero--compensar {
+  background: rgba(184, 115, 51, 0.08);
+  border-color: rgba(184, 115, 51, 0.28);
 }
 
-.dh-alert p:last-child {
-  margin-bottom: 0;
+.dh-hero--loading {
+  opacity: 0.55;
 }
 
-.dh-alert__icon {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  font-size: 28px;
-}
-
-.dh-alert__body {
-  min-width: 0;
-}
-
-.dh-alert__title {
-  display: block;
-  margin-bottom: 8px;
+.dh-hero__label {
+  margin: 0;
   font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--app-text-secondary, #64748b);
 }
 
-.dh-alert__emphasis {
+.dh-hero__amount {
+  margin: 4px 0 8px;
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: #1e3a8a;
+}
+
+.dh-hero--compensar .dh-hero__amount {
+  color: var(--app-accent-copper, #b87333);
+}
+
+.dh-hero__split {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--app-text-secondary, #64748b);
+}
+
+.dh-context {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--app-text-primary, #0f172a);
 }
 
-.dh-alert--warning {
-  background: rgba(180, 83, 9, 0.08);
-  border-color: rgba(180, 83, 9, 0.28);
+.dh-empty-state {
+  margin: 0 0 16px;
+  padding: 16px;
+  border-radius: var(--app-radius-md, 12px);
+  border: 1px dashed var(--app-border, rgba(15, 23, 42, 0.16));
 }
 
-.dh-alert--warning .dh-alert__icon {
-  color: #b45309;
+.dh-empty-state__title {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--app-text-primary, #0f172a);
 }
 
-.dh-alert--info {
-  background: rgba(30, 58, 138, 0.07);
-  border-color: rgba(30, 58, 138, 0.22);
+.dh-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.dh-alert--info .dh-alert__icon {
+.dh-gastos-hint {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--app-text-secondary, #64748b);
+}
+
+.dh-gastos-hint a,
+.dh-issues a {
   color: #1e40af;
 }
 
-.dh-alert--caja {
-  background: rgba(124, 58, 237, 0.07);
-  border-color: rgba(124, 58, 237, 0.25);
+.dh-issues {
+  margin: 12px 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
 }
 
-.dh-alert--caja .dh-alert__icon {
-  color: #6d28d9;
+.dh-issues li {
+  margin: 4px 0;
+}
+
+.dh-loading {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+.dh-info-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 0 12px;
+  font-size: 0.9rem;
+  color: var(--app-text-secondary, #64748b);
+}
+
+.dh-info-line mat-icon {
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+  color: #1e40af;
+}
+
+.dh-text-btn {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: #1e40af;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.dh-checkbox-tip {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* El control deshabilitado no recibe el ratón; el evento llega al span, que tiene el tooltip. */
+:host ::ng-deep .dh-checkbox-tip .mat-mdc-checkbox-disabled {
+  pointer-events: none;
+}
+
+.dh-checkbox-tip:focus-visible {
+  outline: 2px solid #1e40af;
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 .dh-accordion {
@@ -186,21 +259,6 @@ mat-radio-group {
   font-size: 1.05rem;
 }
 
-.dh-result {
-  margin-top: 8px;
-  padding-top: 12px;
-  border-bottom: none;
-}
-
-.dh-result .dh-v {
-  font-size: 1.15rem;
-  color: #1e3a8a;
-}
-
-.dh-result--favor .dh-v {
-  color: var(--app-accent-copper, #b87333);
-}
-
 .dh-row--muted .dh-k {
   display: flex;
   flex-wrap: wrap;
@@ -218,20 +276,6 @@ mat-radio-group {
   letter-spacing: 0.03em;
   background: rgba(15, 23, 42, 0.06);
   color: var(--app-text-secondary, #64748b);
-}
-
-.dh-inline-hint,
-.dh-result-footnote {
-  font-size: 0.82rem;
-  line-height: 1.45;
-  color: var(--app-text-secondary, #64748b);
-  margin: 0 0 12px;
-  padding-left: 2px;
-}
-
-.dh-result-footnote {
-  margin-top: 4px;
-  font-style: italic;
 }
 
 .dh-nota,
@@ -289,39 +333,38 @@ mat-radio-group {
   color: #a5b4fc;
 }
 
-:host-context(html.app-dark-theme) .dh-alert {
-  color: var(--app-text-primary, #f8fafc);
-}
-
-:host-context(html.app-dark-theme) .dh-alert__emphasis {
-  color: var(--app-text-primary, #f8fafc);
-}
-
-:host-context(html.app-dark-theme) .dh-alert--warning {
-  background: rgba(251, 191, 36, 0.1);
-  border-color: rgba(251, 191, 36, 0.35);
-}
-
-:host-context(html.app-dark-theme) .dh-alert--warning .dh-alert__icon {
-  color: #fbbf24;
-}
-
-:host-context(html.app-dark-theme) .dh-alert--info {
+:host-context(html.app-dark-theme) .dh-hero {
   background: rgba(99, 102, 241, 0.12);
   border-color: rgba(129, 140, 248, 0.35);
 }
 
-:host-context(html.app-dark-theme) .dh-alert--info .dh-alert__icon {
+:host-context(html.app-dark-theme) .dh-hero__amount {
+  color: #c7d2fe;
+}
+
+:host-context(html.app-dark-theme) .dh-hero--compensar {
+  background: rgba(184, 115, 51, 0.14);
+  border-color: rgba(251, 191, 36, 0.35);
+}
+
+:host-context(html.app-dark-theme) .dh-hero--compensar .dh-hero__amount {
+  color: #fdba74;
+}
+
+:host-context(html.app-dark-theme) .dh-context,
+:host-context(html.app-dark-theme) .dh-empty-state__title {
+  color: var(--app-text-primary, #f8fafc);
+}
+
+:host-context(html.app-dark-theme) .dh-empty-state {
+  border-color: rgba(248, 250, 252, 0.16);
+}
+
+:host-context(html.app-dark-theme) .dh-gastos-hint a,
+:host-context(html.app-dark-theme) .dh-issues a,
+:host-context(html.app-dark-theme) .dh-text-btn,
+:host-context(html.app-dark-theme) .dh-info-line mat-icon {
   color: #a5b4fc;
-}
-
-:host-context(html.app-dark-theme) .dh-alert--caja {
-  background: rgba(167, 139, 250, 0.1);
-  border-color: rgba(167, 139, 250, 0.35);
-}
-
-:host-context(html.app-dark-theme) .dh-alert--caja .dh-alert__icon {
-  color: #c4b5fd;
 }
 
 :host-context(html.app-dark-theme) .dh-accordion mat-expansion-panel {

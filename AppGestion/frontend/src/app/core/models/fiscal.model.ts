@@ -13,6 +13,13 @@ export interface FiscalPlazoActual {
   mensajeAdvertencia: string | null;
 }
 
+export interface IncidenciaCalidad {
+  tipo: string;
+  id: number;
+  etiqueta: string;
+  ruta: string;
+}
+
 export interface Modelo303Resumen {
   anio: number;
   trimestre: number;
@@ -28,6 +35,9 @@ export interface Modelo303Resumen {
   resultadoIva: number;
   resultadoEsIngreso: boolean;
   numeroFacturas: number;
+  numeroGastos: number;
+  incidencias: IncidenciaCalidad[];
+  resumenContexto: string;
   advertencias: string[];
   avisoLegal: string;
 }
