@@ -1,6 +1,26 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { Observable, Subject } from 'rxjs';
-import { FiltroModelo303, observacionesModelo303 } from './hacienda-carga';
+import {
+  ETIQUETA_A_INGRESAR,
+  ETIQUETA_SIN_DATOS,
+  FiltroModelo303,
+  cifraModelo303,
+  observacionesModelo303,
+} from './hacienda-carga';
+
+describe('cifraModelo303', () => {
+  it('sin facturas ni gastos no enseña 0,00 € como ingreso', () => {
+    expect(cifraModelo303(0, 0, 0)).toEqual({ etiqueta: ETIQUETA_SIN_DATOS, importe: null });
+  });
+
+  it('una factura de 0 € sigue siendo IVA estimado a ingresar 0', () => {
+    expect(cifraModelo303(1, 0, 0)).toEqual({ etiqueta: ETIQUETA_A_INGRESAR, importe: 0 });
+  });
+
+  it('repercutido igual a soportado sigue siendo IVA estimado a ingresar 0', () => {
+    expect(cifraModelo303(4, 2, 21 - 21)).toEqual({ etiqueta: ETIQUETA_A_INGRESAR, importe: 0 });
+  });
+});
 
 describe('observacionesModelo303', () => {
   beforeEach(() => {

@@ -19,7 +19,7 @@ import { RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError } from 'rxjs';
 import { FiscalService } from '../../../core/services/fiscal.service';
 import { FiscalCriterio, Modelo303Resumen, Modelo347Resumen } from '../../../core/models/fiscal.model';
-import { FiltroModelo303, observacionesModelo303 } from './hacienda-carga';
+import { ETIQUETA_A_COMPENSAR, FiltroModelo303, cifraModelo303, observacionesModelo303 } from './hacienda-carga';
 import { FiscalAlertaBannerComponent } from '../fiscal-alerta-banner/fiscal-alerta-banner.component';
 import { TranslateService } from '@ngx-translate/core';
 
@@ -106,6 +106,26 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
 
   importeDestacado(valor: number): number {
     return Math.abs(valor ?? 0);
+  }
+
+  cifra(r: Modelo303Resumen): { etiqueta: string; importe: number | null } {
+    return cifraModelo303(r.numeroFacturas, r.numeroGastos, r.resultadoIva);
+  }
+
+  esCompensar(r: Modelo303Resumen): boolean {
+    return this.cifra(r).etiqueta === ETIQUETA_A_COMPENSAR;
+  }
+
+  /** La explicación del soportado a cero va en un solo aviso, no en cada nota del API. */
+  avisos(r: Modelo303Resumen): string[] {
+    return (r.advertencias ?? []).filter((aviso) => !aviso.startsWith('IVA soportado'));
+  }
+
+  rutaApp(ruta: string): string {
+    if (!ruta) {
+      return ruta;
+    }
+    return ruta.startsWith('/') ? `..${ruta}` : ruta;
   }
 
   cargar347(): void {

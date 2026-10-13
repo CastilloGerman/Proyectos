@@ -1,6 +1,7 @@
 package com.appgestion.api.service;
 
 import com.appgestion.api.dto.response.Modelo303ResumenResponse;
+import com.appgestion.api.fiscal.CifraModelo303;
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.Element;
@@ -56,21 +57,27 @@ public class FiscalPdfService {
             }
 
             java.math.BigDecimal resultado = r.resultadoIva() == null ? java.math.BigDecimal.ZERO : r.resultadoIva();
-            boolean aIngresar = resultado.signum() >= 0;
+            boolean sinDatos = !CifraModelo303.muestraImporte(r.numeroFacturas(), r.numeroGastos());
+            String resultadoLabel = CifraModelo303.etiqueta(r.numeroFacturas(), r.numeroGastos(), resultado);
+            boolean aIngresar = !CifraModelo303.A_COMPENSAR.equals(resultadoLabel);
             Font heroFont = FontFactory.getFont(
                     FontFactory.HELVETICA_BOLD,
                     16,
                     aIngresar ? new Color(30, 58, 138) : new Color(184, 115, 51)
             );
-            String resultadoLabel = aIngresar ? "IVA estimado a ingresar" : "IVA estimado a compensar";
-            Paragraph hero = new Paragraph(resultadoLabel + ": " + eur(resultado.abs()) + " €", heroFont);
+            Paragraph hero = new Paragraph(
+                    sinDatos ? resultadoLabel : resultadoLabel + ": " + eur(resultado.abs()) + " €",
+                    heroFont
+            );
             hero.setSpacingBefore(10);
             hero.setSpacingAfter(4);
             document.add(hero);
-            document.add(new Paragraph(
-                    "IVA repercutido " + eur(r.ivaRepercutido()) + " € menos IVA soportado " + eur(r.ivaSoportado()) + " €",
-                    bodyFont
-            ));
+            if (!sinDatos) {
+                document.add(new Paragraph(
+                        "IVA repercutido " + eur(r.ivaRepercutido()) + " € menos IVA soportado " + eur(r.ivaSoportado()) + " €",
+                        bodyFont
+                ));
+            }
             document.add(new Paragraph(" ", bodyFont));
 
             PdfPTable table = new PdfPTable(2);
@@ -81,15 +88,28 @@ public class FiscalPdfService {
             addBodyRow(table, "Base imponible total (ventas)", eur(r.baseImponibleTotal()), bodyFont);
             addBodyRow(table, "IVA repercutido", eur(r.ivaRepercutido()), bodyFont);
             addBodyRow(table, "IVA soportado (compras)", eur(r.ivaSoportado()), bodyFont);
-            addBodyRow(table, resultadoLabel, eur(resultado.abs()), bodyFont);
+            if (!sinDatos) {
+                addBodyRow(table, resultadoLabel, eur(resultado.abs()), bodyFont);
+            }
 
             document.add(table);
 
             document.add(new Paragraph(" ", smallFont));
-            document.add(new Paragraph("Nota IVA soportado: " + r.ivaSoportadoNota(), smallFont));
+            boolean soportadoCero = r.ivaSoportado() == null || r.ivaSoportado().signum() == 0;
+            if (!sinDatos && soportadoCero) {
+                document.add(new Paragraph(
+                        "No has registrado gastos este trimestre; tu IVA soportado puede estar infravalorado.",
+                        smallFont
+                ));
+            } else if (!soportadoCero && r.ivaSoportadoNota() != null && !r.ivaSoportadoNota().isBlank()) {
+                document.add(new Paragraph(r.ivaSoportadoNota(), smallFont));
+            }
 
             if (r.advertencias() != null) {
                 for (String adv : r.advertencias()) {
+                    if (adv != null && adv.startsWith("IVA soportado")) {
+                        continue;
+                    }
                     document.add(new Paragraph("• " + adv, smallFont));
                 }
             }

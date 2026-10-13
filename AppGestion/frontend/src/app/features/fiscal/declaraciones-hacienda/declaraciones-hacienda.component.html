@@ -1,4 +1,4 @@
-<div class="dh-page">
+<div class="dh-page" data-hacienda-ui="por-fecha-de-cobro">
   <app-fiscal-alerta-banner />
 
   <div class="dh-header">
@@ -70,21 +70,27 @@
       </div>
 
       @if (resumen(); as r) {
-        <section
-          class="dh-hero"
-          [class.dh-hero--compensar]="!r.resultadoEsIngreso"
-          [class.dh-hero--loading]="loading()"
-          [attr.aria-busy]="loading()"
-        >
-          <p class="dh-hero__label">
-            {{ r.resultadoEsIngreso ? 'IVA estimado a ingresar' : 'IVA estimado a compensar' }}
-          </p>
-          <p class="dh-hero__amount">{{ importeDestacado(r.resultadoIva) | number : '1.2-2' }} €</p>
-          <p class="dh-hero__split">
-            IVA repercutido {{ r.ivaRepercutido | number : '1.2-2' }} € − IVA soportado
-            {{ r.ivaSoportado | number : '1.2-2' }} €
-          </p>
-        </section>
+        @if (cifra(r); as c) {
+          @if (c.importe === null) {
+          <section class="dh-hero dh-hero--vacio" [class.dh-hero--loading]="loading()" [attr.aria-busy]="loading()">
+            <p class="dh-hero__label">{{ c.etiqueta }}</p>
+          </section>
+          } @else {
+          <section
+            class="dh-hero"
+            [class.dh-hero--compensar]="esCompensar(r)"
+            [class.dh-hero--loading]="loading()"
+            [attr.aria-busy]="loading()"
+          >
+            <p class="dh-hero__label">{{ c.etiqueta }}</p>
+            <p class="dh-hero__amount">{{ c.importe | number : '1.2-2' : 'es' }} €</p>
+            <p class="dh-hero__split">
+              IVA repercutido {{ r.ivaRepercutido | number : '1.2-2' : 'es' }} € − IVA soportado
+              {{ r.ivaSoportado | number : '1.2-2' : 'es' }} €
+            </p>
+          </section>
+          }
+        }
 
         <p class="dh-context">{{ r.resumenContexto }}</p>
 
@@ -95,7 +101,7 @@
               <button mat-stroked-button type="button" (click)="cambiarTrimestre(trimestreSelect)">
                 Cambiar de trimestre
               </button>
-              <a mat-stroked-button routerLink="/facturas/nuevo">Crear factura</a>
+              <a mat-stroked-button routerLink="../facturas/nuevo">Crear factura</a>
             </div>
           </div>
         } @else {
@@ -106,23 +112,23 @@
             </div>
             <div class="dh-row dh-dest">
               <span class="dh-k">Base imponible</span>
-              <span class="dh-v">{{ r.baseImponibleTotal | number : '1.2-2' }} €</span>
+              <span class="dh-v">{{ r.baseImponibleTotal | number : '1.2-2' : 'es' }} €</span>
             </div>
             <div class="dh-row dh-dest">
               <span class="dh-k">IVA repercutido</span>
-              <span class="dh-v">{{ r.ivaRepercutido | number : '1.2-2' }} €</span>
+              <span class="dh-v">{{ r.ivaRepercutido | number : '1.2-2' : 'es' }} €</span>
             </div>
             <div class="dh-row dh-row--muted">
               <span class="dh-k">IVA soportado <span class="dh-tag">desde gastos</span></span>
-              <span class="dh-v">{{ r.ivaSoportado | number : '1.2-2' }} €</span>
+              <span class="dh-v">{{ r.ivaSoportado | number : '1.2-2' : 'es' }} €</span>
             </div>
           </div>
         }
 
-        @if (r.numeroGastos === 0) {
+        @if (r.numeroFacturas > 0 && r.numeroGastos === 0) {
           <p class="dh-gastos-hint">
             No has registrado gastos este trimestre; tu IVA soportado puede estar infravalorado.
-            <a routerLink="/gastos">Gastos</a>
+            <a routerLink="../gastos">Gastos</a>
           </p>
         }
 
@@ -130,7 +136,7 @@
           <ul class="dh-issues">
             @for (inc of r.incidencias; track inc.tipo + '-' + inc.id) {
               <li>
-                <a [routerLink]="inc.ruta">{{ inc.etiqueta }}</a>
+                <a [routerLink]="rutaApp(inc.ruta)">{{ inc.etiqueta }}</a>
               </li>
             }
           </ul>
@@ -165,10 +171,8 @@
               <mat-panel-title>IVA repercutido, IVA soportado y “resultado”</mat-panel-title>
             </mat-expansion-panel-header>
             <p>
-              El <strong>IVA repercutido</strong> refleja lo asociado a tus ventas registradas aquí. El <strong>IVA soportado</strong> se calcula a partir de los gastos que registres en la sección Gastos (fecha de compra dentro del trimestre).
-            </p>
-            <p>
-              Si aún no has registrado gastos del trimestre, el soportado será 0&nbsp;€ y el resultado orientativo puede verse mayor de lo real hasta que incorpores tus compras.
+              El <strong>IVA repercutido</strong> es el de tus facturas de venta. El <strong>IVA soportado</strong> es el de los gastos con fecha de compra en el trimestre.
+              <a routerLink="../gastos">Gastos</a>
             </p>
           </mat-expansion-panel>
           <mat-expansion-panel>
@@ -192,8 +196,10 @@
       </div>
 
       @if (resumen(); as r) {
-        <p class="dh-nota">{{ r.ivaSoportadoNota }}</p>
-        @for (a of r.advertencias; track a) {
+        @if (r.numeroGastos > 0) {
+          <p class="dh-nota">{{ r.ivaSoportadoNota }}</p>
+        }
+        @for (a of avisos(r); track a) {
           <p class="dh-adv">• {{ a }}</p>
         }
         <p class="dh-legal">{{ r.avisoLegal }}</p>
@@ -232,7 +238,7 @@
             </ng-container>
             <ng-container matColumnDef="base">
               <th mat-header-cell *matHeaderCellDef>Base anual (€)</th>
-              <td mat-cell *matCellDef="let row">{{ row.baseImponibleAnual | number : '1.2-2' }}</td>
+              <td mat-cell *matCellDef="let row">{{ row.baseImponibleAnual | number : '1.2-2' : 'es' }}</td>
             </ng-container>
             <tr mat-header-row *matHeaderRowDef="displayedColumns347"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns347"></tr>

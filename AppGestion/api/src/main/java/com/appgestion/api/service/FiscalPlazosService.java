@@ -63,11 +63,7 @@ public class FiscalPlazosService {
         boolean entreDos = anterior != null
                 && today.isAfter(anterior.fecha())
                 && today.isBefore(siguiente.fecha());
-        String advertencia = null;
-        if (entreDos) {
-            advertencia = "El plazo del " + Objects.requireNonNull(anterior).etiqueta()
-                    + " ha vencido. Presenta cuanto antes para minimizar recargos.";
-        }
+        // No avisamos de recargos: no sabemos si el usuario ya presentó ese trimestre.
 
         return new FiscalPlazoActualResponse(
                 siguiente.etiqueta(),
@@ -76,7 +72,7 @@ public class FiscalPlazosService {
                 estado,
                 mensaje,
                 entreDos,
-                advertencia
+                null
         );
     }
 

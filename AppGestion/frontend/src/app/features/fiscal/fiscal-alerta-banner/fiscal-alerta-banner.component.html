@@ -19,9 +19,6 @@
         <span [class.fab__title--urgent]="d.estado === 'ROJO'">{{ tituloPlazo(d) }}</span>
       </p>
       <p class="fab__sub">{{ d.mensaje }}</p>
-      @if (d.mensajeAdvertencia) {
-        <p class="fab__adv">{{ d.mensajeAdvertencia }}</p>
-      }
     </div>
   </div>
 }

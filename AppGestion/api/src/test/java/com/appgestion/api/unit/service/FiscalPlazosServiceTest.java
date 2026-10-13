@@ -12,6 +12,7 @@ import java.time.ZoneId;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FiscalPlazosServiceTest {
@@ -39,7 +40,7 @@ class FiscalPlazosServiceTest {
                 .calcularParaFecha(LocalDate.of(2025, 3, 15));
         assertEquals("T1 2025", r.trimestre());
         assertTrue(r.plazoAnteriorVencido());
-        assertTrue(r.mensajeAdvertencia() != null && r.mensajeAdvertencia().contains("T4 2024"));
+        assertNull(r.mensajeAdvertencia());
     }
 
     @Test
@@ -81,7 +82,7 @@ class FiscalPlazosServiceTest {
         assertEquals("T2 2025", r.trimestre());
         assertEquals(LocalDate.of(2025, 7, 20), r.fechaLimite());
         assertTrue(r.plazoAnteriorVencido());
-        assertTrue(r.mensajeAdvertencia() != null && r.mensajeAdvertencia().contains("T1 2025"));
+        assertNull(r.mensajeAdvertencia());
     }
 
     @Test
