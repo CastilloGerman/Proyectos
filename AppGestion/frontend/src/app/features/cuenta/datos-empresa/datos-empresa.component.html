@@ -124,7 +124,7 @@
             <p class="empresa-hint-muted">{{ 'acctCo.noLogoHint' | translate }}</p>
           }
           <div class="empresa-img-actions">
-            <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" #logoInput (change)="onLogoFile($event)" hidden />
+            <input type="file" accept="image/png,image/jpeg,image/jpg,image/gif" #logoInput (change)="onLogoFile($event)" hidden />
             <button mat-stroked-button type="button" (click)="logoInput.click()">
               <mat-icon>upload</mat-icon>
               {{ 'acctCo.btnUploadLogo' | translate }}

@@ -30,6 +30,11 @@ export interface PresupuestoCostesResumen {
 /**
  * Calcula subtotal, descuentos, base IVA y total de un presupuesto.
  * Misma lógica que el formulario de presupuesto (preview antes de guardar).
+ *
+ * Ticket aparte: migrar este cálculo a decimal. Usa number (IEEE 754), igual
+ * que el double del servidor. Un 27,135 guardado como 27,134999999999998 se
+ * muestra como 27,13. La factura suma base y cuota ya redondeadas, así que su
+ * total puede quedar 0,01 € por encima (opción B, a la espera del gestor).
  */
 export function calcularPresupuestoCostes(input: PresupuestoCostesInput): PresupuestoCostesResumen {
   let subtotalItems = 0;

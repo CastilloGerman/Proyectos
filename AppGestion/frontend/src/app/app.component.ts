@@ -1,10 +1,11 @@
-import { Component, DestroyRef, NgZone, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, NgZone, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterOutlet, Router, NavigationEnd, RouterLink } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { inject as injectAnalytics } from '@vercel/analytics';
 import { AuthService } from './core/auth/auth.service';
 import { NotificacionesService } from './core/services/notificaciones.service';
+import { CookieConsentService } from './core/consent/cookie-consent.service';
 import { AppAuthenticatedShellComponent } from './app-authenticated-shell/app-authenticated-shell.component';
 import { LanguageSwitcherComponent } from './shared/language-switcher/language-switcher.component';
 import { CookieBannerComponent } from './legal/cookie-banner/cookie-banner.component';
@@ -121,11 +122,17 @@ export class AppComponent implements OnInit {
   readonly isLegalRoute = computed(() => isLegalPath(this.currentUrl()));
   readonly isPublicBudgetRoute = computed(() => this.currentUrl().startsWith('/p/'));
 
+  private readonly cookieConsent = inject(CookieConsentService);
+  private analyticsLoaded = false;
+
   constructor() {
-    // Initialize Vercel Web Analytics
-    if (typeof window !== 'undefined') {
-      injectAnalytics();
-    }
+    // SEC-32: la analítica de terceros (Vercel Web Analytics) solo se carga tras un "Aceptar" explícito.
+    effect(() => {
+      if (this.cookieConsent.status() === 'accepted' && !this.analyticsLoaded && typeof window !== 'undefined') {
+        this.analyticsLoaded = true;
+        injectAnalytics();
+      }
+    });
   }
 
   ngOnInit(): void {

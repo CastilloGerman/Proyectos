@@ -3,6 +3,7 @@ package com.appgestion.api.service;
 import com.appgestion.api.constant.FacturaEstadoPago;
 import com.appgestion.api.constant.PresupuestoEstado;
 import com.appgestion.api.fiscal.CalculoFactura;
+import com.appgestion.api.fiscal.RepartoDescuento;
 import com.appgestion.api.fiscal.TipoIva;
 import com.appgestion.api.dto.FacturaNumeroGenerado;
 import com.appgestion.api.domain.entity.*;
@@ -30,6 +31,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +57,7 @@ public class FacturaService {
     private final FacturaCobroService facturaCobroService;
     private final FacturaPaymentLinkService facturaPaymentLinkService;
     private final ClienteService clienteService;
+    private final FacturaAuditoriaService facturaAuditoriaService;
 
     public FacturaService(FacturaRepository facturaRepository,
                           ClienteRepository clienteRepository,
@@ -68,7 +71,9 @@ public class FacturaService {
                           FacturaEmailService facturaEmailService,
                           FacturaCobroService facturaCobroService,
                           FacturaPaymentLinkService facturaPaymentLinkService,
-                          ClienteService clienteService) {
+                          ClienteService clienteService,
+                          FacturaAuditoriaService facturaAuditoriaService) {
+        this.facturaAuditoriaService = facturaAuditoriaService;
         this.facturaRepository = facturaRepository;
         this.clienteRepository = clienteRepository;
         this.empresaRepository = empresaRepository;
@@ -151,7 +156,7 @@ public class FacturaService {
         factura.setFechaExpedicion(request.fechaExpedicion());
         factura.setFechaVencimiento(request.fechaVencimiento());
         factura.setMetodoPago(request.metodoPago());
-        factura.setEstadoPago(request.estadoPago());
+        factura.setEstadoPago(normalizarEstadoPago(request.estadoPago())); // SEC-16: solo valores del catálogo
         factura.setMontoCobrado(request.montoCobrado());
         factura.setNotas(request.notas());
         factura.setIvaHabilitado(request.ivaHabilitado());
@@ -159,6 +164,7 @@ public class FacturaService {
         mapItems(request.items(), factura);
         calcularTotales(factura);
         factura = facturaRepository.save(factura);
+        facturaAuditoriaService.registrar(factura, FacturaAuditoriaService.EVENTO_CREADA, null, usuario.getId());
         return facturaResponseMapper.toResponse(factura, facturaCobroRepository.findByFacturaIdOrderByFechaDescCreatedAtDesc(factura.getId()));
     }
 
@@ -183,6 +189,9 @@ public class FacturaService {
 
         validarDatosFactura(usuarioId, cliente);
 
+        // SEC-15: instantánea previa a cualquier cambio, para la pista de auditoría.
+        Map<String, Object> antes = facturaAuditoriaService.snapshot(factura);
+
         aplicarCambioNumeroEnActualizacion(factura, request, usuarioId);
 
         factura.setCliente(cliente);
@@ -193,7 +202,7 @@ public class FacturaService {
         factura.setCondicionesPago(request.condicionesPago());
         factura.setFechaVencimiento(request.fechaVencimiento());
         factura.setMetodoPago(request.metodoPago());
-        factura.setEstadoPago(request.estadoPago());
+        factura.setEstadoPago(normalizarEstadoPago(request.estadoPago())); // SEC-16: solo valores del catálogo
         factura.setMontoCobrado(request.montoCobrado());
         factura.setNotas(request.notas());
         factura.setIvaHabilitado(request.ivaHabilitado());
@@ -202,6 +211,7 @@ public class FacturaService {
         mapItems(request.items(), factura);
         calcularTotales(factura);
         factura = facturaRepository.save(factura);
+        facturaAuditoriaService.registrar(factura, FacturaAuditoriaService.EVENTO_EDITADA, antes, usuarioId);
         return facturaResponseMapper.toResponse(factura, facturaCobroRepository.findByFacturaIdOrderByFechaDescCreatedAtDesc(factura.getId()));
     }
 
@@ -233,6 +243,7 @@ public class FacturaService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede editar una factura anulada");
         }
 
+        Map<String, Object> antes = facturaAuditoriaService.snapshot(factura);
         String estado = normalizarEstadoPago(request.estadoPago());
         factura.setEstadoPago(estado);
 
@@ -253,6 +264,7 @@ public class FacturaService {
         }
 
         facturaRepository.save(factura);
+        facturaAuditoriaService.registrar(factura, FacturaAuditoriaService.EVENTO_ESTADO_PAGO, antes, usuarioId);
         return facturaResponseMapper.toResponse(factura, cobros);
     }
 
@@ -288,6 +300,7 @@ public class FacturaService {
         presupuesto.setEstado(PresupuestoEstado.ACEPTADO);
         calcularTotales(factura);
         factura = facturaRepository.save(factura);
+        facturaAuditoriaService.registrar(factura, FacturaAuditoriaService.EVENTO_CREADA, null, usuario.getId());
         return facturaResponseMapper.toResponse(factura, facturaCobroRepository.findByFacturaIdOrderByFechaDescCreatedAtDesc(factura.getId()));
     }
 
@@ -310,10 +323,12 @@ public class FacturaService {
         if (Boolean.TRUE.equals(factura.getAnulada())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La factura ya está anulada");
         }
+        Map<String, Object> antes = facturaAuditoriaService.snapshot(factura);
         factura.setAnulada(true);
         factura.setFechaAnulacion(LocalDate.now());
         factura.setMotivoAnulacion(motivo != null && !motivo.isBlank() ? motivo.trim() : null);
         facturaRepository.save(factura);
+        facturaAuditoriaService.registrar(factura, FacturaAuditoriaService.EVENTO_ANULADA, antes, usuarioId);
     }
 
     @Transactional
@@ -401,25 +416,71 @@ public class FacturaService {
         }
     }
 
+    /**
+     * La base de cada línea es el subtotal del presupuesto, ya con el descuento de
+     * línea. Si el descuento global es anterior al IVA, se reparte sobre esas bases.
+     * El precio unitario pasa a ser la base neta solo cuando cantidad × precio cuadra
+     * a céntimo; si no, se conserva el precio original.
+     * <p>
+     * El descuento posterior al IVA no se resta de la factura: pendiente de decisión
+     * fiscal. La base repartida ya va a céntimo. {@link #calcularTotales(Factura)}
+     * calcula la cuota sobre esa base y el total es base + cuota (opción B, a la
+     * espera de que el gestor la confirme). El presupuesto redondea la suma sin
+     * redondear, así que su total puede quedar 0,01 € por debajo.
+     */
     private void copiarItemsDesdePresupuesto(Presupuesto presupuesto, Factura factura) {
-        for (PresupuestoItem pi : presupuesto.getItems()) {
+        List<PresupuestoItem> origen = presupuesto.getItems();
+        List<RepartoDescuento.Linea> lineas = new ArrayList<>();
+        for (PresupuestoItem pi : origen) {
+            boolean aplica = !Boolean.FALSE.equals(pi.getAplicaIva());
+            lineas.add(new RepartoDescuento.Linea(
+                    dinero(pi.getSubtotal()),
+                    aplica ? TipoIva.GENERAL : TipoIva.CERO));
+        }
+        boolean antesDeIva = Boolean.TRUE.equals(presupuesto.getDescuentoAntesIva());
+        // Posterior al IVA: no se aplica. Pendiente de decisión fiscal.
+        BigDecimal porcentaje = antesDeIva ? dinero(presupuesto.getDescuentoGlobalPorcentaje()) : BigDecimal.ZERO;
+        BigDecimal fijo = antesDeIva ? dinero(presupuesto.getDescuentoGlobalFijo()) : BigDecimal.ZERO;
+        List<BigDecimal> bases = RepartoDescuento.repartir(lineas, porcentaje, fijo);
+
+        for (int i = 0; i < origen.size(); i++) {
+            PresupuestoItem pi = origen.get(i);
             FacturaItem item = new FacturaItem();
             item.setFactura(factura);
             item.setMaterial(pi.getMaterial());
             item.setTareaManual(pi.getTareaManual());
             item.setEsTareaManual(Optional.ofNullable(pi.getEsTareaManual()).orElse(false));
-            BigDecimal cant = BigDecimal.valueOf(Optional.ofNullable(pi.getCantidad()).orElse(0.0));
-            BigDecimal precio = BigDecimal.valueOf(Optional.ofNullable(pi.getPrecioUnitario()).orElse(0.0));
+            BigDecimal cant = dinero(pi.getCantidad());
+            BigDecimal precio = dinero(pi.getPrecioUnitario());
+            BigDecimal neto = bases.get(i);
             item.setCantidad(cant.doubleValue());
-            item.setPrecioUnitario(precio.doubleValue());
-            BigDecimal st = cant.multiply(precio).setScale(SCALE, ROUNDING);
-            item.setSubtotal(st.doubleValue());
+            item.setPrecioUnitario(precioUnitarioDeLinea(cant, precio, neto).doubleValue());
+            item.setSubtotal(neto.doubleValue());
             item.setCuotaIva(0.0);
             boolean aplica = !Boolean.FALSE.equals(pi.getAplicaIva());
             item.setAplicaIva(aplica);
             item.setTipoIva(aplica ? TipoIva.GENERAL : TipoIva.CERO);
             factura.getItems().add(item);
         }
+    }
+
+    private static BigDecimal dinero(Double value) {
+        if (value == null) {
+            return BigDecimal.ZERO.setScale(SCALE, ROUNDING);
+        }
+        return BigDecimal.valueOf(value);
+    }
+
+    private static BigDecimal precioUnitarioDeLinea(BigDecimal cantidad, BigDecimal precioOriginal, BigDecimal neto) {
+        if (cantidad.signum() <= 0) {
+            return precioOriginal;
+        }
+        BigDecimal unitario = neto.divide(cantidad, SCALE, ROUNDING);
+        BigDecimal reconstruido = unitario.multiply(cantidad).setScale(SCALE, ROUNDING);
+        if (reconstruido.compareTo(neto.setScale(SCALE, ROUNDING)) == 0) {
+            return unitario;
+        }
+        return precioOriginal;
     }
 
     private void validarDatosFactura(Long usuarioId, Cliente cliente) {
@@ -539,6 +600,11 @@ public class FacturaService {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado de pago no válido");
     }
 
+    /**
+     * Base y cuota redondeadas a céntimo. El total es su suma.
+     * Opción B, a la espera de que el gestor la confirme: no se redondea una suma
+     * sin redondear. Frente al total del presupuesto cabe una diferencia de 0,01 €.
+     */
     private void calcularTotales(Factura factura) {
         boolean ivaHabilitado = Boolean.TRUE.equals(factura.getIvaHabilitado());
         List<CalculoFactura.LineaEntrada> entradas = new java.util.ArrayList<>();

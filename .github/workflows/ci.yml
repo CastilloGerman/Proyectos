@@ -1,0 +1,57 @@
+# SEC-35: el Dockerfile de producción compila con -DskipTests, así que los tests y el análisis de
+# dependencias deben ejecutarse antes (aquí) y bloquear el merge si fallan.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: AppGestion
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Tests backend
+        run: mvn -B -f api/pom.xml verify
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: AppGestion/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: AppGestion/.nvmrc
+          cache: npm
+          cache-dependency-path: AppGestion/frontend/package-lock.json
+      - run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Auditoría de dependencias de producción (SCA)
+        run: npm audit --omit=dev --audit-level=high
+
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high

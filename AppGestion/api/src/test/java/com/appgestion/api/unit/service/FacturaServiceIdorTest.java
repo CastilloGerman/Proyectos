@@ -48,7 +48,8 @@ class FacturaServiceIdorTest {
                 mock(FacturaEmailService.class),
                 mock(FacturaCobroService.class),
                 mock(FacturaPaymentLinkService.class),
-                mock(ClienteService.class));
+                mock(ClienteService.class),
+                mock(FacturaAuditoriaService.class));
     }
 
     @Test

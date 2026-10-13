@@ -2,6 +2,7 @@ package com.appgestion.api.domain.entity;
 
 import com.appgestion.api.domain.enums.EmailProviderMode;
 import com.appgestion.api.domain.enums.OAuthOnFailureMode;
+import com.appgestion.api.service.crypto.EncryptedStringConverter;
 import jakarta.persistence.*;
 
 import java.time.Instant;
@@ -59,7 +60,9 @@ public class Empresa {
     @Column(name = "mail_username", length = 150)
     private String mailUsername;
 
-    @Column(name = "mail_password", length = 255)
+    /** Contraseña SMTP legacy. Cifrada en reposo (AES-GCM) mediante {@link EncryptedStringConverter}. */
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "mail_password", length = 512)
     private String mailPassword;
 
     @Enumerated(EnumType.STRING)

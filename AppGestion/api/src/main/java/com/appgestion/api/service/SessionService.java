@@ -10,6 +10,7 @@ import com.appgestion.api.repository.UsuarioSesionRepository;
 import com.appgestion.api.security.JwtService;
 import com.appgestion.api.security.SecurityUtils;
 import com.appgestion.api.util.ClientMetadataParser;
+import com.appgestion.api.util.IpAnonymizer;
 import com.appgestion.api.util.TrustedClientAddressResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,6 +43,9 @@ public class SessionService {
 
     @Value("${app.jwt.expiration-ms}")
     private long expirationMs;
+
+    @Value("${app.sessions.anonymize-ip:true}")
+    private boolean anonymizeIp;
 
     public SessionService(UsuarioSesionRepository sesionRepository,
                           UsuarioRepository usuarioRepository,
@@ -77,7 +81,10 @@ public class SessionService {
         s.setCreatedAt(now);
         s.setLastActivityAt(now);
         s.setExpiresAt(now.plusMillis(expirationMs));
-        s.setIpAddress(snap.ipAddress());
+        // SEC-31: minimizacion de datos (RGPD). La IP completa no se necesita para reconocer un dispositivo en la
+        // lista de sesiones; por defecto se guarda anonimizada (ultimo octeto IPv4 / sufijo IPv6 a 0).
+        String ip = snap.ipAddress();
+        s.setIpAddress(anonymizeIp && StringUtils.hasText(ip) ? IpAnonymizer.anonymize(ip) : ip);
         s.setUserAgent(snap.userAgent());
         s.setBrowser(snap.browser());
         s.setOsName(snap.osName());
@@ -214,6 +221,18 @@ public class SessionService {
         auditAccessService.recordForUsuario(u, AuditAccessEventType.SESSION_REVOKED_OTHERS, true, null, true,
                 httpRequest, currentSid, "/auth/sessions/others", Map.of("revokedCount", revoked));
         return revoked;
+    }
+
+    /** SEC-08: revoca todas las sesiones activas del usuario salvo {@code keepSessionId} (puede ser nulo). */
+    @Transactional
+    public int revokeAllForUserExcept(Long usuarioId, String keepSessionId) {
+        return sesionRepository.revokeAllForUserExcept(usuarioId, keepSessionId == null ? "" : keepSessionId, Instant.now());
+    }
+
+    /** Revoca TODAS las sesiones activas de un usuario (p. ej. al reclamar una cuenta pendiente de verificar). */
+    @Transactional
+    public int revokeAllForUser(Long usuarioId) {
+        return sesionRepository.revokeAllForUserExcept(usuarioId, "", Instant.now());
     }
 
     private static String extractBearer(HttpServletRequest request) {

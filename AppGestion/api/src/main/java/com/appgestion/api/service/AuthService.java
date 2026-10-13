@@ -10,13 +10,16 @@ import com.appgestion.api.dto.request.ForgotPasswordRequest;
 import com.appgestion.api.dto.request.GoogleLoginRequest;
 import com.appgestion.api.dto.request.LoginRequest;
 import com.appgestion.api.dto.request.RegisterRequest;
+import com.appgestion.api.dto.request.ResendVerificationRequest;
 import com.appgestion.api.dto.request.ResetPasswordRequest;
+import com.appgestion.api.dto.request.VerifyEmailRequest;
 import com.appgestion.api.dto.request.UpdateAccountSettingsRequest;
 import com.appgestion.api.dto.request.UpdatePerfilRequest;
 import com.appgestion.api.dto.request.TotpDisableRequest;
 import com.appgestion.api.dto.request.TotpSetupConfirmRequest;
 import com.appgestion.api.dto.request.UpdatePreferenciasRequest;
 import com.appgestion.api.dto.response.AuthResponse;
+import com.appgestion.api.dto.response.RegisterResponse;
 import com.appgestion.api.dto.response.TotpSetupStartResponse;
 import com.appgestion.api.dto.response.UsuarioResponse;
 import com.appgestion.api.repository.UsuarioRepository;
@@ -52,6 +55,10 @@ public class AuthService {
     private static final Set<String> GENEROS_PERMITIDOS = Set.of(
             "MALE", "FEMALE", "NON_BINARY", "OTHER", "UNSPECIFIED");
     private static final int TOTP_PENDING_MINUTES = 10;
+    /** Rol de toda cuenta autoregistrada. Los roles privilegiados nunca se asignan desde la API pública. */
+    static final String ROL_USUARIO_POR_DEFECTO = "USER";
+    /** Código de error (cuerpo {@code message}) que el frontend interpreta para ofrecer el reenvío del enlace. */
+    public static final String EMAIL_NO_VERIFICADO = "EMAIL_NO_VERIFICADO";
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
@@ -60,12 +67,14 @@ public class AuthService {
     private final GoogleTokenVerifier googleTokenVerifier;
     private final OrganizationService organizationService;
     private final TotpService totpService;
+    private final TotpVerificationService totpVerificationService;
     private final NotificacionService notificacionService;
     private final SessionService sessionService;
     private final AuditAccessService auditAccessService;
     private final PresupuestoCondicionesService presupuestoCondicionesService;
     private final PasswordResetService passwordResetService;
     private final InvitacionService invitacionService;
+    private final EmailVerificationService emailVerificationService;
 
     public AuthService(UsuarioRepository usuarioRepository,
                        PasswordEncoder passwordEncoder,
@@ -74,12 +83,14 @@ public class AuthService {
                        GoogleTokenVerifier googleTokenVerifier,
                        OrganizationService organizationService,
                        TotpService totpService,
+                       TotpVerificationService totpVerificationService,
                        NotificacionService notificacionService,
                        SessionService sessionService,
                        AuditAccessService auditAccessService,
                        PresupuestoCondicionesService presupuestoCondicionesService,
                        PasswordResetService passwordResetService,
-                       InvitacionService invitacionService) {
+                       InvitacionService invitacionService,
+                       EmailVerificationService emailVerificationService) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -87,16 +98,26 @@ public class AuthService {
         this.googleTokenVerifier = googleTokenVerifier;
         this.organizationService = organizationService;
         this.totpService = totpService;
+        this.totpVerificationService = totpVerificationService;
         this.notificacionService = notificacionService;
         this.sessionService = sessionService;
         this.auditAccessService = auditAccessService;
         this.presupuestoCondicionesService = presupuestoCondicionesService;
         this.passwordResetService = passwordResetService;
         this.invitacionService = invitacionService;
+        this.emailVerificationService = emailVerificationService;
     }
 
+    /**
+     * Alta de cuenta con email + contraseña. NO devuelve JWT: la cuenta queda pendiente de verificar el email
+     * (SEC-05) y solo podrá iniciar sesión tras confirmar el enlace enviado a esa dirección.
+     * <p>
+     * Si el email ya existe pero su cuenta sigue SIN verificar, la cuenta se "reclama": se sustituyen nombre y
+     * contraseña y se envía un nuevo enlace. Así nadie puede bloquear (ni secuestrar) el email de otra persona
+     * registrándolo antes que ella (pre-hijacking).
+     */
     @Transactional
-    public AuthResponse registrar(RegisterRequest request, HttpServletRequest httpRequest) {
+    public RegisterResponse registrar(RegisterRequest request, HttpServletRequest httpRequest) {
         Invitacion referralInv = null;
         String refTok = request.referralToken();
         if (refTok != null && !refTok.isBlank()) {
@@ -104,51 +125,74 @@ public class AuthService {
         }
 
         String emailNormalized = request.email().trim().toLowerCase();
-        if (usuarioRepository.existsByEmail(emailNormalized)) {
-            throw new IllegalArgumentException("Ya existe un usuario con ese email");
+        Optional<Usuario> existente = usuarioRepository.findByEmail(emailNormalized);
+        if (existente.isPresent() && existente.get().isEmailVerified()) {
+            // SEC-22: respuesta idéntica a un alta nueva para no revelar qué emails están registrados. El titular real
+            // recibe un aviso por email (con límite de frecuencia). Se paga el coste de bcrypt igualmente para que el
+            // tiempo de respuesta no delate la rama.
+            passwordEncoder.encode(request.password());
+            emailVerificationService.notificarIntentoRegistro(existente.get());
+            return new RegisterResponse(emailNormalized, true);
         }
 
-        Usuario usuario = new Usuario();
+        Usuario usuario = existente.orElseGet(Usuario::new);
+        boolean nuevo = existente.isEmpty();
         usuario.setNombre(request.nombre());
         usuario.setEmail(emailNormalized);
         usuario.setPasswordHash(passwordEncoder.encode(request.password()));
-        usuario.setRol(request.getRol());
+        usuario.setRol(ROL_USUARIO_POR_DEFECTO); // SEC-01: el rol nunca viene del cliente
         usuario.setActivo(true);
+        usuario.setEmailVerified(false);
         usuario.setReferredByUsuarioId(referralInv != null ? referralInv.getInviterUsuarioId() : null);
 
-        LocalDate trialStart = LocalDate.now();
-        usuario.setTrialStartDate(trialStart);
-        usuario.setTrialEndDate(trialStart.plusDays(TrialConstants.DEFAULT_TRIAL_DAYS));
-        usuario.setSubscriptionStatus(SubscriptionStatus.TRIAL_ACTIVE);
-
-        usuario = organizationService.attachNewPersonalOrganization(usuario);
+        if (nuevo) {
+            LocalDate trialStart = LocalDate.now();
+            usuario.setTrialStartDate(trialStart);
+            usuario.setTrialEndDate(trialStart.plusDays(TrialConstants.DEFAULT_TRIAL_DAYS));
+            usuario.setSubscriptionStatus(SubscriptionStatus.TRIAL_ACTIVE);
+            usuario = organizationService.attachNewPersonalOrganization(usuario);
+            notificacionService.ensureWelcomeIfEmpty(usuario.getId());
+        } else {
+            usuario = usuarioRepository.save(usuario);
+        }
 
         if (referralInv != null) {
             invitacionService.markInvitationUsed(referralInv);
         }
 
-        notificacionService.ensureWelcomeIfEmpty(usuario.getId());
-
-        var sesion = sessionService.createSession(usuario, httpRequest, request.clientInfo());
-        String token = jwtService.generateToken(usuario.getEmail(), usuario.getRol(), sesion.getId());
-        Instant expiresAt = Instant.now().plusMillis(jwtService.getExpirationMs());
+        emailVerificationService.sendVerificationEmail(usuario);
 
         Map<String, Object> auditExtras = referralInv != null
                 ? Map.of("channel", "REFERRAL_TOKEN", "inviterId", referralInv.getInviterUsuarioId())
                 : Map.of("channel", "PASSWORD");
 
         auditAccessService.recordForUsuario(usuario, AuditAccessEventType.REGISTER_SUCCESS, true, null, false,
-                httpRequest, sesion.getId(), "/auth/register", auditExtras);
+                httpRequest, null, "/auth/register", auditExtras);
 
-        return AuthResponse.of(token, usuario.getEmail(), usuario.getRol(), expiresAt,
-                usuario.getSubscriptionStatus(), usuario.getTrialEndDate(), subscriptionService.canWrite(usuario),
-                sesion.getId());
+        return new RegisterResponse(usuario.getEmail(), true);
     }
 
-    @Transactional
+    /** Hash bcrypt ficticio (calculado una vez, con el mismo coste que los reales) para igualar tiempos de respuesta. */
+    private volatile String dummyPasswordHash;
+
+    private String dummyPasswordHash() {
+        String h = dummyPasswordHash;
+        if (h == null) {
+            h = passwordEncoder.encode(UUID.randomUUID().toString());
+            dummyPasswordHash = h;
+        }
+        return h;
+    }
+
+    // SEC-24: noRollbackFor para que los eventos LOGIN_FAILURE no se pierdan con el rollback de la excepción.
+    @Transactional(noRollbackFor = {IllegalArgumentException.class, ResponseStatusException.class})
     public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
         Optional<Usuario> opt = usuarioRepository.findByEmail(request.email());
         if (opt.isEmpty()) {
+            // SEC-22: se ejecuta un bcrypt ficticio para que "email inexistente" tarde lo mismo que "contraseña
+            // incorrecta"; SEC-24: el intento queda como evento de seguridad en el log.
+            passwordEncoder.matches(request.password(), dummyPasswordHash());
+            auditAccessService.logAuthFailureUnknownIdentity(request.email(), "UNKNOWN_EMAIL", "/auth/login", httpRequest);
             throw new IllegalArgumentException("Credenciales inválidas");
         }
         Usuario usuario = opt.get();
@@ -163,6 +207,14 @@ public class AuthService {
             auditAccessService.recordForUsuario(usuario, AuditAccessEventType.LOGIN_FAILURE, false, "ACCOUNT_INACTIVE",
                     false, httpRequest, null, "/auth/login", Map.of("channel", "PASSWORD"));
             throw new IllegalArgumentException("Usuario desactivado");
+        }
+
+        // SEC-05: sin email verificado no hay sesión. Se comprueba DESPUÉS de validar la contraseña para no revelar
+        // el estado de la cuenta a quien no la conoce.
+        if (!usuario.isEmailVerified()) {
+            auditAccessService.recordForUsuario(usuario, AuditAccessEventType.LOGIN_FAILURE, false, "EMAIL_NOT_VERIFIED",
+                    false, httpRequest, null, "/auth/login", Map.of("channel", "PASSWORD"));
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, EMAIL_NO_VERIFICADO);
         }
 
         subscriptionService.checkAndUpdateTrialStatus(usuario);
@@ -186,7 +238,7 @@ public class AuthService {
     /**
      * Inicio de sesión con Google: verifica el ID token, busca o crea usuario por email y devuelve JWT.
      */
-    @Transactional
+    @Transactional(noRollbackFor = {IllegalArgumentException.class, ResponseStatusException.class})
     public AuthResponse loginWithGoogle(GoogleLoginRequest request, HttpServletRequest httpRequest) {
         var tokenInfo = googleTokenVerifier.verify(request.idToken())
                 .orElseThrow(() -> new IllegalArgumentException("Token de Google inválido o expirado"));
@@ -201,14 +253,26 @@ public class AuthService {
             nuevo.setNombre(nombre);
             nuevo.setEmail(email);
             nuevo.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
-            nuevo.setRol("USER");
+            nuevo.setRol(ROL_USUARIO_POR_DEFECTO);
             nuevo.setActivo(true);
+            nuevo.setEmailVerified(true); // Google ya ha verificado el email (tokeninfo email_verified=true)
             LocalDate trialStart = LocalDate.now();
             nuevo.setTrialStartDate(trialStart);
             nuevo.setTrialEndDate(trialStart.plusDays(TrialConstants.DEFAULT_TRIAL_DAYS));
             nuevo.setSubscriptionStatus(SubscriptionStatus.TRIAL_ACTIVE);
             return organizationService.attachNewPersonalOrganization(nuevo);
         });
+
+        // SEC-05 (pre-hijacking): si la cuenta existente nunca verificó su email, alguien pudo registrarla con una
+        // contraseña que conoce. Google acaba de demostrar que el titular real controla ese email, así que se
+        // reclama la cuenta: se invalida la contraseña previa, se cierran todas las sesiones y se marca verificada.
+        if (!usuario.isEmailVerified()) {
+            usuario.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
+            sessionService.revokeAllForUser(usuario.getId());
+            emailVerificationService.marcarVerificado(usuario);
+            auditAccessService.recordForUsuario(usuario, AuditAccessEventType.EMAIL_VERIFIED, true, "VERIFIED_VIA_GOOGLE",
+                    true, httpRequest, null, "/auth/google", Map.of("channel", "GOOGLE"));
+        }
 
         if (!Boolean.TRUE.equals(usuario.getActivo())) {
             auditAccessService.recordForUsuario(usuario, AuditAccessEventType.LOGIN_FAILURE, false, "ACCOUNT_INACTIVE",
@@ -288,7 +352,7 @@ public class AuthService {
                     false, httpRequest, null, path, Map.of("channel", channel));
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "TOTP_REQUERIDO");
         }
-        if (!totpService.verify(usuario.getTotpSecret(), totpCode)) {
+        if (!totpVerificationService.verify(usuario.getId(), usuario.getTotpSecret(), totpCode)) {
             auditAccessService.recordForUsuario(usuario, AuditAccessEventType.LOGIN_FAILURE, false, "TOTP_INVALIDO",
                     false, httpRequest, null, path, Map.of("channel", channel));
             throw new IllegalArgumentException("Código de verificación incorrecto");
@@ -309,7 +373,7 @@ public class AuthService {
         return new TotpSetupStartResponse(otpAuthUrl, key.getKey(), TOTP_PENDING_MINUTES);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = {IllegalArgumentException.class, ResponseStatusException.class})
     public UsuarioResponse confirmarTotpSetup(TotpSetupConfirmRequest request, HttpServletRequest httpRequest) {
         Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
         if (Boolean.TRUE.equals(usuario.getTotpEnabled())) {
@@ -325,7 +389,7 @@ public class AuthService {
             usuarioRepository.save(usuario);
             throw new IllegalArgumentException("El enrolamiento ha caducado. Vuelve a generar el código QR.");
         }
-        if (!totpService.verify(pending, request.code())) {
+        if (!totpVerificationService.verify(usuario.getId(), pending, request.code())) {
             auditAccessService.recordForUsuario(usuario, AuditAccessEventType.LOGIN_FAILURE, false, "TOTP_SETUP_INVALID",
                     true, httpRequest, null, "/auth/totp/setup/confirm", Map.of("context", "TOTP_SETUP"));
             throw new IllegalArgumentException("Código incorrecto");
@@ -350,7 +414,7 @@ public class AuthService {
                 httpRequest, null, "/auth/totp/setup/cancel", null);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = {IllegalArgumentException.class, ResponseStatusException.class})
     public void desactivarTotp(TotpDisableRequest request, HttpServletRequest httpRequest) {
         Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
         if (!Boolean.TRUE.equals(usuario.getTotpEnabled())) {
@@ -362,7 +426,7 @@ public class AuthService {
                     Map.of("context", "TOTP_DISABLE"));
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La contraseña no es correcta");
         }
-        if (!totpService.verify(usuario.getTotpSecret(), request.totpCode())) {
+        if (!totpVerificationService.verify(usuario.getId(), usuario.getTotpSecret(), request.totpCode())) {
             auditAccessService.recordForUsuario(usuario, AuditAccessEventType.LOGIN_FAILURE, false, "TOTP_INVALIDO",
                     true, httpRequest, null, "/auth/totp/disable", Map.of("context", "TOTP_DISABLE"));
             throw new IllegalArgumentException("Código de verificación incorrecto");
@@ -452,6 +516,14 @@ public class AuthService {
         return s;
     }
 
+    public void verificarEmail(VerifyEmailRequest request, HttpServletRequest httpRequest) {
+        emailVerificationService.verify(request.token(), httpRequest);
+    }
+
+    public void reenviarVerificacionEmail(ResendVerificationRequest request) {
+        emailVerificationService.resend(request.email());
+    }
+
     public void requestPasswordReset(ForgotPasswordRequest request, HttpServletRequest httpRequest) {
         passwordResetService.requestPasswordReset(request, httpRequest);
     }
@@ -461,9 +533,10 @@ public class AuthService {
     }
 
     /**
-     * Cambio de contraseña con la sesión actual (JWT). No cierra otras sesiones: el token sigue válido hasta su expiración.
+     * Cambio de contraseña con la sesión actual (JWT). SEC-08: cierra todas las demás sesiones del usuario
+     * (conserva solo la actual) y avisa por email del cambio.
      */
-    @Transactional
+    @Transactional(noRollbackFor = {IllegalArgumentException.class, ResponseStatusException.class})
     public void cambiarContrasena(ChangePasswordRequest request, HttpServletRequest httpRequest) {
         Usuario usuario = SecurityUtils.getCurrentUsuario(usuarioRepository);
         String sid = sessionIdFromRequest(httpRequest);
@@ -479,9 +552,11 @@ public class AuthService {
         }
         usuario.setPasswordHash(passwordEncoder.encode(nueva));
         usuarioRepository.save(usuario);
+        sessionService.revokeAllForUserExcept(usuario.getId(), sid);
         auditAccessService.recordForUsuario(usuario, AuditAccessEventType.PASSWORD_CHANGE_SUCCESS, true, null, true,
                 httpRequest, sid, "/auth/change-password", null);
-        log.info("Contraseña actualizada (usuario autenticado) para {}", usuario.getEmail());
+        passwordResetService.notificarCambioContrasena(usuario);
+        log.info("Contraseña actualizada (usuario autenticado) para usuario id={}", usuario.getId());
     }
 
     private String sessionIdFromRequest(HttpServletRequest httpRequest) {

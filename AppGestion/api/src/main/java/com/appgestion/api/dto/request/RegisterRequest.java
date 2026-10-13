@@ -1,10 +1,13 @@
 package com.appgestion.api.dto.request;
 
+import com.appgestion.api.validation.StrongPassword;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record RegisterRequest(
         @NotBlank(message = "El nombre es obligatorio")
         @Size(max = 100)
@@ -12,19 +15,18 @@ public record RegisterRequest(
 
         @NotBlank(message = "El email es obligatorio")
         @Email(message = "Email inválido")
+        @Size(max = 254, message = "Email inválido")
         String email,
 
         @NotBlank(message = "La contraseña es obligatoria")
-        @Size(min = 6, message = "La contraseña debe tener al menos 6 caracteres")
+        @StrongPassword
         String password,
 
+        @Size(max = 256, message = "Enlace de invitación inválido")
         String referralToken,
-
-        String rol,
 
         @Valid DeviceClientInfoRequest clientInfo
 ) {
-    public String getRol() {
-        return rol != null && !rol.isBlank() ? rol : "USER";
-    }
+    // SEC-01: el rol NUNCA se acepta del cliente. Cualquier campo "rol" enviado en el JSON se ignora
+    // (ignoreUnknown) y el servidor asigna siempre el rol por defecto.
 }

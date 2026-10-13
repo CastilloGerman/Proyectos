@@ -19,6 +19,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -42,7 +44,33 @@ class EmailOutboxServiceTest {
                 emailJobRepository, usuarioRepository, new ObjectMapper(), emailJobProcessor);
         Usuario usuario = new Usuario();
         usuario.setId(7L);
-        when(usuarioRepository.findById(7L)).thenReturn(Optional.of(usuario));
+        lenient().when(usuarioRepository.findById(7L)).thenReturn(Optional.of(usuario));
+    }
+
+    /** SEC-14: tope diario de correos a terceros por usuario. */
+    @Test
+    void rechazaEnvioACliente_cuandoSeSuperaLaCuotaDiaria() {
+        ReflectionTestUtils.setField(service, "dailySendQuota", 2);
+        when(emailJobRepository.countClienteJobsSince(eq(7L), any())).thenReturn(2L);
+
+        assertThatThrownBy(() -> service.enqueueHtmlCliente(
+                7L, "cliente@example.test", "ana@example.test", "Asunto", "<p>Hola</p>", null, null, "key-q"))
+                .isInstanceOfSatisfying(org.springframework.web.server.ResponseStatusException.class,
+                        e -> org.assertj.core.api.Assertions.assertThat(e.getStatusCode().value()).isEqualTo(429));
+        verify(emailJobRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void permiteEnvioACliente_porDebajoDeLaCuota() {
+        ReflectionTestUtils.setField(service, "dailySendQuota", 2);
+        when(emailJobRepository.countClienteJobsSince(eq(7L), any())).thenReturn(1L);
+        when(emailJobRepository.saveAndFlush(any(EmailJob.class)))
+                .thenThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate"));
+
+        service.enqueueHtmlCliente(
+                7L, "cliente@example.test", "ana@example.test", "Asunto", "<p>Hola</p>", null, null, "key-q2");
+
+        verify(emailJobRepository).saveAndFlush(any(EmailJob.class));
     }
 
     @Test
@@ -83,7 +111,9 @@ class EmailOutboxServiceTest {
         assertThatThrownBy(() ->
                 service.enqueueHtmlUsuario(7L, "ana@example.test", "Asunto", "<p>Hola</p>", "key-1"))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("RESEND_API_KEY");
+                // SEC-18: el motivo técnico (variable de entorno) no se filtra al cliente.
+                .hasMessage(EmailOutboxService.MENSAJE_ENVIO_FALLIDO)
+                .hasMessageNotContaining("RESEND_API_KEY");
         verify(emailJobProcessor).process(5L);
     }
 

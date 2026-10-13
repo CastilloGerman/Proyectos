@@ -1,4 +1,5 @@
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -52,10 +53,60 @@ function resolveRequestPath(url) {
   return indexFile;
 }
 
+/**
+ * SEC-07: cabeceras de seguridad y CSP. Los scripts inline de index.html (p. ej. el del tema) se autorizan por hash
+ * calculado al arrancar, de modo que no hace falta 'unsafe-inline' en script-src.
+ */
+function inlineScriptHashes() {
+  try {
+    const html = readFileSync(indexFile, 'utf8').replace(/\r\n/g, '\n');
+    const hashes = [];
+    const re = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g;
+    let m;
+    while ((m = re.exec(html)) !== null) {
+      hashes.push(`'sha256-${createHash('sha256').update(m[1]).digest('base64')}'`);
+    }
+    return hashes;
+  } catch {
+    return [];
+  }
+}
+
+const apiOrigin = process.env.API_ORIGIN ?? 'https://api.noemiweb.com';
+const csp = [
+  "default-src 'self'",
+  // 'unsafe-hashes' + hash: autoriza SOLO el manejador onload="this.media='all'" que Angular inyecta para cargar
+  // styles.css sin bloquear el render (inlineCritical). No habilita scripts inline arbitrarios.
+  `script-src 'self' ${inlineScriptHashes().join(' ')} 'unsafe-hashes' 'sha256-MhtPZXr7+LpJUY5qtMutB+qWfQtMaPccfe7QXtCcEYc=' https://accounts.google.com/gsi/`,
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "img-src 'self' data: blob: https:",
+  "media-src 'self' blob: data:",
+  `connect-src 'self' ${apiOrigin} https://accounts.google.com/gsi/`,
+  "frame-src 'self' blob: https://accounts.google.com/gsi/",
+  "worker-src 'self'",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join('; ');
+
+function setSecurityHeaders(res) {
+  res.setHeader('Content-Security-Policy', csp);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+}
+
 function handleRequest(req, res) {
   const filePath = resolveRequestPath(req.url ?? '/');
   const stream = createReadStream(filePath);
   const pathname = decodeURIComponent(new URL(req.url ?? '/', 'http://localhost').pathname);
+
+  setSecurityHeaders(res);
 
   res.setHeader('Content-Type', contentTypes[extname(filePath)] ?? 'application/octet-stream');
   if (pathname.startsWith('/assets/i18n/') && extname(filePath) === '.json') {

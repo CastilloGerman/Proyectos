@@ -14,7 +14,11 @@ import com.appgestion.api.dto.response.EmpresaResponse;
 import com.appgestion.api.repository.EmpresaRepository;
 import com.appgestion.api.util.BizumTelefonoValidator;
 import com.appgestion.api.util.IbanValidator;
+import com.appgestion.api.util.LogoImageValidator;
+import com.appgestion.api.util.MailFromPolicy;
 import com.appgestion.api.util.NifIvaIntraValidator;
+import com.appgestion.api.util.SmtpTargetValidator;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +40,10 @@ public class EmpresaService {
 
     private static final Set<String> METODOS_PAGO_PERMITIDOS = Set.of("Transferencia", "Efectivo", "Tarjeta", "Bizum");
     private static final Set<Integer> DIAS_RECORDATORIO_CLIENTE_PERMITIDOS = Set.of(7, 15, 30);
+
+    /** Remitente del sistema (app.email.system-from): fija el dominio permitido para el remitente personalizado. */
+    @Value("${app.email.system-from:}")
+    private String systemFrom = "";
 
     private final EmpresaRepository empresaRepository;
 
@@ -66,8 +74,18 @@ public class EmpresaService {
         emp.setEmail(request.email());
         emp.setNotasPiePresupuesto(request.notasPiePresupuesto());
         emp.setNotasPieFactura(request.notasPieFactura());
-        if (request.mailHost() != null) emp.setMailHost(request.mailHost());
-        if (request.mailPort() != null) emp.setMailPort(request.mailPort());
+        if (request.mailHost() != null) {
+            String host = request.mailHost().trim();
+            // Solo se revalida (DNS) si el host cambia; el envío vuelve a validarlo siempre antes de conectar.
+            if (!host.isEmpty() && !host.equalsIgnoreCase(emp.getMailHost())) {
+                validarDestinoSmtp(host, null);
+            }
+            emp.setMailHost(host.isEmpty() ? null : host);
+        }
+        if (request.mailPort() != null) {
+            validarDestinoSmtp(null, request.mailPort());
+            emp.setMailPort(request.mailPort());
+        }
         if (request.mailUsername() != null) emp.setMailUsername(request.mailUsername());
         if (request.mailPassword() != null && !request.mailPassword().isBlank()) emp.setMailPassword(request.mailPassword());
         if (request.logoImagenBase64() != null) {
@@ -85,7 +103,10 @@ public class EmpresaService {
                         throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                                 "El logo no puede superar " + (MAX_LOGO_BYTES / 1024) + " KB");
                     }
+                    LogoImageValidator.validar(decoded); // SEC-33: formato real + dimensiones (sin decodificar píxeles)
                     emp.setLogoImagen(decoded);
+                } catch (LogoImageValidator.InvalidLogoException e) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
                 } catch (IllegalArgumentException e) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Logo en Base64 no válido");
                 }
@@ -117,10 +138,31 @@ public class EmpresaService {
         }
         if (request.systemFromOverride() != null) {
             String sfo = request.systemFromOverride().trim();
-            emp.setSystemFromOverride(sfo.isEmpty() ? null : sfo);
+            if (sfo.isEmpty()) {
+                emp.setSystemFromOverride(null);
+            } else if (!sfo.equals(emp.getSystemFromOverride())) {
+                // SEC-14: solo el nombre visible es personalizable; el dominio es el de la plataforma.
+                try {
+                    emp.setSystemFromOverride(MailFromPolicy.validate(sfo, systemFrom));
+                } catch (IllegalArgumentException e) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+                }
+            }
         }
         emp = empresaRepository.save(emp);
         return toResponse(emp);
+    }
+
+    /** SEC-03: evita SSRF / escaneo de red interna a través del servidor SMTP configurable. */
+    private static void validarDestinoSmtp(String host, Integer port) {
+        try {
+            if (host != null) {
+                SmtpTargetValidator.validateHost(host, java.net.InetAddress::getAllByName);
+            }
+            SmtpTargetValidator.validatePort(port);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 
     @Transactional

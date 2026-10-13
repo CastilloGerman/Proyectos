@@ -196,7 +196,7 @@ export class DatosEmpresaComponent implements OnInit {
     const input = ev.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
-    if (!/^image\/(png|jpeg|jpg|webp)$/i.test(file.type)) {
+    if (!/^image\/(png|jpeg|jpg|gif)$/i.test(file.type)) {
       this.snackBar.open(this.translate.instant('snack.companyImageFormat'), this.translate.instant('common.close'), {
         duration: 4000,
       });

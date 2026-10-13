@@ -7,7 +7,10 @@ import com.appgestion.api.dto.request.ForgotPasswordRequest;
 import com.appgestion.api.dto.request.GoogleLoginRequest;
 import com.appgestion.api.dto.request.LoginRequest;
 import com.appgestion.api.dto.request.RegisterRequest;
+import com.appgestion.api.dto.request.ResendVerificationRequest;
 import com.appgestion.api.dto.request.ResetPasswordRequest;
+import com.appgestion.api.dto.request.VerifyEmailRequest;
+import com.appgestion.api.dto.response.RegisterResponse;
 import com.appgestion.api.dto.request.TotpDisableRequest;
 import com.appgestion.api.dto.request.TotpSetupConfirmRequest;
 import com.appgestion.api.dto.request.UpdateAccountSettingsRequest;
@@ -52,10 +55,24 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request,
-                                                 HttpServletRequest httpRequest) {
-        AuthResponse response = authService.registrar(request, httpRequest);
+    public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request,
+                                                     HttpServletRequest httpRequest) {
+        RegisterResponse response = authService.registrar(request, httpRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<Void> verifyEmail(@Valid @RequestBody VerifyEmailRequest request,
+                                            HttpServletRequest httpRequest) {
+        authService.verificarEmail(request, httpRequest);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Reenvío del enlace de verificación. Siempre 204 (no revela si el email existe). */
+    @PostMapping("/resend-verification")
+    public ResponseEntity<Void> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
+        authService.reenviarVerificacionEmail(request);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/login")

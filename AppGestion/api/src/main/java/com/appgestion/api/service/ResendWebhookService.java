@@ -50,9 +50,13 @@ public class ResendWebhookService {
             throw new ResponseStatusException(HttpStatus.CONTENT_TOO_LARGE, "Payload demasiado grande");
         }
 
+        // SEC-04: fail-closed. Sin secreto configurado NO se acepta ningún evento (antes se aceptaba cualquiera).
         String webhookSecret = appEmailProperties.getResend().getWebhookSecret();
-        if (StringUtils.hasText(webhookSecret)
-                && !ResendSvixSignatureVerifier.verify(rawPayload, svixId, svixTimestamp, svixSignature, webhookSecret)) {
+        if (!StringUtils.hasText(webhookSecret)) {
+            log.error("Webhook Resend rechazado: app.email.resend.webhook-secret (RESEND_WEBHOOK_SECRET) no está configurado");
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Webhook no disponible");
+        }
+        if (!ResendSvixSignatureVerifier.verify(rawPayload, svixId, svixTimestamp, svixSignature, webhookSecret)) {
             log.warn("Webhook Resend rechazado: firma inválida o cabeceras ausentes");
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Firma de webhook inválida");
         }

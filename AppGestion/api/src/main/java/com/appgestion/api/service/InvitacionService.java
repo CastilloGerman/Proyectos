@@ -12,6 +12,7 @@ import com.appgestion.api.dto.response.InviteVerifyResponse;
 import com.appgestion.api.repository.InvitacionRepository;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.appgestion.api.util.EmailCopy;
+import com.appgestion.api.util.LogSanitizer;
 import com.appgestion.api.security.JwtService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
@@ -77,7 +78,9 @@ public class InvitacionService {
     public void crearInvitacion(CreateInvitacionRequest request, Long inviterUsuarioId) {
         String email = request.email().trim().toLowerCase();
         if (usuarioRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("Ya existe un usuario con ese email");
+            // SEC-22: no se revela a quien invita si el email ya está registrado; simplemente no se envía nada.
+            log.info("Invitación omitida: el destinatario ya tiene cuenta ({})", LogSanitizer.maskEmail(email));
+            return;
         }
         String rawToken = UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
         String hash = sha256Hex(rawToken);
@@ -102,9 +105,11 @@ public class InvitacionService {
 
         try {
             emailService.enviarPdf(inviterUsuarioId, email, asunto, cuerpo, null, null);
-            log.info("Invitación enviada a {}", email);
+            log.info("Invitación enviada a {}", LogSanitizer.maskEmail(email));
         } catch (Exception e) {
-            log.warn("Invitación creada pero no se pudo enviar email a {}: {}. Enlace (solo logs): {}", email, e.getMessage(), link);
+            // SEC-23: nunca se registra el enlace (contiene el token de invitación).
+            log.warn("Invitación creada pero no se pudo enviar el email a {}: {}", LogSanitizer.maskEmail(email),
+                    e.getClass().getSimpleName());
         }
     }
 
@@ -133,7 +138,7 @@ public class InvitacionService {
         }
         String email = inv.getEmail();
         if (usuarioRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("Ya existe un usuario con ese email");
+            throw new IllegalArgumentException("Invitación inválida o expirada"); // SEC-22: mensaje uniforme
         }
 
         Long inviterId = Objects.requireNonNull(inv.getInviterUsuarioId(), "invitación sin invitador");
@@ -144,6 +149,8 @@ public class InvitacionService {
         usuario.setPasswordHash(passwordEncoder.encode(request.password()));
         usuario.setRol("USER");
         usuario.setActivo(true);
+        // El token de invitación solo se envió a este email: su posesión demuestra el control de la dirección.
+        usuario.setEmailVerified(true);
         LocalDate trialStart = LocalDate.now();
         usuario.setTrialStartDate(trialStart);
         usuario.setTrialEndDate(trialStart.plusDays(TrialConstants.DEFAULT_TRIAL_DAYS));

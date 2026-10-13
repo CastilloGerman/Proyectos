@@ -50,7 +50,11 @@ public class WebConfig {
             config.setAllowedOrigins(origins);
         }
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
+        // SEC-30: lista cerrada de cabeceras en lugar de "*" (con credenciales, "*" permitiria cualquier cabecera
+        // personalizada desde un origen permitido). Son las que usa realmente el frontend.
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Accept-Language",
+                "X-Requested-With", "X-Request-Id", "X-Correlation-Id"));
+        config.setMaxAge(3600L); // cachea el preflight una hora: menos OPTIONS por cada llamada
         config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

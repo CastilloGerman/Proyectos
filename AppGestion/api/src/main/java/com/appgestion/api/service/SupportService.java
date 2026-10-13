@@ -64,7 +64,9 @@ public class SupportService {
             if (f.getSize() > MAX_BYTES_POR_ARCHIVO) {
                 throw new IllegalArgumentException("Cada archivo debe ser de 25 MB como máximo.");
             }
-            if (!isAllowedAttachment(f)) {
+            byte[] contenido = f.getBytes();
+            String tipoReal = detectarTipoAdjunto(contenido, f.getOriginalFilename());
+            if (tipoReal == null) {
                 throw new IllegalArgumentException(
                         "Tipo de archivo no permitido. Usa imágenes, vídeo (p. ej. MP4) o PDF.");
             }
@@ -73,8 +75,8 @@ public class SupportService {
                 throw new IllegalArgumentException("El tamaño total de los adjuntos supera el límite permitido.");
             }
             String safeName = safeFilename(f.getOriginalFilename());
-            String ct = StringUtils.hasText(f.getContentType()) ? f.getContentType() : "application/octet-stream";
-            adjuntos.add(new AdjuntoCorreo(safeName, f.getBytes(), ct));
+            // SEC-17: el Content-Type que se reenvia es el detectado por firma, nunca el declarado por el cliente.
+            adjuntos.add(new AdjuntoCorreo(safeName, contenido, tipoReal));
         }
 
         String subject = "[" + EmailCopy.PRODUCT_NAME + " Soporte] " + truncate(asunto.trim(), ASUNTO_MAX);
@@ -147,30 +149,60 @@ public class SupportService {
         return base.length() > 180 ? base.substring(0, 180) : base;
     }
 
-    private static boolean isAllowedAttachment(MultipartFile f) {
-        String ct = f.getContentType();
-        if (ct != null && StringUtils.hasText(ct)) {
-            String c = ct.toLowerCase(Locale.ROOT);
-            if (c.startsWith("image/")) {
-                return true;
-            }
-            if (c.startsWith("video/")) {
-                return true;
-            }
-            if ("application/pdf".equals(c)) {
-                return true;
-            }
+    /**
+     * SEC-17: valida el adjunto por extension (lista cerrada, sin SVG/HTML) Y por firma de bytes, y comprueba que ambas
+     * coinciden. Devuelve el Content-Type real o {@code null} si el archivo no es aceptable.
+     */
+    static String detectarTipoAdjunto(byte[] b, String originalFilename) {
+        if (b == null || b.length < 12) {
+            return null;
         }
-        String orig = f.getOriginalFilename();
-        String filenameLower = orig != null ? orig.toLowerCase(Locale.ROOT) : "";
-        return extensionAllowedForSupport(filenameLower);
+        String name = originalFilename != null ? originalFilename.toLowerCase(Locale.ROOT) : "";
+        int dot = name.lastIndexOf('.');
+        if (dot < 0 || !EXTENSIONES_ADJUNTO_SOPORTE.contains(name.substring(dot))) {
+            return null;
+        }
+        String ext = name.substring(dot);
+        String real = tipoPorFirma(b);
+        if (real == null) {
+            return null;
+        }
+        boolean coincide = switch (real) {
+            case "image/jpeg" -> ext.equals(".jpg") || ext.equals(".jpeg");
+            case "image/png" -> ext.equals(".png");
+            case "image/gif" -> ext.equals(".gif");
+            case "image/webp" -> ext.equals(".webp");
+            case "application/pdf" -> ext.equals(".pdf");
+            case "video/mp4", "video/quicktime" -> ext.equals(".mp4") || ext.equals(".mov");
+            case "video/webm" -> ext.equals(".webm");
+            default -> false;
+        };
+        return coincide ? real : null;
     }
 
-    private static boolean extensionAllowedForSupport(String filenameLower) {
-        int dot = filenameLower.lastIndexOf('.');
-        if (dot < 0) {
-            return false;
+    private static String tipoPorFirma(byte[] b) {
+        if ((b[0] & 0xFF) == 0xFF && (b[1] & 0xFF) == 0xD8 && (b[2] & 0xFF) == 0xFF) {
+            return "image/jpeg";
         }
-        return EXTENSIONES_ADJUNTO_SOPORTE.contains(filenameLower.substring(dot));
+        if ((b[0] & 0xFF) == 0x89 && b[1] == 'P' && b[2] == 'N' && b[3] == 'G') {
+            return "image/png";
+        }
+        if (b[0] == 'G' && b[1] == 'I' && b[2] == 'F' && b[3] == '8') {
+            return "image/gif";
+        }
+        if (b[0] == 'R' && b[1] == 'I' && b[2] == 'F' && b[3] == 'F'
+                && b[8] == 'W' && b[9] == 'E' && b[10] == 'B' && b[11] == 'P') {
+            return "image/webp";
+        }
+        if (b[0] == '%' && b[1] == 'P' && b[2] == 'D' && b[3] == 'F' && b[4] == '-') {
+            return "application/pdf";
+        }
+        if (b[4] == 'f' && b[5] == 't' && b[6] == 'y' && b[7] == 'p') {
+            return b[8] == 'q' && b[9] == 't' ? "video/quicktime" : "video/mp4";
+        }
+        if ((b[0] & 0xFF) == 0x1A && (b[1] & 0xFF) == 0x45 && (b[2] & 0xFF) == 0xDF && (b[3] & 0xFF) == 0xA3) {
+            return "video/webm";
+        }
+        return null;
     }
 }

@@ -2,10 +2,9 @@ package com.appgestion.api.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.Keys;
-import io.jsonwebtoken.security.SignatureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -109,7 +108,7 @@ public class JwtService implements InitializingBean {
                 return Optional.empty();
             }
             return Optional.of(sid.trim());
-        } catch (ExpiredJwtException | MalformedJwtException | SignatureException | IllegalArgumentException e) {
+        } catch (JwtException | IllegalArgumentException e) {
             return Optional.empty();
         }
     }
@@ -121,7 +120,7 @@ public class JwtService implements InitializingBean {
         } catch (ExpiredJwtException e) {
             log.warn("JWT expirado: exp={}", e.getClaims().getExpiration());
             return false;
-        } catch (MalformedJwtException | SignatureException | IllegalArgumentException e) {
+        } catch (JwtException | IllegalArgumentException e) { // incluye iss/claims incorrectos (SEC-10)
             log.warn("JWT inválido (firma/secret): {}", e.getMessage());
             return false;
         }
@@ -130,6 +129,7 @@ public class JwtService implements InitializingBean {
     private Claims getClaims(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
+                .requireIssuer(issuer) // SEC-10: el emisor debe ser el propio
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

@@ -4,6 +4,8 @@ import com.appgestion.api.dto.response.EmailOAuthStatusResponse;
 import com.appgestion.api.dto.response.OAuthAuthorizeUrlResponse;
 import com.appgestion.api.service.CurrentUserService;
 import com.appgestion.api.service.email.EmailOAuthService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -12,6 +14,10 @@ import org.springframework.web.servlet.view.RedirectView;
 @RestController
 @RequestMapping("/auth/email/oauth")
 public class EmailOAuthController {
+
+    private static final Logger log = LoggerFactory.getLogger(EmailOAuthController.class);
+    private static final String OAUTH_NO_DISPONIBLE =
+            "La conexión con este proveedor de correo no está disponible ahora mismo. Contacta con soporte.";
 
     private final EmailOAuthService emailOAuthService;
     private final CurrentUserService currentUserService;
@@ -30,7 +36,9 @@ public class EmailOAuthController {
             Long uid = currentUserService.getCurrentUsuario().getId();
             return new OAuthAuthorizeUrlResponse(emailOAuthService.buildGoogleAuthorizeUrl(uid));
         } catch (IllegalStateException e) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
+            // SEC-18: el detalle de configuración (variables, redirect URI) solo va al log, no al cliente.
+            log.warn("OAuth de correo no disponible: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, OAUTH_NO_DISPONIBLE);
         }
     }
 
@@ -46,7 +54,9 @@ public class EmailOAuthController {
             Long uid = currentUserService.getCurrentUsuario().getId();
             return new OAuthAuthorizeUrlResponse(emailOAuthService.buildMicrosoftAuthorizeUrl(uid));
         } catch (IllegalStateException e) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
+            // SEC-18: el detalle de configuración (variables, redirect URI) solo va al log, no al cliente.
+            log.warn("OAuth de correo no disponible: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, OAUTH_NO_DISPONIBLE);
         }
     }
 

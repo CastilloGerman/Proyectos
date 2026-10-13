@@ -127,9 +127,20 @@ describe('AuthService', () => {
       expect(req.request.body.email).toBe('new@test.com');
       expect(req.request.body.password).toBe('pass123');
       expect(req.request.body.clientInfo).toBeDefined();
-      req.flush(mockAuthResponse);
+      req.flush({ email: 'new@test.com', emailVerificationRequired: true });
 
-      expect(service.isAuthenticated()).toBe(true);
+      // SEC-05: el registro NO inicia sesión; hay que confirmar el email primero.
+      expect(service.isAuthenticated()).toBe(false);
+    });
+
+    it('never sends a role to the server (SEC-01)', () => {
+      service
+        .register({ nombre: 'Mallory', email: 'm@test.com', password: 'pass123', rol: 'ADMIN' } as never)
+        .subscribe();
+
+      const req = http.expectOne(`${AUTH_ROOT}/register`);
+      expect(req.request.body.rol).toBeUndefined();
+      req.flush({ email: 'm@test.com', emailVerificationRequired: true });
     });
 
     it('includes referralToken when provided', () => {
@@ -144,7 +155,25 @@ describe('AuthService', () => {
 
       const req = http.expectOne(`${AUTH_ROOT}/register`);
       expect(req.request.body.referralToken).toBe('ref-token');
-      req.flush(mockAuthResponse);
+      req.flush({ email: 'ref@test.com', emailVerificationRequired: true });
+    });
+  });
+
+  describe('email verification', () => {
+    it('posts the token to /auth/verify-email', () => {
+      service.verifyEmail('tok-123').subscribe();
+      const req = http.expectOne(`${AUTH_ROOT}/verify-email`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ token: 'tok-123' });
+      req.flush(null);
+    });
+
+    it('posts the email to /auth/resend-verification', () => {
+      service.resendVerification('a@test.com').subscribe();
+      const req = http.expectOne(`${AUTH_ROOT}/resend-verification`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ email: 'a@test.com' });
+      req.flush(null);
     });
   });
 

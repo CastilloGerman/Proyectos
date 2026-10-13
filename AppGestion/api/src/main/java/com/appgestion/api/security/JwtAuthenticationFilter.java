@@ -13,6 +13,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.appgestion.api.service.SessionService;
+import com.appgestion.api.util.LogSanitizer;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.SignatureException;
@@ -56,17 +57,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String token = extractTokenFromRequest(request);
 
+            boolean tokenValido = false;
             if (!StringUtils.hasText(token)) {
-                log.warn("JWT: SIN TOKEN - {} {} (¿proxy no reenvía Authorization?)", request.getMethod(), request.getRequestURI());
-            } else if (!jwtService.validateToken(token)) {
-                log.warn("JWT: token inválido o expirado en {} {} - Authorization presente pero no válido", request.getMethod(), request.getRequestURI());
+                // Las peticiones anónimas son normales (login, registro, recursos públicos): no es un evento de seguridad.
+                log.debug("JWT: sin token en {} {}", request.getMethod(), LogSanitizer.clean(request.getRequestURI()));
+            } else {
+                tokenValido = jwtService.validateToken(token);
+                if (!tokenValido) {
+                    log.warn("JWT: token inválido o expirado en {} {}", request.getMethod(),
+                            LogSanitizer.clean(request.getRequestURI()));
+                }
             }
 
-            if (StringUtils.hasText(token) && jwtService.validateToken(token)) {
+            if (tokenValido) {
                 String email = jwtService.extractEmail(token);
+                // SEC-10: el claim "sid" es obligatorio. Un JWT sin sesión persistida no se podría revocar.
                 boolean sessionOk = jwtService.extractSessionId(token)
                         .map(sid -> sessionService.validateAndTouchSession(sid, email).isPresent())
-                        .orElse(true);
+                        .orElse(false);
                 if (sessionOk) {
                     UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
@@ -79,15 +87,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 } else {
-                    log.warn("JWT: sesión revocada o inválida (sid) en {} {}", request.getMethod(), request.getRequestURI());
+                    log.warn("JWT: sesión revocada o inválida (sid) en {} {}", request.getMethod(), LogSanitizer.clean(request.getRequestURI()));
                 }
             }
         } catch (ExpiredJwtException e) {
-            log.warn("JWT: token EXPIRADO en {} {} - exp: {}", request.getMethod(), request.getRequestURI(), e.getClaims().getExpiration());
-        } catch (MalformedJwtException | SignatureException | IllegalArgumentException e) {
-            log.warn("JWT: token INVÁLIDO (firma/secret) en {} {}: {}", request.getMethod(), request.getRequestURI(), e.getMessage());
+            log.warn("JWT: token EXPIRADO en {} {}", request.getMethod(), LogSanitizer.clean(request.getRequestURI()));
+        } catch (io.jsonwebtoken.JwtException | IllegalArgumentException e) {
+            // No se registra e.getMessage(): puede incluir fragmentos de claims o del token.
+            log.warn("JWT: token INVÁLIDO en {} {} ({})", request.getMethod(), LogSanitizer.clean(request.getRequestURI()),
+                    e.getClass().getSimpleName());
         } catch (UsernameNotFoundException e) {
-            log.warn("JWT: usuario no encontrado en {} {}: {}", request.getMethod(), request.getRequestURI(), e.getMessage());
+            log.warn("JWT: usuario del token no encontrado en {} {}", request.getMethod(), LogSanitizer.clean(request.getRequestURI()));
         }
 
         filterChain.doFilter(request, response);

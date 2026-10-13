@@ -20,4 +20,19 @@ public interface EmailJobRepository extends JpaRepository<EmailJob, Long> {
             """)
     List<EmailJob> findDuePending(@Param("pending") EmailJobStatus pending, @Param("now") Instant now, Pageable pageable);
 
+    @Query("""
+            SELECT COUNT(j) FROM EmailJob j
+            WHERE j.usuario.id = :usuarioId
+            AND j.createdAt >= :since
+            AND j.payloadJson LIKE :kindPattern
+            """)
+    long countByUsuarioAndKindSince(@Param("usuarioId") Long usuarioId,
+                                    @Param("since") Instant since,
+                                    @Param("kindPattern") String kindPattern);
+
+    /** SEC-14: correos a terceros (kind HTML_CLIENT) encolados por el usuario desde {@code since}. */
+    default long countClienteJobsSince(Long usuarioId, Instant since) {
+        return countByUsuarioAndKindSince(usuarioId, since, "%\"kind\":\"HTML_CLIENT\"%");
+    }
+
 }

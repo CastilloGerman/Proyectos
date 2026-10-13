@@ -79,6 +79,7 @@ public final class AuthLoginSeedSupport {
         u.setPasswordHash(passwordEncoder.encode(plainPassword));
         u.setRol("USER");
         u.setActivo(true);
+        u.setEmailVerified(true);
         u.setOrganization(org);
         u.setSubscriptionStatus(SubscriptionStatus.ACTIVE);
         if (totpEnabled && totpSecretBase32 != null) {

@@ -1,0 +1,3 @@
+# El hash CSP del script inline de index.html (frontend/vercel.json) se calcula sobre LF: se fuerza LF en el
+# checkout para que Windows y Linux (Vercel) produzcan el mismo contenido y, por tanto, el mismo hash.
+AppGestion/frontend/src/index.html text eol=lf

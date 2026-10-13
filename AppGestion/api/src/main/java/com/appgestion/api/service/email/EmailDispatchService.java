@@ -7,6 +7,7 @@ import com.appgestion.api.domain.enums.EmailProviderMode;
 import com.appgestion.api.domain.enums.OAuthOnFailureMode;
 import com.appgestion.api.dto.email.EmailJobPayload;
 import com.appgestion.api.repository.EmpresaRepository;
+import com.appgestion.api.util.MailFromPolicy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -97,9 +98,15 @@ public class EmailDispatchService {
     }
 
     private void sendSystem(Empresa emp, EmailJobPayload payload) {
-        String from = StringUtils.hasText(emp.getSystemFromOverride())
-                ? emp.getSystemFromOverride().trim()
-                : appEmailProperties.getSystemFrom();
+        // SEC-14: defensa en profundidad. Un remitente personalizado heredado (o manipulado en BD) que no cumpla la
+        // política del dominio de la plataforma se ignora y se usa el remitente del sistema.
+        String platformFrom = appEmailProperties.getSystemFrom();
+        String override = emp.getSystemFromOverride();
+        boolean useOverride = StringUtils.hasText(override) && MailFromPolicy.isAllowed(override, platformFrom);
+        if (StringUtils.hasText(override) && !useOverride) {
+            log.warn("email_from_override_rejected org_id={} (dominio no permitido)", emp.getId());
+        }
+        String from = useOverride ? override.trim() : platformFrom;
         List<ResendEmailClient.Attachment> attachments = new ArrayList<>();
         if (EmailJobPayload.KIND_HTML_PDF.equals(payload.kind()) || EmailJobPayload.KIND_HTML_CLIENT.equals(payload.kind())) {
             if (StringUtils.hasText(payload.pdfBase64())) {

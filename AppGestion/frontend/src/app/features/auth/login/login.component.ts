@@ -101,6 +101,20 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
               }
             </button>
           </form>
+          @if (emailNotVerified()) {
+            <div class="google-totp-box">
+              <p class="login-totp-hint">{{ 'auth.login.emailNotVerified' | translate }}</p>
+              <button
+                mat-stroked-button
+                type="button"
+                class="google-totp-submit"
+                [disabled]="resendingVerification"
+                (click)="resendVerification()"
+              >
+                {{ 'auth.login.resendVerification' | translate }}
+              </button>
+            </div>
+          }
           <div class="login-divider">
             <span>{{ 'auth.login.dividerOr' | translate }}</span>
           </div>
@@ -715,6 +729,9 @@ export class LoginComponent implements OnInit, AfterViewInit {
   form: FormGroup;
   loading = false;
   readonly totpStep = signal(false);
+  /** La contraseña es correcta pero el email aún no está confirmado (SEC-05). */
+  readonly emailNotVerified = signal(false);
+  resendingVerification = false;
   readonly googleTotpStep = signal(false);
   googleTotpCode = '';
   private pendingGoogleToken: string | null = null;
@@ -752,6 +769,27 @@ export class LoginComponent implements OnInit, AfterViewInit {
     const e = err as { error?: { message?: string; detail?: string } };
     const msg = e?.error?.message ?? e?.error?.detail;
     return msg === 'TOTP_REQUERIDO';
+  }
+
+  private isEmailNotVerifiedError(err: unknown): boolean {
+    const e = err as { error?: { message?: string; detail?: string } };
+    const msg = e?.error?.message ?? e?.error?.detail;
+    return msg === 'EMAIL_NO_VERIFICADO';
+  }
+
+  resendVerification(): void {
+    const email = String(this.form.get('email')?.value ?? '').trim();
+    if (!email || this.resendingVerification) return;
+    this.resendingVerification = true;
+    const done = () => {
+      this.resendingVerification = false;
+      this.snackBar.open(
+        this.translate.instant('auth.login.verificationResent'),
+        this.translate.instant('common.close'),
+        { duration: 5000 },
+      );
+    };
+    this.auth.resendVerification(email).subscribe({ next: done, error: done });
   }
 
   ngOnInit(): void {
@@ -936,6 +974,16 @@ export class LoginComponent implements OnInit, AfterViewInit {
         },
         error: (err) => {
           this.loading = false;
+          if (this.isEmailNotVerifiedError(err)) {
+            this.emailNotVerified.set(true);
+            this.snackBar.open(
+              this.translate.instant('auth.login.emailNotVerified'),
+              this.translate.instant('common.close'),
+              { duration: 6000 },
+            );
+            return;
+          }
+          this.emailNotVerified.set(false);
           if (!step && this.isTotpRequiredError(err)) {
             this.totpStep.set(true);
             this.form.get('totpCode')?.setValidators([Validators.required, Validators.pattern(/^\d{6}$/)]);

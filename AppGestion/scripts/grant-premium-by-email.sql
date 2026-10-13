@@ -1,3 +1,4 @@
+-- SEC-37: sustituye CAMBIA_ESTE_EMAIL@ejemplo.com por el email del usuario antes de ejecutar (no lo subas al repo).
 -- Railway → PostgreSQL → Query: ejecuta TODO el bloque de una vez.
 -- (Varios SELECT con distinto nº de columnas rompen el parser de Railway.)
 
@@ -9,7 +10,7 @@ SET subscription_status = 'ACTIVE',
     stripe_price_id = NULL,
     subscription_cancel_at_period_end = FALSE,
     subscription_requires_payment_action = FALSE
-WHERE email = 'germancastillodkno@gmail.com';
+WHERE email = 'CAMBIA_ESTE_EMAIL@ejemplo.com';
 
 SELECT id,
        email,
@@ -17,4 +18,4 @@ SELECT id,
        trial_end_date,
        stripe_subscription_id
 FROM usuarios
-WHERE email = 'germancastillodkno@gmail.com';
+WHERE email = 'CAMBIA_ESTE_EMAIL@ejemplo.com';

@@ -414,6 +414,23 @@ html.app-dark-theme .footer-legal a {
     }
   }
 
+  .btn-reject {
+    background: transparent;
+    color: #f0f0f0;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 8px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background 0.2s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+  }
+
   .btn-accept {
     background: var(--app-accent-rust, #8b4513);
     color: white;

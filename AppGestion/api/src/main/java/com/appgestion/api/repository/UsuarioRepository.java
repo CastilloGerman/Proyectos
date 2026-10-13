@@ -27,7 +27,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     @Query("SELECT u FROM Usuario u WHERE u.subscriptionStatus = :status AND u.trialEndDate < :today")
     List<Usuario> findExpiredTrials(@Param("status") SubscriptionStatus status, @Param("today") LocalDate today);
 
-    Optional<Usuario> findByPasswordResetToken(String token);
+    Optional<Usuario> findByPasswordResetToken(String tokenHash);
+
+    Optional<Usuario> findByEmailVerificationTokenHash(String tokenHash);
 
     @Query("""
             select distinct u.id from Usuario u

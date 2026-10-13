@@ -80,7 +80,7 @@ class TrustedClientAddressResolverTest {
     void trusted_shouldReadXForwardedForWhenPeerIsTrusted() {
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteAddr()).thenReturn("10.0.0.5");
-        when(request.getHeader("X-Forwarded-For")).thenReturn("203.0.113.50, 70.40.201.1");
+        when(request.getHeader("X-Forwarded-For")).thenReturn("203.0.113.50");
 
         List<TrustedClientAddressResolver.Cidr> trusted = List.of(
                 TrustedClientAddressResolver.Cidr.parse("10.0.0.0/8")
@@ -90,6 +90,41 @@ class TrustedClientAddressResolverTest {
                 request, TrustedClientAddressResolver.ClientIpMode.TRUSTED_PROXIES, trusted);
 
         assertEquals("203.0.113.50", ip);
+    }
+
+    @Test
+    @DisplayName("[trusted-proxies] SEC-11: ignora entradas de la izquierda falsificadas por el cliente")
+    void trusted_ignoresSpoofedLeftmostEntries() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRemoteAddr()).thenReturn("10.0.0.5");
+        // El cliente envió "1.2.3.4"; nuestro proxy (10.0.0.9) añadió la IP real 70.40.201.1 que vio.
+        when(request.getHeader("X-Forwarded-For")).thenReturn("1.2.3.4, 70.40.201.1, 10.0.0.9");
+
+        List<TrustedClientAddressResolver.Cidr> trusted = List.of(
+                TrustedClientAddressResolver.Cidr.parse("10.0.0.0/8")
+        );
+
+        String ip = TrustedClientAddressResolver.resolveStatic(
+                request, TrustedClientAddressResolver.ClientIpMode.TRUSTED_PROXIES, trusted);
+
+        assertEquals("70.40.201.1", ip);
+    }
+
+    @Test
+    @DisplayName("[trusted-proxies] SEC-11: una entrada no-IP corta la cadena (sin consultas DNS)")
+    void trusted_garbageEntryStopsTrust() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRemoteAddr()).thenReturn("10.0.0.5");
+        when(request.getHeader("X-Forwarded-For")).thenReturn("1.2.3.4, abc");
+
+        List<TrustedClientAddressResolver.Cidr> trusted = List.of(
+                TrustedClientAddressResolver.Cidr.parse("10.0.0.0/8")
+        );
+
+        String ip = TrustedClientAddressResolver.resolveStatic(
+                request, TrustedClientAddressResolver.ClientIpMode.TRUSTED_PROXIES, trusted);
+
+        assertEquals("10.0.0.5", ip);
     }
 
     @Test

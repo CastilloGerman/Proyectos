@@ -15,6 +15,8 @@ import java.util.Optional;
 @Service
 public class FacturaPaymentLinkService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(FacturaPaymentLinkService.class);
+
     private final FacturaRepository facturaRepository;
     private final FacturaCobroRepository facturaCobroRepository;
     private final StripeService stripeService;
@@ -53,7 +55,9 @@ public class FacturaPaymentLinkService {
             factura.setPaymentLinkUrl(pl.url());
             facturaRepository.save(factura);
         } catch (StripeException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Stripe: " + e.getMessage());
+            // El mensaje de Stripe puede revelar detalles de configuración (p. ej. fragmentos de la clave): solo al log.
+            log.warn("Stripe payment link: facturaId={} type={} code={}", facturaId, e.getClass().getSimpleName(), e.getCode());
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "No se pudo generar el enlace de pago. Inténtalo más tarde.");
         }
         return facturaResponseMapper.toResponse(factura,
                 facturaCobroRepository.findByFacturaIdOrderByFechaDescCreatedAtDesc(factura.getId()));

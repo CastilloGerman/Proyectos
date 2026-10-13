@@ -12,6 +12,8 @@ import com.appgestion.api.repository.OauthPendingRepository;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.appgestion.api.service.crypto.TokenEncryptionService;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,8 @@ import java.util.UUID;
 
 @Service
 public class EmailOAuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(EmailOAuthService.class);
 
     private final AppEmailProperties props;
     private final TokenEncryptionService tokenEncryption;
@@ -121,10 +125,7 @@ public class EmailOAuthService {
 
     @Transactional
     public String handleGoogleCallback(String code, String state) {
-        OauthPending pending = oauthPendingRepository.findByStateToken(state)
-                .filter(p -> p.getExpiresAt().isAfter(Instant.now()))
-                .filter(p -> "google".equals(p.getProvider()))
-                .orElse(null);
+        OauthPending pending = consumePending(state, "google");
         if (pending == null) {
             return frontendUrl + "/cuenta/datos-empresa?oauth=error&reason=state";
         }
@@ -172,19 +173,37 @@ public class EmailOAuthService {
                 emp.setMailUsername(email.trim());
             }
             empresaRepository.save(emp);
-            oauthPendingRepository.delete(pending);
             return frontendUrl + "/cuenta/datos-empresa?oauth=success";
         } catch (Exception e) {
+            log.warn("oauth_callback_failed provider=google error={}", e.getClass().getSimpleName());
             return frontendUrl + "/cuenta/datos-empresa?oauth=error&reason=callback";
         }
     }
 
+    /**
+     * SEC-27: el {@code state} es de un solo uso. Se consume (borra) en cuanto se lee, tanto si es válido como si ha
+     * caducado o es de otro proveedor, de modo que no pueda reutilizarse ni siquiera tras un fallo posterior.
+     */
+    private OauthPending consumePending(String state, String provider) {
+        if (!StringUtils.hasText(state)) {
+            return null;
+        }
+        OauthPending pending = oauthPendingRepository.findByStateToken(state).orElse(null);
+        if (pending == null) {
+            return null;
+        }
+        oauthPendingRepository.delete(pending);
+        if (!pending.getExpiresAt().isAfter(Instant.now()) || !provider.equals(pending.getProvider())) {
+            log.warn("oauth_state_rejected provider={} reason={}", provider,
+                    pending.getExpiresAt().isAfter(Instant.now()) ? "provider_mismatch" : "expired");
+            return null;
+        }
+        return pending;
+    }
+
     @Transactional
     public String handleMicrosoftCallback(String code, String state) {
-        OauthPending pending = oauthPendingRepository.findByStateToken(state)
-                .filter(p -> p.getExpiresAt().isAfter(Instant.now()))
-                .filter(p -> "microsoft".equals(p.getProvider()))
-                .orElse(null);
+        OauthPending pending = consumePending(state, "microsoft");
         if (pending == null) {
             return frontendUrl + "/cuenta/datos-empresa?oauth=error&reason=state";
         }
@@ -234,9 +253,9 @@ public class EmailOAuthService {
                 emp.setMailUsername(email.trim());
             }
             empresaRepository.save(emp);
-            oauthPendingRepository.delete(pending);
             return frontendUrl + "/cuenta/datos-empresa?oauth=success";
         } catch (Exception e) {
+            log.warn("oauth_callback_failed provider=microsoft error={}", e.getClass().getSimpleName());
             return frontendUrl + "/cuenta/datos-empresa?oauth=error&reason=callback";
         }
     }
@@ -303,8 +322,8 @@ public class EmailOAuthService {
             if (me != null && me.hasNonNull("email")) {
                 return me.get("email").asText();
             }
-        } catch (Exception ignored) {
-            // omitir
+        } catch (Exception e) {
+            log.warn("oauth_userinfo_failed provider=google error={}", e.getClass().getSimpleName());
         }
         return null;
     }
@@ -325,8 +344,8 @@ public class EmailOAuthService {
             if (me.hasNonNull("userPrincipalName")) {
                 return me.get("userPrincipalName").asText();
             }
-        } catch (Exception ignored) {
-            // omitir
+        } catch (Exception e) {
+            log.warn("oauth_userinfo_failed provider=microsoft error={}", e.getClass().getSimpleName());
         }
         return null;
     }

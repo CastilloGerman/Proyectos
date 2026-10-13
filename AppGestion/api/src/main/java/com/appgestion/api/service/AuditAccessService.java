@@ -10,6 +10,7 @@ import com.appgestion.api.repository.AuditAccessEventRepository;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.appgestion.api.util.ClientMetadataParser;
 import com.appgestion.api.util.IpAnonymizer;
+import com.appgestion.api.util.LogSanitizer;
 import com.appgestion.api.util.TrustedClientAddressResolver;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -95,8 +96,23 @@ public class AuditAccessService {
         try {
             insert.run();
         } catch (Exception e) {
-            log.warn("Registro de auditoría omitido: {}", e.getMessage());
+            // SEC-24: un evento de auditoría perdido es un incidente, no un detalle. Se registra a nivel ERROR con la
+            // traza y con una clave estable ("audit_event_lost") sobre la que configurar alertas en el agregador de logs.
+            log.error("audit_event_lost: no se pudo persistir un evento de auditoría", e);
         }
+    }
+
+    /**
+     * SEC-24: los fallos de autenticación sobre identidades que no existen no tienen {@link Usuario} ni organización a
+     * la que asociar una fila de auditoría, así que se dejan como evento de seguridad estructurado en el log
+     * (email enmascarado e IP anonimizada), apto para alertas por patrones (p. ej. credential stuffing).
+     */
+    public void logAuthFailureUnknownIdentity(String email, String reason, String path, HttpServletRequest request) {
+        String rawIp = request == null ? null
+                : ClientMetadataParser.parse(request, null, clientIpMode, trustedProxies).ipAddress();
+        String ip = StringUtils.hasText(rawIp) ? (anonymizeIp ? IpAnonymizer.anonymize(rawIp) : rawIp) : "unknown";
+        log.warn("security_event type=AUTH_FAILURE reason={} path={} email={} ip={}",
+                LogSanitizer.clean(reason), LogSanitizer.clean(path), LogSanitizer.maskEmail(email), ip);
     }
 
     public void recordForUsuario(Usuario usuario, AuditAccessEventType type, boolean success, String failureReason,
@@ -206,7 +222,7 @@ public class AuditAccessService {
                 eventType, successFilter, ipContains, q, filterUsuarioId);
     }
 
-    @Transactional(readOnly = true)
+    // (sin @Transactional: en un método privado el proxy de Spring lo ignora; la transacción es la del método público)
     private AuditAccessPageResponse listHistorialAccesosParaUsuario(Usuario current, int page, int size, Instant from, Instant to,
                                                       AuditAccessEventType eventType, Boolean successFilter,
                                                       String ipContains, String q, Long filterUsuarioId) {
@@ -311,7 +327,9 @@ public class AuditAccessService {
         );
     }
 
-    @Transactional(readOnly = true)
+    // SEC-24: NO readOnly. La exportación registra su propio evento de auditoría (INSERT); en una transacción de solo
+    // lectura PostgreSQL lo rechaza y el evento se perdía en silencio.
+    @Transactional
     public byte[] exportHistorialAccesos(String format, Instant from, Instant to, AuditAccessEventType eventType,
                                          Boolean successFilter, String ipContains, String q, Long filterUsuarioId,
                                          HttpServletRequest request) {
@@ -319,7 +337,7 @@ public class AuditAccessService {
                 successFilter, ipContains, q, filterUsuarioId, request);
     }
 
-    @Transactional(readOnly = true)
+    // (sin @Transactional: ver comentario en listHistorialAccesosParaUsuario)
     private byte[] exportHistorialAccesosParaUsuario(Usuario current, String format, Instant from, Instant to, AuditAccessEventType eventType,
                          Boolean successFilter, String ipContains, String q, Long filterUsuarioId,
                          HttpServletRequest request) {
@@ -354,31 +372,38 @@ public class AuditAccessService {
         StringBuilder sb = new StringBuilder(header);
         for (AuditAccessEventResponse r : rows) {
             sb.append(r.id()).append(',')
-                    .append(csv(r.occurredAt())).append(',')
-                    .append(csv(r.userEmail())).append(',')
-                    .append(csv(r.eventType())).append(',')
+                    .append(csvCell(r.occurredAt())).append(',')
+                    .append(csvCell(r.userEmail())).append(',')
+                    .append(csvCell(r.eventType())).append(',')
                     .append(r.success()).append(',')
-                    .append(csv(r.failureReason())).append(',')
-                    .append(csv(r.ipAddress())).append(',')
-                    .append(csv(r.countryCode())).append(',')
-                    .append(csv(r.sessionId())).append(',')
-                    .append(csv(r.resourcePath())).append(',')
+                    .append(csvCell(r.failureReason())).append(',')
+                    .append(csvCell(r.ipAddress())).append(',')
+                    .append(csvCell(r.countryCode())).append(',')
+                    .append(csvCell(r.sessionId())).append(',')
+                    .append(csvCell(r.resourcePath())).append(',')
                     .append(r.sensitive()).append(',')
-                    .append(csv(r.metadataJson()))
+                    .append(csvCell(r.metadataJson()))
                     .append('\n');
         }
         return sb.toString().getBytes(StandardCharsets.UTF_8);
     }
 
-    private static String csv(Object v) {
+    /**
+     * SEC-25: celda CSV segura. Neutraliza la inyeccion de formulas (Excel/LibreOffice interpretan como formula
+     * cualquier celda que empiece por = + - @ tab o CR) anteponiendo una comilla simple, y aplana saltos de linea.
+     */
+    public static String csvCell(Object v) {
         if (v == null) {
             return "";
         }
-        String s = String.valueOf(v).replace("\"", "\"\"");
-        if (s.contains(",") || s.contains("\"") || s.contains("\n")) {
+        String s = String.valueOf(v).replace("\r", " ").replace("\n", " ");
+        if (!s.isEmpty() && "=+-@\t".indexOf(s.charAt(0)) >= 0) {
+            s = "'" + s;
+        }
+        s = s.replace("\"", "\"\"");
+        if (s.contains(",") || s.contains("\"")) {
             return "\"" + s + "\"";
         }
         return s;
     }
-
 }

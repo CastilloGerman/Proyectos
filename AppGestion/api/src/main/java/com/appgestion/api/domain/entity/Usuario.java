@@ -1,6 +1,7 @@
 package com.appgestion.api.domain.entity;
 
 import com.appgestion.api.domain.enums.SubscriptionStatus;
+import com.appgestion.api.service.crypto.EncryptedStringConverter;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -66,6 +67,7 @@ public class Usuario {
     @Column(name = "trial_end_date")
     private LocalDate trialEndDate;
 
+    /** Hash SHA-256 (hex) del token de recuperación; el token en claro solo viaja por email. */
     @Column(name = "password_reset_token", length = 255)
     private String passwordResetToken;
 
@@ -120,19 +122,36 @@ public class Usuario {
     @Column(name = "pais_residencia_iso", length = 2)
     private String paisResidenciaIso;
 
-    /** Secreto TOTP activo (Base32). Cifrado en reposo sería mejora futura. */
-    @Column(name = "totp_secret", length = 64)
+    /** Secreto TOTP activo (Base32). Cifrado en reposo (AES-GCM) mediante {@link EncryptedStringConverter}. */
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "totp_secret", length = 255)
     private String totpSecret;
 
     @Column(name = "totp_enabled", nullable = false)
     private Boolean totpEnabled = false;
 
     /** Secreto temporal mientras el usuario confirma el enrolamiento. */
-    @Column(name = "totp_pending_secret", length = 64)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "totp_pending_secret", length = 255)
     private String totpPendingSecret;
 
     @Column(name = "totp_pending_expires_at")
     private LocalDateTime totpPendingExpiresAt;
+
+    /** El usuario ha demostrado controlar su email (enlace de verificación, invitación o Google). */
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
+    /** Hash SHA-256 (hex) del token de verificación de email; el token en claro solo viaja por email. */
+    @Column(name = "email_verification_token_hash", length = 64)
+    private String emailVerificationTokenHash;
+
+    @Column(name = "email_verification_expires_at")
+    private LocalDateTime emailVerificationExpiresAt;
+
+    /** Último envío del email de verificación (cooldown anti-spam). */
+    @Column(name = "email_verification_sent_at")
+    private LocalDateTime emailVerificationSentAt;
 
     /** JSON array de claves de condiciones marcadas por defecto en presupuestos nuevos. */
     @Column(name = "condiciones_presupuesto_predeterminadas", columnDefinition = "TEXT")
@@ -245,6 +264,18 @@ public class Usuario {
 
     public String getTotpPendingSecret() { return totpPendingSecret; }
     public void setTotpPendingSecret(String totpPendingSecret) { this.totpPendingSecret = totpPendingSecret; }
+
+    public boolean isEmailVerified() { return emailVerified; }
+    public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
+
+    public String getEmailVerificationTokenHash() { return emailVerificationTokenHash; }
+    public void setEmailVerificationTokenHash(String emailVerificationTokenHash) { this.emailVerificationTokenHash = emailVerificationTokenHash; }
+
+    public LocalDateTime getEmailVerificationExpiresAt() { return emailVerificationExpiresAt; }
+    public void setEmailVerificationExpiresAt(LocalDateTime emailVerificationExpiresAt) { this.emailVerificationExpiresAt = emailVerificationExpiresAt; }
+
+    public LocalDateTime getEmailVerificationSentAt() { return emailVerificationSentAt; }
+    public void setEmailVerificationSentAt(LocalDateTime emailVerificationSentAt) { this.emailVerificationSentAt = emailVerificationSentAt; }
 
     public LocalDateTime getTotpPendingExpiresAt() { return totpPendingExpiresAt; }
     public void setTotpPendingExpiresAt(LocalDateTime totpPendingExpiresAt) { this.totpPendingExpiresAt = totpPendingExpiresAt; }

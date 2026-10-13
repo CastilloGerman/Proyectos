@@ -93,15 +93,36 @@ public class TrustedClientAddressResolver {
         if (forwarded == null || forwarded.isBlank()) {
             return peer;
         }
-        String first = forwarded.split(",", 2)[0].trim();
-        if (!first.matches("[0-9a-fA-F:.]+")) {
-            return peer;
+        // SEC-11: X-Forwarded-For lo escribe el cliente y cada proxy AÑADE al final la IP de quien le habló. La
+        // entrada de más a la izquierda es, por tanto, falsificable. Se recorre de derecha a izquierda saltando los
+        // proxies de confianza y se devuelve la primera IP que no lo es (la real vista por nuestra infraestructura).
+        String[] parts = forwarded.split(",");
+        String candidate = peer;
+        for (int i = parts.length - 1; i >= 0; i--) {
+            String entry = parts[i].trim();
+            if (!entry.matches("[0-9a-fA-F:.]+") || !isIpLiteral(entry)) {
+                // Entrada corrupta: no se confía en nada de lo que hay a su izquierda.
+                return candidate;
+            }
+            candidate = entry;
+            final String ip = entry;
+            if (trustedProxies.stream().noneMatch(cidr -> cidr.contains(ip))) {
+                return candidate;
+            }
+        }
+        return candidate;
+    }
+
+    private static boolean isIpLiteral(String value) {
+        // Un literal IP siempre contiene '.' o ':'; evita que "abc" (solo hex) provoque una consulta DNS.
+        if (value.indexOf('.') < 0 && value.indexOf(':') < 0) {
+            return false;
         }
         try {
-            InetAddress.getByName(first);
-            return first;
-        } catch (UnknownHostException ignored) {
-            return peer;
+            InetAddress.getByName(value);
+            return true;
+        } catch (UnknownHostException e) {
+            return false;
         }
     }
 

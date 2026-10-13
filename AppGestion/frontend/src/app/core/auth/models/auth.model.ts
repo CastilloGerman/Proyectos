@@ -17,10 +17,17 @@ export interface RegisterRequest {
   nombre: string;
   email: string;
   password: string;
-  rol?: string;
   /** Token de referido (?ref=) verificado antes del POST /auth/register. */
   referralToken?: string;
   clientInfo?: DeviceClientInfo;
+}
+
+/**
+ * Respuesta de POST /auth/register. No hay sesión: la cuenta debe confirmarse con el enlace enviado por email.
+ */
+export interface RegisterResponse {
+  email: string;
+  emailVerificationRequired: boolean;
 }
 
 export interface InviteVerifyResponse {

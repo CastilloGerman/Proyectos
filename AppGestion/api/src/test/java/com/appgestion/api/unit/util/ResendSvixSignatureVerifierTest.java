@@ -41,7 +41,10 @@ class ResendSvixSignatureVerifierTest {
     }
 
     @Test
-    void verify_blankSecret_skipsCheck() {
-        assertThat(ResendSvixSignatureVerifier.verify("{}", null, null, null, "  ")).isTrue();
+    void verify_blankSecret_rejects_failClosed() {
+        assertThat(ResendSvixSignatureVerifier.verify("{}", null, null, null, "  ")).isFalse();
+        assertThat(ResendSvixSignatureVerifier.verify("{}", null, null, null, null)).isFalse();
+        assertThat(ResendSvixSignatureVerifier.verify("{}", "msg_x", String.valueOf(Instant.now().getEpochSecond()), "v1,AAAA", ""))
+                .isFalse();
     }
 }

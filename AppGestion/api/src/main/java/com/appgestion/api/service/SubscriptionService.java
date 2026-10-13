@@ -137,7 +137,7 @@ public class SubscriptionService {
         usuario.setSubscriptionCancelAtPeriodEnd(false);
         usuario.setSubscriptionRequiresPaymentAction(false);
         usuarioRepository.save(usuario);
-        log.info("Dev: usuario {} marcado como ACTIVE (premium)", usuario.getEmail());
+        log.info("Dev: usuario id={} marcado como ACTIVE (premium)", usuario.getId());
     }
 
     public SubscriptionDetailsDto getSubscriptionDetails(Usuario usuario) {

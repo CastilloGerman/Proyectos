@@ -1,0 +1,29 @@
+# SEC-34: actualizaciones automáticas de dependencias (parches de seguridad incluidos).
+version: 2
+updates:
+  - package-ecosystem: "maven"
+    directory: "/AppGestion/api"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      spring:
+        patterns:
+          - "org.springframework*"
+  - package-ecosystem: "npm"
+    directory: "/AppGestion/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      angular:
+        patterns:
+          - "@angular/*"
+  - package-ecosystem: "docker"
+    directory: "/AppGestion"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

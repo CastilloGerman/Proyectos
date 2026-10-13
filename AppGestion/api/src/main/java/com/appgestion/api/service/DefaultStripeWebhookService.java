@@ -57,6 +57,13 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
     @Override
     @Transactional
     public StripeWebhookProcessingResult processWebhook(String payload, String signature) {
+        // SEC-28: sin secreto configurado la firma no protege nada (HMAC con clave vacía es falsificable por cualquiera),
+        // así que se rechaza en TODOS los perfiles en lugar de aceptar eventos sin verificar.
+        if (webhookSecret == null || webhookSecret.isBlank()) {
+            log.error("Webhook de Stripe rechazado: stripe.webhook-secret (STRIPE_WEBHOOK_SECRET) no esta configurado");
+            return StripeWebhookProcessingResult.badSignature();
+        }
+
         Event event;
         try {
             event = webhookEventParser.parse(payload, signature, webhookSecret);
@@ -68,14 +75,21 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
             return StripeWebhookProcessingResult.ok();
         }
 
-        StripeObject dataObject = event.getDataObjectDeserializer().getObject().orElse(null);
-        if (dataObject != null) {
-            dispatch(event.getType(), dataObject);
-        }
-
+        // SEC-28: se reserva el evento ANTES de procesarlo. El indice unico sobre event_id actua de barrera: con dos
+        // entregas concurrentes la segunda espera a la primera y falla con DataIntegrityViolationException (el
+        // controlador la traduce a 200), en lugar de procesar el mismo evento dos veces. Si el procesamiento falla,
+        // la transaccion entera (reserva incluida) se revierte y Stripe reintenta.
         ProcessedStripeEvent processed = new ProcessedStripeEvent();
         processed.setEventId(event.getId());
         processedEventRepository.save(processed);
+
+        StripeObject dataObject = event.getDataObjectDeserializer().getObject().orElse(null);
+        if (dataObject != null) {
+            dispatch(event.getType(), dataObject);
+        } else {
+            log.warn("Stripe webhook {} ({}): objeto no deserializable (version de API distinta?); se marca como procesado sin efecto",
+                    event.getId(), event.getType());
+        }
 
         return StripeWebhookProcessingResult.ok();
     }
@@ -99,7 +113,14 @@ public class DefaultStripeWebhookService implements StripeWebhookService {
             return;
         }
 
-        Long usuarioId = Long.valueOf(usuarioIdStr);
+        Long usuarioId;
+        try {
+            usuarioId = Long.valueOf(usuarioIdStr.trim());
+        } catch (NumberFormatException e) {
+            // SEC-28: un metadato inesperado no debe provocar un 500 (y reintentos infinitos de Stripe).
+            log.warn("checkout.session.completed: metadata usuario_id no numerico; evento ignorado");
+            return;
+        }
         String customerId = session.getCustomer();
         String subscriptionId = session.getSubscription();
 

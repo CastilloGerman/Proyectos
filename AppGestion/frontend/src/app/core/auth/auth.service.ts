@@ -7,6 +7,7 @@ import {
   InviteVerifyResponse,
   LoginRequest,
   RegisterRequest,
+  RegisterResponse,
   SesionDispositivoDto,
   TotpSetupStartResponse,
 } from './models/auth.model';
@@ -89,19 +90,27 @@ export class AuthService {
     );
   }
 
-  register(data: RegisterRequest): Observable<AuthResponse> {
+  /** Alta de cuenta. No inicia sesión: el usuario debe confirmar su email antes de poder entrar. */
+  register(data: RegisterRequest): Observable<RegisterResponse> {
     const payload: Record<string, unknown> = {
       nombre: data.nombre,
       email: data.email,
       password: data.password,
       clientInfo: data.clientInfo ?? buildDeviceClientInfo(),
     };
-    if (data.rol) payload['rol'] = data.rol;
     const ref = data.referralToken?.trim();
     if (ref) payload['referralToken'] = ref;
-    return this.http.post<AuthResponse>(`${this.authRoot}/register`, payload).pipe(
-      tap((response) => this.handleAuthSuccess(response))
-    );
+    return this.http.post<RegisterResponse>(`${this.authRoot}/register`, payload);
+  }
+
+  /** Confirma el email con el token del enlace recibido por correo. */
+  verifyEmail(token: string): Observable<void> {
+    return this.http.post<void>(`${this.authRoot}/verify-email`, { token });
+  }
+
+  /** Reenvía el enlace de confirmación (el servidor nunca revela si el email existe). */
+  resendVerification(email: string): Observable<void> {
+    return this.http.post<void>(`${this.authRoot}/resend-verification`, { email });
   }
 
   verifyInviteToken(token: string): Observable<InviteVerifyResponse> {
@@ -171,8 +180,12 @@ export class AuthService {
     return this.http.post<void>(`${this.authRoot}/forgot-password`, { email });
   }
 
-  resetPassword(token: string, newPassword: string): Observable<void> {
-    return this.http.post<void>(`${this.authRoot}/reset-password`, { token, newPassword });
+  resetPassword(token: string, newPassword: string, totpCode?: string): Observable<void> {
+    return this.http.post<void>(`${this.authRoot}/reset-password`, {
+      token,
+      newPassword,
+      ...(totpCode ? { totpCode } : {}),
+    });
   }
 
   /** Cambio de contraseña con sesión activa (POST /auth/change-password). */

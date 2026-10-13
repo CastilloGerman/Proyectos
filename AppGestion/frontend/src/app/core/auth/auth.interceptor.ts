@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from './auth.service';
 import { TranslateService } from '@ngx-translate/core';
+import { environment } from '../../../environments/environment';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
@@ -13,7 +14,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const translate = inject(TranslateService);
   const token = auth.getToken();
 
-  const cloned = token
+  // SEC-07: el JWT solo viaja hacia nuestra API, nunca hacia terceros (CDN, Google, enlaces de pago...).
+  const apiBase = environment.apiUrl;
+  const isApiRequest = req.url === apiBase || req.url.startsWith(`${apiBase}/`) || req.url.startsWith(`${apiBase}?`);
+
+  const cloned = token && isApiRequest
     ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
     : req;
 
@@ -26,7 +31,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           url.includes('/auth/register') ||
           url.includes('/auth/google') ||
           url.includes('/auth/forgot-password') ||
-          url.includes('/auth/reset-password');
+          url.includes('/auth/reset-password') ||
+          url.includes('/auth/verify-email') ||
+          url.includes('/auth/resend-verification');
         const isLogoutRequest = url.includes('/auth/logout');
         const skipGlobalSessionHandler =
           publicAuth || isLogoutRequest || auth.isLogoutInProgress();

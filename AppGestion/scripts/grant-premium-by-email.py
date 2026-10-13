@@ -12,7 +12,7 @@ except ImportError:
     print("Instala: pip install psycopg2-binary", file=sys.stderr)
     sys.exit(1)
 
-EMAIL_DEFAULT = "germancastillodkno@gmail.com"
+# SEC-37: sin email por defecto en el repositorio; se pasa como argumento o con GRANT_PREMIUM_EMAIL.
 
 
 def parse_database_url(url: str) -> dict:
@@ -30,7 +30,10 @@ def parse_database_url(url: str) -> dict:
 
 
 def main() -> int:
-    email = sys.argv[1] if len(sys.argv) > 1 else EMAIL_DEFAULT
+    email = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("GRANT_PREMIUM_EMAIL", "")
+    if not email:
+        print("Uso: grant-premium-by-email.py <email>  (o variable GRANT_PREMIUM_EMAIL)", file=sys.stderr)
+        return 2
     url = os.environ.get("DATABASE_URL") or os.environ.get("SPRING_DATASOURCE_URL", "")
     if url.startswith("jdbc:postgresql://"):
         url = url.replace("jdbc:postgresql://", "postgresql://", 1)

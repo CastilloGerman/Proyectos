@@ -32,6 +32,23 @@ import { LegalFooterComponent } from '../../../legal/legal-footer/legal-footer.c
           <div class="register-logo">
             <img src="assets/noemi-logo.png" alt="Noemí" class="register-logo-img" />
           </div>
+          @if (sentTo) {
+            <h1 class="register-title">{{ 'auth.register.verifyTitle' | translate }}</h1>
+            <p class="register-subtitle">{{ 'auth.register.verifySent' | translate: { email: sentTo } }}</p>
+            <p class="register-ref-status">{{ 'auth.register.verifySpamHint' | translate }}</p>
+            <button
+              mat-stroked-button
+              type="button"
+              class="submit-btn"
+              [disabled]="resending"
+              (click)="resend()"
+            >
+              {{ 'auth.register.verifyResend' | translate }}
+            </button>
+            <a [routerLink]="['/login']" [queryParams]="loginQueryParams" class="login-link">{{
+              'auth.register.loginLink' | translate
+            }}</a>
+          } @else {
           <h1 class="register-title">{{ 'auth.register.title' | translate }}</h1>
           @if (referralToken && referralCheckState === 'checking') {
             <p class="register-ref-status">{{ 'auth.register.referralChecking' | translate }}</p>
@@ -90,6 +107,7 @@ import { LegalFooterComponent } from '../../../legal/legal-footer/legal-footer.c
           <a [routerLink]="['/login']" [queryParams]="loginQueryParams" class="login-link">{{
             'auth.register.loginLink' | translate
           }}</a>
+          }
         </div>
       </div>
       <app-legal-footer />
@@ -253,6 +271,9 @@ export class RegisterComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
   form: FormGroup;
   loading = false;
+  /** Email al que se envió el enlace de confirmación (tras registrarse). */
+  sentTo: string | null = null;
+  resending = false;
 
   referralToken: string | null = null;
   referralCheckState: 'idle' | 'checking' | 'ok' | 'bad' = 'idle';
@@ -268,7 +289,7 @@ export class RegisterComponent implements OnInit {
     this.form = this.fb.group({
       nombre: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]],
+      password: ['', [Validators.required, Validators.minLength(12), Validators.maxLength(128)]],
     });
   }
 
@@ -299,6 +320,20 @@ export class RegisterComponent implements OnInit {
     });
   }
 
+  resend(): void {
+    if (!this.sentTo || this.resending) return;
+    this.resending = true;
+    const done = () => {
+      this.resending = false;
+      this.snackBar.open(
+        this.translate.instant('auth.login.verificationResent'),
+        this.translate.instant('common.close'),
+        { duration: 5000 },
+      );
+    };
+    this.auth.resendVerification(this.sentTo).subscribe({ next: done, error: done });
+  }
+
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -315,8 +350,11 @@ export class RegisterComponent implements OnInit {
       payload.referralToken = this.referralToken;
     }
     this.auth.register(payload).subscribe({
-      next: () => {
-        this.router.navigate(['/dashboard']);
+      next: (res) => {
+        // No hay sesión hasta confirmar el email: se muestra el aviso "revisa tu correo".
+        this.loading = false;
+        this.sentTo = res?.email || payload.email;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.loading = false;

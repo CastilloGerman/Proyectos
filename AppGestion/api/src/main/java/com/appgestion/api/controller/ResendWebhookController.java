@@ -14,7 +14,8 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * Webhook de Resend (eventos bounce, complaint, etc.). Persiste payload para análisis y alertas.
- * Si {@code app.email.resend.webhook-secret} está definido, exige cabeceras Svix y firma válida.
+ * Exige cabeceras Svix y firma válida. Si {@code app.email.resend.webhook-secret} no está definido el webhook se
+ * rechaza (503): nunca se aceptan eventos sin firma.
  */
 @RestController
 @RequestMapping("/webhook/resend")

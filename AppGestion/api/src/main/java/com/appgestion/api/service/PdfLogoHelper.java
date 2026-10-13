@@ -1,5 +1,6 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.util.LogoImageValidator;
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.Element;
@@ -28,8 +29,17 @@ public final class PdfLogoHelper {
      */
     public static void agregarTituloConLogoOpcional(Document document, byte[] logoImagen, String titulo, Font titleFont)
             throws DocumentException, IOException {
+        Image img = null;
         if (logoImagen != null && logoImagen.length > 0) {
-            Image img = Image.getInstance(logoImagen);
+            try {
+                // SEC-33: un logo ilegible o con dimensiones fuera de rango (datos antiguos) no debe romper el PDF.
+                LogoImageValidator.validar(logoImagen);
+                img = Image.getInstance(logoImagen);
+            } catch (RuntimeException | IOException e) {
+                img = null;
+            }
+        }
+        if (img != null) {
             img.scaleToFit(LOGO_MAX_WIDTH_PT, LOGO_MAX_HEIGHT_PT);
             PdfPTable row = new PdfPTable(2);
             row.setWidthPercentage(100);

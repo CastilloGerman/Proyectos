@@ -29,8 +29,9 @@ public final class ResendSvixSignatureVerifier {
             String svixTimestamp,
             String svixSignatureHeader,
             String signingSecret) {
+        // SEC-04: sin secreto nunca se puede validar la firma → se rechaza (fail-closed).
         if (signingSecret == null || signingSecret.isBlank()) {
-            return true;
+            return false;
         }
         if (rawPayload == null
                 || svixId == null

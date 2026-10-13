@@ -3,6 +3,7 @@ package com.appgestion.api.security;
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.appgestion.api.service.SubscriptionService;
+import com.appgestion.api.util.LogSanitizer;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,7 +27,8 @@ public class SubscriptionCheckFilter extends OncePerRequestFilter {
     private final SubscriptionService subscriptionService;
     private final UsuarioRepository usuarioRepository;
 
-    @Value("${app.subscription.skip-check:true}")
+    // SEC-20: fail-closed. Si la propiedad falta, se EXIGE la suscripción (solo el perfil local la omite).
+    @Value("${app.subscription.skip-check:false}")
     private boolean skipSubscriptionCheck;
 
     public SubscriptionCheckFilter(SubscriptionService subscriptionService, UsuarioRepository usuarioRepository) {
@@ -45,10 +47,9 @@ public class SubscriptionCheckFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
-        String path = request.getRequestURI();
+        String path = normalizedPath(request);
 
-        if (skipSubscriptionCheck || isExcludedPath(path)
-                || ("DELETE".equalsIgnoreCase(request.getMethod()) && path.matches(".*/presupuestos/\\d+/enlace"))) {
+        if (skipSubscriptionCheck || isExcludedPath(path) || isRevocarEnlace(request.getMethod(), path)) {
             if (path.contains("enviar-email")) {
                 log.debug("SubscriptionCheckFilter: ruta excluida o skip-check activo - {}", path);
             }
@@ -80,32 +81,67 @@ public class SubscriptionCheckFilter extends OncePerRequestFilter {
             return;
         }
 
-        log.warn("403 Forbidden: usuario {} en modo solo lectura - {} {}", email, method, path);
+        log.warn("403 Forbidden: usuario {} en modo solo lectura - {} {}", LogSanitizer.maskEmail(email), method, LogSanitizer.clean(path));
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         response.getWriter().write("{\"error\":\"Cuenta en modo solo lectura. Activa tu suscripción para crear o editar.\"}");
     }
 
-    private boolean isExcludedPath(String path) {
-        // No excluir /auth/ completo: POST autenticados (p. ej. invitaciones) deben respetar canWrite.
-        return path.contains("/publico/presupuestos/")
-                || path.contains("/webhook/")
-                || path.contains("/subscription/checkout")
-                || path.contains("/subscription/portal")
-                || path.contains("/enviar-email")
-                || path.contains("/dev/")
-                // El perfil (nombre/teléfono) debe poder actualizarse aunque la suscripción esté en solo lectura.
-                || path.contains("/auth/profile")
-                || path.contains("/auth/account-settings")
-                || path.contains("/auth/preferences")
-                || path.contains("/auth/change-password")
-                || path.contains("/auth/totp")
-                || path.contains("/auth/support")
-                || path.contains("/auth/notifications")
-                // Datos de empresa en PDFs: permitir guardar aunque la suscripción esté en solo lectura.
-                || path.contains("/config/empresa")
-                // Conectar / desconectar OAuth de correo (afecta envío, no facturación directa).
-                || path.contains("/auth/email/oauth");
+    /** Prefijos de ruta (tras normalizar) que se permiten aunque la cuenta este en modo solo lectura. */
+    private static final java.util.List<String> EXCLUDED_PREFIXES = java.util.List.of(
+            "/publico/presupuestos/",
+            "/webhook/",
+            "/subscription/checkout",
+            "/subscription/portal",
+            "/dev/",
+            // El perfil (nombre/telefono) debe poder actualizarse aunque la suscripcion este en solo lectura.
+            "/auth/profile",
+            "/auth/account-settings",
+            "/auth/preferences",
+            "/auth/change-password",
+            "/auth/totp",
+            "/auth/support",
+            "/auth/notifications",
+            // Datos de empresa en PDFs: permitir guardar aunque la suscripcion este en solo lectura.
+            "/config/empresa",
+            // Conectar / desconectar OAuth de correo (afecta envio, no facturacion directa).
+            "/auth/email/oauth");
+
+    private static final java.util.regex.Pattern ENVIAR_EMAIL =
+            java.util.regex.Pattern.compile("^/(presupuestos|facturas)/\\d+/enviar-email/?$");
+    private static final java.util.regex.Pattern REVOCAR_ENLACE =
+            java.util.regex.Pattern.compile("^/presupuestos/\\d+/enlace/?$");
+
+    /**
+     * SEC-29: la ruta se normaliza (sin context-path) y se compara por PREFIJO o por patron anclado, nunca con
+     * {@code contains}: una ruta como {@code /clientes/x/auth/profile} ya no se salta la comprobacion.
+     */
+    public static String normalizedPath(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        String ctx = request.getContextPath();
+        if (uri == null) {
+            return "";
+        }
+        if (ctx != null && !ctx.isEmpty() && uri.startsWith(ctx)) {
+            uri = uri.substring(ctx.length());
+        }
+        return uri;
+    }
+
+    public static boolean isExcludedPath(String path) {
+        if (path == null) {
+            return false;
+        }
+        for (String prefix : EXCLUDED_PREFIXES) {
+            if (path.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return ENVIAR_EMAIL.matcher(path).matches();
+    }
+
+    public static boolean isRevocarEnlace(String method, String path) {
+        return "DELETE".equalsIgnoreCase(method) && path != null && REVOCAR_ENLACE.matcher(path).matches();
     }
 }

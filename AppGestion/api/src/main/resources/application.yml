@@ -34,8 +34,9 @@ spring:
   datasource:
     # Local: PostgreSQL estándar en localhost:5432. Railway: PG* o DATABASE_URL postgresql://… (se convierte a JDBC al arranque).
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:appgestion}}
-    username: ${PGUSER:${DB_USERNAME:postgres}}
-    password: ${PGPASSWORD:${DB_PASSWORD:postgres}}
+    # SEC-20: sin credenciales por defecto en el perfil base (el perfil local define postgres/postgres).
+    username: ${PGUSER:${DB_USERNAME:}}
+    password: ${PGPASSWORD:${DB_PASSWORD:}}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -43,9 +44,13 @@ spring:
       connection-timeout: 30000
 
   flyway:
-    baseline-on-migrate: true
+    # SEC-21: por defecto estricto. validate-on-migrate detecta migraciones ya aplicadas que se hayan modificado,
+    # y baseline-on-migrate=false evita enmascarar un esquema inesperado (solo el perfil local lo habilita).
+    # Si un despliegue falla con "Validate failed" tras revisar el cambio, repara con `flyway repair` en lugar de
+    # desactivar la validación; FLYWAY_VALIDATE_ON_MIGRATE=false es solo un escape temporal.
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:false}
     baseline-version: 1
-    validate-on-migrate: false
+    validate-on-migrate: ${FLYWAY_VALIDATE_ON_MIGRATE:true}
     locations: classpath:db/migration
 
   jpa:
@@ -64,7 +69,8 @@ spring:
     error:
       # Spring Boot 4: usar spring.web.error en lugar de server.error (deprecado).
       # En prod (perfil prod) se sobrescribe a never.
-      include-message: on_param
+      # SEC-18: nunca mensajes internos de Spring en las respuestas de error (ni siquiera con ?message=true).
+      include-message: never
 
 server:
   # Railway (y similares) inyectan PORT; local sigue usando 8081 por defecto.
@@ -106,7 +112,9 @@ app:
     expose-internal-error-message: ${APP_API_EXPOSE_INTERNAL_ERRORS:false}
   support:
     # Buzón de soporte (solo servidor). Los usuarios envían vía POST; no exponer este valor en el front.
-    inbox-email: ${SUPPORT_INBOX_EMAIL:castillogerman98@hotmail.com}
+    # SEC-37: sin valor por defecto en el repositorio. Obligatorio definir SUPPORT_INBOX_EMAIL en cada entorno;
+    # si falta, el formulario de soporte responde "buzón no configurado" en lugar de enviar a una dirección fija.
+    inbox-email: ${SUPPORT_INBOX_EMAIL:}
   subscription:
     # Por defecto exige suscripción para escritura (seguro). Perfil local la desactiva.
     skip-check: false
@@ -122,7 +130,9 @@ app:
     expiry-days: ${PUBLIC_BUDGET_LINK_EXPIRY_DAYS:60}
     max-active-links: ${PUBLIC_BUDGET_LINK_MAX_ACTIVE:10}
     trusted-proxies: ${PUBLIC_BUDGET_LINK_TRUSTED_PROXIES:}
-    rate-limit-per-ip: ${PUBLIC_BUDGET_LINK_RATE_IP:10000}
+    # SEC-11/SEC-39: peticiones por minuto e IP. Si client-ip-mode=none tras un proxy, todos comparten IP: configura
+    # APP_SECURITY_CLIENT_IP_MODE (trusted-proxies/vercel) para que el límite sea realmente por cliente.
+    rate-limit-per-ip: ${PUBLIC_BUDGET_LINK_RATE_IP:600}
     rate-limit-per-token: ${PUBLIC_BUDGET_LINK_RATE_TOKEN:60}
   presupuesto-seguimiento:
     cron: ${APP_PRESUPUESTO_SEGUIMIENTO_CRON:0 0 9 * * ?}
@@ -135,6 +145,11 @@ app:
     secret: ${JWT_SECRET:}
     expiration-ms: 86400000
     issuer: appgestion-api
+  auth:
+    google:
+      # Client IDs de Google (públicos) aceptados como audiencia (aud) del ID token en /auth/google.
+      # Lista separada por comas. Si está vacío, el login con Google se rechaza.
+      client-ids: ${GOOGLE_LOGIN_CLIENT_IDS:622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.apps.googleusercontent.com}
   security:
     auth-rate-limit:
       enabled: true
@@ -150,6 +165,8 @@ app:
     trusted-proxies: ${APP_SECURITY_TRUSTED_PROXIES:}
   # Sesiones JWT persistidas (dispositivos): purga automática de filas muy antiguas.
   sessions:
+    # SEC-31: IP anonimizada (último octeto a 0) en la lista de sesiones.
+    anonymize-ip: ${APP_SESSIONS_ANONYMIZE_IP:true}
     cleanup:
       enabled: ${SESSIONS_CLEANUP_ENABLED:true}
       # Borra registros cuyo expiresAt es anterior a (ahora - N días). Mínimo efectivo: 1.
@@ -160,7 +177,12 @@ app:
   email:
     # Clave para cifrar tokens OAuth (obligatoria si usas Gmail/Outlook; en local el perfil define un valor por defecto)
     token-encryption-key: ${APP_EMAIL_TOKEN_SECRET:}
+    # SEC-26: solo para rotar la clave. Despliega con la nueva en APP_EMAIL_TOKEN_SECRET y la antigua aquí; los valores
+    # antiguos se siguen leyendo y se reescriben con la nueva al guardarse. Retírala cuando ya no haga falta.
+    previous-token-encryption-key: ${APP_EMAIL_TOKEN_SECRET_PREVIOUS:}
     worker-delay-ms: 3000
+    # SEC-14: máximo de correos a terceros (documentos a clientes) por usuario cada 24 h. 0 = sin tope.
+    daily-send-quota: ${APP_EMAIL_DAILY_SEND_QUOTA:200}
     oauth-pending-cleanup-ms: 600000
     system-from: ${APP_EMAIL_SYSTEM_FROM:Noemi <onboarding@resend.dev>}
     resend:
@@ -179,6 +201,9 @@ app:
     # Endpoint de pruebas para activar premium sin Stripe. Desactivado por defecto.
     # Recomendado: usar SQL sobre la BD para usuarios de test y no exponer controles en la UI.
     grant-premium-enabled: ${APP_DEV_GRANT_PREMIUM_ENABLED:false}
+    # SEC-23: volcar al log los enlaces de verificación/recuperación (con token). Solo tiene efecto en el perfil local
+    # y requiere activarlo expresamente; nunca habilitar fuera del desarrollo.
+    log-email-links: ${APP_DEV_LOG_EMAIL_LINKS:false}
     # Opcional: solo estos emails (coma). Vacío = cualquier usuario autenticado si la función está activa.
     grant-premium-email-allowlist: ${APP_DEV_GRANT_PREMIUM_EMAIL_ALLOWLIST:}
   audit:
@@ -200,6 +225,13 @@ spring:
   config:
     activate:
       on-profile: local
+  datasource:
+    username: ${PGUSER:${DB_USERNAME:postgres}}
+    password: ${PGPASSWORD:${DB_PASSWORD:postgres}}
+  flyway:
+    # Solo desarrollo: la BD local puede haberse creado con ddl-auto=update y haber derivado de las migraciones.
+    baseline-on-migrate: true
+    validate-on-migrate: false
   jpa:
     hibernate:
       ddl-auto: update

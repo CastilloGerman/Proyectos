@@ -34,7 +34,7 @@ function passwordMatchValidator(g: AbstractControl): ValidationErrors | null {
             <img src="assets/noemi-logo.png" alt="Noemí" class="reset-logo-img" />
           </div>
           <h1 class="reset-title">Nueva contraseña</h1>
-          <p class="reset-subtitle">Introduce tu nueva contraseña (mínimo 6 caracteres).</p>
+          <p class="reset-subtitle">Introduce tu nueva contraseña (mínimo 12 caracteres).</p>
           @if (token) {
             <form [formGroup]="form" (ngSubmit)="onSubmit()" class="reset-form">
               <mat-form-field appearance="outline" class="full-width">
@@ -44,9 +44,20 @@ function passwordMatchValidator(g: AbstractControl): ValidationErrors | null {
                   <mat-error>La contraseña es obligatoria</mat-error>
                 }
                 @if (form.get('newPassword')?.hasError('minlength')) {
-                  <mat-error>Mínimo 6 caracteres</mat-error>
+                  <mat-error>Mínimo 12 caracteres</mat-error>
                 }
               </mat-form-field>
+              @if (needsTotp) {
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Código de verificación (2FA)</mat-label>
+                  <input matInput formControlName="totpCode" type="text" inputmode="numeric"
+                         autocomplete="one-time-code" maxlength="10">
+                  <mat-hint>Introduce el código de tu app de autenticación</mat-hint>
+                  @if (form.get('totpCode')?.hasError('required') && form.get('totpCode')?.touched) {
+                    <mat-error>El código es obligatorio</mat-error>
+                  }
+                </mat-form-field>
+              }
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Repetir contraseña</mat-label>
                 <input matInput formControlName="confirmPassword" type="password" autocomplete="new-password">
@@ -168,6 +179,8 @@ export class ResetPasswordComponent implements OnInit {
   form: FormGroup;
   token: string | null = null;
   loading = false;
+  /** SEC-09: el backend pide el código 2FA si la cuenta lo tiene activado (error TOTP_REQUERIDO). */
+  needsTotp = false;
 
   constructor(
     private fb: FormBuilder,
@@ -179,8 +192,9 @@ export class ResetPasswordComponent implements OnInit {
   ) {
     this.form = this.fb.group(
       {
-        newPassword: ['', [Validators.required, Validators.minLength(6)]],
+        newPassword: ['', [Validators.required, Validators.minLength(12), Validators.maxLength(128)]],
         confirmPassword: ['', Validators.required],
+        totpCode: [''],
       },
       { validators: passwordMatchValidator }
     );
@@ -196,7 +210,8 @@ export class ResetPasswordComponent implements OnInit {
       return;
     }
     this.loading = true;
-    this.auth.resetPassword(this.token, this.form.value.newPassword).subscribe({
+    const totp = this.needsTotp ? String(this.form.value.totpCode ?? '').trim() : undefined;
+    this.auth.resetPassword(this.token, this.form.value.newPassword, totp).subscribe({
       next: () => {
         this.snackBar.open(
           this.translate.instant('auth.passwordReset.success'),
@@ -210,6 +225,12 @@ export class ResetPasswordComponent implements OnInit {
         const apiErr = err as { error?: { message?: string } };
         const srv =
           typeof apiErr.error?.message === 'string' ? String(apiErr.error.message).trim() : '';
+        if (srv === 'TOTP_REQUERIDO') {
+          this.needsTotp = true;
+          this.form.get('totpCode')?.setValidators([Validators.required]);
+          this.form.get('totpCode')?.updateValueAndValidity();
+          return;
+        }
         const msg = srv.length > 0 ? srv : this.translate.instant('auth.passwordReset.invalidLink');
         this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
       },

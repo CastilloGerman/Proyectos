@@ -57,6 +57,15 @@ describe('authInterceptor', () => {
     req.flush([]);
   });
 
+  it('SEC-07: no envia el JWT a URLs que no son de la API', () => {
+    getToken.mockReturnValue('my-jwt-token');
+    http.get('https://terceros.example.com/recurso').subscribe();
+
+    const req = httpMock.expectOne('https://terceros.example.com/recurso');
+    expect(req.request.headers.has('Authorization')).toBe(false);
+    req.flush([]);
+  });
+
   it('does not add Authorization header when token is absent', () => {
     getToken.mockReturnValue(null);
     http.get('/api/clientes').subscribe();

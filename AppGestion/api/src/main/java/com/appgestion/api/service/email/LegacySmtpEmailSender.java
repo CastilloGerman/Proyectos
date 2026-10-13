@@ -2,6 +2,7 @@ package com.appgestion.api.service.email;
 
 import com.appgestion.api.domain.entity.Empresa;
 import com.appgestion.api.dto.email.EmailJobPayload;
+import com.appgestion.api.util.SmtpTargetValidator;
 import jakarta.mail.internet.InternetAddress;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -18,6 +19,8 @@ import java.util.Optional;
  */
 @Component
 public class LegacySmtpEmailSender {
+
+    private static final int SMTP_TIMEOUT_MS = 15_000;
 
     public void send(Empresa emp, EmailJobPayload payload) throws Exception {
         JavaMailSenderImpl sender = buildSender(emp);
@@ -62,7 +65,14 @@ public class LegacySmtpEmailSender {
             throw new IllegalStateException("SMTP legacy: faltan credenciales en datos de empresa.");
         }
         String host = (emp.getMailHost() != null && !emp.getMailHost().isBlank()) ? emp.getMailHost() : "smtp.gmail.com";
+        host = host.trim();
         int port = Optional.ofNullable(emp.getMailPort()).orElse(587);
+        // SEC-03: nunca conectar a hosts internos ni a puertos no SMTP (se valida también aquí porque el DNS puede cambiar).
+        try {
+            SmtpTargetValidator.validate(host, port);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("SMTP legacy: servidor o puerto no permitido.");
+        }
         JavaMailSenderImpl sender = new JavaMailSenderImpl();
         sender.setHost(host);
         sender.setPort(port);
@@ -72,7 +82,11 @@ public class LegacySmtpEmailSender {
         props.put("mail.smtp.auth", "true");
         props.put("mail.smtp.starttls.enable", "true");
         props.put("mail.smtp.starttls.required", "true");
-        props.put("mail.smtp.ssl.trust", host);
+        // Se valida el certificado del servidor (antes se confiaba en cualquier certificado del host → MITM de credenciales).
+        props.put("mail.smtp.ssl.checkserveridentity", "true");
+        props.put("mail.smtp.connectiontimeout", String.valueOf(SMTP_TIMEOUT_MS));
+        props.put("mail.smtp.timeout", String.valueOf(SMTP_TIMEOUT_MS));
+        props.put("mail.smtp.writetimeout", String.valueOf(SMTP_TIMEOUT_MS));
         return sender;
     }
 }

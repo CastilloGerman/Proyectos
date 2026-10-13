@@ -19,6 +19,20 @@ public class AppEmailProperties {
 
     private Microsoft microsoft = new Microsoft();
 
+    /**
+     * Clave anterior, solo para rotación: se usa únicamente para DESCIFRAR valores que ya no abre la clave actual.
+     * Tras re-cifrar todo con la nueva clave puede vaciarse.
+     */
+    private String previousTokenEncryptionKey = "";
+
+    public String getPreviousTokenEncryptionKey() {
+        return previousTokenEncryptionKey;
+    }
+
+    public void setPreviousTokenEncryptionKey(String previousTokenEncryptionKey) {
+        this.previousTokenEncryptionKey = previousTokenEncryptionKey;
+    }
+
     public String getTokenEncryptionKey() {
         return tokenEncryptionKey;
     }

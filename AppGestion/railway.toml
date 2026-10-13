@@ -6,4 +6,6 @@
 buildCommand = "mvn -B -Dmaven.test.skip=true package && mkdir -p target && cp api/target/appgestion-api.jar target/appgestion-api.jar"
 
 [deploy]
-startCommand = "java -jar target/appgestion-api.jar"
+# SEC-20: spring.profiles.default solo se aplica si NO hay SPRING_PROFILES_ACTIVE; asi un despliegue sin perfil
+# explicito arranca en prod (RuntimeProfileGuard rechaza el arranque en la nube sin el perfil prod).
+startCommand = "java -Dspring.profiles.default=prod -jar target/appgestion-api.jar"

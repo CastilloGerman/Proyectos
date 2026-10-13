@@ -1,6 +1,8 @@
 package com.appgestion.api.security;
 
 import com.appgestion.api.util.TrustedClientAddressResolver;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -12,8 +14,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Limita peticiones por IP en rutas de autenticación (fuerza bruta / abuso).
@@ -23,7 +23,10 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class AuthRateLimitFilter extends OncePerRequestFilter {
 
-    private final Map<String, Bucket> cache = new ConcurrentHashMap<>();
+    /** SEC-11: tope de IPs rastreadas. Una entrada sin uso durante {@code refillMinutes} ya habría recuperado todo su cupo. */
+    private static final long MAX_TRACKED_CLIENTS = 100_000;
+
+    private final Cache<String, Bucket> cache;
     private final boolean enabled;
     private final int capacity;
     private final int refillMinutes;
@@ -38,6 +41,10 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
         this.refillMinutes = refillMinutes;
         this.mode = mode;
         this.trustedProxies = trustedProxies;
+        this.cache = Caffeine.newBuilder()
+                .expireAfterAccess(Duration.ofMinutes(Math.max(1, refillMinutes) + 1L))
+                .maximumSize(MAX_TRACKED_CLIENTS)
+                .build();
     }
 
     @Override
@@ -52,7 +59,7 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
         }
 
         String key = clientIp(request);
-        Bucket bucket = cache.computeIfAbsent(key, k -> newBucket());
+        Bucket bucket = cache.get(key, k -> newBucket());
         if (bucket.tryConsume(1)) {
             filterChain.doFilter(request, response);
         } else {
@@ -64,7 +71,14 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
     }
 
     private boolean isAuthRateLimitedPath(String uri, String method) {
-        if (uri == null || !"POST".equalsIgnoreCase(method)) {
+        if (uri == null) {
+            return false;
+        }
+        // SEC-11: la comprobación de un token de invitación es un GET que permite sondear tokens.
+        if ("GET".equalsIgnoreCase(method)) {
+            return uri.endsWith("/auth/invite/verify");
+        }
+        if (!"POST".equalsIgnoreCase(method)) {
             return false;
         }
         return uri.endsWith("/auth/login")
@@ -72,7 +86,13 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
                 || uri.endsWith("/auth/google")
                 || uri.endsWith("/auth/forgot-password")
                 || uri.endsWith("/auth/reset-password")
-                || uri.endsWith("/auth/invite/accept");
+                || uri.endsWith("/auth/verify-email")
+                || uri.endsWith("/auth/resend-verification")
+                || uri.endsWith("/auth/invite/accept")
+                // Endpoints autenticados que comprueban una credencial (contraseña o TOTP).
+                || uri.endsWith("/auth/change-password")
+                || uri.endsWith("/auth/totp/disable")
+                || uri.endsWith("/auth/totp/setup/confirm");
     }
 
     private Bucket newBucket() {

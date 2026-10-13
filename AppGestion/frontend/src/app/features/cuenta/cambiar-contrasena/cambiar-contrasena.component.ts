@@ -49,7 +49,7 @@ export class CambiarContrasenaComponent implements OnInit, OnDestroy {
 
   readonly form = this.fb.nonNullable.group({
     currentPassword: ['', [Validators.required, Validators.maxLength(128)]],
-    newPassword: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(128)]],
+    newPassword: ['', [Validators.required, Validators.minLength(12), Validators.maxLength(128)]],
     confirmPassword: ['', [Validators.required, passwordMatchValidator('newPassword')]],
   });
 

@@ -76,7 +76,7 @@ export type ConfigContext = 'presupuesto' | 'factura' | 'mail';
                   <img [src]="logoPreviewSrc" alt="Vista previa logo" class="logo-preview" />
                 </div>
               }
-              <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" #logoInput (change)="onLogoFile($event)" hidden />
+              <input type="file" accept="image/png,image/jpeg,image/jpg,image/gif" #logoInput (change)="onLogoFile($event)" hidden />
               <button mat-stroked-button type="button" (click)="logoInput.click()">Subir logo</button>
               @if (logoPreviewSrc || tieneLogoGuardada) {
                 <button mat-button type="button" color="warn" (click)="quitarLogo()">Quitar logo</button>
@@ -231,7 +231,7 @@ export class ConfigEmpresaDialogComponent implements OnInit {
   onLogoFile(ev: Event): void {
     const input = ev.target as HTMLInputElement;
     const file = input.files?.[0];
-    if (!file || !/^image\/(png|jpeg|jpg|webp)$/i.test(file.type)) {
+    if (!file || !/^image\/(png|jpeg|jpg|gif)$/i.test(file.type)) {
       this.snackBar.open(this.translate.instant('snack.configLogoFormat'), this.translate.instant('common.close'), {
         duration: 4000,
       });

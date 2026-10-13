@@ -77,10 +77,7 @@ public class SubscriptionController {
             log.warn("Checkout configuración: {}", e.getMessage());
             return ResponseEntity.badRequest()
                     .body(Map.of(
-                            "error",
-                            e.getMessage() != null && !e.getMessage().isBlank()
-                                    ? e.getMessage()
-                                    : "Configuración de Stripe incompleta en el servidor."));
+                            "error", "Configuración de Stripe incompleta en el servidor."));
         } catch (Exception e) {
             log.error("Checkout inesperado", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

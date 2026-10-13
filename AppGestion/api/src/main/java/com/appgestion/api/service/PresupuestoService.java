@@ -167,7 +167,7 @@ public class PresupuestoService {
         presupuesto.setUsuario(usuario);
         presupuesto.setCliente(cliente);
         presupuesto.setIvaHabilitado(request.ivaHabilitado());
-        presupuesto.setEstado(request.estado());
+        presupuesto.setEstado(normalizarEstado(request.estado())); // SEC-16: solo estados del catálogo
         presupuesto.setDescuentoGlobalPorcentaje(request.descuentoGlobalPorcentaje());
         presupuesto.setDescuentoGlobalFijo(request.descuentoGlobalFijo());
         presupuesto.setDescuentoAntesIva(request.descuentoAntesIva());
@@ -189,7 +189,7 @@ public class PresupuestoService {
 
         presupuesto.setCliente(cliente);
         presupuesto.setIvaHabilitado(request.ivaHabilitado());
-        presupuesto.setEstado(request.estado());
+        presupuesto.setEstado(normalizarEstado(request.estado())); // SEC-16: solo estados del catálogo
         presupuesto.setDescuentoGlobalPorcentaje(request.descuentoGlobalPorcentaje());
         presupuesto.setDescuentoGlobalFijo(request.descuentoGlobalFijo());
         presupuesto.setDescuentoAntesIva(request.descuentoAntesIva());
@@ -318,6 +318,8 @@ public class PresupuestoService {
 
             double descPctItem = Optional.ofNullable(req.descuentoPorcentaje()).orElse(0.0);
             double descFijoItem = Optional.ofNullable(req.descuentoFijo()).orElse(0.0);
+            // Ticket aparte: migrar este cálculo a BigDecimal. El double arrastra
+            // céntimos (27,135 puede quedar en 27,134999999999998 y verse como 27,13).
             double itemSubtotal = cantidad * precioUnitario;
             itemSubtotal = itemSubtotal * (1 - descPctItem / 100) - descFijoItem;
             item.setSubtotal(Math.max(0, itemSubtotal));
@@ -326,6 +328,14 @@ public class PresupuestoService {
         }
     }
 
+    /**
+     * Ticket aparte: migrar este cálculo a BigDecimal.
+     * <p>
+     * Suma y descuento van en {@code double}. Un 27,135 puede guardarse como
+     * 27,134999999999998 y el PDF o la pantalla lo enseñan como 27,13. La factura
+     * guarda base y cuota a céntimo y el total es su suma (opción B, a la espera
+     * del gestor), así que puede quedar 0,01 € por encima de este total.
+     */
     private void calcularTotales(Presupuesto presupuesto) {
         double subtotal = 0;
         double baseIva = 0;

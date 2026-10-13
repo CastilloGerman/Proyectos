@@ -92,6 +92,7 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.POST, "/publico/presupuestos/*/visto",
                             "/publico/presupuestos/*/responder").permitAll();
                     auth.requestMatchers("/auth/register", "/auth/login", "/auth/google", "/auth/forgot-password", "/auth/reset-password",
+                                "/auth/verify-email", "/auth/resend-verification",
                                 "/auth/invite/**").permitAll()
                         .requestMatchers("/auth/email/oauth/*/callback").permitAll()
                         .requestMatchers("/webhook/**").permitAll()
