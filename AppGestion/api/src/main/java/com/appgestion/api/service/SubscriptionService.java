@@ -1,5 +1,6 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.config.StripeConfig;
 import com.appgestion.api.domain.entity.StripeInvoiceLedger;
 import com.appgestion.api.domain.entity.StripeSubscription;
 import com.appgestion.api.domain.entity.Usuario;
@@ -37,6 +38,7 @@ public class SubscriptionService {
     private final UsuarioRepository usuarioRepository;
     private final StripeSubscriptionRepository stripeSubscriptionRepository;
     private final StripeInvoiceLedgerRepository stripeInvoiceLedgerRepository;
+    private final StripeConfig stripeConfig;
 
     @Value("${stripe.price-id-monthly}")
     private String configuredMonthlyPriceId;
@@ -53,10 +55,12 @@ public class SubscriptionService {
     public SubscriptionService(
             UsuarioRepository usuarioRepository,
             StripeSubscriptionRepository stripeSubscriptionRepository,
-            StripeInvoiceLedgerRepository stripeInvoiceLedgerRepository) {
+            StripeInvoiceLedgerRepository stripeInvoiceLedgerRepository,
+            StripeConfig stripeConfig) {
         this.usuarioRepository = usuarioRepository;
         this.stripeSubscriptionRepository = stripeSubscriptionRepository;
         this.stripeInvoiceLedgerRepository = stripeInvoiceLedgerRepository;
+        this.stripeConfig = stripeConfig;
     }
 
     /**
@@ -197,6 +201,7 @@ public class SubscriptionService {
             return;
         }
         try {
+            stripeConfig.ensureConfigured();
             Subscription sub = Subscription.retrieve(stripeSubscriptionId);
             syncFromStripeSubscription(sub, usuarioId, stripeCustomerId);
         } catch (StripeException e) {
@@ -217,6 +222,7 @@ public class SubscriptionService {
             return;
         }
         try {
+            stripeConfig.ensureConfigured();
             Subscription sub = Subscription.retrieve(stripeSubscriptionId);
             syncFromStripeSubscription(sub, null, null);
         } catch (StripeException e) {
@@ -295,6 +301,7 @@ public class SubscriptionService {
         usuario.setSubscriptionRequiresPaymentAction(false);
         usuarioRepository.save(usuario);
         try {
+            stripeConfig.ensureConfigured();
             Subscription sub = Subscription.retrieve(subId);
             syncFromStripeSubscription(sub, null, null);
         } catch (StripeException e) {

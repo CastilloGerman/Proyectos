@@ -1,5 +1,6 @@
 package com.appgestion.api.service;
 
+import com.appgestion.api.config.StripeConfig;
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.SubscriptionBillingPeriod;
 import com.appgestion.api.dto.response.SubscriptionInvoiceDto;
@@ -30,9 +31,11 @@ public class StripeService {
     private static final Logger log = LoggerFactory.getLogger(StripeService.class);
 
     private final UsuarioRepository usuarioRepository;
+    private final StripeConfig stripeConfig;
 
-    public StripeService(UsuarioRepository usuarioRepository) {
+    public StripeService(UsuarioRepository usuarioRepository, StripeConfig stripeConfig) {
         this.usuarioRepository = usuarioRepository;
+        this.stripeConfig = stripeConfig;
     }
 
     @Value("${stripe.price-id-monthly}")
@@ -68,6 +71,7 @@ public class StripeService {
     private String createCheckoutSession(
             Usuario usuario, SubscriptionBillingPeriod billingPeriod, boolean staleRecoveryAttempt)
             throws StripeException {
+        stripeConfig.ensureConfigured();
         final String priceId = resolveCheckoutPriceId(billingPeriod);
         if (successUrl == null
                 || successUrl.isBlank()
@@ -141,6 +145,7 @@ public class StripeService {
         if (stripeCustomerId == null || stripeCustomerId.isBlank()) {
             return List.of();
         }
+        stripeConfig.ensureConfigured();
         int lim = Math.min(Math.max(limit, 1), 100);
         InvoiceListParams params = InvoiceListParams.builder()
                 .setCustomer(stripeCustomerId)
@@ -171,6 +176,7 @@ public class StripeService {
     }
 
     public String createBillingPortalSession(String stripeCustomerId) throws StripeException {
+        stripeConfig.ensureConfigured();
         com.stripe.param.billingportal.SessionCreateParams params =
                 com.stripe.param.billingportal.SessionCreateParams.builder()
                         .setCustomer(stripeCustomerId)
@@ -190,6 +196,7 @@ public class StripeService {
         if (amountCents < 50) {
             throw new IllegalArgumentException("Importe demasiado bajo para el checkout");
         }
+        stripeConfig.ensureConfigured();
         SessionCreateParams params = SessionCreateParams.builder()
                 .setMode(Mode.PAYMENT)
                 .addLineItem(
