@@ -5,7 +5,7 @@ import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelect, MatSelectModule } from '@angular/material/select';
+import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -72,7 +72,7 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
   criterio: FiscalCriterio = 'DEVENGO';
   soloPagadas = false;
 
-  readonly years = this.buildYears();
+  years = this.buildYears();
   readonly trimestres = [1, 2, 3, 4] as const;
   readonly etiquetaTrimestre = etiquetaTrimestre;
   readonly displayedColumns347 = ['nombre', 'dni', 'base'] as const;
@@ -116,9 +116,16 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
     this.programarCarga303();
   }
 
-  cambiarTrimestre(select: MatSelect): void {
-    select.focus();
-    select.open();
+  verTrimestreAnterior(): void {
+    if (this.trimestre === 1) {
+      this.year -= 1;
+      this.trimestre = 4;
+      this.asegurarAnio(this.year);
+      this.cargar347();
+    } else {
+      this.trimestre -= 1;
+    }
+    this.programarCarga303();
   }
 
   abrirExplicaciones(accordion: MatAccordion, host: HTMLElement): void {
@@ -251,5 +258,11 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
       out.push(i);
     }
     return out;
+  }
+
+  private asegurarAnio(year: number): void {
+    if (!this.years.includes(year)) {
+      this.years = [year, ...this.years];
+    }
   }
 }

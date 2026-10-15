@@ -30,7 +30,6 @@
         <mat-form-field appearance="outline">
           <mat-label>Trimestre</mat-label>
           <mat-select
-            #trimestreSelect
             [ngModel]="trimestre"
             name="trimestre"
             (ngModelChange)="onTrimestreChange($event)"
@@ -84,41 +83,38 @@
       </mat-expansion-panel>
 
       @if (resumen(); as r) {
-        @if (cifra(r); as c) {
-          @if (c.importe === null) {
-          <section class="dh-hero dh-hero--vacio" [class.dh-hero--loading]="loading()" [attr.aria-busy]="loading()">
-            <p class="dh-hero__label">{{ c.etiqueta }}</p>
-          </section>
-          } @else {
-          <section
-            class="dh-hero"
-            [class.dh-hero--compensar]="esCompensar(r)"
-            [class.dh-hero--loading]="loading()"
-            [attr.aria-busy]="loading()"
-          >
-            <p class="dh-hero__label">{{ c.etiqueta }}</p>
-            <p class="dh-hero__amount">{{ c.importe | number : '1.2-2' : 'es' }} €</p>
-            <p class="dh-hero__split">
-              IVA repercutido {{ r.ivaRepercutido | number : '1.2-2' : 'es' }} € − IVA soportado
-              {{ r.ivaSoportado | number : '1.2-2' : 'es' }} €
-            </p>
-          </section>
-          }
-        }
-
-        <p class="dh-context">{{ r.resumenContexto }}</p>
-
-        @if (r.numeroFacturas === 0) {
+        @if (r.numeroFacturas === 0 && r.numeroGastos === 0) {
           <div class="dh-empty-state" role="status">
-            <p class="dh-empty-state__title">No hay facturas en T{{ r.trimestre }} {{ r.anio }}</p>
+            <p class="dh-empty-state__title">
+              No hay facturas ni gastos en {{ etiquetaTrimestre(r.trimestre) }} de {{ r.anio }}
+            </p>
             <div class="dh-empty-actions">
-              <button mat-stroked-button type="button" (click)="cambiarTrimestre(trimestreSelect)">
-                Cambiar de trimestre
+              <button mat-stroked-button type="button" (click)="verTrimestreAnterior()">
+                Ver el trimestre anterior
               </button>
               <a mat-stroked-button routerLink="../facturas/nuevo">Crear factura</a>
             </div>
           </div>
         } @else {
+          @if (cifra(r); as c) {
+            <section
+              class="dh-hero"
+              [class.dh-hero--compensar]="esCompensar(r)"
+              [class.dh-hero--loading]="loading()"
+              [attr.aria-busy]="loading()"
+            >
+              <p class="dh-hero__label">{{ c.etiqueta }}</p>
+              <p class="dh-hero__amount">{{ c.importe | number : '1.2-2' : 'es' }} €</p>
+              <p class="dh-hero__split">
+                IVA repercutido {{ r.ivaRepercutido | number : '1.2-2' : 'es' }} € − IVA soportado
+                {{ r.ivaSoportado | number : '1.2-2' : 'es' }} €
+              </p>
+            </section>
+          }
+          @if (r.numeroFacturas === 0) {
+            <p class="dh-sin-facturas">No hay facturas en este trimestre.</p>
+          }
+          <p class="dh-context">{{ r.resumenContexto }}</p>
           <div class="dh-resumen">
             <div class="dh-row">
               <span class="dh-k">Período</span>
@@ -149,23 +145,23 @@
               <span class="dh-v">{{ r.ivaSoportado | number : '1.2-2' : 'es' }} €</span>
             </div>
           </div>
-        }
 
-        @if (r.numeroFacturas > 0 && r.numeroGastos === 0) {
-          <p class="dh-gastos-hint">
-            No has registrado gastos este trimestre; tu IVA soportado puede estar infravalorado.
-            <a routerLink="../gastos">Gastos</a>
-          </p>
-        }
+          @if (r.numeroFacturas > 0 && r.numeroGastos === 0) {
+            <p class="dh-gastos-hint">
+              No has registrado gastos este trimestre; tu IVA soportado puede estar infravalorado.
+              <a routerLink="../gastos">Gastos</a>
+            </p>
+          }
 
-        @if (r.incidencias.length) {
-          <ul class="dh-issues">
-            @for (inc of r.incidencias; track inc.tipo + '-' + inc.id) {
-              <li>
-                <a [routerLink]="rutaApp(inc.ruta)">{{ inc.etiqueta }}</a>
-              </li>
-            }
-          </ul>
+          @if (r.incidencias.length) {
+            <ul class="dh-issues">
+              @for (inc of r.incidencias; track inc.tipo + '-' + inc.id) {
+                <li>
+                  <a [routerLink]="rutaApp(inc.ruta)">{{ inc.etiqueta }}</a>
+                </li>
+              }
+            </ul>
+          }
         }
       } @else if (loading()) {
         <div class="dh-loading" role="status">
