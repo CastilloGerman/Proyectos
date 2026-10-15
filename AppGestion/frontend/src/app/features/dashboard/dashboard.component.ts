@@ -23,7 +23,7 @@ import { Material } from '../../core/models/material.model';
 import { Gasto } from '../../core/models/gasto.model';
 import { EstadoBadgeComponent } from '../../shared/estado-badge/estado-badge.component';
 import { FacturaParcialImporteDialogComponent } from '../../shared/factura-parcial-importe-dialog/factura-parcial-importe-dialog.component';
-import { catchError, forkJoin, of } from 'rxjs';
+import { catchError, finalize, of } from 'rxjs';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 interface PresupuestoStats {
@@ -99,6 +99,9 @@ export interface TopCliente {
         <h1>{{ 'nav.dashboard' | translate }}</h1>
         <p class="subtitle">{{ 'dashboard.subtitle' | translate }}</p>
       </header>
+      @if (cargandoPresupuestos || cargandoFacturas || cargandoMateriales || cargandoGastos) {
+        <mat-progress-bar mode="indeterminate" class="dashboard-loading" aria-hidden="true"></mat-progress-bar>
+      }
 
       <section class="kpi-grid">
         <div class="kpi-card kpi-presupuestos">
@@ -106,7 +109,7 @@ export interface TopCliente {
             <mat-icon>description</mat-icon>
           </div>
           <div class="kpi-content">
-            <span class="kpi-value">{{ presupuestosCount }}</span>
+            <span class="kpi-value">{{ cargandoPresupuestos ? '…' : presupuestosCount }}</span>
             <span class="kpi-label">{{ 'nav.budgets' | translate }}</span>
           </div>
           <a mat-button routerLink="/presupuestos" class="kpi-link">{{ 'dashboard.seeAllEstimates' | translate }}</a>
@@ -116,7 +119,7 @@ export interface TopCliente {
             <mat-icon>receipt_long</mat-icon>
           </div>
           <div class="kpi-content">
-            <span class="kpi-value">{{ facturasCount }}</span>
+            <span class="kpi-value">{{ cargandoFacturas ? '…' : facturasCount }}</span>
             <span class="kpi-label">{{ 'nav.invoices' | translate }}</span>
           </div>
           <a mat-button routerLink="/facturas" class="kpi-link">{{ 'dashboard.seeAllInvoices' | translate }}</a>
@@ -126,7 +129,11 @@ export interface TopCliente {
             <mat-icon>euro</mat-icon>
           </div>
           <div class="kpi-content">
-            <span class="kpi-value">{{ facturaStats.totalFacturado | number:'1.2-2' }} €</span>
+            @if (cargandoFacturas) {
+              <span class="kpi-value">…</span>
+            } @else {
+              <span class="kpi-value">{{ facturaStats.totalFacturado | number:'1.2-2' }} €</span>
+            }
             <span class="kpi-label">{{ 'dashboard.totalInvoiced' | translate }}</span>
           </div>
           <a mat-button routerLink="/facturas" class="kpi-link">{{ 'dashboard.seeInvoices' | translate }}</a>
@@ -136,7 +143,11 @@ export interface TopCliente {
             <mat-icon>pending_actions</mat-icon>
           </div>
           <div class="kpi-content">
-            <span class="kpi-value">{{ facturaStats.totalPendiente | number:'1.2-2' }} €</span>
+            @if (cargandoFacturas) {
+              <span class="kpi-value">…</span>
+            } @else {
+              <span class="kpi-value">{{ facturaStats.totalPendiente | number:'1.2-2' }} €</span>
+            }
             <span class="kpi-label">{{ 'dashboard.toCollect' | translate }}</span>
           </div>
           <a mat-button routerLink="/facturas" [queryParams]="{ pendienteCobro: '1' }" class="kpi-link">{{ 'dashboard.seePending' | translate }}</a>
@@ -439,7 +450,9 @@ export interface TopCliente {
                 </mat-form-field>
               }
             </div>
-            @if (facturasCount === 0) {
+            @if (cargandoFacturas) {
+              <p class="chart-empty">{{ 'common.loading' | translate }}</p>
+            } @else if (facturasCount === 0) {
               <p class="chart-empty">{{ 'dashboard.chartEmpty' | translate }}</p>
             } @else {
               <div class="chart-wrap" [attr.aria-label]="'dashboard.chartAria' | translate">
@@ -549,7 +562,9 @@ export interface TopCliente {
             <a mat-button routerLink="/clientes">{{ 'dashboard.seeAllClients' | translate }}</a>
           </mat-card-header>
           <mat-card-content>
-            @if (topClientes.length === 0) {
+            @if (cargandoPresupuestos || cargandoFacturas) {
+              <p class="empty">{{ 'common.loading' | translate }}</p>
+            } @else if (topClientes.length === 0) {
               <p class="empty">{{ 'dashboard.topCustomersEmpty' | translate }}</p>
             } @else {
               <ul class="recent-list top-list top-clientes-list">
@@ -580,7 +595,9 @@ export interface TopCliente {
             <a mat-button routerLink="/materiales">{{ 'dashboard.seeAllMaterials' | translate }}</a>
           </mat-card-header>
           <mat-card-content>
-            @if (topMateriales.length === 0) {
+            @if (cargandoMateriales) {
+              <p class="empty">{{ 'common.loading' | translate }}</p>
+            } @else if (topMateriales.length === 0) {
               <p class="empty">{{ 'dashboard.topMaterialsEmpty' | translate }}</p>
             } @else {
               <ul class="recent-list top-list">
@@ -606,7 +623,9 @@ export interface TopCliente {
             <a mat-button routerLink="/presupuestos">{{ 'dashboard.seeAllEstimates' | translate }}</a>
           </mat-card-header>
           <mat-card-content>
-            @if (recentPresupuestos.length === 0) {
+            @if (cargandoPresupuestos) {
+              <p class="empty">{{ 'common.loading' | translate }}</p>
+            } @else if (recentPresupuestos.length === 0) {
               <p class="empty">{{ 'dashboard.recentEstimatesEmpty' | translate }}</p>
             } @else {
               <ul class="recent-list">
@@ -638,7 +657,9 @@ export interface TopCliente {
             <a mat-button routerLink="/facturas">{{ 'dashboard.seeAllInvoices' | translate }}</a>
           </mat-card-header>
           <mat-card-content>
-            @if (recentFacturas.length === 0) {
+            @if (cargandoFacturas) {
+              <p class="empty">{{ 'common.loading' | translate }}</p>
+            } @else if (recentFacturas.length === 0) {
               <p class="empty">{{ 'dashboard.recentInvoicesEmpty' | translate }}</p>
             } @else {
               <ul class="recent-list">
@@ -673,7 +694,9 @@ export interface TopCliente {
             <a mat-button routerLink="/gastos">{{ 'dashboard.seeAllExpenses' | translate }}</a>
           </mat-card-header>
           <mat-card-content>
-            @if (recentGastos.length === 0) {
+            @if (cargandoGastos) {
+              <p class="empty">{{ 'common.loading' | translate }}</p>
+            } @else if (recentGastos.length === 0) {
               <p class="empty">{{ 'dashboard.recentExpensesEmpty' | translate }}</p>
               @if (auth.canMutate()) {
                 <a mat-stroked-button color="primary" routerLink="/gastos/nuevo" class="gastos-empty-cta">
@@ -712,6 +735,10 @@ export interface TopCliente {
 
     .dashboard-header {
       margin-bottom: var(--app-space-xl, 32px);
+    }
+
+    .dashboard-loading {
+      margin: -16px 0 24px;
     }
 
     .dashboard-header h1 {
@@ -1419,6 +1446,10 @@ export interface TopCliente {
   `]
 })
 export class DashboardComponent implements OnInit, AfterViewInit {
+  cargandoPresupuestos = true;
+  cargandoFacturas = true;
+  cargandoMateriales = true;
+  cargandoGastos = true;
   presupuestosCount = 0;
   facturasCount = 0;
   presupuestoStats: PresupuestoStats = {
@@ -1633,38 +1664,62 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       this.refreshMonthDrillLabel();
       this.cdr.detectChanges();
     });
-    forkJoin({
-      presupuestos: this.presupuestoService.getAll().pipe(catchError(() => this.emptyAfterLoadFail<Presupuesto>('snack.estimatesLoadFail'))),
-      facturas: this.facturaService.getAll().pipe(catchError(() => this.emptyAfterLoadFail<Factura>('snack.invoiceLoadFail'))),
-      materiales: this.materialService.getTopUsados().pipe(catchError(() => this.emptyAfterLoadFail<Material>('snack.materialsLoadFail'))),
-      gastos: this.gastoService.getAll().pipe(catchError(() => this.emptyAfterLoadFail<Gasto>('gastos.loadFail'))),
-    }).subscribe({
-      next: ({ presupuestos, facturas, materiales, gastos }) => {
-        this.allPresupuestos = presupuestos;
-        this.presupuestosCount = presupuestos.length;
-        this.recentPresupuestos = [...presupuestos]
-          .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
-          .slice(0, 5);
-        this.computePresupuestoStats(presupuestos);
-
-        this.allFacturas = facturas;
-        this.facturasCount = facturas.length;
-        this.recentFacturas = [...facturas]
-          .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
-          .slice(0, 5);
-        this.computeFacturaStats(facturas);
-        this.ingresosPorMes = this.computeIngresosChartData(facturas);
-
-        this.topMateriales = materiales;
-        this.computeTopClientes();
-
-        this.recentGastos = [...gastos]
-          .sort((a, b) => this.parseLocalDate(b.fecha).getTime() - this.parseLocalDate(a.fecha).getTime())
-          .slice(0, 5);
-        this.gastoTrimestreStats = this.computeGastoTrimestreStats(gastos);
-
+    this.presupuestoService.getAll().pipe(
+      takeUntilDestroyed(this.destroyRef),
+      catchError(() => this.emptyAfterLoadFail<Presupuesto>('snack.estimatesLoadFail')),
+      finalize(() => {
+        this.cargandoPresupuestos = false;
         this.scheduleLayoutRefresh();
-      },
+      }),
+    ).subscribe((presupuestos) => {
+      this.allPresupuestos = presupuestos;
+      this.presupuestosCount = presupuestos.length;
+      this.recentPresupuestos = [...presupuestos]
+        .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
+        .slice(0, 5);
+      this.computePresupuestoStats(presupuestos);
+      this.computeTopClientes();
+    });
+
+    this.facturaService.getAll().pipe(
+      takeUntilDestroyed(this.destroyRef),
+      catchError(() => this.emptyAfterLoadFail<Factura>('snack.invoiceLoadFail')),
+      finalize(() => {
+        this.cargandoFacturas = false;
+        this.scheduleLayoutRefresh();
+      }),
+    ).subscribe((facturas) => {
+      this.allFacturas = facturas;
+      this.facturasCount = facturas.length;
+      this.recentFacturas = [...facturas]
+        .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
+        .slice(0, 5);
+      this.computeFacturaStats(facturas);
+      this.ingresosPorMes = this.computeIngresosChartData(facturas);
+      this.computeTopClientes();
+    });
+
+    this.materialService.getTopUsados().pipe(
+      takeUntilDestroyed(this.destroyRef),
+      catchError(() => this.emptyAfterLoadFail<Material>('snack.materialsLoadFail')),
+      finalize(() => {
+        this.cargandoMateriales = false;
+      }),
+    ).subscribe((materiales) => {
+      this.topMateriales = materiales;
+    });
+
+    this.gastoService.getAll().pipe(
+      takeUntilDestroyed(this.destroyRef),
+      catchError(() => this.emptyAfterLoadFail<Gasto>('gastos.loadFail')),
+      finalize(() => {
+        this.cargandoGastos = false;
+      }),
+    ).subscribe((gastos) => {
+      this.recentGastos = [...gastos]
+        .sort((a, b) => this.parseLocalDate(b.fecha).getTime() - this.parseLocalDate(a.fecha).getTime())
+        .slice(0, 5);
+      this.gastoTrimestreStats = this.computeGastoTrimestreStats(gastos);
     });
   }
 
