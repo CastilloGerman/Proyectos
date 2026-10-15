@@ -24,14 +24,15 @@ public interface FacturaRepository extends JpaRepository<Factura, Long> {
             """)
     List<Long> findIdsByUsuarioIdForList(@Param("uid") Long uid, @Param("incluirAnuladas") boolean incluirAnuladas);
 
-    /** Grafo de listado: cliente, presupuesto, anticipo, partidas y material en una sola consulta. */
+    /**
+     * Cabecera del listado. Sin partidas: un join de líneas multiplica las filas y el JSON
+     * del grid/dashboard, que no muestran el detalle. El detalle las pide por id.
+     */
     @Query("""
-            select distinct f from Factura f
+            select f from Factura f
             join fetch f.cliente
             left join fetch f.presupuesto
             left join fetch f.facturaAnticipoReferencia
-            left join fetch f.items i
-            left join fetch i.material
             where f.id in :ids
             """)
     List<Factura> findForListByIds(@Param("ids") Collection<Long> ids);

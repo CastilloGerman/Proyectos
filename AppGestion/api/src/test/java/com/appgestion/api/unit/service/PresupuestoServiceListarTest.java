@@ -2,6 +2,7 @@ package com.appgestion.api.unit.service;
 
 import com.appgestion.api.domain.entity.Cliente;
 import com.appgestion.api.domain.entity.Presupuesto;
+import com.appgestion.api.domain.entity.PresupuestoItem;
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.domain.enums.EstadoCliente;
 import com.appgestion.api.domain.enums.TipoFactura;
@@ -85,7 +86,12 @@ class PresupuestoServiceListarTest {
         presupuesto.setUsuario(usuario);
         presupuesto.setCliente(cliente);
         presupuesto.setEstado("Pendiente");
-        presupuesto.setItems(new ArrayList<>());
+        PresupuestoItem partida = new PresupuestoItem();
+        partida.setId(5L);
+        partida.setCantidad(2.0);
+        partida.setPrecioUnitario(10.0);
+        partida.setSubtotal(20.0);
+        presupuesto.setItems(new ArrayList<>(List.of(partida)));
 
         Instant vista = Instant.parse("2026-01-01T00:00:00Z");
         Instant aviso = Instant.parse("2026-01-02T00:00:00Z");
@@ -103,6 +109,7 @@ class PresupuestoServiceListarTest {
         List<PresupuestoResponse> result = service.listar(7L, null);
 
         assertThat(result).hasSize(1);
+        assertThat(result.get(0).items()).isEmpty();
         assertThat(result.get(0).facturaId()).isEqualTo(99L);
         assertThat(result.get(0).enlacePrimeraVistaAt()).isEqualTo(vista);
         assertThat(result.get(0).enlaceNumVistas()).isEqualTo(2L);

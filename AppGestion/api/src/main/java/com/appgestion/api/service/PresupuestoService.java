@@ -112,7 +112,8 @@ public class PresupuestoService {
                             enlace != null ? enlace.primeraVistaAt() : null,
                             enlace != null ? enlace.numVistas() : 0L,
                             aviso != null ? aviso.count() : 0L,
-                            aviso != null ? aviso.ultimo() : null);
+                            aviso != null ? aviso.ultimo() : null,
+                            false);
                 });
         if (q != null && !q.isBlank()) {
             String lower = q.strip().toLowerCase();
@@ -387,7 +388,8 @@ public class PresupuestoService {
                 enlace.getPrimeraVistaAt(),
                 numVistas != null ? numVistas : 0L,
                 alertCount,
-                latestAlert);
+                latestAlert,
+                true);
     }
 
     private PresupuestoResponse buildResponse(Presupuesto presupuesto,
@@ -395,8 +397,9 @@ public class PresupuestoService {
                                                Instant primeraVistaAt,
                                                long numVistas,
                                                long alertCount,
-                                               Instant latestAlert) {
-        List<PresupuestoItemResponse> items = presupuesto.getItems().stream()
+                                               Instant latestAlert,
+                                               boolean includeItems) {
+        List<PresupuestoItemResponse> items = includeItems ? presupuesto.getItems().stream()
                 .map(item -> new PresupuestoItemResponse(
                         item.getId(),
                         item.getMaterial() != null ? item.getMaterial().getId() : null,
@@ -407,7 +410,7 @@ public class PresupuestoService {
                         item.getSubtotal(),
                         Optional.ofNullable(item.getVisiblePdf()).orElse(true)
                 ))
-                .toList();
+                .toList() : List.of();
 
         var cli = presupuesto.getCliente();
         String estadoCliente = cli != null && cli.getEstadoCliente() != null

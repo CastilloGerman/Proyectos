@@ -107,7 +107,7 @@ public class FacturaService {
         var stream = ids.stream()
                 .map(byId::get)
                 .filter(Objects::nonNull)
-                .map(f -> facturaResponseMapper.toResponse(f, List.of()));
+                .map(facturaResponseMapper::toListResponse);
         if (q != null && !q.isBlank()) {
             String lower = q.strip().toLowerCase();
             stream = stream.filter(f ->

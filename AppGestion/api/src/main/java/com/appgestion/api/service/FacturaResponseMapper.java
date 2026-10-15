@@ -14,11 +14,20 @@ import java.util.List;
 public class FacturaResponseMapper {
 
     public FacturaResponse toResponse(Factura factura, List<FacturaCobro> cobrosList) {
-        return toResponse(factura, cobrosList, List.of());
+        return toResponse(factura, cobrosList, List.of(), true);
     }
 
     public FacturaResponse toResponse(Factura factura, List<FacturaCobro> cobrosList, List<String> avisos) {
-        List<FacturaItemResponse> items = factura.getItems().stream()
+        return toResponse(factura, cobrosList, avisos, true);
+    }
+
+    /** Listados y dashboard: no hidrata partidas ni materiales. */
+    public FacturaResponse toListResponse(Factura factura) {
+        return toResponse(factura, List.of(), List.of(), false);
+    }
+
+    public FacturaResponse toResponse(Factura factura, List<FacturaCobro> cobrosList, List<String> avisos, boolean includeItems) {
+        List<FacturaItemResponse> items = includeItems ? factura.getItems().stream()
                 .map(item -> new FacturaItemResponse(
                         item.getId(),
                         item.getMaterial() != null ? item.getMaterial().getId() : null,
@@ -30,7 +39,7 @@ public class FacturaResponseMapper {
                         Boolean.TRUE.equals(item.getAplicaIva()) || item.getAplicaIva() == null,
                         item.getTipoIva() != null ? item.getTipoIva() : (Boolean.FALSE.equals(item.getAplicaIva()) ? 0 : 21)
                 ))
-                .toList();
+                .toList() : List.of();
 
         List<FacturaCobroResponse> cobros = cobrosList.stream()
                 .map(c -> new FacturaCobroResponse(

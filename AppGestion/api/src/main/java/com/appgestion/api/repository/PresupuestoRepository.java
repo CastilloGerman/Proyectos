@@ -19,13 +19,13 @@ public interface PresupuestoRepository extends JpaRepository<Presupuesto, Long> 
     @Query("select p.id from Presupuesto p where p.usuario.id = :usuarioId order by p.fechaCreacion desc")
     List<Long> findIdsByUsuarioIdOrderByFechaCreacionDesc(@Param("usuarioId") Long usuarioId);
 
-    /** Grafo de listado: cliente, usuario, partidas y material en una sola consulta. */
+    /**
+     * Cabecera del listado (cliente). Las partidas no se cargan: el grid y el dashboard
+     * solo usan totales e importes ya calculados. El detalle las pide por id.
+     */
     @Query("""
-            select distinct p from Presupuesto p
+            select p from Presupuesto p
             join fetch p.cliente
-            join fetch p.usuario
-            left join fetch p.items i
-            left join fetch i.material
             where p.id in :ids
             """)
     List<Presupuesto> findForListByIds(@Param("ids") Collection<Long> ids);
