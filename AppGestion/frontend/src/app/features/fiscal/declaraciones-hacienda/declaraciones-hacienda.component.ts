@@ -20,6 +20,7 @@ import { EMPTY, Subject, catchError } from 'rxjs';
 import { FiscalService } from '../../../core/services/fiscal.service';
 import { FiscalCriterio, Modelo303Resumen, Modelo347Resumen } from '../../../core/models/fiscal.model';
 import { ETIQUETA_A_COMPENSAR, FiltroModelo303, cifraModelo303, observacionesModelo303 } from './hacienda-carga';
+import { diaEnMadrid, trimestrePorDefecto } from './hacienda-periodo';
 import { FiscalAlertaBannerComponent } from '../fiscal-alerta-banner/fiscal-alerta-banner.component';
 import { TranslateService } from '@ngx-translate/core';
 
@@ -61,8 +62,10 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
   readonly resumen = signal<Modelo303Resumen | null>(null);
   readonly modelo347 = signal<Modelo347Resumen | null>(null);
 
-  year = new Date().getFullYear();
-  trimestre = this.trimestreActual();
+  private readonly hoy = diaEnMadrid(new Date());
+  private readonly periodoInicial = trimestrePorDefecto(this.hoy);
+  year = this.periodoInicial.year;
+  trimestre = this.periodoInicial.trimestre;
   criterio: FiscalCriterio = 'DEVENGO';
   soloPagadas = false;
 
@@ -212,16 +215,8 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
     this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
   }
 
-  private trimestreActual(): number {
-    const m = new Date().getMonth() + 1;
-    if (m <= 3) return 1;
-    if (m <= 6) return 2;
-    if (m <= 9) return 3;
-    return 4;
-  }
-
   private buildYears(): number[] {
-    const y = new Date().getFullYear();
+    const y = this.hoy.year;
     const out: number[] = [];
     for (let i = y + 1; i >= y - 6; i--) {
       out.push(i);
