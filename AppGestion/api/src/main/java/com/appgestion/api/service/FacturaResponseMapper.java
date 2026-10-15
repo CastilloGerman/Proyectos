@@ -14,6 +14,10 @@ import java.util.List;
 public class FacturaResponseMapper {
 
     public FacturaResponse toResponse(Factura factura, List<FacturaCobro> cobrosList) {
+        return toResponse(factura, cobrosList, List.of());
+    }
+
+    public FacturaResponse toResponse(Factura factura, List<FacturaCobro> cobrosList, List<String> avisos) {
         List<FacturaItemResponse> items = factura.getItems().stream()
                 .map(item -> new FacturaItemResponse(
                         item.getId(),
@@ -72,7 +76,8 @@ public class FacturaResponseMapper {
                 factura.getAnulada(),
                 factura.getFechaAnulacion(),
                 factura.getMotivoAnulacion(),
-                cobros
+                cobros,
+                avisos == null ? List.of() : List.copyOf(avisos)
         );
     }
 }

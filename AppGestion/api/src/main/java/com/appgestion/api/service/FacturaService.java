@@ -32,17 +32,22 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class FacturaService {
 
     private static final int SCALE = 2;
+    /** Cantidad y precio de la factura final con anticipo se guardan a 4 decimales. */
+    private static final int ESCALA_CANTIDAD_PRECIO = 4;
     private static final RoundingMode ROUNDING = RoundingMode.HALF_UP;
+    static final String AVISO_DESCUENTO_PERDIDO = "se ha perdido el descuento de esta línea";
 
     private final FacturaRepository facturaRepository;
     private final ClienteRepository clienteRepository;
@@ -207,12 +212,17 @@ public class FacturaService {
         factura.setNotas(request.notas());
         factura.setIvaHabilitado(request.ivaHabilitado());
 
+        List<LineaGuardada> anteriores = copiarLineas(factura);
         factura.getItems().clear();
-        mapItems(request.items(), factura);
+        List<String> avisos = new ArrayList<>();
+        mapItems(request.items(), factura, anteriores, avisos);
         calcularTotales(factura);
         factura = facturaRepository.save(factura);
         facturaAuditoriaService.registrar(factura, FacturaAuditoriaService.EVENTO_EDITADA, antes, usuarioId);
-        return facturaResponseMapper.toResponse(factura, facturaCobroRepository.findByFacturaIdOrderByFechaDescCreatedAtDesc(factura.getId()));
+        return facturaResponseMapper.toResponse(
+                factura,
+                facturaCobroRepository.findByFacturaIdOrderByFechaDescCreatedAtDesc(factura.getId()),
+                avisos);
     }
 
     /**
@@ -525,6 +535,22 @@ public class FacturaService {
     }
 
     private void mapItems(List<FacturaItemRequest> itemRequests, Factura factura) {
+        mapItems(itemRequests, factura, List.of(), null);
+    }
+
+    /**
+     * Al editar, la base neta se conserva si la línea se reconoce y no cambian
+     * cantidad, precio ni tipo. El reconocimiento es por id. Sin id, por
+     * descripción, cantidad, precio y tipo, y solo si esa coincidencia es única.
+     * Cantidad y precio se comparan a {@link #ESCALA_CANTIDAD_PRECIO} decimales.
+     */
+    private void mapItems(
+            List<FacturaItemRequest> itemRequests,
+            Factura factura,
+            List<LineaGuardada> anteriores,
+            List<String> avisos) {
+        Set<Long> usadosPorId = new HashSet<>();
+        Set<Integer> usadosPorIndice = new HashSet<>();
         for (FacturaItemRequest req : itemRequests) {
             FacturaItem item = new FacturaItem();
             item.setFactura(factura);
@@ -551,12 +577,109 @@ public class FacturaService {
                 item.setTareaManual(req.tareaManual());
             }
 
-            BigDecimal itemSubtotal = cantidad.multiply(precioUnitario).setScale(SCALE, ROUNDING);
-            item.setSubtotal(itemSubtotal.doubleValue());
+            LineaGuardada anterior = emparejar(req, tipo, anteriores, usadosPorId, usadosPorIndice);
+            boolean mismaLinea = anterior != null
+                    && mismaEscala(cantidad, anterior.cantidad())
+                    && mismaEscala(precioUnitario, anterior.precio())
+                    && tipo == anterior.tipo();
+            if (mismaLinea) {
+                item.setSubtotal(anterior.subtotal().doubleValue());
+            } else {
+                BigDecimal itemSubtotal = cantidad.multiply(precioUnitario).setScale(SCALE, ROUNDING);
+                item.setSubtotal(itemSubtotal.doubleValue());
+                if (avisos != null && anterior != null && baseDistintaDelProducto(anterior)) {
+                    avisos.add(AVISO_DESCUENTO_PERDIDO);
+                }
+            }
             item.setCuotaIva(0.0);
 
             factura.getItems().add(item);
         }
+    }
+
+    private LineaGuardada emparejar(
+            FacturaItemRequest req,
+            int tipo,
+            List<LineaGuardada> anteriores,
+            Set<Long> usadosPorId,
+            Set<Integer> usadosPorIndice) {
+        if (req.id() != null) {
+            for (int i = 0; i < anteriores.size(); i++) {
+                LineaGuardada linea = anteriores.get(i);
+                if (linea.id() != null && req.id().equals(linea.id()) && usadosPorId.add(linea.id())) {
+                    usadosPorIndice.add(i);
+                    return linea;
+                }
+            }
+            return null;
+        }
+        List<Integer> coincidencias = new ArrayList<>();
+        for (int i = 0; i < anteriores.size(); i++) {
+            if (usadosPorIndice.contains(i)) {
+                continue;
+            }
+            LineaGuardada linea = anteriores.get(i);
+            if (mismaTupla(req, tipo, linea)) {
+                coincidencias.add(i);
+            }
+        }
+        if (coincidencias.size() != 1) {
+            return null;
+        }
+        int indice = coincidencias.get(0);
+        usadosPorIndice.add(indice);
+        LineaGuardada linea = anteriores.get(indice);
+        if (linea.id() != null) {
+            usadosPorId.add(linea.id());
+        }
+        return linea;
+    }
+
+    private static boolean mismaTupla(FacturaItemRequest req, int tipo, LineaGuardada linea) {
+        return texto(req.tareaManual()).equals(texto(linea.descripcion()))
+                && mismaEscala(BigDecimal.valueOf(Optional.ofNullable(req.cantidad()).orElse(0.0)), linea.cantidad())
+                && mismaEscala(BigDecimal.valueOf(Optional.ofNullable(req.precioUnitario()).orElse(0.0)), linea.precio())
+                && tipo == linea.tipo();
+    }
+
+    private static boolean mismaEscala(BigDecimal pedido, BigDecimal guardado) {
+        return pedido.setScale(ESCALA_CANTIDAD_PRECIO, ROUNDING)
+                .compareTo(guardado.setScale(ESCALA_CANTIDAD_PRECIO, ROUNDING)) == 0;
+    }
+
+    private static boolean baseDistintaDelProducto(LineaGuardada linea) {
+        BigDecimal producto = linea.cantidad().multiply(linea.precio()).setScale(SCALE, ROUNDING);
+        return producto.compareTo(linea.subtotal().setScale(SCALE, ROUNDING)) != 0;
+    }
+
+    private static String texto(String valor) {
+        return valor == null ? "" : valor.trim();
+    }
+
+    private static List<LineaGuardada> copiarLineas(Factura factura) {
+        List<LineaGuardada> copias = new ArrayList<>();
+        for (FacturaItem item : factura.getItems()) {
+            String descripcion = Boolean.TRUE.equals(item.getEsTareaManual())
+                    ? item.getTareaManual()
+                    : (item.getMaterial() != null ? item.getMaterial().getNombre() : "");
+            copias.add(new LineaGuardada(
+                    item.getId(),
+                    descripcion,
+                    dinero(item.getCantidad()),
+                    dinero(item.getPrecioUnitario()),
+                    item.getTipoIva() == null ? TipoIva.GENERAL : item.getTipoIva(),
+                    dinero(item.getSubtotal())));
+        }
+        return copias;
+    }
+
+    private record LineaGuardada(
+            Long id,
+            String descripcion,
+            BigDecimal cantidad,
+            BigDecimal precio,
+            int tipo,
+            BigDecimal subtotal) {
     }
 
     /**

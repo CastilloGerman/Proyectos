@@ -660,6 +660,7 @@ export class FacturaFormComponent implements OnInit {
         itemList.forEach((it) =>
           this.items.push(
             this.fb.group({
+              id: [it.id ?? null],
               materialId: [it.materialId ?? null],
               tareaManual: [it.descripcion || ''],
               cantidad: [it.cantidad, [Validators.required, Validators.min(0.001)]],
@@ -844,6 +845,7 @@ export class FacturaFormComponent implements OnInit {
     }
     const value = this.form.getRawValue();
     const rowItems = (value.items ?? []) as Array<{
+      id?: number | null;
       materialId?: number | null;
       tareaManual?: string;
       cantidad: number | string;
@@ -854,7 +856,7 @@ export class FacturaFormComponent implements OnInit {
     const ivaOn = value.ivaHabilitado !== false;
     const items: FacturaItemRequest[] = rowItems.map((it) => {
       const tipoIva = ivaOn ? (it.tipoIva ?? 21) : 0;
-      return {
+      const item: FacturaItemRequest = {
         materialId: it.materialId || undefined,
         tareaManual: it.tareaManual || undefined,
         cantidad: +it.cantidad,
@@ -862,6 +864,10 @@ export class FacturaFormComponent implements OnInit {
         aplicaIva: tipoIva !== 0,
         tipoIva,
       };
+      if (it.id) {
+        item.id = it.id;
+      }
+      return item;
     });
     const payload: FacturaRequest = {
       clienteId: value.clienteId as number,

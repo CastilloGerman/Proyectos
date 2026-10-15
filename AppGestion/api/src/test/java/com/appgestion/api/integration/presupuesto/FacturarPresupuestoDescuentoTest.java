@@ -8,6 +8,8 @@ import com.appgestion.api.repository.OrganizationRepository;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -27,6 +29,7 @@ import java.math.RoundingMode;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(classes = AppGestionApiApplication.class)
@@ -173,6 +176,158 @@ class FacturarPresupuestoDescuentoTest {
         assertThat(linea.get("tipoIva").asInt()).isEqualTo(21);
     }
 
+    /**
+     * El formulario reenvía el id, la cantidad y el precio, sin la base neta.
+     * Guardar solo las notas deja la cabecera en 98,99 / 20,79 / 119,78.
+     */
+    @Test
+    void editarSoloLasNotas_conservaLaBaseNetaDe9899() throws Exception {
+        String body = presupuesto(
+                linea("Trabajo", "3.0", "33.33", true, "0.0", "0.0"),
+                "0.0", "1.00", true);
+        Emitido emitido = emitir(body);
+        JsonNode factura = emitido.factura();
+
+        JsonNode actualizado = guardar(factura, "Nota añadida sin tocar importes",
+                lineaEnviada(factura.get("items").get(0), true));
+
+        assertThat(actualizado.get("notas").asText()).isEqualTo("Nota añadida sin tocar importes");
+        assertThat(actualizado.get("avisos")).isEmpty();
+        assertThat(euros(actualizado.get("items").get(0), "subtotal")).isEqualByComparingTo("98.99");
+        assertFactura(actualizado, "98.99", "20.79", "119.78");
+    }
+
+    /**
+     * Un cliente que no envía id ni avisos sigue siendo válido.
+     * Con una sola línea, la coincidencia por descripción, cantidad, precio y tipo es única.
+     */
+    @Test
+    void editarSoloLasNotas_sinIdNiAvisos_conservaLaCabecera() throws Exception {
+        String body = presupuesto(
+                linea("Trabajo", "3.0", "33.33", true, "0.0", "0.0"),
+                "0.0", "1.00", true);
+        JsonNode factura = emitir(body).factura();
+
+        JsonNode actualizado = guardar(factura, "Nota de un cliente antiguo",
+                lineaEnviada(factura.get("items").get(0), false));
+
+        assertThat(actualizado.get("notas").asText()).isEqualTo("Nota de un cliente antiguo");
+        assertFactura(actualizado, "98.99", "20.79", "119.78");
+    }
+
+    @Test
+    void reordenarLineas_conservaLaBaseDeCadaId() throws Exception {
+        Emitido emitido = emitir(presupuesto(
+                linea("Alfa", "3.0", "33.33", true, "0.0", "0.0")
+                        + "," + linea("Beta", "1.0", "20.00", true, "0.0", "0.0"),
+                "0.0", "1.00", true));
+        JsonNode factura = emitido.factura();
+        JsonNode alfa = factura.get("items").get(0);
+        JsonNode beta = factura.get("items").get(1);
+        BigDecimal subtotalAlfa = euros(alfa, "subtotal");
+        BigDecimal subtotalBeta = euros(beta, "subtotal");
+
+        JsonNode actualizado = guardar(factura, "Reordenadas",
+                lineaEnviada(beta, true), lineaEnviada(alfa, true));
+
+        assertThat(actualizado.get("items").get(0).get("descripcion").asText()).isEqualTo("Beta");
+        assertThat(euros(actualizado.get("items").get(0), "subtotal")).isEqualByComparingTo(subtotalBeta);
+        assertThat(actualizado.get("items").get(1).get("descripcion").asText()).isEqualTo("Alfa");
+        assertThat(euros(actualizado.get("items").get(1), "subtotal")).isEqualByComparingTo(subtotalAlfa);
+        assertThat(euros(actualizado, "subtotal")).isEqualByComparingTo(euros(factura, "subtotal"));
+        assertThat(euros(actualizado, "iva")).isEqualByComparingTo(euros(factura, "iva"));
+        assertThat(euros(actualizado, "total")).isEqualByComparingTo(euros(factura, "total"));
+    }
+
+    @Test
+    void borrarLaPrimera_conservaLaBaseDeLaQueQueda() throws Exception {
+        Emitido emitido = emitir(presupuesto(
+                linea("Alfa", "3.0", "33.33", true, "0.0", "0.0")
+                        + "," + linea("Beta", "1.0", "20.00", true, "0.0", "0.0"),
+                "0.0", "1.00", true));
+        JsonNode factura = emitido.factura();
+        JsonNode beta = factura.get("items").get(1);
+        BigDecimal subtotalBeta = euros(beta, "subtotal");
+
+        JsonNode actualizado = guardar(factura, "Sin la primera", lineaEnviada(beta, true));
+
+        assertThat(actualizado.get("items")).hasSize(1);
+        assertThat(actualizado.get("items").get(0).get("descripcion").asText()).isEqualTo("Beta");
+        assertThat(euros(actualizado.get("items").get(0), "subtotal")).isEqualByComparingTo(subtotalBeta);
+        assertThat(euros(actualizado, "subtotal")).isEqualByComparingTo(subtotalBeta);
+    }
+
+    @Test
+    void dosLineasIdenticas_conIdConservaCadaBaseAlReordenarlas() throws Exception {
+        JsonNode factura = facturaConDosLineasIguales();
+        BigDecimal primera = euros(factura.get("items").get(0), "subtotal");
+        BigDecimal segunda = euros(factura.get("items").get(1), "subtotal");
+        assertThat(primera).isNotEqualByComparingTo(segunda);
+
+        JsonNode actualizado = guardar(factura, "Mismo texto",
+                lineaEnviada(factura.get("items").get(1), true),
+                lineaEnviada(factura.get("items").get(0), true));
+
+        assertThat(euros(actualizado.get("items").get(0), "subtotal")).isEqualByComparingTo(segunda);
+        assertThat(euros(actualizado.get("items").get(1), "subtotal")).isEqualByComparingTo(primera);
+    }
+
+    @Test
+    void dosLineasIdenticas_sinIdNoSeQuedaConLaBasePorPosicion() throws Exception {
+        JsonNode factura = facturaConDosLineasIguales();
+        BigDecimal primera = euros(factura.get("items").get(0), "subtotal");
+        BigDecimal segunda = euros(factura.get("items").get(1), "subtotal");
+        assertThat(primera).isNotEqualByComparingTo("99.99");
+
+        JsonNode actualizado = guardar(factura, "Sin id",
+                lineaEnviada(factura.get("items").get(0), false),
+                lineaEnviada(factura.get("items").get(1), false));
+
+        assertThat(euros(actualizado.get("items").get(0), "subtotal")).isEqualByComparingTo("99.99");
+        assertThat(euros(actualizado.get("items").get(1), "subtotal")).isEqualByComparingTo("99.99");
+        assertThat(segunda).isNotEqualByComparingTo(primera);
+    }
+
+    @Test
+    void anadirUnaLineaNueva_conservaLaAnteriorYCalculaLaNueva() throws Exception {
+        Emitido emitido = emitir(presupuesto(
+                linea("Trabajo", "3.0", "33.33", true, "0.0", "0.0"),
+                "0.0", "1.00", true));
+        JsonNode factura = emitido.factura();
+        ObjectNode extra = objectMapper.createObjectNode();
+        extra.put("tareaManual", "Extra");
+        extra.put("cantidad", new BigDecimal("2"));
+        extra.put("precioUnitario", new BigDecimal("5.00"));
+        extra.put("aplicaIva", true);
+        extra.put("tipoIva", 21);
+
+        JsonNode actualizado = guardar(factura, "Con línea nueva",
+                lineaEnviada(factura.get("items").get(0), true), extra);
+
+        assertThat(euros(actualizado.get("items").get(0), "subtotal")).isEqualByComparingTo("98.99");
+        assertThat(euros(actualizado.get("items").get(1), "subtotal")).isEqualByComparingTo("10.00");
+        assertFactura(actualizado, "108.99", "22.89", "131.88");
+        assertThat(actualizado.get("avisos")).isEmpty();
+    }
+
+    @Test
+    void cambiarElPrecioDeUnaLineaConDescuento_recalculaYAvisa() throws Exception {
+        Emitido emitido = emitir(presupuesto(
+                linea("Trabajo", "3.0", "33.33", true, "0.0", "0.0"),
+                "0.0", "1.00", true));
+        JsonNode factura = emitido.factura();
+        ObjectNode linea = lineaEnviada(factura.get("items").get(0), true);
+        linea.put("precioUnitario", new BigDecimal("40.00"));
+
+        JsonNode actualizado = guardar(factura, "Precio nuevo", linea);
+
+        assertThat(euros(actualizado.get("items").get(0), "subtotal")).isEqualByComparingTo("120.00");
+        assertFactura(actualizado, "120.00", "25.20", "145.20");
+        assertThat(actualizado.get("avisos"))
+                .extracting(JsonNode::asText)
+                .containsExactly("se ha perdido el descuento de esta línea");
+    }
+
     @Test
     void descuentoDeLineaYGlobal_laFacturaCuadraAlCentimo() throws Exception {
         String body = presupuesto(
@@ -240,6 +395,54 @@ class FacturarPresupuestoDescuentoTest {
         }
         assertThat(sumaLineas.setScale(2, RoundingMode.HALF_UP))
                 .isEqualByComparingTo(euros(emitido.presupuesto(), "subtotal").setScale(2, RoundingMode.HALF_UP));
+    }
+
+    private JsonNode facturaConDosLineasIguales() throws Exception {
+        return emitir(presupuesto(
+                linea("Igual", "3.0", "33.33", true, "0.0", "0.0")
+                        + "," + linea("Igual", "3.0", "33.33", true, "0.0", "0.0"),
+                "0.0", "0.01", true)).factura();
+    }
+
+    /** Igual que el formulario: id, cantidad y precio, sin subtotal. */
+    private ObjectNode lineaEnviada(JsonNode linea, boolean conId) {
+        ObjectNode item = objectMapper.createObjectNode();
+        if (conId && linea.hasNonNull("id")) {
+            item.put("id", linea.get("id").asLong());
+        }
+        item.put("tareaManual", linea.path("descripcion").asText());
+        item.put("cantidad", linea.get("cantidad").decimalValue());
+        item.put("precioUnitario", linea.get("precioUnitario").decimalValue());
+        item.put("aplicaIva", linea.path("aplicaIva").asBoolean(true));
+        item.put("tipoIva", linea.path("tipoIva").asInt(21));
+        return item;
+    }
+
+    private JsonNode guardar(JsonNode factura, String notas, ObjectNode... lineas) throws Exception {
+        ObjectNode body = objectMapper.createObjectNode();
+        body.put("clienteId", factura.get("clienteId").asLong());
+        if (factura.hasNonNull("presupuestoId")) {
+            body.put("presupuestoId", factura.get("presupuestoId").asLong());
+        }
+        body.put("numeroFactura", factura.get("numeroFactura").asText());
+        body.put("fechaExpedicion", factura.get("fechaExpedicion").asText());
+        body.put("metodoPago", factura.path("metodoPago").asText("Transferencia"));
+        body.put("estadoPago", factura.path("estadoPago").asText("No Pagada"));
+        body.put("notas", notas);
+        body.put("ivaHabilitado", factura.path("ivaHabilitado").asBoolean(true));
+        ArrayNode items = body.putArray("items");
+        for (ObjectNode linea : lineas) {
+            items.add(linea);
+        }
+        String actualizadoJson = mockMvc.perform(put("/facturas/{id}", factura.get("id").asLong())
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return objectMapper.readTree(actualizadoJson);
     }
 
     private String presupuesto(String items, String porcentaje, String fijo, boolean antesDeIva) {

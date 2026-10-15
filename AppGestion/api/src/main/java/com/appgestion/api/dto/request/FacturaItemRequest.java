@@ -18,7 +18,9 @@ public record FacturaItemRequest(
         Double precioUnitario,
         Boolean aplicaIva,
         @Min(value = 0, message = "Tipo de IVA no válido") @Max(value = 100, message = "Tipo de IVA no válido")
-        Integer tipoIva
+        Integer tipoIva,
+        /** Id de la línea ya guardada. Si viene, el guardado la reconoce aunque cambie el orden. */
+        Long id
 ) {
     public FacturaItemRequest {
         if (aplicaIva == null) aplicaIva = true;

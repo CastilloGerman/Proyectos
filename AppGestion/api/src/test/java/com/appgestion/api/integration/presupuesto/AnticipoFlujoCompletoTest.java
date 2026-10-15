@@ -10,6 +10,8 @@ import com.appgestion.api.repository.OrganizationRepository;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +35,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -153,5 +156,75 @@ class AnticipoFlujoCompletoTest {
                 .setScale(2, RoundingMode.HALF_UP);
         BigDecimal esperado = BigDecimal.valueOf(ivaAnt + ivaFinal).setScale(2, RoundingMode.HALF_UP);
         assertThat(ivaRep).isEqualByComparingTo(esperado);
+    }
+
+    /**
+     * La factura final guarda el precio a 4 decimales. Editar solo las notas
+     * compara cantidad y precio a esa escala y no vuelve a calcular la base.
+     */
+    @Test
+    void editarSoloLasNotasDeLaFacturaFinal_conservaSubtotalIvaYTotal() throws Exception {
+        String presJson = mockMvc.perform(post("/presupuestos")
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(PresupuestoIntegrationTestSupport.presupuestoJson(
+                                scenario.clienteCompletoId(), PresupuestoEstado.ACEPTADO, 100.0, 3.0)))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        long presId = objectMapper.readTree(presJson).get("id").asLong();
+
+        mockMvc.perform(post("/presupuestos/{id}/anticipo", presId)
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"importeAnticipo\": 100, \"fechaAnticipo\": \"%s\"}".formatted(LocalDate.now())))
+                .andExpect(status().isOk());
+
+        JsonNode factura = objectMapper.readTree(mockMvc.perform(post("/presupuestos/{id}/factura-final", presId)
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService)))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString());
+
+        JsonNode linea = factura.get("items").get(0);
+        BigDecimal precio = linea.get("precioUnitario").decimalValue();
+        assertThat(precio.setScale(4, RoundingMode.HALF_UP))
+                .isNotEqualByComparingTo(precio.setScale(2, RoundingMode.HALF_UP));
+
+        ObjectNode body = objectMapper.createObjectNode();
+        body.put("clienteId", factura.get("clienteId").asLong());
+        body.put("presupuestoId", factura.get("presupuestoId").asLong());
+        body.put("numeroFactura", factura.get("numeroFactura").asText());
+        body.put("fechaExpedicion", factura.get("fechaExpedicion").asText());
+        body.put("metodoPago", factura.path("metodoPago").asText("Transferencia"));
+        body.put("estadoPago", factura.path("estadoPago").asText("No Pagada"));
+        body.put("notas", "Nota sin tocar el anticipo");
+        body.put("ivaHabilitado", true);
+        ArrayNode items = body.putArray("items");
+        ObjectNode item = items.addObject();
+        item.put("id", linea.get("id").asLong());
+        item.put("tareaManual", linea.path("descripcion").asText());
+        item.put("cantidad", linea.get("cantidad").decimalValue());
+        item.put("precioUnitario", precio);
+        item.put("aplicaIva", true);
+        item.put("tipoIva", linea.path("tipoIva").asInt(21));
+
+        JsonNode actualizado = objectMapper.readTree(mockMvc.perform(put("/facturas/{id}", factura.get("id").asLong())
+                        .with(PresupuestoIntegrationAuth.asUsuarioPresupuestos(userDetailsService))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString());
+
+        assertThat(actualizado.get("notas").asText()).isEqualTo("Nota sin tocar el anticipo");
+        assertThat(actualizado.get("items").get(0).get("subtotal").decimalValue())
+                .isEqualByComparingTo(linea.get("subtotal").decimalValue());
+        assertThat(actualizado.get("subtotal").decimalValue()).isEqualByComparingTo(factura.get("subtotal").decimalValue());
+        assertThat(actualizado.get("iva").decimalValue()).isEqualByComparingTo(factura.get("iva").decimalValue());
+        assertThat(actualizado.get("total").decimalValue()).isEqualByComparingTo(factura.get("total").decimalValue());
     }
 }

@@ -12,6 +12,7 @@ export interface FacturaItem {
 }
 
 export interface FacturaItemRequest {
+  id?: number;
   materialId?: number;
   tareaManual?: string;
   cantidad: number;
@@ -71,6 +72,8 @@ export interface Factura {
   fechaAnulacion?: string | null;
   motivoAnulacion?: string | null;
   cobros?: FacturaCobro[];
+  /** Avisos del último guardado. Vacío si no se ha perdido ninguna base neta. */
+  avisos?: string[];
 }
 
 export interface FacturaRequest {

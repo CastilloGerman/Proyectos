@@ -36,5 +36,7 @@ public record FacturaResponse(
         Boolean anulada,
         LocalDate fechaAnulacion,
         String motivoAnulacion,
-        List<FacturaCobroResponse> cobros
+        List<FacturaCobroResponse> cobros,
+        /** Vacía si el guardado no ha tenido que descartar una base neta. */
+        List<String> avisos
 ) {}
