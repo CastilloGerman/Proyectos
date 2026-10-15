@@ -17,7 +17,7 @@ class RailwayJdbcUrlEnvironmentListenerTest {
         RailwayJdbcUrlEnvironmentListener.applyRailwayPostgresUrl(environment);
 
         assertThat(environment.getProperty("spring.datasource.url"))
-                .isEqualTo("jdbc:postgresql://mainline.proxy.rlwy.net:12345/railway?sslmode=require");
+                .isEqualTo("jdbc:postgresql://mainline.proxy.rlwy.net:12345/railway?sslmode=require&channelBinding=disable&gssEncMode=disable");
         assertThat(environment.getProperty("spring.datasource.username")).isEqualTo("railway_user");
         assertThat(environment.getProperty("spring.datasource.password")).isEqualTo("secret");
     }
@@ -32,7 +32,7 @@ class RailwayJdbcUrlEnvironmentListenerTest {
         RailwayJdbcUrlEnvironmentListener.applyRailwayPostgresUrl(environment);
 
         assertThat(environment.getProperty("spring.datasource.url"))
-                .isEqualTo("jdbc:postgresql://postgres.railway.internal:5432/railway");
+                .isEqualTo("jdbc:postgresql://postgres.railway.internal:5432/railway?sslmode=require&channelBinding=disable&gssEncMode=disable");
         assertThat(environment.getProperty("spring.datasource.username")).isEqualTo("railway_user");
         assertThat(environment.getProperty("spring.datasource.password")).isEqualTo("secret");
     }
@@ -47,7 +47,7 @@ class RailwayJdbcUrlEnvironmentListenerTest {
         RailwayJdbcUrlEnvironmentListener.applyRailwayPostgresUrl(environment);
 
         assertThat(environment.getProperty("spring.datasource.url"))
-                .isEqualTo("jdbc:postgresql://mainline.proxy.rlwy.net:12345/railway");
+                .isEqualTo("jdbc:postgresql://mainline.proxy.rlwy.net:12345/railway?sslmode=require&channelBinding=disable&gssEncMode=disable");
         assertThat(environment.getProperty("spring.datasource.username")).isNull();
         assertThat(environment.getProperty("spring.datasource.password")).isNull();
     }
@@ -62,7 +62,7 @@ class RailwayJdbcUrlEnvironmentListenerTest {
         RailwayJdbcUrlEnvironmentListener.applyRailwayPostgresUrl(environment);
 
         assertThat(environment.getProperty("spring.datasource.url"))
-                .isEqualTo("jdbc:postgresql://mainline.proxy.rlwy.net:12345/railway");
+                .isEqualTo("jdbc:postgresql://mainline.proxy.rlwy.net:12345/railway?sslmode=require&channelBinding=disable&gssEncMode=disable");
     }
 
     @Test
@@ -77,7 +77,7 @@ class RailwayJdbcUrlEnvironmentListenerTest {
         RailwayJdbcUrlEnvironmentListener.applyRailwayPostgresUrl(environment);
 
         assertThat(environment.getProperty("spring.datasource.url"))
-                .isEqualTo("jdbc:postgresql://mainline.proxy.rlwy.net:12345/railway");
+                .isEqualTo("jdbc:postgresql://mainline.proxy.rlwy.net:12345/railway?sslmode=require&channelBinding=disable&gssEncMode=disable");
         assertThat(environment.getProperty("spring.datasource.username")).isEqualTo("postgres");
         assertThat(environment.getProperty("spring.datasource.password")).isEqualTo("secret");
     }

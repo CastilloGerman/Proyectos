@@ -4,6 +4,8 @@ import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -158,6 +160,20 @@ public class GlobalExceptionHandler {
         body.put("detail", message);
         body.put("status", HttpStatus.BAD_REQUEST.value());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    /** La base de datos no aceptó la conexión (Neon dormido, host inalcanzable, TLS). No es un fallo de Google. */
+    @ExceptionHandler({CannotCreateTransactionException.class, DataAccessResourceFailureException.class})
+    public ResponseEntity<Map<String, Object>> handleDatabaseUnavailable(Exception ex) {
+        String errorId = UUID.randomUUID().toString().substring(0, 8);
+        log.warn("database_unavailable [{}]: {}", errorId, ex.getClass().getSimpleName());
+        String message = "No se pudo conectar con la base de datos. Inténtalo de nuevo en unos segundos.";
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("status", HttpStatus.SERVICE_UNAVAILABLE.value());
+        body.put("errorId", errorId);
+        body.put("message", message);
+        body.put("detail", message);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
     }
 
     @ExceptionHandler(Exception.class)

@@ -125,7 +125,7 @@ public class RailwayJdbcUrlEnvironmentListener
             jdbc.append("?").append(query);
         }
 
-        return new JdbcParts(jdbc.toString(), username, password);
+        return new JdbcParts(withRemoteConnectionParams(jdbc.toString()), username, password);
     }
 
     private static String decode(String s) {
@@ -147,8 +147,8 @@ public class RailwayJdbcUrlEnvironmentListener
         }
 
         Map<String, Object> map = new HashMap<>();
-        map.put("spring.datasource.url", "jdbc:postgresql://" + host.trim() + ":" + port.trim()
-                + "/" + cleanDatabaseName(database));
+        map.put("spring.datasource.url", withRemoteConnectionParams(
+                "jdbc:postgresql://" + host.trim() + ":" + port.trim() + "/" + cleanDatabaseName(database)));
 
         String username = firstNonBlank(environment.getProperty("PGUSER"), environment.getProperty("POSTGRES_USER"));
         String password = firstNonBlank(
@@ -164,6 +164,39 @@ public class RailwayJdbcUrlEnvironmentListener
         MutablePropertySources sources = environment.getPropertySources();
         sources.remove(PROPERTY_SOURCE_NAME);
         sources.addFirst(new MapPropertySource(PROPERTY_SOURCE_NAME, map));
+    }
+
+    /**
+     * Neon (y el driver JDBC reciente) se quedan colgados hasta el timeout de Hikari si falta TLS estricto
+     * o si el driver intenta channel binding / GSSAPI, que el pooler no negocia. En local no se toca la URL.
+     */
+    static String withRemoteConnectionParams(String jdbcUrl) {
+        if (jdbcUrl == null || isLocalPostgres(jdbcUrl)) {
+            return jdbcUrl;
+        }
+        String url = jdbcUrl;
+        String lower = url.toLowerCase(java.util.Locale.ROOT);
+        if (!lower.contains("sslmode=")) {
+            url = appendQuery(url, "sslmode=require");
+            lower = url.toLowerCase(java.util.Locale.ROOT);
+        }
+        if (!lower.contains("channelbinding=")) {
+            url = appendQuery(url, "channelBinding=disable");
+            lower = url.toLowerCase(java.util.Locale.ROOT);
+        }
+        if (!lower.contains("gssencmode=")) {
+            url = appendQuery(url, "gssEncMode=disable");
+        }
+        return url;
+    }
+
+    private static boolean isLocalPostgres(String jdbcUrl) {
+        String lower = jdbcUrl.toLowerCase(java.util.Locale.ROOT);
+        return lower.contains("//localhost") || lower.contains("//127.0.0.1") || lower.contains("//[::1]");
+    }
+
+    private static String appendQuery(String jdbcUrl, String param) {
+        return jdbcUrl + (jdbcUrl.contains("?") ? "&" : "?") + param;
     }
 
     private static String cleanDatabaseName(String database) {

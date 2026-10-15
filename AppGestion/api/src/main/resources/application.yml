@@ -306,11 +306,13 @@ spring:
   config:
     activate:
       on-profile: serverless
-  # En serverless (Vercel), las migraciones se ejecutan fuera de la API.
-  # No validar el esquema al arrancar: eso abre una conexión y, si Neon está dormido, el proceso muere
-  # antes de poder responder (504 / FUNCTION_INVOCATION_FAILED).
+  # Vercel no tiene un paso de migración aparte. Si Flyway queda apagado, el código nuevo
+  # consulta columnas que no existen (p. ej. usuarios.email_verification_expires_at) y el login responde 500.
+  # El candado transaccional es el que funciona con el pooler de Neon.
   flyway:
-    enabled: false
+    enabled: true
+    postgresql:
+      transactional-lock: true
   jpa:
     hibernate:
       ddl-auto: none
