@@ -57,6 +57,16 @@ public class SubscriptionCheckFilter extends OncePerRequestFilter {
             return;
         }
 
+        // Las lecturas no comprueban suscripción. Evitar el SELECT de usuario aquí: tras el login
+        // el dashboard dispara varias GET en paralelo y cada una competía por una conexión.
+        // Deuda: GET /auth/audit-access/export inserta un evento de auditoría y pasa igual,
+        // porque aquí se permite cualquier lectura.
+        String method = request.getMethod();
+        if ("GET".equalsIgnoreCase(method) || "HEAD".equalsIgnoreCase(method) || "OPTIONS".equalsIgnoreCase(method)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
             filterChain.doFilter(request, response);
@@ -66,12 +76,6 @@ public class SubscriptionCheckFilter extends OncePerRequestFilter {
         String email = auth.getName();
         Usuario usuario = usuarioRepository.findByEmail(email).orElse(null);
         if (usuario == null) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        String method = request.getMethod();
-        if ("GET".equalsIgnoreCase(method) || "HEAD".equalsIgnoreCase(method) || "OPTIONS".equalsIgnoreCase(method)) {
             filterChain.doFilter(request, response);
             return;
         }
