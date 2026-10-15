@@ -40,6 +40,21 @@
             }
           </mat-select>
         </mat-form-field>
+        <div class="dh-actions">
+          @if (loading()) {
+            <mat-spinner diameter="20"></mat-spinner>
+          }
+          <button mat-stroked-button type="button" (click)="exportarPdf()" [disabled]="loading() || !resumen()">
+            <mat-icon>picture_as_pdf</mat-icon>
+            Exportar PDF
+          </button>
+        </div>
+      </div>
+
+      <mat-expansion-panel class="dh-opciones" [expanded]="false">
+        <mat-expansion-panel-header>
+          <mat-panel-title>Opciones de cálculo</mat-panel-title>
+        </mat-expansion-panel-header>
         <div class="dh-criterio">
           <mat-radio-group [ngModel]="criterio" name="criterio" (ngModelChange)="onCriterioChange($event)">
             <mat-radio-button value="DEVENGO" matTooltip="El IVA se cuenta por la fecha que figura en la factura">
@@ -66,16 +81,7 @@
             Solo facturas pagadas
           </mat-checkbox>
         </span>
-        <div class="dh-actions">
-          @if (loading()) {
-            <mat-spinner diameter="20"></mat-spinner>
-          }
-          <button mat-stroked-button type="button" (click)="exportarPdf()" [disabled]="loading() || !resumen()">
-            <mat-icon>picture_as_pdf</mat-icon>
-            Exportar PDF
-          </button>
-        </div>
-      </div>
+      </mat-expansion-panel>
 
       @if (resumen(); as r) {
         @if (cifra(r); as c) {
