@@ -209,16 +209,31 @@
   margin-bottom: var(--app-space-lg, 24px);
 }
 
+:host ::ng-deep .dh-card .mat-mdc-card-header {
+  display: block;
+}
+
+:host ::ng-deep .dh-card .mat-mdc-card-subtitle {
+  display: block;
+  margin-bottom: 16px;
+}
+
+:host ::ng-deep .dh-card .mat-mdc-card-content {
+  padding-top: 12px;
+  overflow: visible;
+}
+
 .dh-filters {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
   align-items: flex-end;
   margin-bottom: var(--app-space-lg, 24px);
+  padding-top: 8px;
 }
 
 .dh-filters mat-form-field {
-  min-width: 140px;
+  min-width: 240px;
 }
 
 .dh-opciones {
