@@ -168,7 +168,10 @@ public class RailwayJdbcUrlEnvironmentListener
 
     /**
      * Neon (y el driver JDBC reciente) se quedan colgados hasta el timeout de Hikari si falta TLS estricto
-     * o si el driver intenta channel binding / GSSAPI, que el pooler no negocia. En local no se toca la URL.
+     * o si el driver intenta channel binding / GSSAPI, que el pooler no negocia. Esos cuelgues no respetan
+     * el timeout de Hikari: hacen falta {@code connectTimeout} y {@code socketTimeout} del propio driver.
+     * {@code prepareThreshold=0} evita prepared statements de servidor, que el pooler transaccional no conserva.
+     * En local no se toca la URL.
      */
     static String withRemoteConnectionParams(String jdbcUrl) {
         if (jdbcUrl == null || isLocalPostgres(jdbcUrl)) {
@@ -186,6 +189,18 @@ public class RailwayJdbcUrlEnvironmentListener
         }
         if (!lower.contains("gssencmode=")) {
             url = appendQuery(url, "gssEncMode=disable");
+            lower = url.toLowerCase(java.util.Locale.ROOT);
+        }
+        if (!lower.contains("connecttimeout=")) {
+            url = appendQuery(url, "connectTimeout=10");
+            lower = url.toLowerCase(java.util.Locale.ROOT);
+        }
+        if (!lower.contains("sockettimeout=")) {
+            url = appendQuery(url, "socketTimeout=30");
+            lower = url.toLowerCase(java.util.Locale.ROOT);
+        }
+        if (!lower.contains("preparethreshold=")) {
+            url = appendQuery(url, "prepareThreshold=0");
         }
         return url;
     }

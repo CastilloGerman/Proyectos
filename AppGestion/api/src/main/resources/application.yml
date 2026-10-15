@@ -329,6 +329,8 @@ spring:
       connection-timeout: 10000
       # 5 min: reciclar antes de que el pooler cierre la sesión por edad o inactividad.
       max-lifetime: 300000
+      # Por debajo de max-lifetime. Si no, Hikari anula idleTimeout (el valor por defecto es 10 min).
+      idle-timeout: 120000
       # -1: no exigir una conexión al crear el pool. Si no, el arranque espera connection-timeout y se cae.
       initialization-fail-timeout: -1
   task:
