@@ -13,7 +13,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatAccordion, MatExpansionModule } from '@angular/material/expansion';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError } from 'rxjs';
@@ -71,6 +71,7 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
   trimestre = this.periodoInicial.trimestre;
   criterio: FiscalCriterio = 'DEVENGO';
   soloPagadas = false;
+  explicacionAbierta = false;
 
   years = this.buildYears();
   readonly trimestres = [1, 2, 3, 4] as const;
@@ -126,11 +127,6 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
       this.trimestre -= 1;
     }
     this.programarCarga303();
-  }
-
-  abrirExplicaciones(accordion: MatAccordion, host: HTMLElement): void {
-    accordion.openAll();
-    host.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   importeDestacado(valor: number): number {

@@ -150,6 +150,22 @@
   cursor: pointer;
 }
 
+.dh-calculo {
+  display: inline-block;
+  margin: 0 0 8px;
+}
+
+.dh-ejemplo {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--app-text-secondary, #64748b);
+}
+
+.dh-ejemplo p {
+  margin: 0 0 6px;
+}
+
 .dh-checkbox-tip {
   display: inline-flex;
   align-items: center;

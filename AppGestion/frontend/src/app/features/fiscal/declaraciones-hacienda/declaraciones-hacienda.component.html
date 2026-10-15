@@ -172,50 +172,17 @@
       <div class="dh-info-line" role="note">
         <mat-icon>info</mat-icon>
         <span>Resumen orientativo, consulta con tu gestor antes de presentar.</span>
-        <button type="button" class="dh-text-btn" (click)="abrirExplicaciones(explicaciones, explicacionesEl)">
-          Más información
-        </button>
       </div>
 
-      <div #explicacionesEl>
-        <mat-accordion #explicaciones="matAccordion" multi class="dh-accordion">
-          <mat-expansion-panel>
-            <mat-expansion-panel-header>
-              <mat-panel-title>Modelo 303 oficial y casillas de la AEAT</mat-panel-title>
-            </mat-expansion-panel-header>
-            <p>
-              El modelo que presentas en la sede electrónica tiene <strong>casillas concretas</strong> (01, 02, 03…) y reglas fiscales definidas por la AEAT. Este pantallazo calcula totales a partir de tus facturas de la app; <strong>no mapea</strong> esos importes a casillas oficiales ni valida combinaciones de operaciones.
-            </p>
-            <p>Úsalo como apoyo; la presentación válida es la que hagas (o tu gestor) en la AEAT.</p>
-          </mat-expansion-panel>
-          <mat-expansion-panel>
-            <mat-expansion-panel-header>
-              <mat-panel-title>IVA repercutido, IVA soportado y “resultado”</mat-panel-title>
-            </mat-expansion-panel-header>
-            <p>
-              El <strong>IVA repercutido</strong> es el de tus facturas de venta. El desglose separa 21 %, 10 %, 4 % y 0 %. El 0 % junta exento y gravado al 0 %; las casillas oficiales los distinguen y esta pantalla todavía no. Si la suma de las cuotas de línea no coincide con el IVA de la factura, la diferencia sale como ajuste por redondeo. El <strong>IVA soportado</strong> es el de los gastos con fecha de compra en el trimestre.
-              <a routerLink="../gastos">Gastos</a>
-            </p>
-          </mat-expansion-panel>
-          <mat-expansion-panel>
-            <mat-expansion-panel-header>
-              <mat-panel-title>Qué incluye y qué no</mat-panel-title>
-            </mat-expansion-panel-header>
-            <p>
-              Este resumen suma las facturas de venta y los gastos registrados en la aplicación. No presenta nada ante la AEAT.
-            </p>
-            <p>
-              <strong>Por fecha de cobro</strong> no es el régimen especial de criterio de caja (RECC). No prorratea cobros parciales: si una factura tiene varios cobros, toda la factura se imputa al trimestre de la fecha del <strong>último cobro</strong>.
-            </p>
-            <p>
-              Ejemplo: cobros parciales en enero y marzo imputan <strong>toda</strong> la factura al trimestre del último pago, no 400&nbsp;€ en un trimestre y 600&nbsp;€ en otro.
-            </p>
-            <p>
-              El IVA soportado de los gastos se imputa por la fecha del gasto, también con «Por fecha de cobro», porque las compras no tienen fecha de pago. Los anticipos se contabilizan en su factura de anticipo para no duplicar el IVA del tramo ya facturado.
-            </p>
-          </mat-expansion-panel>
-        </mat-accordion>
-      </div>
+      <button type="button" class="dh-text-btn dh-calculo" (click)="explicacionAbierta = !explicacionAbierta">
+        ¿Cómo se calcula?
+      </button>
+      @if (explicacionAbierta) {
+        <div class="dh-ejemplo">
+          <p>El resultado es el IVA de tus facturas menos el IVA de tus gastos.</p>
+          <p>Ejemplo: 1.000 € de IVA en facturas − 200 € de IVA en gastos = 800 €.</p>
+        </div>
+      }
 
       @if (resumen(); as r) {
         @if (r.numeroGastos > 0) {
