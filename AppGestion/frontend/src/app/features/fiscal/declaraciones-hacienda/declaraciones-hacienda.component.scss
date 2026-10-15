@@ -212,6 +212,12 @@
   color: var(--app-text-secondary, #64748b);
 }
 
+.dh-leyenda {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--app-text-secondary, #64748b);
+}
+
 mat-radio-group {
   display: flex;
   flex-wrap: wrap;

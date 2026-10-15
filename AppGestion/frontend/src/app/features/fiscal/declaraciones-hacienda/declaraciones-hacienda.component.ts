@@ -20,7 +20,7 @@ import { EMPTY, Subject, catchError } from 'rxjs';
 import { FiscalService } from '../../../core/services/fiscal.service';
 import { FiscalCriterio, Modelo303Resumen, Modelo347Resumen } from '../../../core/models/fiscal.model';
 import { ETIQUETA_A_COMPENSAR, FiltroModelo303, cifraModelo303, observacionesModelo303 } from './hacienda-carga';
-import { TrimestreId, diaEnMadrid, trimestrePorDefecto } from './hacienda-periodo';
+import { TrimestreId, diaEnMadrid, etiquetaTrimestre, trimestrePorDefecto } from './hacienda-periodo';
 import { FiscalAlertaBannerComponent } from '../fiscal-alerta-banner/fiscal-alerta-banner.component';
 import { TranslateService } from '@ngx-translate/core';
 
@@ -74,6 +74,7 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
 
   readonly years = this.buildYears();
   readonly trimestres = [1, 2, 3, 4] as const;
+  readonly etiquetaTrimestre = etiquetaTrimestre;
   readonly displayedColumns347 = ['nombre', 'dni', 'base'] as const;
 
   onYearChange(year: number): void {

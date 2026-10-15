@@ -36,16 +36,20 @@
             (ngModelChange)="onTrimestreChange($event)"
           >
             @for (t of trimestres; track t) {
-              <mat-option [value]="t">T{{ t }}</mat-option>
+              <mat-option [value]="t">{{ etiquetaTrimestre(t) }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
         <div class="dh-criterio">
-          <label class="dh-label">Criterio</label>
           <mat-radio-group [ngModel]="criterio" name="criterio" (ngModelChange)="onCriterioChange($event)">
-            <mat-radio-button value="DEVENGO">Devengo (fecha de expedición)</mat-radio-button>
-            <mat-radio-button value="CAJA">Por fecha de cobro</mat-radio-button>
+            <mat-radio-button value="DEVENGO" matTooltip="El IVA se cuenta por la fecha que figura en la factura">
+              Fecha de la factura
+            </mat-radio-button>
+            <mat-radio-button value="CAJA" matTooltip="El IVA se cuenta cuando el cliente te paga">
+              Fecha en que me pagaron
+            </mat-radio-button>
           </mat-radio-group>
+          <p class="dh-leyenda">Si no estás seguro, deja 'Fecha de la factura'.</p>
         </div>
         <span
           class="dh-checkbox-tip"
