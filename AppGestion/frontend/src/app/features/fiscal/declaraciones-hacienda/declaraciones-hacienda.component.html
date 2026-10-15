@@ -1,5 +1,9 @@
 <div class="dh-page" data-hacienda-ui="por-fecha-de-cobro">
-  <app-fiscal-alerta-banner />
+  <app-fiscal-alerta-banner
+    [tieneMovimientos]="movimientosPlazo()"
+    (plazoCargado)="onPlazoBanner($event)"
+    (verTrimestre)="verTrimestreDelPlazo($event)"
+  />
 
   <div class="dh-header">
     <h1>Hacienda</h1>

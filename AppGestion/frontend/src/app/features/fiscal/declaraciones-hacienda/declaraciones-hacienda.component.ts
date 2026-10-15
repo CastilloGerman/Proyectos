@@ -20,7 +20,7 @@ import { EMPTY, Subject, catchError } from 'rxjs';
 import { FiscalService } from '../../../core/services/fiscal.service';
 import { FiscalCriterio, Modelo303Resumen, Modelo347Resumen } from '../../../core/models/fiscal.model';
 import { ETIQUETA_A_COMPENSAR, FiltroModelo303, cifraModelo303, observacionesModelo303 } from './hacienda-carga';
-import { diaEnMadrid, trimestrePorDefecto } from './hacienda-periodo';
+import { TrimestreId, diaEnMadrid, trimestrePorDefecto } from './hacienda-periodo';
 import { FiscalAlertaBannerComponent } from '../fiscal-alerta-banner/fiscal-alerta-banner.component';
 import { TranslateService } from '@ngx-translate/core';
 
@@ -61,6 +61,9 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
   readonly loading347 = signal(false);
   readonly resumen = signal<Modelo303Resumen | null>(null);
   readonly modelo347 = signal<Modelo347Resumen | null>(null);
+  /** null hasta contrastar el trimestre del aviso con su resumen. */
+  readonly movimientosPlazo = signal<boolean | null>(null);
+  private plazoBanner: TrimestreId | null = null;
 
   private readonly hoy = diaEnMadrid(new Date());
   private readonly periodoInicial = trimestrePorDefecto(this.hoy);
@@ -82,6 +85,21 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
   onTrimestreChange(trimestre: number): void {
     this.trimestre = trimestre;
     this.programarCarga303();
+  }
+
+  onPlazoBanner(periodo: TrimestreId): void {
+    this.plazoBanner = periodo;
+    this.actualizarMovimientosPlazo();
+  }
+
+  verTrimestreDelPlazo(periodo: TrimestreId): void {
+    const cambiaAnio = this.year !== periodo.year;
+    this.year = periodo.year;
+    this.trimestre = periodo.trimestre;
+    this.programarCarga303();
+    if (cambiaAnio) {
+      this.cargar347();
+    }
   }
 
   onCriterioChange(criterio: FiscalCriterio): void {
@@ -187,6 +205,7 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
       .subscribe((r) => {
         this.resumen.set(r);
         this.loading.set(false);
+        this.actualizarMovimientosPlazo();
       });
     this.programarCarga303();
     this.cargar347();
@@ -213,6 +232,15 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
         ? String(raw).trim()
         : this.translate.instant('snack.tax303SummaryLoadFail');
     this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
+  }
+
+  private actualizarMovimientosPlazo(): void {
+    const plazo = this.plazoBanner;
+    const resumen = this.resumen();
+    if (!plazo || !resumen || resumen.anio !== plazo.year || resumen.trimestre !== plazo.trimestre) {
+      return;
+    }
+    this.movimientosPlazo.set(resumen.numeroFacturas > 0 || resumen.numeroGastos > 0);
   }
 
   private buildYears(): number[] {

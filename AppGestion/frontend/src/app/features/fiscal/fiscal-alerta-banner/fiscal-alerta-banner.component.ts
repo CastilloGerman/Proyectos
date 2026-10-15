@@ -1,8 +1,16 @@
-import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatIconModule } from '@angular/material/icon';
 import { FiscalService } from '../../../core/services/fiscal.service';
 import { FiscalPlazoActual } from '../../../core/models/fiscal.model';
+import {
+  TrimestreId,
+  etiquetaPlazo,
+  ocultarPlazo,
+  parseEtiquetaPlazo,
+  plazoEnRojo,
+  plazoEstaOculto,
+} from '../declaraciones-hacienda/hacienda-periodo';
 
 @Component({
   selector: 'app-fiscal-alerta-banner',
@@ -14,9 +22,15 @@ export class FiscalAlertaBannerComponent implements OnInit {
   private readonly fiscal = inject(FiscalService);
   private readonly destroyRef = inject(DestroyRef);
 
+  /** null hasta saber si ese trimestre tiene facturas o gastos. */
+  @Input() tieneMovimientos: boolean | null = null;
+  @Output() plazoCargado = new EventEmitter<TrimestreId>();
+  @Output() verTrimestre = new EventEmitter<TrimestreId>();
+
   readonly data = signal<FiscalPlazoActual | null>(null);
+  readonly plazoId = signal<TrimestreId | null>(null);
+  readonly oculto = signal(false);
   readonly loadError = signal(false);
-  readonly loading = signal(true);
 
   ngOnInit(): void {
     this.fiscal
@@ -25,34 +39,66 @@ export class FiscalAlertaBannerComponent implements OnInit {
       .subscribe({
         next: (d) => {
           this.data.set(d);
-          this.loading.set(false);
+          const id = parseEtiquetaPlazo(d.trimestre);
+          this.plazoId.set(id);
+          if (id) {
+            this.oculto.set(this.leidoOculto(id));
+            this.plazoCargado.emit(id);
+          }
         },
-        error: () => {
-          this.loadError.set(true);
-          this.loading.set(false);
-        },
+        error: () => this.loadError.set(true),
       });
   }
 
-  tituloPlazo(d: FiscalPlazoActual): string {
-    return `${d.trimestre} — Plazo: ${this.formatearFecha(d.fechaLimite)}`;
+  visible(): boolean {
+    return this.tieneMovimientos === true && !this.oculto() && this.data() != null && this.plazoId() != null;
   }
 
-  private formatearFecha(iso: string): string {
-    const d = new Date(iso + 'T12:00:00');
-    return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+  clase(): string {
+    const d = this.data();
+    return d && plazoEnRojo(d.diasRestantes) ? 'fab fab--rojo' : 'fab fab--ambar';
   }
 
-  claseEstado(estado: FiscalPlazoActual['estado']): string {
-    switch (estado) {
-      case 'VERDE':
-        return 'fab fab--verde';
-      case 'AMARILLO':
-        return 'fab fab--amarillo';
-      case 'ROJO':
-        return 'fab fab--rojo';
-      default:
-        return 'fab';
+  texto(d: FiscalPlazoActual): string {
+    const id = this.plazoId();
+    const nombre = id ? etiquetaPlazo(id.trimestre) : d.trimestre;
+    return `${nombre} · ${this.textoDias(d.diasRestantes)}`;
+  }
+
+  ver(): void {
+    const id = this.plazoId();
+    if (id) {
+      this.verTrimestre.emit(id);
     }
+  }
+
+  ocultar(): void {
+    const id = this.plazoId();
+    if (id) {
+      try {
+        ocultarPlazo(id, localStorage);
+      } catch {
+        // Si el navegador bloquea el acceso, el aviso se oculta solo en esta visita.
+      }
+    }
+    this.oculto.set(true);
+  }
+
+  private leidoOculto(id: TrimestreId): boolean {
+    try {
+      return plazoEstaOculto(id, localStorage);
+    } catch {
+      return false;
+    }
+  }
+
+  private textoDias(dias: number): string {
+    if (dias <= 0) {
+      return 'vence hoy';
+    }
+    if (dias === 1) {
+      return 'queda 1 día';
+    }
+    return `quedan ${dias} días`;
   }
 }
