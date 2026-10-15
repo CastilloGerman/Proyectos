@@ -72,6 +72,7 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
   criterio: FiscalCriterio = 'DEVENGO';
   soloPagadas = false;
   explicacionAbierta = false;
+  detalle347 = false;
 
   years = this.buildYears();
   readonly trimestres = [1, 2, 3, 4] as const;
@@ -139,6 +140,12 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
 
   esCompensar(r: Modelo303Resumen): boolean {
     return this.cifra(r).etiqueta === ETIQUETA_A_COMPENSAR;
+  }
+
+  umbral347(): number {
+    const raw = this.modelo347()?.umbralEuros;
+    const valor = raw == null ? 3005.06 : Number(String(raw).replace(',', '.'));
+    return Number.isFinite(valor) ? valor : 3005.06;
   }
 
   rutaApp(ruta: string): string {

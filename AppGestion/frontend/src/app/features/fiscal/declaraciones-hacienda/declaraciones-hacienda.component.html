@@ -196,21 +196,26 @@
     <mat-card-header>
       <mat-card-title>Modelo 347 (orientativo)</mat-card-title>
       <mat-card-subtitle>
-        Clientes con NIF y base anual &gt; {{ modelo347()?.umbralEuros ?? '3005.06' }} € (criterio devengo, año del selector del 303). No sustituye el 347 oficial ni sus casillas.
+        El 347 es la lista anual de clientes a los que has facturado más de
+        {{ umbral347() | number : '1.2-2' : 'es' }} €.
       </mat-card-subtitle>
     </mat-card-header>
     <mat-card-content>
-      <button mat-stroked-button type="button" (click)="cargar347()" [disabled]="loading347()" class="dh-btn-347">
-        @if (loading347()) {
-          <mat-spinner diameter="20"></mat-spinner>
-        } @else {
-          Actualizar listado 347
-        }
-      </button>
+      @if (loading347() && !modelo347()) {
+        <p class="dh-sin-facturas">Cargando el listado…</p>
+      }
 
       @if (modelo347(); as m347) {
-        <p class="dh-347-count">Clientes por encima del umbral: <strong>{{ m347.totalClientesUmbral }}</strong></p>
-        @if (m347.clientes.length > 0) {
+        @if (m347.totalClientesUmbral === 0) {
+          <p class="dh-347-vacio">
+            Ningún cliente supera los {{ umbral347() | number : '1.2-2' : 'es' }} € este año.
+            <button type="button" class="dh-text-btn" (click)="detalle347 = !detalle347">Ver detalle</button>
+          </p>
+          @if (detalle347) {
+            <p class="dh-sin-facturas">Con los datos de este año no hay ninguno por encima de ese importe.</p>
+          }
+        } @else {
+          <p class="dh-347-count">Clientes por encima del umbral: <strong>{{ m347.totalClientesUmbral }}</strong></p>
           <table mat-table [dataSource]="m347.clientes" class="dh-table">
             <ng-container matColumnDef="nombre">
               <th mat-header-cell *matHeaderCellDef>Cliente</th>
@@ -227,8 +232,6 @@
             <tr mat-header-row *matHeaderRowDef="displayedColumns347"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns347"></tr>
           </table>
-        } @else {
-          <p class="dh-empty">No hay clientes que superen el umbral con los datos actuales.</p>
         }
       }
     </mat-card-content>
