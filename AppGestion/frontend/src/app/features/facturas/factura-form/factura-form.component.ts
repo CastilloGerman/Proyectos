@@ -58,6 +58,13 @@ import { EnviarFacturaComponent } from '../enviar-factura/enviar-factura.compone
               <h2>{{ (isEdit ? 'snack.invoiceUpdated' : 'snack.invoiceCreated') | translate }}</h2>
               <p>{{ 'factForm.createdShareHint' | translate }}</p>
               <app-enviar-factura [factura]="facturaActual" />
+              @if (avisosDescuento.length) {
+                <ul class="aviso-descuento" role="alert">
+                  @for (aviso of avisosDescuento; track $index) {
+                    <li>{{ aviso }}</li>
+                  }
+                </ul>
+              }
               <button mat-stroked-button type="button" routerLink="/facturas">{{ 'factForm.backToInvoices' | translate }}</button>
             </section>
           } @else {
@@ -363,6 +370,7 @@ import { EnviarFacturaComponent } from '../enviar-factura/enviar-factura.compone
     .creacion-completada { display:grid; justify-items:start; gap:12px; padding:8px 0; }
     .creacion-completada > mat-icon { color:#168447; font-size:40px; width:40px; height:40px; }
     .creacion-completada h2, .creacion-completada p { margin:0; }
+    .aviso-descuento { margin:0; padding:8px 12px; background:#fff4e5; border:1px solid #e6a23c; color:#8a4b08; }
 
     .vencimiento-buttons {
       display: flex;
@@ -466,6 +474,7 @@ export class FacturaFormComponent implements OnInit {
   id?: number;
   facturaActual: Factura | null = null;
   creacionCompletada = false;
+  avisosDescuento: string[] = [];
   cobros: FacturaCobro[] = [];
   paymentLinkUrl: string | null = null;
   private facturaTotalSnapshot = 0;
@@ -891,6 +900,7 @@ export class FacturaFormComponent implements OnInit {
     req.subscribe({
       next: (factura) => {
         this.facturaActual = factura;
+        this.avisosDescuento = factura.avisos ?? [];
         this.creacionCompletada = true;
         this.snackBar.open(
           this.translate.instant(this.isEdit ? 'snack.invoiceUpdated' : 'snack.invoiceCreated'),
