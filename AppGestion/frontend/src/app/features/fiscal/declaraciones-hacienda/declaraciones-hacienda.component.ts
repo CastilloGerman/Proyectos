@@ -68,7 +68,7 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
   private readonly hoy = diaEnMadrid(new Date());
   private readonly periodoInicial = trimestrePorDefecto(this.hoy);
   year = this.periodoInicial.year;
-  trimestre = this.periodoInicial.trimestre;
+  trimestre: number = this.periodoInicial.trimestre;
   criterio: FiscalCriterio = 'DEVENGO';
   soloPagadas = false;
   explicacionAbierta = false;
