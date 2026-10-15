@@ -923,8 +923,12 @@ export class LoginComponent implements OnInit, AfterViewInit {
 
   private googleLoginErrorMessage(err: unknown): string {
     const httpErr = err as HttpErrorResponse;
-    if (httpErr?.status === 0) {
-      return this.translate.instant('auth.login.googleNetworkError');
+    if (httpErr?.status === 0 || httpErr?.status === 502 || httpErr?.status === 503 || httpErr?.status === 504) {
+      return (
+        httpErr?.error?.message ??
+        httpErr?.error?.detail ??
+        this.translate.instant('auth.login.googleNetworkError')
+      );
     }
     return (
       httpErr?.error?.message ??
@@ -984,6 +988,14 @@ export class LoginComponent implements OnInit, AfterViewInit {
             return;
           }
           this.emailNotVerified.set(false);
+          if (err?.status === 0 || err?.status === 502 || err?.status === 503 || err?.status === 504) {
+            this.snackBar.open(
+              this.translate.instant('shell.snackbarServerError'),
+              this.translate.instant('common.close'),
+              { duration: 5000 },
+            );
+            return;
+          }
           if (!step && this.isTotpRequiredError(err)) {
             this.totpStep.set(true);
             this.form.get('totpCode')?.setValidators([Validators.required, Validators.pattern(/^\d{6}$/)]);

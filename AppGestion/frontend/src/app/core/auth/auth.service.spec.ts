@@ -184,16 +184,17 @@ describe('AuthService', () => {
 
       service.logout();
       expect(service.isLogoutInProgress()).toBe(true);
+      // La pantalla no espera al servidor: la sesión local ya se ha ido antes de la respuesta.
+      expect(storage.getItem(TOKEN_KEY)).toBeNull();
+      expect(storage.getItem(USER_KEY)).toBeNull();
+      expect(service.isAuthenticated()).toBe(false);
+      expect(navigate).toHaveBeenCalledWith(['/login']);
 
       const req = http.expectOne(`${AUTH_ROOT}/logout`);
       expect(req.request.method).toBe('POST');
       req.flush(null);
 
-      expect(storage.getItem(TOKEN_KEY)).toBeNull();
-      expect(storage.getItem(USER_KEY)).toBeNull();
-      expect(service.isAuthenticated()).toBe(false);
       expect(service.isLogoutInProgress()).toBe(false);
-      expect(navigate).toHaveBeenCalledWith(['/login']);
     });
 
     it('clears session even when logout request fails', () => {

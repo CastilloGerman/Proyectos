@@ -28,6 +28,7 @@ import com.appgestion.api.security.SecurityUtils;
 import com.appgestion.api.security.TotpService;
 import com.appgestion.api.validation.UserPreferencesValidator;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -75,6 +76,8 @@ public class AuthService {
     private final PasswordResetService passwordResetService;
     private final InvitacionService invitacionService;
     private final EmailVerificationService emailVerificationService;
+    /** Proxy de este bean: la transacción de Google empieza después de verificar el token, no durante la red. */
+    private final AuthService self;
 
     public AuthService(UsuarioRepository usuarioRepository,
                        PasswordEncoder passwordEncoder,
@@ -90,7 +93,8 @@ public class AuthService {
                        PresupuestoCondicionesService presupuestoCondicionesService,
                        PasswordResetService passwordResetService,
                        InvitacionService invitacionService,
-                       EmailVerificationService emailVerificationService) {
+                       EmailVerificationService emailVerificationService,
+                       @Lazy AuthService self) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -106,6 +110,7 @@ public class AuthService {
         this.passwordResetService = passwordResetService;
         this.invitacionService = invitacionService;
         this.emailVerificationService = emailVerificationService;
+        this.self = self;
     }
 
     /**
@@ -236,13 +241,18 @@ public class AuthService {
     }
 
     /**
-     * Inicio de sesión con Google: verifica el ID token, busca o crea usuario por email y devuelve JWT.
+     * Inicio de sesión con Google. La verificación del ID token ocurre fuera de la transacción: así un fallo de red
+     * con Google no retiene una conexión de base de datos hasta que el proxy corta la petición.
      */
-    @Transactional(noRollbackFor = {IllegalArgumentException.class, ResponseStatusException.class})
     public AuthResponse loginWithGoogle(GoogleLoginRequest request, HttpServletRequest httpRequest) {
         var tokenInfo = googleTokenVerifier.verify(request.idToken())
                 .orElseThrow(() -> new IllegalArgumentException("Token de Google inválido o expirado"));
+        return self.openGoogleSession(tokenInfo, request, httpRequest);
+    }
 
+    @Transactional(noRollbackFor = {IllegalArgumentException.class, ResponseStatusException.class})
+    public AuthResponse openGoogleSession(GoogleTokenVerifier.TokenInfo tokenInfo, GoogleLoginRequest request,
+                                          HttpServletRequest httpRequest) {
         String email = tokenInfo.email().trim().toLowerCase();
         String nombre = tokenInfo.name() != null && !tokenInfo.name().isBlank()
                 ? tokenInfo.name().trim()

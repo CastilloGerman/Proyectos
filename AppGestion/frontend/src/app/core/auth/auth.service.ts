@@ -294,20 +294,25 @@ export class AuthService {
    */
   logout(): void {
     this.logoutInProgress = true;
-    this.http
-      .post<void>(`${this.authRoot}/logout`, {})
-      .pipe(
-        catchError(() => of(void 0)),
-        finalize(() => {
-          localStorage.removeItem(TOKEN_KEY);
-          localStorage.removeItem(USER_KEY);
-          this.tokenSignal.set(null);
-          this.userSignal.set(null);
-          this.logoutInProgress = false;
-          this.router.navigate(['/login']);
-        })
-      )
-      .subscribe();
+    const hadToken = !!this.getToken();
+    if (hadToken) {
+      // El interceptor lee el token al suscribirse, antes de limpiar el almacenamiento.
+      // La pantalla no espera a la API: en frío el POST puede tardar decenas de segundos
+      // y el cierre parecía colgado. La revocación sigue en segundo plano con el JWT ya copiado.
+      this.http
+        .post<void>(`${this.authRoot}/logout`, {})
+        .pipe(
+          catchError(() => of(void 0)),
+          finalize(() => {
+            this.logoutInProgress = false;
+          })
+        )
+        .subscribe();
+    } else {
+      this.logoutInProgress = false;
+    }
+    this.clearSessionLocal();
+    this.router.navigate(['/login']);
   }
 
   /** Limpia sesión local sin llamar al API (p. ej. 401 en el interceptor). */

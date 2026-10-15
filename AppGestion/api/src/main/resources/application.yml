@@ -314,9 +314,15 @@ spring:
     hikari:
       # Con pooler transaccional de Neon, Hikari añade una capa innecesaria.
       # Pool mínimo: el pooler gestiona las conexiones reales.
+      # 20 s da margen a que el cómputo de Neon despierte; 10 s hacía fallar el primer login en frío.
       maximum-pool-size: 2
       minimum-idle: 0
-      connection-timeout: 10000
+      connection-timeout: 20000
+  task:
+    scheduling:
+      # En Vercel no hay proceso persistente. El worker de correo y el resto de @Scheduled
+      # arrancaban igual, cogían una de las 2 conexiones y alargaban login y logout.
+      enabled: false
 app:
   # Desactivar @Scheduled en serverless (no hay proceso persistente).
   # Los jobs se dispararán mediante endpoints externos (fase siguiente).

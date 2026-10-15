@@ -13,6 +13,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -48,7 +49,12 @@ public class SubscriptionMigrationRunner {
         try {
             existing = appMigrationStateRepository.findByKey(MIGRATION_KEY);
         } catch (Exception e) {
-            // Si la tabla app_migration_state no existe, es un error de despliegue.
+            if (!isMissingMigrationTable(e)) {
+                // Un Neon dormido o un timeout de red no es un esquema roto. Abortar aquí mata el proceso
+                // (Vercel responde FUNCTION_INVOCATION_FAILED / 504) y ni el login ni el logout llegan a responder.
+                log.error("SubscriptionMigrationRunner: no se pudo leer el estado de migración; se reintentará en el siguiente arranque", e);
+                return;
+            }
             throw new IllegalStateException(
                     "SubscriptionMigrationRunner: la tabla 'app_migration_state' no existe. "
                             + "Ejecuta las migraciones de Flyway antes del primer arranque. "
@@ -76,6 +82,23 @@ public class SubscriptionMigrationRunner {
         }
         // Marcar como ejecutada para los siguientes arranques.
         appMigrationStateRepository.save(new AppMigrationState(MIGRATION_KEY, String.valueOf(updated)));
+    }
+
+    /** Solo un "relation does not exist" (SQLState 42P01) debe tumbar el arranque. El resto se reintenta. */
+    static boolean isMissingMigrationTable(Throwable error) {
+        Throwable current = error;
+        while (current != null) {
+            if (current instanceof SQLException sql && "42P01".equals(sql.getSQLState())) {
+                return true;
+            }
+            String message = current.getMessage();
+            if (message != null && message.contains("app_migration_state")
+                    && (message.contains("does not exist") || message.contains("no existe"))) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private boolean needsMigration(Usuario u) {

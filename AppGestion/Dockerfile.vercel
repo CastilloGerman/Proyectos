@@ -27,7 +27,7 @@ EXPOSE 80
 
 # Priorizar arranque en frio: C1 evita el coste de compilacion C2 durante startup.
 # Compromiso: menor rendimiento maximo en workloads largos; medir antes de promover.
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:TieredStopAtLevel=1" \
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:TieredStopAtLevel=1 -Djava.net.preferIPv4Stack=true" \
     SPRING_PROFILES_ACTIVE="prod,serverless"
 
 # exec permite que Java reciba SIGTERM directamente.

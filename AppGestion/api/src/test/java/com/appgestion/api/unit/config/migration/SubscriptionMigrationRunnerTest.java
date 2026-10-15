@@ -12,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataAccessResourceFailureException;
 
 import java.util.List;
 import java.util.Optional;
@@ -109,5 +110,18 @@ class SubscriptionMigrationRunnerTest {
         assert msg.contains("app_migration_state");
         assert msg.contains("Flyway") : "El mensaje debe mencionar Flyway: " + msg;
         assert msg.contains("prod") : "El mensaje debe mencionar el perfil prod: " + msg;
+    }
+
+    @Test
+    @DisplayName("Un timeout de base de datos no tumba el arranque")
+    void shouldContinueWhenDatabaseIsTemporarilyUnavailable() {
+        when(appMigrationStateRepository.findByKey("subscription_migration_v1"))
+                .thenThrow(new DataAccessResourceFailureException(
+                        "Connection is not available, request timed out after 10000ms"));
+
+        runner.migrateExistingUsers();
+
+        verify(usuarioRepository, never()).findAll();
+        verify(appMigrationStateRepository, never()).save(any());
     }
 }

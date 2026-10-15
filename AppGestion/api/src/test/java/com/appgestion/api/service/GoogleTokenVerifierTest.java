@@ -1,11 +1,19 @@
 package com.appgestion.api.service;
 
 import com.appgestion.api.service.GoogleTokenVerifier.TokenInfo;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Jwks;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
+import java.security.KeyPair;
+import java.security.interfaces.RSAPublicKey;
 import java.time.Instant;
+import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** SEC-02: validaciones de audiencia, emisor, caducidad y email verificado sobre la respuesta de tokeninfo. */
 class GoogleTokenVerifierTest {
@@ -74,5 +82,47 @@ class GoogleTokenVerifierTest {
     void tokenVacio_seRechaza() {
         assertThat(verifier.verify(null)).isEmpty();
         assertThat(verifier.verify("  ")).isEmpty();
+    }
+
+    @Test
+    void firmaRsaDelClientId_seAcepta() throws Exception {
+        KeyPair pair = Jwts.SIG.RS256.keyPair().build();
+        GoogleTokenVerifier local = verifierConClave(pair);
+        assertThat(local.verify(jwtFirmado(pair, MY_CLIENT_ID, true))).isPresent();
+    }
+
+    @Test
+    void firmaDeOtraClave_seRechaza() {
+        KeyPair signer = Jwts.SIG.RS256.keyPair().build();
+        KeyPair published = Jwts.SIG.RS256.keyPair().build();
+        GoogleTokenVerifier local = verifierConClave(published);
+        assertThat(local.verify(jwtFirmado(signer, MY_CLIENT_ID, true))).isEmpty();
+    }
+
+    @Test
+    void googleNoResponde_responde503SinQuedarseColgado() {
+        GoogleTokenVerifier local = new GoogleTokenVerifier(MY_CLIENT_ID, () -> {
+            throw new IOException("timeout");
+        });
+        assertThatThrownBy(() -> local.verify("eyJhbGciOiJSUzI1NiIsImtpZCI6ImtpZC0xIn0.eyJzdWIiOiJ4In0.c2ln"))
+                .isInstanceOf(ResponseStatusException.class);
+    }
+
+    private static GoogleTokenVerifier verifierConClave(KeyPair published) {
+        String jwk = Jwks.json(Jwks.builder().key((RSAPublicKey) published.getPublic()).id("kid-1").build());
+        return new GoogleTokenVerifier(MY_CLIENT_ID, () -> "{\"keys\":[" + jwk + "]}");
+    }
+
+    private static String jwtFirmado(KeyPair signer, String audience, boolean emailVerified) {
+        return Jwts.builder()
+                .header().keyId("kid-1").and()
+                .claim("email", "a@b.com")
+                .claim("email_verified", emailVerified)
+                .claim("name", "Ada")
+                .issuer(ISS)
+                .audience().add(audience).and()
+                .expiration(Date.from(Instant.now().plusSeconds(600)))
+                .signWith(signer.getPrivate(), Jwts.SIG.RS256)
+                .compact();
     }
 }
