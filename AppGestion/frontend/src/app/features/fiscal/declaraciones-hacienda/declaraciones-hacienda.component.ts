@@ -141,11 +141,6 @@ export class DeclaracionesHaciendaComponent implements OnInit, OnDestroy {
     return this.cifra(r).etiqueta === ETIQUETA_A_COMPENSAR;
   }
 
-  /** La explicación del soportado a cero va en un solo aviso, no en cada nota del API. */
-  avisos(r: Modelo303Resumen): string[] {
-    return (r.advertencias ?? []).filter((aviso) => !aviso.startsWith('IVA soportado'));
-  }
-
   rutaApp(ruta: string): string {
     if (!ruta) {
       return ruta;

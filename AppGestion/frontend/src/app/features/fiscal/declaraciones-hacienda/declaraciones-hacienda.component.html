@@ -171,7 +171,7 @@
 
       <div class="dh-info-line" role="note">
         <mat-icon>info</mat-icon>
-        <span>Resumen orientativo, consulta con tu gestor antes de presentar.</span>
+        <span>Resumen orientativo, consulta con tu gestor.</span>
       </div>
 
       <button type="button" class="dh-text-btn dh-calculo" (click)="explicacionAbierta = !explicacionAbierta">
@@ -188,10 +188,6 @@
         @if (r.numeroGastos > 0) {
           <p class="dh-nota">{{ r.ivaSoportadoNota }}</p>
         }
-        @for (a of avisos(r); track a) {
-          <p class="dh-adv">• {{ a }}</p>
-        }
-        <p class="dh-legal">{{ r.avisoLegal }}</p>
       }
     </mat-card-content>
   </mat-card>
@@ -214,7 +210,6 @@
 
       @if (modelo347(); as m347) {
         <p class="dh-347-count">Clientes por encima del umbral: <strong>{{ m347.totalClientesUmbral }}</strong></p>
-        <p class="dh-legal">{{ m347.avisoLegal }}</p>
         @if (m347.clientes.length > 0) {
           <table mat-table [dataSource]="m347.clientes" class="dh-table">
             <ng-container matColumnDef="nombre">
@@ -238,4 +233,8 @@
       }
     </mat-card-content>
   </mat-card>
+
+  @if (resumen(); as r) {
+    <p class="dh-legal">{{ r.avisoLegal }}</p>
+  }
 </div>
