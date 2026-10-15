@@ -32,7 +32,7 @@ En el código se apoya en:
 - **Soporte y avisos:** contacto a buzón interno (multipart), notificaciones in-app, páginas legales y consentimiento de cookies.
 - **Tareas programadas:** recordatorios de factura, seguimiento de presupuestos, caducidad de trial, limpieza de sesiones y de auditoría, worker de la outbox de correo y limpieza de OAuth pendiente. El perfil `serverless` desactiva la limpieza de sesiones y de auditoría.
 
-El arranque local es PostgreSQL, el Maven Wrapper y npm, mediante `start-local.ps1`. El despliegue de la API en Vercel usa `Dockerfile.vercel` y el perfil Spring `serverless` (Flyway desactivado en ese perfil; las migraciones se aplican aparte). Guía: [DESPLIEGUE-VERCEL-API.md](docs/DESPLIEGUE-VERCEL-API.md).
+El arranque local es PostgreSQL, el Maven Wrapper y npm, mediante `start-local.ps1`. El despliegue de la API en Vercel usa `Dockerfile.vercel` y el perfil Spring `serverless`. En ese perfil Flyway no arranca (`spring.flyway.enabled=false`, `ddl-auto: none`). Las migraciones se aplican en un paso previo al despliegue, contra la URL directa de Neon. Guía: [DESPLIEGUE-VERCEL-API.md](docs/DESPLIEGUE-VERCEL-API.md).
 
 ---
 
@@ -145,7 +145,14 @@ La URL por defecto es `jdbc:postgresql://localhost:5432/appgestion`. El perfil `
 CREATE DATABASE appgestion;
 ```
 
-Hibernate `ddl-auto`: **`validate`** en el perfil base y en `prod`; **`update`** solo en el perfil **`local`**. Flyway valida las migraciones por defecto (`FLYWAY_VALIDATE_ON_MIGRATE=true`). El perfil `local` pone `baseline-on-migrate=true` y `validate-on-migrate=false`. El perfil `serverless` desactiva Flyway.
+Hibernate `ddl-auto`: **`validate`** en el perfil base y en `prod`; **`update`** solo en el perfil **`local`**; **`none`** en **`serverless`**. Flyway valida las migraciones por defecto (`FLYWAY_VALIDATE_ON_MIGRATE=true`). El perfil `local` pone `baseline-on-migrate=true` y `validate-on-migrate=false`. El perfil `serverless` deja Flyway apagado.
+
+En Vercel la API habla con el **pooler** de Neon. `SPRING_DATASOURCE_URL` usa el host con `-pooler` y `prepareThreshold=0` (el pooler transaccional no conserva prepared statements). Flyway no usa esa URL: el paso previo al despliegue lee `FLYWAY_URL`, el host **directo** (el mismo endpoint sin `-pooler`). Usuario y contraseña de ese paso son `FLYWAY_USER` y `FLYWAY_PASSWORD`, secretos del CI, no del contenedor. Forma de las URLs, sin credenciales:
+
+```text
+SPRING_DATASOURCE_URL=jdbc:postgresql://ep-NOMBRE-pooler.REGION.aws.neon.tech/appgestion?sslmode=require&prepareThreshold=0
+FLYWAY_URL=jdbc:postgresql://ep-NOMBRE.REGION.aws.neon.tech/appgestion?sslmode=require
+```
 
 ### API y frontend a la vez (Windows)
 
@@ -223,8 +230,10 @@ Esta tabla es una referencia de nombres. Los comandos anteriores configuran el e
 |----------|-----|
 | `SPRING_PROFILES_ACTIVE` | `local`, `prod` y, en Vercel, `prod,serverless` |
 | `PORT` | Puerto HTTP. Defecto del yml: `8080`. `start-local.ps1` y el proxy usan `8081` |
-| `SPRING_DATASOURCE_URL` | JDBC. Si falta, se compone con `PGHOST`, `PGPORT` y `PGDATABASE` |
-| `DB_USERNAME`, `DB_PASSWORD`, `PGUSER`, `PGPASSWORD` | Credenciales PostgreSQL. Defecto `postgres`/`postgres` solo en perfil `local` |
+| `SPRING_DATASOURCE_URL` | JDBC de la API. Si falta, se compone con `PGHOST`, `PGPORT` y `PGDATABASE`. En Vercel: host Neon con `-pooler`, `sslmode=require` y `prepareThreshold=0` |
+| `FLYWAY_URL` | JDBC directa de Neon, sin `-pooler`. Solo el paso de migración previo al despliegue. El proceso `serverless` no la lee |
+| `FLYWAY_USER`, `FLYWAY_PASSWORD` | Usuario y contraseña de `FLYWAY_URL`. Secretos del CI, no van en el repositorio ni en el contenedor de Vercel |
+| `DB_USERNAME`, `DB_PASSWORD`, `PGUSER`, `PGPASSWORD` | Credenciales PostgreSQL de la API. Defecto `postgres`/`postgres` solo en perfil `local` |
 | `JWT_SECRET` | Obligatorio fuera de `local` (≥32 caracteres) |
 | `CORS_ALLOWED_ORIGINS`, `CORS_ALLOWED_ORIGIN_PATTERNS` | Orígenes CORS |
 | `FRONTEND_URL` | URL del front. En `prod`, defecto `https://noemiweb.com` |

@@ -1419,6 +1419,7 @@
     "optFailSystem": "Send via app email (recommended)",
     "optFailBlock": "Do not send",
     "oauthFailHint": "When token expires or provider rejects submission.",
+    "saveBlocked": "Can’t save yet. Check: {{fields}}",
     "saveChanges": "Save changes"
   },
   "lang": {

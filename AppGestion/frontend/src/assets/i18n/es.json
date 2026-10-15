@@ -1620,6 +1620,7 @@
     "optFailSystem": "Enviar por el correo de la aplicación (recomendado)",
     "optFailBlock": "No enviar el correo",
     "oauthFailHint": "Si el token caduca o el proveedor rechaza.",
+    "saveBlocked": "No se puede guardar. Revisa: {{fields}}",
     "saveChanges": "Guardar cambios"
   },
   "lang": {

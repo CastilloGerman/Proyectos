@@ -155,128 +155,13 @@
         </mat-card-content>
       </mat-card>
 
-      <mat-accordion class="empresa-accordion">
-        <mat-expansion-panel>
-          <mat-expansion-panel-header>
-            <mat-panel-title>{{ 'acctCo.advEmailTitle' | translate }}</mat-panel-title>
-            <mat-panel-description>{{ emailEnvioResumen() }}</mat-panel-description>
-          </mat-expansion-panel-header>
-          <div class="empresa-fields empresa-fields--email-mode">
-            <p class="empresa-hint-muted">
-              {{ 'acctCo.advancedIntro' | translate }}
-            </p>
-            <mat-radio-group formControlName="emailProvider" class="empresa-radio-stack">
-              <mat-radio-button value="system">{{ 'acctCo.optSystem' | translate }}</mat-radio-button>
-              <mat-radio-button value="gmail">{{ 'acctCo.optGmailOAuth' | translate }}</mat-radio-button>
-              <mat-radio-button value="outlook">{{ 'acctCo.optOutlookOAuth' | translate }}</mat-radio-button>
-              <mat-radio-button value="smtp_legacy">{{ 'acctCo.optSmtpLegacy' | translate }}</mat-radio-button>
-            </mat-radio-group>
-
-            @if (form.controls.emailProvider.value === 'system') {
-              <mat-form-field appearance="outline" class="full">
-                <mat-label>{{ 'acctCo.systemFromLbl' | translate }}</mat-label>
-                <input
-                  matInput
-                  formControlName="systemFromOverride"
-                  [placeholder]="'acctCo.systemFromPh' | translate"
-                  maxlength="255"
-                />
-                <mat-hint>{{ 'acctCo.systemFromHint' | translate }}</mat-hint>
-              </mat-form-field>
-            }
-
-            @if (form.controls.emailProvider.value === 'gmail' || form.controls.emailProvider.value === 'outlook') {
-              <div class="empresa-oauth-actions">
-                @if (form.controls.emailProvider.value === 'gmail' && !googleOAuthConfigured) {
-                  <p class="empresa-hint-warn">{{ 'acctCo.oauthWarnGoogle' | translate }}</p>
-                }
-                @if (form.controls.emailProvider.value === 'outlook' && !microsoftOAuthConfigured) {
-                  <p class="empresa-hint-warn">{{ 'acctCo.oauthWarnMs' | translate }}</p>
-                }
-                <p class="empresa-hint-muted">
-                  {{ 'acctCo.oauthStatePrefix' | translate }}
-                  @if (oauthConnected) {
-                    <strong>{{ 'acctCo.oauthConnectedBold' | translate }}</strong>
-                  } @else {
-                    <span>{{ 'acctCo.oauthDisconnected' | translate }}</span>
-                  }
-                </p>
-                <div class="empresa-row empresa-row--wrap">
-                  @if (form.controls.emailProvider.value === 'gmail') {
-                    <button
-                      mat-stroked-button
-                      type="button"
-                      color="primary"
-                      (click)="conectarGoogle()"
-                      [disabled]="oauthConnecting || !googleOAuthConfigured"
-                    >
-                      {{ 'acctCo.btnGmail' | translate }}
-                    </button>
-                  }
-                  @if (form.controls.emailProvider.value === 'outlook') {
-                    <button
-                      mat-stroked-button
-                      type="button"
-                      color="primary"
-                      (click)="conectarMicrosoft()"
-                      [disabled]="oauthConnecting || !microsoftOAuthConfigured"
-                    >
-                      {{ 'acctCo.btnMs' | translate }}
-                    </button>
-                  }
-                  @if (oauthConnected) {
-                    <button mat-button type="button" color="warn" (click)="desconectarOAuth()">{{ 'acctCo.btnDisconnectAcct' | translate }}</button>
-                  }
-                </div>
-                <mat-form-field appearance="outline" class="full">
-                  <mat-label>{{ 'acctCo.oauthFailLbl' | translate }}</mat-label>
-                  <mat-select formControlName="oauthOnFailure">
-                    <mat-option value="system">{{ 'acctCo.optFailSystem' | translate }}</mat-option>
-                    <mat-option value="fail">{{ 'acctCo.optFailBlock' | translate }}</mat-option>
-                  </mat-select>
-                  <mat-hint>{{ 'acctCo.oauthFailHint' | translate }}</mat-hint>
-                </mat-form-field>
-              </div>
-            }
-          </div>
-        </mat-expansion-panel>
-
-        <mat-expansion-panel>
-          <mat-expansion-panel-header>
-            <mat-panel-title>{{ 'acctCo.smtpPanelTitle' | translate }}</mat-panel-title>
-            <mat-panel-description>
-              {{ 'acctCo.optionalBullet' | translate }}{{ mailConfigurado ? ('acctCo.smtpConfigured' | translate) : ('acctCo.smtpNotCfg' | translate) }}
-            </mat-panel-description>
-          </mat-expansion-panel-header>
-          <div class="empresa-fields empresa-fields--smtp">
-            <p class="empresa-hint-muted">
-              {{ 'acctCo.smtpIntro' | translate }}
-            </p>
-            <mat-form-field appearance="outline" class="full">
-              <mat-label>{{ 'acctCo.smtpHost' | translate }}</mat-label>
-              <input matInput formControlName="mailHost" placeholder="smtp.gmail.com" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="full smtp-port">
-              <mat-label>{{ 'acctCo.smtpPort' | translate }}</mat-label>
-              <input matInput type="number" formControlName="mailPort" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="full">
-              <mat-label>{{ 'acctCo.smtpUser' | translate }}</mat-label>
-              <input matInput formControlName="mailUsername" autocomplete="username" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="full">
-              <mat-label>{{ 'acctCo.smtpPass' | translate }}</mat-label>
-              <input matInput formControlName="mailPassword" type="password" autocomplete="new-password" />
-              <mat-hint>{{
-                mailConfigurado ? ('acctCo.smtpPassHintStored' | translate) : ('acctCo.smtpPassHintEmpty' | translate)
-              }}</mat-hint>
-            </mat-form-field>
-          </div>
-        </mat-expansion-panel>
-      </mat-accordion>
-
       <div class="empresa-actions">
-        <button mat-raised-button color="primary" type="submit" [disabled]="saving() || form.invalid">
+        @if (form.invalid) {
+          <p class="empresa-save-block" role="alert">
+            {{ 'acctCo.saveBlocked' | translate: { fields: camposInvalidos() } }}
+          </p>
+        }
+        <button mat-raised-button color="primary" type="submit" [disabled]="saving()">
           @if (saving()) {
             <mat-progress-spinner diameter="20" mode="indeterminate" />
           } @else {

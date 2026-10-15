@@ -5,11 +5,20 @@ const CIF_LETRAS_CONTROL = 'JABCDEFGHI';
 const CIF_CALCULO = [0, 2, 4, 6, 8, 1, 3, 5, 7, 9];
 
 function normalizar(nif: string): string {
-  return (nif || '').replace(/[\s\-]/g, '').toUpperCase();
+  let n = (nif || '').replace(/[^0-9a-zA-Z]/g, '').toUpperCase();
+  if (n.startsWith('ES') && n.length === 11) {
+    n = n.slice(2);
+  }
+  return n;
 }
 
 function esDni(n: string): boolean {
   return /^\d{8}[A-Z]$/.test(n);
+}
+
+/** K (menores), L (españoles en el extranjero) y M (extranjeros sin NIE). */
+function esNifKlm(n: string): boolean {
+  return /^[KLM]\d{7}[A-Z]$/.test(n);
 }
 
 function esNie(n: string): boolean {
@@ -24,6 +33,11 @@ function validarDni(dni: string): boolean {
   const num = parseInt(dni.substring(0, 8), 10);
   const letra = dni.charAt(8);
   return DNI_LETRAS.charAt(num % 23) === letra;
+}
+
+function validarNifKlm(nif: string): boolean {
+  const num = parseInt(nif.substring(1, 8), 10);
+  return DNI_LETRAS.charAt(num % 23) === nif.charAt(8);
 }
 
 function validarNie(nie: string): boolean {
@@ -66,6 +80,7 @@ export function esNifValido(nif: string | null | undefined): boolean {
   if (esCif(n)) return validarCif(n);
   if (esNie(n)) return validarNie(n);
   if (esDni(n)) return validarDni(n);
+  if (esNifKlm(n)) return validarNifKlm(n);
   return false;
 }
 

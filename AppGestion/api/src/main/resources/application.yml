@@ -306,13 +306,10 @@ spring:
   config:
     activate:
       on-profile: serverless
-  # Vercel no tiene un paso de migración aparte. Si Flyway queda apagado, el código nuevo
-  # consulta columnas que no existen (p. ej. usuarios.email_verification_expires_at) y el login responde 500.
-  # El candado transaccional es el que funciona con el pooler de Neon.
+  # Las migraciones no corren aquí: el pooler de Neon y el arranque en frío no son sitio para el lock de Flyway.
+  # Se aplican en el paso previo al despliegue, contra la URL directa (FLYWAY_URL, host sin -pooler).
   flyway:
-    enabled: true
-    postgresql:
-      transactional-lock: true
+    enabled: false
   jpa:
     hibernate:
       ddl-auto: none
@@ -321,17 +318,23 @@ spring:
         "[boot.allow_jdbc_metadata_access]": false
   datasource:
     hikari:
-      # Con pooler transaccional de Neon, Hikari añade una capa innecesaria.
-      # Pool mínimo: el pooler gestiona las conexiones reales.
-      # -1: no exigir una conexión al crear el pool. Si no, el arranque espera connection-timeout y se cae.
-      maximum-pool-size: 2
+      # El pooler transaccional de Neon gestiona las conexiones reales a Postgres.
+      # Hikari solo reparte las pocas sesiones que esa instancia tiene abiertas contra el pooler.
+      # 5: cabe el inicio (presupuestos, facturas, gastos y materiales a la vez) sin abrir
+      # una sesión del pooler por cada petición encolada.
+      maximum-pool-size: 5
+      # 0: una instancia congelada no debe retener sesiones ociosas que el pooler puede cerrar.
       minimum-idle: 0
+      # 10 s: si el pooler no entrega sesión, fallar pronto en lugar de aguantar el timeout largo del perfil base.
+      connection-timeout: 10000
+      # 5 min: reciclar antes de que el pooler cierre la sesión por edad o inactividad.
+      max-lifetime: 300000
+      # -1: no exigir una conexión al crear el pool. Si no, el arranque espera connection-timeout y se cae.
       initialization-fail-timeout: -1
-      connection-timeout: 30000
   task:
     scheduling:
       # En Vercel no hay proceso persistente. El worker de correo y el resto de @Scheduled
-      # arrancaban igual, cogían una de las 2 conexiones y alargaban login y logout.
+      # arrancaban igual, cogían una conexión del pool y alargaban login y logout.
       enabled: false
 app:
   # Desactivar @Scheduled en serverless (no hay proceso persistente).
