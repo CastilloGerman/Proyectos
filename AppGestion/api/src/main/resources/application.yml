@@ -307,17 +307,25 @@ spring:
     activate:
       on-profile: serverless
   # En serverless (Vercel), las migraciones se ejecutan fuera de la API.
-  # La API solo valida que el schema sea correcto.
+  # No validar el esquema al arrancar: eso abre una conexión y, si Neon está dormido, el proceso muere
+  # antes de poder responder (504 / FUNCTION_INVOCATION_FAILED).
   flyway:
     enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        "[boot.allow_jdbc_metadata_access]": false
   datasource:
     hikari:
       # Con pooler transaccional de Neon, Hikari añade una capa innecesaria.
       # Pool mínimo: el pooler gestiona las conexiones reales.
-      # 20 s da margen a que el cómputo de Neon despierte; 10 s hacía fallar el primer login en frío.
+      # -1: no exigir una conexión al crear el pool. Si no, el arranque espera connection-timeout y se cae.
       maximum-pool-size: 2
       minimum-idle: 0
-      connection-timeout: 20000
+      initialization-fail-timeout: -1
+      connection-timeout: 30000
   task:
     scheduling:
       # En Vercel no hay proceso persistente. El worker de correo y el resto de @Scheduled

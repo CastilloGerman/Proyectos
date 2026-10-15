@@ -9,9 +9,9 @@ import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -33,25 +33,24 @@ public class SubscriptionMigrationRunner {
     private final AppMigrationStateRepository appMigrationStateRepository;
     private final EntityManager entityManager;
 
-    public SubscriptionMigrationRunner(UsuarioRepository usuarioRepository,
-                                       AppMigrationStateRepository appMigrationStateRepository,
-                                       EntityManager entityManager) {
+    public SubscriptionMigrationRunner(@Lazy UsuarioRepository usuarioRepository,
+                                       @Lazy AppMigrationStateRepository appMigrationStateRepository,
+                                       @Lazy EntityManager entityManager) {
         this.usuarioRepository = usuarioRepository;
         this.appMigrationStateRepository = appMigrationStateRepository;
         this.entityManager = entityManager;
     }
 
+    /**
+     * Sin {@code @Transactional} en el listener: la transacción abriría la conexión antes del método, y un Neon
+     * dormido tumbaría el proceso (Vercel: FUNCTION_INVOCATION_FAILED / 504) sin llegar al catch.
+     */
     @EventListener(ApplicationReadyEvent.class)
-    @Transactional
     public void migrateExistingUsers() {
-        // Guard: si ya se ejecutó, saltar (evita cargar todos los usuarios en cada arranque en frío).
-        Optional<AppMigrationState> existing;
         try {
-            existing = appMigrationStateRepository.findByKey(MIGRATION_KEY);
+            migrateExistingUsersInDatabase();
         } catch (Exception e) {
             if (!isMissingMigrationTable(e)) {
-                // Un Neon dormido o un timeout de red no es un esquema roto. Abortar aquí mata el proceso
-                // (Vercel responde FUNCTION_INVOCATION_FAILED / 504) y ni el login ni el logout llegan a responder.
                 log.error("SubscriptionMigrationRunner: no se pudo leer el estado de migración; se reintentará en el siguiente arranque", e);
                 return;
             }
@@ -63,6 +62,11 @@ public class SubscriptionMigrationRunner {
                             + "Detalle: " + e.getMessage(),
                     e);
         }
+    }
+
+    private void migrateExistingUsersInDatabase() {
+        // Guard: si ya se ejecutó, saltar (evita cargar todos los usuarios en cada arranque en frío).
+        Optional<AppMigrationState> existing = appMigrationStateRepository.findByKey(MIGRATION_KEY);
         if (existing.isPresent()) {
             log.debug("SubscriptionMigrationRunner: migración ya ejecutada ({}), omitiendo", MIGRATION_KEY);
             return;
