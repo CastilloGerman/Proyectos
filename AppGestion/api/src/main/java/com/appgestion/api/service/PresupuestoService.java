@@ -20,6 +20,7 @@ import com.appgestion.api.repository.PresupuestoEnlaceRepository;
 import com.appgestion.api.repository.PresupuestoSeguimientoAvisoRepository;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.appgestion.api.util.EmailCopy;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,7 +55,7 @@ public class PresupuestoService {
                               MaterialRepository materialRepository,
                               FacturaRepository facturaRepository,
                               PresupuestoPdfService presupuestoPdfService,
-                              EmailService emailService,
+                              @Lazy EmailService emailService,
                               PresupuestoCondicionesService presupuestoCondicionesService,
                               UsuarioRepository usuarioRepository,
                               PresupuestoEnlaceRepository presupuestoEnlaceRepository,

@@ -23,6 +23,7 @@ import com.appgestion.api.repository.FacturaRepository;
 import com.appgestion.api.repository.MaterialRepository;
 import com.appgestion.api.repository.PresupuestoRepository;
 import com.appgestion.api.util.NifValidator;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -73,7 +74,7 @@ public class FacturaService {
                           FacturaNumeroService facturaNumeroService,
                           FacturaCobroRepository facturaCobroRepository,
                           FacturaResponseMapper facturaResponseMapper,
-                          FacturaEmailService facturaEmailService,
+                          @Lazy FacturaEmailService facturaEmailService,
                           FacturaCobroService facturaCobroService,
                           FacturaPaymentLinkService facturaPaymentLinkService,
                           ClienteService clienteService,
