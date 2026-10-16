@@ -376,7 +376,15 @@ function decimalMin(minimum: number) {
     .section-title { font-size: 1rem; font-weight: 600; margin: 0 0 10px; }
     .materiales-section { border: 1px solid rgba(30, 58, 138, .16); background: rgba(30, 58, 138, .03); }
     .tareas-section { border: 1px solid rgba(180, 83, 9, .22); background: rgba(180, 83, 9, .06); }
-    .ia-section { border: 1px solid #64748b; background: #f8fafc; }
+    .ia-section {
+      border: 1px solid rgba(100, 116, 139, 0.45);
+      background: rgba(100, 116, 139, 0.08);
+      color: var(--app-text-primary, #0f172a);
+    }
+    :host-context(html.app-dark-theme) .ia-section {
+      border-color: rgba(148, 163, 184, 0.32);
+      background: rgba(148, 163, 184, 0.08);
+    }
     .ai-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
     .ai-generate, .confirm-ai-btn { min-height: 48px; }
     .char-count { color: var(--app-text-secondary, #475569); font-size: .9rem; }

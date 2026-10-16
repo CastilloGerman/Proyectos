@@ -50,16 +50,38 @@ export interface PresupuestoIaPanelState {
     </section>
   `,
   styles: [`
-    .ia-panel { margin: 0; }
+    .ia-panel { margin: 0; color: var(--app-text-primary, #0f172a); }
+    .ia-panel h2 { margin: 0 0 10px; color: var(--app-text-primary, #0f172a); font-size: 1rem; font-weight: 600; }
     .full { display: block; width: 100%; }
+    .full textarea {
+      color: var(--app-text-primary, #0f172a);
+      caret-color: var(--app-text-primary, #0f172a);
+      background: transparent;
+    }
     .actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
     .char-count { color: var(--app-text-secondary, #64748b); font-size: 13px; }
-    .price-tip { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 12px; font-size: 13px; }
-    .price-tip mat-icon { flex: 0 0 auto; }
+    .price-tip { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 12px; font-size: 13px; color: var(--app-text-secondary, #64748b); }
+    .price-tip mat-icon { flex: 0 0 auto; color: var(--app-text-secondary, #64748b); }
     button { min-height: 48px; }
-    .status { margin: 8px 0 0; font-weight: 600; }
+    .status { margin: 8px 0 0; font-weight: 600; color: var(--app-text-primary, #0f172a); }
     .status.error { color: #b91c1c; }
     .overwrite-warning { margin: 0 0 12px; padding: 10px 12px; border: 1px solid #b45309; border-radius: 8px; color: #92400e; background: #fffbeb; }
+    :host-context(html.app-dark-theme) .full {
+      --mdc-outlined-text-field-input-text-color: var(--app-text-primary, #f8fafc);
+      --mdc-outlined-text-field-label-text-color: var(--app-text-secondary, #cbd5e1);
+      --mdc-outlined-text-field-hover-label-text-color: var(--app-text-primary, #f8fafc);
+      --mdc-outlined-text-field-focus-label-text-color: #c7d2fe;
+      --mdc-outlined-text-field-outline-color: rgba(148, 163, 184, 0.45);
+      --mdc-outlined-text-field-hover-outline-color: rgba(203, 213, 225, 0.7);
+      --mdc-outlined-text-field-focus-outline-color: #818cf8;
+      --mdc-outlined-text-field-caret-color: var(--app-text-primary, #f8fafc);
+    }
+    :host-context(html.app-dark-theme) .status.error { color: #fca5a5; }
+    :host-context(html.app-dark-theme) .overwrite-warning {
+      color: #fcd34d;
+      background: rgba(120, 53, 15, 0.45);
+      border-color: rgba(251, 191, 36, 0.45);
+    }
   `],
 })
 export class PresupuestoIaPanelComponent implements AfterViewInit {
