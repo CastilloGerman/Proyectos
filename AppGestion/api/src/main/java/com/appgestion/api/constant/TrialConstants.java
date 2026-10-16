@@ -5,8 +5,8 @@ package com.appgestion.api.constant;
  */
 public final class TrialConstants {
 
-    /** Días naturales desde el alta hasta fin de trial. */
-    public static final int DEFAULT_TRIAL_DAYS = 30;
+    /** Días naturales desde el alta hasta fin de trial (3 meses). */
+    public static final int DEFAULT_TRIAL_DAYS = 90;
 
     private TrialConstants() {}
 }

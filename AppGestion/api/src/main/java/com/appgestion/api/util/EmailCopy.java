@@ -49,8 +49,8 @@ public final class EmailCopy {
                 + "no tiene que coincidir con la dirección donde recibiste este mensaje.</p>";
     }
 
-    public static String inviteReferralTrialOneMonthParagraphHtml() {
-        return "<p>Tendrás un periodo de prueba gratis de 1 mes para poder conocernos; después, para "
+    public static String inviteReferralTrialParagraphHtml() {
+        return "<p>Tendrás un periodo de prueba gratis de 3 meses para poder conocernos; después, para "
                 + "seguir trabajando, creando y editando necesitarás una suscripción activa.</p>";
     }
 

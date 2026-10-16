@@ -99,7 +99,7 @@ public class InvitacionService {
         String cuerpo = EmailCopy.inviteReferralTeamOpeningParagraphHtml()
                 + EmailCopy.inviteReferralProductParagraphHtml()
                 + EmailCopy.inviteReferralSomeoneSentLinkParagraphHtml()
-                + EmailCopy.inviteReferralTrialOneMonthParagraphHtml()
+                + EmailCopy.inviteReferralTrialParagraphHtml()
                 + "<p><a href=\"" + link + "\">Abrir " + EmailCopy.PUBLIC_SITE_HOST + "</a></p>"
                 + "<p>El enlace caduca en " + INVITE_VALID_DAYS + " días.</p>";
 
