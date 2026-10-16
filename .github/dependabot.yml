@@ -7,7 +7,12 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 5
     groups:
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
       spring:
+        applies-to: version-updates
         patterns:
           - "org.springframework*"
   - package-ecosystem: "npm"
@@ -16,14 +21,48 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 5
     groups:
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
       angular:
+        applies-to: version-updates
         patterns:
           - "@angular/*"
+    ignore:
+      # @angular/build@21 exige typescript >=5.9 <6.0
+      - dependency-name: "typescript"
+        versions: [">=6.0.0"]
+      - dependency-name: "@angular/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@angular-devkit/*"
+        update-types: ["version-update:semver-major"]
+      # architect y build-webpack van en 0.21xx; 0.22xx acompaña a Angular 22
+      # y no cuenta como semver-major.
+      - dependency-name: "@angular-devkit/architect"
+        versions: [">=0.2200.0"]
+      - dependency-name: "@angular-devkit/build-webpack"
+        versions: [">=0.2200.0"]
+      # El runtime es Node 24.x. Un major de @types/node (25, 26, …) no coincide.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "docker"
     directory: "/AppGestion"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
