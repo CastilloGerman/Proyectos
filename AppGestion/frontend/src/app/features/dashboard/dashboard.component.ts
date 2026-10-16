@@ -489,8 +489,15 @@ export interface TopCliente {
                     <path
                       [attr.d]="ingresosAreaPath"
                       fill="url(#ingresosGradient)"
+                      stroke="none"
+                      pointer-events="none"
+                    />
+                    <path
+                      [attr.d]="ingresosLinePath"
+                      fill="none"
                       stroke="#1e3a8a"
-                      stroke-width="2"
+                      stroke-width="2.25"
+                      stroke-linecap="round"
                       stroke-linejoin="round"
                       pointer-events="none"
                     />
@@ -1624,23 +1631,99 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     return value.toFixed(0);
   }
 
-  /** Path SVG del área de ingresos (solo modo año). */
-  get ingresosAreaPath(): string {
-    if (this.chartIngresosMode !== 'anio') return '';
+  /** Puntos del gráfico anual en coordenadas del SVG. */
+  private get ingresosChartPoints(): { x: number; y: number }[] {
+    if (this.chartIngresosMode !== 'anio') return [];
     const data = this.ingresosPorMes;
-    if (data.length === 0) return '';
+    if (data.length === 0) return [];
     const maxVal = this.chartMaxValue;
     const rangeY = this.chartBottomY - this.chartTopY;
     const stepX = this.chartStepX;
-    const points: string[] = [];
-    data.forEach((d, i) => {
-      const x = this.chartPadLeft + i * stepX;
-      const y = this.chartBottomY - (d.value / maxVal) * rangeY;
-      points.push(`${x},${y}`);
-    });
+    return data.map((d, i) => ({
+      x: this.chartPadLeft + i * stepX,
+      y: this.chartBottomY - (d.value / maxVal) * rangeY,
+    }));
+  }
+
+  /**
+   * Curva monótona cúbica (Fritsch–Carlson): pasa por cada mes y redondea
+   * los cambios de pendiente sin inventar picos por encima o por debajo de los datos.
+   */
+  private smoothCurvePath(points: { x: number; y: number }[]): string {
+    if (points.length === 0) return '';
+    if (points.length === 1) return `M ${this.fmtChart(points[0].x)},${this.fmtChart(points[0].y)}`;
+    if (points.length === 2) {
+      return `M ${this.fmtChart(points[0].x)},${this.fmtChart(points[0].y)} L ${this.fmtChart(points[1].x)},${this.fmtChart(points[1].y)}`;
+    }
+
+    const n = points.length;
+    const dx: number[] = [];
+    const slope: number[] = [];
+    for (let i = 0; i < n - 1; i++) {
+      const dxi = points[i + 1].x - points[i].x;
+      dx.push(dxi);
+      slope.push(dxi === 0 ? 0 : (points[i + 1].y - points[i].y) / dxi);
+    }
+
+    const tangent = new Array<number>(n);
+    tangent[0] = slope[0];
+    tangent[n - 1] = slope[n - 2];
+    for (let i = 1; i < n - 1; i++) {
+      if (slope[i - 1] * slope[i] <= 0) {
+        tangent[i] = 0;
+      } else {
+        tangent[i] = (slope[i - 1] + slope[i]) / 2;
+      }
+    }
+
+    for (let i = 0; i < n - 1; i++) {
+      if (slope[i] === 0) {
+        tangent[i] = 0;
+        tangent[i + 1] = 0;
+        continue;
+      }
+      const a = tangent[i] / slope[i];
+      const b = tangent[i + 1] / slope[i];
+      const h = Math.hypot(a, b);
+      if (h > 3) {
+        const scale = 3 / h;
+        tangent[i] = scale * a * slope[i];
+        tangent[i + 1] = scale * b * slope[i];
+      }
+    }
+
+    let d = `M ${this.fmtChart(points[0].x)},${this.fmtChart(points[0].y)}`;
+    for (let i = 0; i < n - 1; i++) {
+      const p0 = points[i];
+      const p1 = points[i + 1];
+      const handle = dx[i] / 3;
+      const cp1x = p0.x + handle;
+      const cp1y = p0.y + tangent[i] * handle;
+      const cp2x = p1.x - handle;
+      const cp2y = p1.y - tangent[i + 1] * handle;
+      d += ` C ${this.fmtChart(cp1x)},${this.fmtChart(cp1y)} ${this.fmtChart(cp2x)},${this.fmtChart(cp2y)} ${this.fmtChart(p1.x)},${this.fmtChart(p1.y)}`;
+    }
+    return d;
+  }
+
+  private fmtChart(n: number): string {
+    if (!Number.isFinite(n)) return '0';
+    return (Math.round(n * 100) / 100).toString();
+  }
+
+  /** Trazo de la curva de ingresos (solo modo año). */
+  get ingresosLinePath(): string {
+    return this.smoothCurvePath(this.ingresosChartPoints);
+  }
+
+  /** Área bajo la curva de ingresos (solo modo año). */
+  get ingresosAreaPath(): string {
+    const points = this.ingresosChartPoints;
+    const line = this.smoothCurvePath(points);
+    if (!line || points.length === 0) return '';
+    const last = points[points.length - 1];
     const first = points[0];
-    const lastX = this.chartPadLeft + (data.length <= 1 ? 0 : (data.length - 1) * stepX);
-    return `M ${first} L ${points.slice(1).join(' L ')} L ${lastX},${this.chartBottomY} L ${this.chartPadLeft},${this.chartBottomY} Z`;
+    return `${line} L ${this.fmtChart(last.x)},${this.chartBottomY} L ${this.fmtChart(first.x)},${this.chartBottomY} Z`;
   }
 
   constructor(

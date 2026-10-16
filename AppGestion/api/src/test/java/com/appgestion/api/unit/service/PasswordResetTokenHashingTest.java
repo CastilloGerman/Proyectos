@@ -3,7 +3,6 @@ package com.appgestion.api.unit.service;
 import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.dto.request.ForgotPasswordRequest;
 import com.appgestion.api.dto.request.ResetPasswordRequest;
-import com.appgestion.api.repository.EmpresaRepository;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.appgestion.api.service.AuditAccessService;
 import com.appgestion.api.service.EmailService;
@@ -53,7 +52,7 @@ class PasswordResetTokenHashingTest {
         Environment env = mock(Environment.class);
         sessionService = mock(SessionService.class);
         totpVerificationService = mock(TotpVerificationService.class);
-        service = new PasswordResetService(usuarioRepository, mock(EmpresaRepository.class), passwordEncoder,
+        service = new PasswordResetService(usuarioRepository, passwordEncoder,
                 emailService, mock(AuditAccessService.class), env, sessionService, totpVerificationService);
         ReflectionTestUtils.setField(service, "frontendUrl", "https://app.example.com");
 
@@ -71,6 +70,7 @@ class PasswordResetTokenHashingTest {
         verify(emailService).enviarPdf(any(), eq("ana@example.com"), anyString(), body.capture(), any(), any());
         Matcher m = Pattern.compile("reset-password\\?token=([A-Za-z0-9_-]+)").matcher(body.getValue());
         assertThat(m.find()).isTrue();
+        assertThat(body.getValue()).contains("Ana, le contactamos de Noemi.");
         return m.group(1);
     }
 

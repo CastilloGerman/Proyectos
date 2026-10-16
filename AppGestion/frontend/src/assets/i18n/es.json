@@ -375,6 +375,8 @@
       "forgotPassword": "¿Olvidaste tu contraseña?",
       "register": "¿No tienes cuenta? Regístrate",
       "scrollAria": "Desplazar a la sección sobre Noemí",
+      "themeToDark": "Activar tema oscuro",
+      "themeToLight": "Activar tema claro",
       "scrollLabel": "Nuestra historia",
       "snackbarGoogleClient": "Inicio con Google no está disponible aquí. Usa tu correo y contraseña.",
       "snackbarTotpApp": "Introduce el código de tu app de autenticación",

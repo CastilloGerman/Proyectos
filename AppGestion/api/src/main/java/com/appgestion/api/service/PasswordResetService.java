@@ -4,7 +4,6 @@ import com.appgestion.api.domain.entity.Usuario;
 import com.appgestion.api.domain.enums.AuditAccessEventType;
 import com.appgestion.api.dto.request.ForgotPasswordRequest;
 import com.appgestion.api.dto.request.ResetPasswordRequest;
-import com.appgestion.api.repository.EmpresaRepository;
 import com.appgestion.api.repository.UsuarioRepository;
 import com.appgestion.api.util.EmailCopy;
 import com.appgestion.api.util.LogSanitizer;
@@ -36,7 +35,6 @@ public class PasswordResetService {
     private static final int PASSWORD_RESET_EXPIRY_HOURS = 1;
 
     private final UsuarioRepository usuarioRepository;
-    private final EmpresaRepository empresaRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final AuditAccessService auditAccessService;
@@ -54,7 +52,6 @@ public class PasswordResetService {
     private boolean logEmailLinks;
 
     public PasswordResetService(UsuarioRepository usuarioRepository,
-                                EmpresaRepository empresaRepository,
                                 PasswordEncoder passwordEncoder,
                                 EmailService emailService,
                                 AuditAccessService auditAccessService,
@@ -64,7 +61,6 @@ public class PasswordResetService {
         this.sessionService = sessionService;
         this.totpVerificationService = totpVerificationService;
         this.usuarioRepository = usuarioRepository;
-        this.empresaRepository = empresaRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
         this.auditAccessService = auditAccessService;
@@ -100,8 +96,8 @@ public class PasswordResetService {
             log.info("Dev: enlace de recuperación de contraseña: {}", resetLink);
         }
         String asunto = "Recuperación de contraseña - " + EmailCopy.PRODUCT_NAME;
-        String nombreEmpresa = empresaRepository.findByUsuarioId(usuario.getId()).map(e -> e.getNombre()).orElse(null);
-        String cuerpo = EmailCopy.prefijoDestinatarioEmpresa(usuario.getNombre(), nombreEmpresa)
+        // El correo lo envía el SaaS, no la empresa del usuario: el saludo usa la marca (Noemi).
+        String cuerpo = EmailCopy.prefijoDestinatarioEmpresa(usuario.getNombre(), null)
                 + "<p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace (válido " + PASSWORD_RESET_EXPIRY_HOURS + " hora(s)):</p>"
                 + "<p><a href=\"" + resetLink + "\">Restablecer contraseña</a></p>"
                 + "<p>Si no solicitaste este cambio, ignora este correo.</p>";

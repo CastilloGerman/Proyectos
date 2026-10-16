@@ -24,6 +24,7 @@ import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/
 import { CompletarClienteFiscalDialogComponent } from '../../../shared/completar-cliente-fiscal-dialog/completar-cliente-fiscal-dialog.component';
 import { Observable } from 'rxjs';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { presupuestoSePuedeFacturar } from '../../../core/utils/presupuesto-facturable.util';
 
 @Component({
     selector: 'app-presupuesto-list',
@@ -453,9 +454,7 @@ export class PresupuestoListComponent implements OnInit, AfterViewInit {
 
   /** Muestra Facturar si el presupuesto admite conversión y aún no tiene factura principal. */
   puedeFacturar(p: Presupuesto): boolean {
-    if (p.facturaId != null && p.facturaId !== undefined) return false;
-    const e = (p.estado || '').trim().toLowerCase();
-    return e === 'pendiente' || e === 'aceptado' || e === 'en ejecución' || e === 'en ejecucion';
+    return presupuestoSePuedeFacturar(p);
   }
 
   crearFactura(presupuesto: Presupuesto): void {

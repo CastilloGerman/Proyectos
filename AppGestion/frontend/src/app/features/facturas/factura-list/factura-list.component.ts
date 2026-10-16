@@ -38,6 +38,7 @@ import { AnularFacturaDialogComponent } from '../../../shared/anular-factura-dia
 import { FacturaParcialImporteDialogComponent } from '../../../shared/factura-parcial-importe-dialog/factura-parcial-importe-dialog.component';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { facturaTieneImportePendiente } from '../../../core/utils/factura-cobro.util';
+import { presupuestoSePuedeFacturar } from '../../../core/utils/presupuesto-facturable.util';
 
 @Component({
     selector: 'app-factura-list',
@@ -797,10 +798,9 @@ export class FacturaListComponent implements OnInit {
   openImportarPresupuesto(): void {
     this.presupuestoService.getAll().subscribe({
       next: (presupuestos) => {
-        const pendientes = presupuestos.filter((p) => p.estado === 'Pendiente');
         const ref = this.dialog.open(ImportarPresupuestoDialogComponent, {
-          width: '600px',
-          data: { presupuestos: pendientes },
+          width: '760px',
+          data: { presupuestos: presupuestos.filter((p) => presupuestoSePuedeFacturar(p)) },
         });
         ref.afterClosed().subscribe((selected: Presupuesto | undefined) => {
           if (selected) {

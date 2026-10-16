@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Presupuesto } from '../../core/models/presupuesto.model';
+import { EstadoBadgeComponent } from '../estado-badge/estado-badge.component';
 
 export interface ImportarPresupuestoDialogData {
   presupuestos: Presupuesto[];
@@ -18,18 +19,23 @@ export interface ImportarPresupuestoDialogData {
         MatButtonModule,
         MatTableModule,
         MatProgressSpinnerModule,
+        EstadoBadgeComponent,
     ],
     template: `
     <h2 mat-dialog-title>Importar presupuesto como factura</h2>
     <mat-dialog-content>
-      <p class="info">Selecciona un presupuesto pendiente para convertirlo en factura. El presupuesto pasará a estado "Aceptado".</p>
+      <p class="info">Selecciona un presupuesto pendiente, aceptado o en ejecución que aún no tenga factura. Al facturarlo pasará a estado «Aceptado».</p>
       @if (data.presupuestos.length === 0) {
-        <p class="empty">No hay presupuestos pendientes para importar.</p>
+        <p class="empty">No hay presupuestos disponibles para importar. Los rechazados y los que ya tienen factura no aparecen aquí.</p>
       } @else {
         <table mat-table [dataSource]="dataSource" class="full-width">
           <ng-container matColumnDef="clienteNombre">
             <th mat-header-cell *matHeaderCellDef>Cliente</th>
             <td mat-cell *matCellDef="let row">{{ row.clienteNombre }}</td>
+          </ng-container>
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let row"><app-estado-badge [estado]="row.estado"></app-estado-badge></td>
           </ng-container>
           <ng-container matColumnDef="fechaCreacion">
             <th mat-header-cell *matHeaderCellDef>Fecha</th>
@@ -71,7 +77,7 @@ export interface ImportarPresupuestoDialogData {
   `]
 })
 export class ImportarPresupuestoDialogComponent {
-  displayedColumns = ['clienteNombre', 'fechaCreacion', 'total', 'select'];
+  displayedColumns = ['clienteNombre', 'estado', 'fechaCreacion', 'total', 'select'];
   dataSource: MatTableDataSource<Presupuesto>;
 
   constructor(

@@ -137,6 +137,83 @@ function passwordMatchValidator(g: AbstractControl): ValidationErrors | null {
       margin-bottom: 8px;
     }
 
+    /*
+     * Sobre tarjeta clara: forzar tokens del outlined field. Si html tiene tema oscuro,
+     * Material define bordes/etiquetas claros (pensados para fondo oscuro) y el borde casi
+     * desaparece sobre blanco hasta el foco.
+     */
+    .reset-card .reset-form .mat-mdc-form-field {
+      --mdc-outlined-text-field-outline-color: rgba(51, 65, 85, 0.45);
+      --mdc-outlined-text-field-hover-outline-color: rgba(30, 58, 138, 0.55);
+      --mdc-outlined-text-field-focus-outline-color: #39488e;
+      --mdc-outlined-text-field-input-text-color: #0f172a;
+      --mdc-outlined-text-field-label-text-color: #64748b;
+      --mdc-outlined-text-field-hover-label-text-color: #475569;
+      --mdc-outlined-text-field-focus-label-text-color: #39488e;
+      --mat-form-field-outlined-label-text-color: #64748b;
+      --mat-form-field-outlined-label-text-populated-color: #64748b;
+      --mat-form-field-error-text-color: #b91c1c;
+      --mat-form-field-hint-text-color: #64748b;
+    }
+
+    .reset-form .full-width ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+      margin-bottom: 8px;
+    }
+
+    .reset-form .full-width ::ng-deep .mat-mdc-text-field-wrapper {
+      border-radius: 14px;
+    }
+
+    .reset-form .full-width ::ng-deep .mdc-notched-outline__notch {
+      min-width: 64px;
+    }
+
+    :host-context(html.app-dark-theme) .reset-wrapper {
+      background: linear-gradient(165deg, #0c1220 0%, #141b2d 45%, #0f1419 100%);
+    }
+
+    :host-context(html.app-dark-theme) .reset-card {
+      background: var(--app-bg-card, #1a222c);
+      border: 1px solid var(--app-border, rgba(255, 255, 255, 0.1));
+      box-shadow: var(--app-shadow-lg, 0 12px 40px rgba(0, 0, 0, 0.5));
+      color: var(--app-text-primary, #f8fafc);
+    }
+
+    :host-context(html.app-dark-theme) .reset-title {
+      color: var(--app-text-primary, #f8fafc);
+    }
+
+    :host-context(html.app-dark-theme) .reset-subtitle {
+      color: var(--app-text-secondary, #cbd5e1);
+    }
+
+    :host-context(html.app-dark-theme) .reset-card .reset-form .mat-mdc-form-field {
+      --mdc-outlined-text-field-input-text-color: var(--app-text-primary, #f8fafc);
+      --mdc-outlined-text-field-label-text-color: var(--app-text-secondary, #cbd5e1);
+      --mdc-outlined-text-field-hover-label-text-color: var(--app-text-primary, #f8fafc);
+      --mdc-outlined-text-field-focus-label-text-color: var(--app-text-secondary, #cbd5e1);
+      --mdc-outlined-text-field-outline-color: rgba(148, 163, 184, 0.55);
+      --mdc-outlined-text-field-hover-outline-color: rgba(203, 213, 225, 0.75);
+      --mdc-outlined-text-field-focus-outline-color: #818cf8;
+      --mat-form-field-outlined-label-text-color: var(--app-text-secondary, #cbd5e1);
+      --mat-form-field-outlined-label-text-populated-color: var(--app-text-secondary, #cbd5e1);
+      --mat-form-field-error-text-color: #fca5a5;
+      --mat-form-field-hint-text-color: var(--app-text-muted, #94a3b8);
+    }
+
+    :host-context(html.app-dark-theme) .reset-error {
+      background: rgba(248, 113, 113, 0.12);
+      color: #fca5a5;
+    }
+
+    :host-context(html.app-dark-theme) .back-link {
+      color: var(--app-text-secondary, #cbd5e1);
+    }
+
+    :host-context(html.app-dark-theme) .back-link:hover {
+      color: #a5b4fc;
+    }
+
     .submit-btn {
       width: 100%;
       margin-top: 16px;
