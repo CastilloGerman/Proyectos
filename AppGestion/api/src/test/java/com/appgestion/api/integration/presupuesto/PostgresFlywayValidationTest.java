@@ -36,6 +36,9 @@ class PostgresFlywayValidationTest {
         properties.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
         properties.add("spring.flyway.enabled", () -> true);
         properties.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
+        // application-test.properties fija H2Dialect; sin esto Hibernate valida el esquema de Postgres con el dialecto de H2.
+        properties.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.PostgreSQLDialect");
+        properties.add("spring.jpa.properties.hibernate.dialect", () -> "org.hibernate.dialect.PostgreSQLDialect");
     }
 
     @Autowired
@@ -99,7 +102,7 @@ class PostgresFlywayValidationTest {
                 where t.relname = 'presupuesto_seguimiento_aviso'
                   and c.contype = 'f' and c.confdeltype = 'c'
                 """, Integer.class));
-        assertEquals("43", jdbc.queryForObject("""
+        assertEquals("48", jdbc.queryForObject("""
                 select version from flyway_schema_history
                 where success = true order by installed_rank desc limit 1
                 """, String.class));

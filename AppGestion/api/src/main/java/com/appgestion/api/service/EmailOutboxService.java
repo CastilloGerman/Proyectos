@@ -15,8 +15,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -43,19 +44,22 @@ public class EmailOutboxService {
     private final UsuarioRepository usuarioRepository;
     private final ObjectMapper objectMapper;
     private final EmailJobProcessor emailJobProcessor;
+    private final TransactionTemplate requiresNew;
 
     public EmailOutboxService(
             EmailJobRepository emailJobRepository,
             UsuarioRepository usuarioRepository,
             ObjectMapper objectMapper,
-            EmailJobProcessor emailJobProcessor) {
+            EmailJobProcessor emailJobProcessor,
+            PlatformTransactionManager transactionManager) {
         this.emailJobRepository = emailJobRepository;
         this.usuarioRepository = usuarioRepository;
         this.objectMapper = objectMapper;
         this.emailJobProcessor = emailJobProcessor;
+        this.requiresNew = new TransactionTemplate(transactionManager);
+        this.requiresNew.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void enqueueHtmlPdf(
             Long usuarioId,
             String to,
@@ -75,10 +79,9 @@ public class EmailOutboxService {
                 pdfB64,
                 pdfFilename,
                 null);
-        saveJob(usuarioId, idempotencyKey, payload);
+        deliverNow(insertJob(usuarioId, idempotencyKey, payload));
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void enqueueHtmlCliente(
             Long usuarioId,
             String to,
@@ -100,17 +103,15 @@ public class EmailOutboxService {
                 pdfB64,
                 pdfFilename,
                 null);
-        saveJob(usuarioId, idempotencyKey, payload);
+        deliverNow(insertJob(usuarioId, idempotencyKey, payload));
     }
 
-    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void enqueueHtmlUsuario(Long usuarioId, String to, String subject, String htmlBody, String idempotencyKey) {
         EmailJobPayload payload = new EmailJobPayload(
                 EmailJobPayload.KIND_HTML_CLIENT, to, subject, htmlBody, null, null, null, null);
-        saveJob(usuarioId, idempotencyKey, payload);
+        deliverNow(insertJob(usuarioId, idempotencyKey, payload));
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void enqueueSoporte(
             Long usuarioId,
             String to,
@@ -139,7 +140,7 @@ public class EmailOutboxService {
                 null,
                 null,
                 list);
-        saveJob(usuarioId, idempotencyKey, payload);
+        deliverNow(insertJob(usuarioId, idempotencyKey, payload));
     }
 
     /**
@@ -158,28 +159,41 @@ public class EmailOutboxService {
         }
     }
 
-    private void saveJob(Long usuarioId, String idempotencyKey, EmailJobPayload payload) {
-        Usuario usuario = usuarioRepository.findById(usuarioId)
-                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+    /**
+     * El alta confirma antes del envío. Si Resend (u otro proveedor) rechaza el correo, la fila sigue en
+     * {@code email_jobs} para que el worker reintente; lanzar dentro de la misma transacción la borraba.
+     */
+    private Long insertJob(Long usuarioId, String idempotencyKey, EmailJobPayload payload) {
         try {
-            EmailJob job = new EmailJob();
-            job.setUsuario(usuario);
-            job.setIdempotencyKey(idempotencyKey);
-            job.setPayloadJson(objectMapper.writeValueAsString(payload));
-            EmailJob saved = emailJobRepository.saveAndFlush(job);
-            emailJobProcessor.process(saved.getId());
-            EmailJob updated = emailJobRepository.findById(saved.getId()).orElse(saved);
-            if (updated.getStatus() != EmailJobStatus.SENT) {
-                // SEC-18: el motivo técnico (variables de entorno, respuesta del proveedor...) solo va al log.
-                log.warn("Envío de correo fallido (job {}): {}", saved.getId(), updated.getLastError());
-                throw new IllegalStateException(MENSAJE_ENVIO_FALLIDO);
-            }
+            return requiresNew.execute(status -> {
+                Usuario usuario = usuarioRepository.findById(usuarioId)
+                        .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+                EmailJob job = new EmailJob();
+                job.setUsuario(usuario);
+                job.setIdempotencyKey(idempotencyKey);
+                try {
+                    job.setPayloadJson(objectMapper.writeValueAsString(payload));
+                } catch (Exception e) {
+                    throw new IllegalStateException("No se pudo encolar el correo", e);
+                }
+                return emailJobRepository.saveAndFlush(job).getId();
+            });
         } catch (DataIntegrityViolationException dup) {
             // idempotencia: mismo trabajo ya encolado
-        } catch (IllegalStateException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new IllegalStateException("No se pudo encolar el correo", e);
+            return null;
+        }
+    }
+
+    private void deliverNow(Long jobId) {
+        if (jobId == null) {
+            return;
+        }
+        emailJobProcessor.process(jobId);
+        EmailJob updated = emailJobRepository.findById(jobId).orElse(null);
+        if (updated == null || updated.getStatus() != EmailJobStatus.SENT) {
+            // SEC-18: el motivo técnico (variables de entorno, respuesta del proveedor...) solo va al log.
+            log.warn("Envío de correo fallido (job {}): {}", jobId, updated != null ? updated.getLastError() : "trabajo no encontrado");
+            throw new IllegalStateException(MENSAJE_ENVIO_FALLIDO);
         }
     }
 }

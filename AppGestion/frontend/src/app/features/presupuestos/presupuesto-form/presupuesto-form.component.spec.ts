@@ -35,7 +35,7 @@ describe('PresupuestoFormComponent AI review', () => {
           paramMap: { get: () => null }, queryParamMap: { get: () => null },
         } } },
         { provide: Router, useValue: { navigate: vi.fn() } },
-        { provide: AuthService, useValue: { canMutate: () => true } },
+        { provide: AuthService, useValue: { canMutate: () => true, user: () => ({ nombre: 'Empresa' }) } },
         { provide: PresupuestoService, useValue: {
           getCondicionesDisponibles: () => of([]),
           getMisCondicionesPredeterminadas: () => of([]),

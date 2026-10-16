@@ -23,18 +23,37 @@ describe('HintBannerComponent', () => {
 
   it('keeps existing banners unchanged when the optional note is omitted', () => {
     const banner = fixture.nativeElement.querySelector('.hint-banner') as HTMLElement;
-    const closeButton = banner.querySelector('.hint-close') as HTMLButtonElement;
+    const header = banner.querySelector('.hint-header') as HTMLButtonElement;
 
-    expect(fixture.componentInstance.visible).toBe(true);
+    expect(header.getAttribute('aria-expanded')).toBe('true');
+    expect(banner.querySelector('.hint-body')).not.toBeNull();
     expect(banner.textContent).toContain('Existing banner title');
     expect(banner.textContent).toContain('Existing banner step');
     expect(banner.querySelector('.hint-note')).toBeNull();
-    expect(getComputedStyle(closeButton).width).toBe('44px');
 
-    closeButton.click();
+    header.click();
     fixture.detectChanges();
-    expect(fixture.componentInstance.visible).toBe(false);
-    expect(localStorage.getItem('hint-existing-banner-test')).toBe('dismissed');
+
+    expect(banner.querySelector('.hint-body')).toBeNull();
+    expect(banner.textContent).toContain('Existing banner title');
+    expect(banner.textContent).not.toContain('Existing banner step');
+    expect(header.getAttribute('aria-expanded')).toBe('false');
+    expect(localStorage.getItem('hint-existing-banner-test')).toBe('collapsed');
+  });
+
+  it('starts collapsed when a previous dismissal is stored', () => {
+    localStorage.setItem('hint-dismissed-banner-test', 'dismissed');
+    const dismissed = TestBed.createComponent(HintBannerComponent);
+    dismissed.componentInstance.storageKey = 'hint-dismissed-banner-test';
+    dismissed.componentInstance.title = 'Dismissed banner title';
+    dismissed.componentInstance.steps = [{ icon: 'person', text: 'Dismissed banner step' }];
+    dismissed.detectChanges();
+
+    const banner = dismissed.nativeElement.querySelector('.hint-banner') as HTMLElement;
+    expect(banner.querySelector('.hint-body')).toBeNull();
+    expect(banner.querySelector('.hint-header')?.getAttribute('aria-expanded')).toBe('false');
+    expect(banner.textContent).toContain('Dismissed banner title');
+    expect(banner.textContent).not.toContain('Dismissed banner step');
   });
 
   it('renders the optional note only when a banner provides one', () => {

@@ -14,6 +14,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import java.util.Optional;
 
@@ -41,7 +45,8 @@ class EmailOutboxServiceTest {
     @BeforeEach
     void setUp() {
         service = new EmailOutboxService(
-                emailJobRepository, usuarioRepository, new ObjectMapper(), emailJobProcessor);
+                emailJobRepository, usuarioRepository, new ObjectMapper(), emailJobProcessor,
+                immediateTransactionManager());
         Usuario usuario = new Usuario();
         usuario.setId(7L);
         lenient().when(usuarioRepository.findById(7L)).thenReturn(Optional.of(usuario));
@@ -125,5 +130,23 @@ class EmailOutboxServiceTest {
         service.enqueueHtmlUsuario(7L, "ana@example.test", "Asunto", "<p>Hola</p>", "key-1");
 
         verify(emailJobProcessor, never()).process(any());
+    }
+
+    /** Ejecuta el callback y confirma, igual que una transacción REQUIRES_NEW que ya ha hecho commit. */
+    private static PlatformTransactionManager immediateTransactionManager() {
+        return new PlatformTransactionManager() {
+            @Override
+            public TransactionStatus getTransaction(TransactionDefinition definition) {
+                return new SimpleTransactionStatus();
+            }
+
+            @Override
+            public void commit(TransactionStatus status) {
+            }
+
+            @Override
+            public void rollback(TransactionStatus status) {
+            }
+        };
     }
 }

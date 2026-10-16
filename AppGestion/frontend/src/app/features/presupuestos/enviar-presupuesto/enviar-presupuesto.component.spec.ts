@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { TranslateModule } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -95,16 +96,16 @@ describe('EnviarPresupuestoComponent', () => {
         { provide: PresupuestoService, useValue: presupuestoApi },
         { provide: ClienteService, useValue: {} },
         { provide: AuthService, useValue: { user: () => ({ nombre: 'Empresa' }) } },
+        { provide: MatSnackBar, useValue: { open: vi.fn() } },
       ],
     });
     const component = TestBed.createComponent(EnviarPresupuestoComponent).componentInstance;
     component.presupuesto = {
-      id: 1, clienteId: 2, clienteNombre: 'Ana', fechaCreacion: '', subtotal: 10, iva: 2.1,
+      id: 1, clienteId: 2, clienteNombre: 'Ana', clienteEmail: 'ana@example.test',
+      fechaCreacion: '', subtotal: 10, iva: 2.1,
       total: 12.1, ivaHabilitado: true, estado: 'Pendiente', items: [],
     };
-    component.email = 'ana@example.test';
-    component.asunto = 'Presupuesto';
-    component.mensaje = 'Te envío el presupuesto';
+    component.ngOnChanges();
 
     await component.enviarEmail();
 
