@@ -11,7 +11,9 @@
     <span [class]="flagClasses(triggerDisplay().code)"></span>
     <span class="lang-switcher__short">{{ triggerDisplay().short }}</span>
   </span>
-  <mat-icon class="lang-switcher__caret">arrow_drop_down</mat-icon>
+  <svg class="lang-switcher__caret" viewBox="0 0 24 24" aria-hidden="true">
+    <path fill="currentColor" d="M7 10l5 5 5-5z" />
+  </svg>
 </button>
 
 <mat-menu

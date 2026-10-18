@@ -168,6 +168,7 @@
       "submit": "Sign in",
       "dividerOr": "or",
       "googleContinue": "Continue with Google",
+      "googleSigningIn": "Signing in with Google…",
       "googleTotpIntro": "Your account has 2FA enabled. Enter the code from your app.",
       "googleTotpLabel": "2FA code",
       "googleTotpSubmit": "Confirm and sign in",

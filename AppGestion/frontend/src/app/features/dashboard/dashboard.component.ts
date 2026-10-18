@@ -829,7 +829,7 @@ export interface TopCliente {
       font-size: 28px;
       width: 28px;
       height: 28px;
-      overflow: visible;
+      overflow: hidden;
     }
 
     .kpi-content {
@@ -887,7 +887,7 @@ export interface TopCliente {
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      overflow: visible;
+      overflow: hidden;
     }
 
     .section-icon.presupuesto {
@@ -1358,7 +1358,7 @@ export interface TopCliente {
       font-size: 28px;
       width: 28px;
       height: 28px;
-      overflow: visible;
+      overflow: hidden;
     }
 
     .salud-vencidas.salud-alert .salud-icon mat-icon { color: #ef4444; }

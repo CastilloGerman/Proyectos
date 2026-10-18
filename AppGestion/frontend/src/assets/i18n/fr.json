@@ -168,6 +168,7 @@
       "submit": "Se connecter",
       "dividerOr": "ou",
       "googleContinue": "Continuer avec Google",
+      "googleSigningIn": "Connexion avec Google…",
       "googleTotpIntro": "Votre compte a la 2FA active. Saisissez le code de votre app.",
       "googleTotpLabel": "Code 2FA",
       "googleTotpSubmit": "Confirmer et se connecter",

@@ -1,7 +1,6 @@
 import { Component, ViewChild, inject, input } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { map, startWith } from 'rxjs/operators';
@@ -28,7 +27,7 @@ const FLAG_MAP: Record<SupportedUiLanguage, string> = {
 @Component({
   selector: 'app-language-switcher',
   standalone: true,
-  imports: [MatButtonModule, MatMenuModule, MatIconModule, TranslateModule],
+  imports: [MatButtonModule, MatMenuModule, TranslateModule],
   templateUrl: './language-switcher.component.html',
   styleUrl: './language-switcher.component.scss',
 })

@@ -199,6 +199,7 @@
       "submit": "Увійти",
       "dividerOr": "або",
       "googleContinue": "Продовжити з Google",
+      "googleSigningIn": "Вхід через Google…",
       "googleTotpIntro": "Увімкнено 2FA. Введіть код з вашої програми.",
       "googleTotpLabel": "Код 2FA",
       "googleTotpSubmit": "Підтвердити й увійти",

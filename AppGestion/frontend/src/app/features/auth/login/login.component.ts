@@ -9,6 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { Subscription } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AnimatedBackgroundComponent } from '../../../shared/animated-background/animated-background.component';
@@ -16,6 +17,31 @@ import { LegalFooterComponent } from '../../../legal/legal-footer/legal-footer.c
 
 /** Client ID de Google para el botón "Iniciar con Google" (mismo que en environment). */
 const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.apps.googleusercontent.com';
+
+interface GoogleIdApi {
+  initialize: (config: Record<string, unknown>) => void;
+  renderButton: (el: HTMLElement, options: Record<string, unknown>) => void;
+}
+
+/**
+ * Un solo initialize() para toda la app. El callback vive aquí y delega en el
+ * LoginComponent que esté en pantalla: si se reinicializa en cada visita, Google
+ * avisa y a veces se queda con el callback de una pantalla ya destruida.
+ */
+let gisCredentialHandler: ((credential: string) => void) | null = null;
+let gisInitializedClientId: string | null = null;
+
+function googleIdApi(): GoogleIdApi | null {
+  const win = window as Window & { google?: { accounts?: { id?: GoogleIdApi } } };
+  return win.google?.accounts?.id ?? null;
+}
+
+function onGisCredential(response: { credential?: string }): void {
+  const credential = response?.credential?.trim();
+  if (credential) {
+    gisCredentialHandler?.(credential);
+  }
+}
 
 @Component({
     selector: 'app-login',
@@ -93,7 +119,7 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
               </mat-form-field>
               <p class="login-totp-hint">{{ 'auth.login.totpHint' | translate }}</p>
             }
-            <button mat-raised-button color="primary" type="submit" [disabled]="loading" class="submit-btn">
+            <button mat-raised-button color="primary" type="submit" [disabled]="loading || googleLoading()" class="submit-btn">
               @if (loading) {
                 <mat-spinner diameter="24"></mat-spinner>
               } @else {
@@ -118,8 +144,15 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
           <div class="login-divider">
             <span>{{ 'auth.login.dividerOr' | translate }}</span>
           </div>
-          <div class="google-button-wrap">
+          <div class="google-button-wrap" [class.google-button-busy]="googleLoading()">
             <div #googleButtonRef class="google-button-inner"></div>
+            @if (googleLoading()) {
+              <div class="google-button-overlay"></div>
+              <p class="google-wait" role="status">
+                <mat-spinner diameter="18"></mat-spinner>
+                {{ 'auth.login.googleSigningIn' | translate }}
+              </p>
+            }
             @if (!googleClientId) {
               <button type="button" class="google-fallback-btn" (click)="onGoogleFallback()">
                 <span class="google-g-letter">G</span>
@@ -461,6 +494,7 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
     }
 
     .google-button-wrap {
+      position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -469,6 +503,30 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
       width: 100%;
       max-width: 100%;
       overflow: hidden;
+    }
+
+    .google-button-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 44px;
+      z-index: 2;
+    }
+
+    .google-wait {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin: 8px 0 0;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #1e3a8a;
+    }
+
+    .google-wait mat-spinner {
+      margin-right: 0;
     }
 
     .google-button-inner {
@@ -710,6 +768,10 @@ const DEFAULT_GOOGLE_CLIENT_ID = '622654316729-itkgprp568mrobd3v8lgnah0cfjchog9.
       background: rgba(255, 255, 255, 0.1);
     }
 
+    :host-context(html.app-dark-theme) .google-wait {
+      color: #c7d2fe;
+    }
+
     :host-context(html.app-dark-theme) .scroll-down-btn {
       background: rgba(26, 34, 44, 0.92);
       color: #c7d2fe;
@@ -728,6 +790,8 @@ export class LoginComponent implements OnInit, AfterViewInit {
   @ViewChild('aboutAnchor') aboutAnchor!: ElementRef<HTMLElement>;
   form: FormGroup;
   loading = false;
+  /** Petición a la API en curso tras elegir una cuenta de Google. */
+  readonly googleLoading = signal(false);
   readonly totpStep = signal(false);
   /** La contraseña es correcta pero el email aún no está confirmado (SEC-05). */
   readonly emailNotVerified = signal(false);
@@ -735,13 +799,21 @@ export class LoginComponent implements OnInit, AfterViewInit {
   readonly googleTotpStep = signal(false);
   googleTotpCode = '';
   private pendingGoogleToken: string | null = null;
+  private googleLoginSub: Subscription | null = null;
+  private destroyed = false;
+  private googlePaintFrame = 0;
+  /** renderButton de Google no se puede llamar dos veces: la segunda deja el botón en blanco. */
+  private googleButtonMounted = false;
+  /** La última cuenta elegida gana: una respuesta tardía de un intento anterior no pisa la sesión. */
+  private googleAttempt = 0;
+  private readonly acceptGoogleCredential = (credential: string): void => {
+    this.onGoogleCredential(credential);
+  };
   readonly referralToken = signal<string | null>(null);
   readonly registerLinkQueryParams = computed(() => {
     const r = this.referralToken();
     return r ? { ref: r } : {};
   });
-  /** Evita [GSI_LOGGER]: initialize() múltiples veces (p. ej. doble montaje en dev). */
-  private static gsiInitializedForClientId: string | null = null;
   /** Valor fijo para evitar que el chunk lazy reciba un environment sin googleClientId; el botón real siempre se muestra. */
   readonly googleClientId = DEFAULT_GOOGLE_CLIENT_ID;
   private readonly translate = inject(TranslateService);
@@ -758,6 +830,14 @@ export class LoginComponent implements OnInit, AfterViewInit {
       email: ['', [Validators.required, Validators.email]],
       password: ['', Validators.required],
       totpCode: [''],
+    });
+    this.ensureGoogleScript();
+    this.destroyRef.onDestroy(() => {
+      this.destroyed = true;
+      if (gisCredentialHandler === this.acceptGoogleCredential) {
+        gisCredentialHandler = null;
+      }
+      this.googleLoginSub?.unsubscribe();
     });
   }
 
@@ -807,17 +887,15 @@ export class LoginComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    if (this.googleClientId && this.googleButtonRef?.nativeElement) {
-      setTimeout(() => this.initGoogleButton(), 100);
+    if (!this.googleClientId) {
+      console.warn('[Login] googleClientId vacío: no se cargará el botón de Google. Usa http://localhost:4200 y configura environment.googleClientId.');
     } else {
-      if (!this.googleClientId) {
-        console.warn('[Login] googleClientId vacío: no se cargará el botón de Google. Usa http://localhost:4200 y configura environment.googleClientId.');
-      }
+      this.scheduleGoogleButton();
     }
     this.translate.onLangChange.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      if (this.googleClientId && this.googleButtonRef?.nativeElement && document.getElementById('google-gsi')) {
-        this.googleButtonRef.nativeElement.innerHTML = '';
-        setTimeout(() => this.renderGoogleButton(), 0);
+      if (this.googleClientId && document.getElementById('google-gsi')) {
+        this.googleButtonMounted = false;
+        this.scheduleGoogleButton(true);
       }
     });
   }
@@ -829,10 +907,14 @@ export class LoginComponent implements OnInit, AfterViewInit {
     return m[c] ?? 'es';
   }
 
-  private initGoogleButton(): void {
+  /** Empieza la descarga de Google en cuanto existe la pantalla, sin esperar al pintado del botón. */
+  private ensureGoogleScript(): void {
     const scriptId = 'google-gsi';
-    if (document.getElementById(scriptId)) {
-      this.renderGoogleButton();
+    const existing = document.getElementById(scriptId);
+    if (existing) {
+      if (!googleIdApi()) {
+        existing.addEventListener('load', () => this.scheduleGoogleButton(), { once: true });
+      }
       return;
     }
     const script = document.createElement('script');
@@ -840,25 +922,47 @@ export class LoginComponent implements OnInit, AfterViewInit {
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.defer = true;
-    script.onload = () => setTimeout(() => this.renderGoogleButton(), 50);
+    script.onload = () => this.scheduleGoogleButton();
     script.onerror = () => console.error('[Login] Error al cargar el script de Google Identity.');
     document.head.appendChild(script);
   }
 
-  private renderGoogleButton(): void {
-    const win = window as Window & { google?: { accounts: { id: { initialize: (c: unknown) => void; renderButton: (el: HTMLElement, o: unknown) => void } } } };
-    if (!win.google?.accounts?.id || !this.googleButtonRef?.nativeElement) {
-      console.warn('[Login] Google GSI no disponible o contenedor no listo.');
+  private scheduleGoogleButton(force = false): void {
+    if (this.destroyed) return;
+    cancelAnimationFrame(this.googlePaintFrame);
+    this.googlePaintFrame = requestAnimationFrame(() => {
+      if (!this.destroyed) this.renderGoogleButton(force);
+    });
+  }
+
+  private renderGoogleButton(force = false): void {
+    const api = googleIdApi();
+    const host = this.googleButtonRef?.nativeElement;
+    if (!api || !host || (this.googleButtonMounted && !force)) {
       return;
     }
-    if (LoginComponent.gsiInitializedForClientId !== this.googleClientId) {
-      win.google.accounts.id.initialize({
+    gisCredentialHandler = this.acceptGoogleCredential;
+    if (gisInitializedClientId !== this.googleClientId) {
+      api.initialize({
         client_id: this.googleClientId,
-        callback: (response: { credential: string }) => this.onGoogleCredential(response.credential),
+        callback: onGisCredential,
+        auto_select: false,
+        button_auto_select: false,
+        cancel_on_tap_outside: true,
+        // Popup con listado de cuentas. FedCM en Chrome se traga el segundo clic
+        // y puede entrar solo con la última cuenta, sin dejar elegir.
+        use_fedcm_for_button: false,
+        ux_mode: 'popup',
+        itp_support: true,
+        context: 'signin',
       });
-      LoginComponent.gsiInitializedForClientId = this.googleClientId;
+      gisInitializedClientId = this.googleClientId;
     }
-    win.google.accounts.id.renderButton(this.googleButtonRef.nativeElement, {
+    this.googleButtonMounted = true;
+    if (force) {
+      host.replaceChildren();
+    }
+    api.renderButton(host, {
       type: 'standard',
       theme: 'outline',
       size: 'large',
@@ -899,17 +1003,21 @@ export class LoginComponent implements OnInit, AfterViewInit {
   }
 
   private callGoogleLogin(idToken: string, totpCode?: string): void {
-    this.loading = true;
-    this.auth.loginWithGoogle(idToken, totpCode).subscribe({
+    const attempt = ++this.googleAttempt;
+    this.googleLoginSub?.unsubscribe();
+    this.googleLoading.set(true);
+    this.googleLoginSub = this.auth.loginWithGoogle(idToken, totpCode).subscribe({
       next: () => {
+        if (attempt !== this.googleAttempt) return;
         console.log('[Login] Inicio con Google correcto.');
-        this.loading = false;
+        this.googleLoading.set(false);
         this.googleTotpStep.set(false);
         this.pendingGoogleToken = null;
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {
-        this.loading = false;
+        if (attempt !== this.googleAttempt) return;
+        this.googleLoading.set(false);
         console.error('[Login] Error al iniciar con Google:', err?.status, err?.error ?? err?.message, err);
         if (this.isTotpRequiredError(err)) {
           this.googleTotpStep.set(true);

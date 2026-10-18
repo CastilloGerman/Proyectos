@@ -12,8 +12,37 @@
   <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.gstatic.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600&family=Roboto:wght@300;400;500;700&family=Sora:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- display=block evita que se vean trozos de texto ("de", "re"…) antes de cargar la fuente de iconos -->
-  <link href="https://fonts.googleapis.com/css2?family=Material+Icons&display=block" rel="stylesheet">
+  <!--
+    Material Icons en local. Si el peso heredado no es 400, el navegador descartaba la fuente
+    y pintaba el nombre del icono (description, pie_chart, sea…).
+  -->
+  <link rel="preload" href="assets/fonts/material-icons-v145.woff2" as="font" type="font/woff2" crossorigin>
+  <style>
+    @font-face {
+      font-family: 'Material Icons';
+      font-style: normal;
+      font-weight: 100 700;
+      font-display: block;
+      src: url('assets/fonts/material-icons-v145.woff2') format('woff2');
+    }
+    .material-icons,
+    mat-icon.mat-ligature-font {
+      font-family: 'Material Icons' !important;
+      font-weight: normal !important;
+      font-style: normal !important;
+      line-height: 1;
+      letter-spacing: normal !important;
+      text-transform: none;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      font-synthesis: none;
+      -webkit-font-feature-settings: 'liga' !important;
+      font-feature-settings: 'liga' !important;
+      font-variant-ligatures: common-ligatures !important;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
   <script>
     (function () {
       try {
