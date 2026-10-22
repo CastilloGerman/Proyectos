@@ -7,13 +7,15 @@ import { AuthService } from './auth.service';
 describe('authGuard', () => {
   let navigate: ReturnType<typeof vi.fn>;
   let isAuthenticated: ReturnType<typeof vi.fn>;
+  let consumeSessionExpiredOnLoad: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     navigate = vi.fn();
     isAuthenticated = vi.fn();
+    consumeSessionExpiredOnLoad = vi.fn().mockReturnValue(false);
     TestBed.configureTestingModule({
       providers: [
-        { provide: AuthService, useValue: { isAuthenticated } },
+        { provide: AuthService, useValue: { isAuthenticated, consumeSessionExpiredOnLoad } },
         { provide: Router, useValue: { navigate } },
       ],
     });

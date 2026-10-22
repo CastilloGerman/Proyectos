@@ -20,6 +20,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -84,6 +85,9 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
+                    // Un fallo de filtro (p. ej. Neon dormido) se reenvía como ERROR. Si esa
+                    // redispacho exige autenticación, el cliente ve 401 y cierra la sesión.
+                    auth.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll();
                     // Solo estado basico; otros endpoints Actuator siguen protegidos.
                     auth.requestMatchers(HttpMethod.GET, "/actuator/health").permitAll();
                     auth.requestMatchers(HttpMethod.GET, "/publico/presupuestos/*",

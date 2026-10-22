@@ -143,7 +143,9 @@ app:
   jwt:
     # Obligatorio en prod: JWT_SECRET (mín. 32 caracteres). En local ver perfil local abajo.
     secret: ${JWT_SECRET:}
-    expiration-ms: 86400000
+    # 7 días. La sesión sigue siendo revocable en servidor. El front descarta el JWT
+    # en cuanto `exp` ha pasado, sin esperar a que la API despierte.
+    expiration-ms: 604800000
     issuer: appgestion-api
   auth:
     google:
@@ -278,7 +280,17 @@ spring:
   datasource:
     hikari:
       maximum-pool-size: 5
-      minimum-idle: 2
+      # 0: no guardar conexiones ociosas. Neon suspende el cómputo y corta el TCP;
+      # reutilizar esos sockets bloquea la primera petición hasta socketTimeout (30 s)
+      # y, si falla, el error acaba en 401 y el front cierra la sesión.
+      minimum-idle: 0
+      # Por encima del connectTimeout del driver (20 s) para cubrir un despertar lento
+      # y un segundo intento, sin llegar al minuto del timeout largo del perfil base.
+      connection-timeout: 25000
+      idle-timeout: 60000
+      max-lifetime: 240000
+      # No exigir una conexión al crear el pool: si Neon está dormido, el arranque no debe caerse.
+      initialization-fail-timeout: -1
   web:
     error:
       include-message: never
@@ -325,8 +337,8 @@ spring:
       maximum-pool-size: 5
       # 0: una instancia congelada no debe retener sesiones ociosas que el pooler puede cerrar.
       minimum-idle: 0
-      # 10 s: si el pooler no entrega sesión, fallar pronto en lugar de aguantar el timeout largo del perfil base.
-      connection-timeout: 10000
+      # Por encima del connectTimeout del driver (20 s): un corte a los 10 s aborta el despertar de Neon.
+      connection-timeout: 25000
       # 5 min: reciclar antes de que el pooler cierre la sesión por edad o inactividad.
       max-lifetime: 300000
       # Por debajo de max-lifetime. Si no, Hikari anula idleTimeout (el valor por defecto es 10 min).

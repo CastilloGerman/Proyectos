@@ -192,7 +192,9 @@ public class RailwayJdbcUrlEnvironmentListener
             lower = url.toLowerCase(java.util.Locale.ROOT);
         }
         if (!lower.contains("connecttimeout=")) {
-            url = appendQuery(url, "connectTimeout=10");
+            // 20 s: el primer intento debe cubrir el despertar de Neon. Con 10 s el driver
+            // aborta, Hikari reintenta y la pantalla se queda cargando cerca de un minuto.
+            url = appendQuery(url, "connectTimeout=20");
             lower = url.toLowerCase(java.util.Locale.ROOT);
         }
         if (!lower.contains("sockettimeout=")) {

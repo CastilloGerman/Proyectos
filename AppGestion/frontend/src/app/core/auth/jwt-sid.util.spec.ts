@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readJwtSessionId } from './jwt-sid.util';
+import { isJwtExpired, readJwtExpSeconds, readJwtSessionId } from './jwt-sid.util';
 
 function makeJwt(payload: Record<string, unknown>): string {
   const header = btoa(JSON.stringify({ alg: 'HS256' }))
@@ -51,5 +51,27 @@ describe('readJwtSessionId', () => {
 
   it('returns undefined for invalid base64 payload', () => {
     expect(readJwtSessionId('a.!!!invalid!!!.b')).toBeUndefined();
+  });
+});
+
+describe('isJwtExpired', () => {
+  it('is false when the token has no exp claim', () => {
+    expect(isJwtExpired(makeJwt({ sid: 's' }))).toBe(false);
+    expect(readJwtExpSeconds(makeJwt({ sid: 's' }))).toBeUndefined();
+  });
+
+  it('is false for malformed tokens', () => {
+    expect(isJwtExpired(null)).toBe(false);
+    expect(isJwtExpired('not-a-jwt')).toBe(false);
+  });
+
+  it('is true when exp is in the past', () => {
+    const token = makeJwt({ exp: 1_700_000_000 });
+    expect(isJwtExpired(token, 1_700_000_000_000)).toBe(true);
+  });
+
+  it('is false when exp is still in the future', () => {
+    const token = makeJwt({ exp: 1_700_000_100 });
+    expect(isJwtExpired(token, 1_700_000_000_000)).toBe(false);
   });
 });

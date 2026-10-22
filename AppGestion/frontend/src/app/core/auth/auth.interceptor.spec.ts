@@ -14,6 +14,7 @@ describe('authInterceptor', () => {
   let getToken: ReturnType<typeof vi.fn>;
   let clearSessionLocal: ReturnType<typeof vi.fn>;
   let isLogoutInProgress: ReturnType<typeof vi.fn>;
+  let consumeExpiredSessionNotice: ReturnType<typeof vi.fn>;
   let navigate: ReturnType<typeof vi.fn>;
   let snackBarOpen: ReturnType<typeof vi.fn>;
   let translateInstant: ReturnType<typeof vi.fn>;
@@ -22,6 +23,7 @@ describe('authInterceptor', () => {
     getToken = vi.fn();
     clearSessionLocal = vi.fn();
     isLogoutInProgress = vi.fn().mockReturnValue(false);
+    consumeExpiredSessionNotice = vi.fn().mockReturnValue(true);
     navigate = vi.fn();
     snackBarOpen = vi.fn();
     translateInstant = vi.fn((key: string) => key);
@@ -32,7 +34,7 @@ describe('authInterceptor', () => {
         provideHttpClientTesting(),
         {
           provide: AuthService,
-          useValue: { getToken, clearSessionLocal, isLogoutInProgress },
+          useValue: { getToken, clearSessionLocal, isLogoutInProgress, consumeExpiredSessionNotice },
         },
         { provide: Router, useValue: { navigate } },
         { provide: MatSnackBar, useValue: { open: snackBarOpen } },
@@ -139,6 +141,43 @@ describe('authInterceptor', () => {
 
     expect(clearSessionLocal).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('does not call the API when the stored JWT is already expired', () => {
+    const header = btoa(JSON.stringify({ alg: 'HS256' }));
+    const body = btoa(JSON.stringify({ exp: 1 }));
+    getToken.mockReturnValue(`${header}.${body}.sig`);
+    let error: HttpErrorResponse | undefined;
+    http.get('/api/facturas').subscribe({
+      error: (err) => {
+        error = err;
+      },
+    });
+
+    httpMock.expectNone('/api/facturas');
+    expect(consumeExpiredSessionNotice).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(['/login']);
+    expect(snackBarOpen).toHaveBeenCalledWith('shell.snackbarSessionExpired', 'common.close', {
+      duration: 4000,
+    });
+    expect(error?.status).toBe(401);
+  });
+
+  it('retries a GET once when the database is waking up and keeps the session', async () => {
+    vi.useFakeTimers();
+    getToken.mockReturnValue('tok');
+    let body: unknown;
+    http.get('/api/facturas').subscribe((value) => {
+      body = value;
+    });
+
+    httpMock.expectOne('/api/facturas').flush('down', { status: 503, statusText: 'Service Unavailable' });
+    await vi.advanceTimersByTimeAsync(800);
+    httpMock.expectOne('/api/facturas').flush([{ id: 1 }]);
+
+    expect(body).toEqual([{ id: 1 }]);
+    expect(clearSessionLocal).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 
   it('does not clear session on 401 for public auth endpoints forgot-password and reset-password', () => {

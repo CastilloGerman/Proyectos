@@ -50,6 +50,40 @@ const mockAuthResponse: AuthResponse = {
   canWrite: true,
 };
 
+describe('AuthService expired token at startup', () => {
+  let storage: Storage;
+
+  beforeEach(() => {
+    storage = createMemoryStorage();
+    vi.stubGlobal('localStorage', storage);
+    vi.stubGlobal('navigator', { userAgent: 'Vitest' });
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.unstubAllGlobals();
+  });
+
+  it('drops the stored session before any API call', () => {
+    storage.setItem(TOKEN_KEY, makeJwt({ sid: 'old', exp: 1 }));
+    storage.setItem(USER_KEY, JSON.stringify({ email: 'user@test.com', sessionId: 'old' }));
+
+    TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
+      providers: [{ provide: Router, useValue: { navigate: vi.fn() } }],
+    });
+    const fresh = TestBed.inject(AuthService);
+    const http = TestBed.inject(HttpTestingController);
+
+    expect(fresh.isAuthenticated()).toBe(false);
+    expect(storage.getItem(TOKEN_KEY)).toBeNull();
+    expect(storage.getItem(USER_KEY)).toBeNull();
+    expect(fresh.consumeSessionExpiredOnLoad()).toBe(true);
+    expect(fresh.consumeSessionExpiredOnLoad()).toBe(false);
+    http.verify();
+  });
+});
+
 describe('AuthService', () => {
   let http: HttpTestingController;
   let service: AuthService;

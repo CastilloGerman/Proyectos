@@ -1,9 +1,12 @@
 package com.appgestion.api.security;
 
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.dao.DataAccessException;
+import org.springframework.transaction.TransactionException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -43,6 +46,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
+        // El dispatcher ERROR no debe volver a validar la sesión: si la base acaba de fallar,
+        // reentrar aquí convierte ese fallo en 401 y el front cierra la sesión.
+        if (request.getDispatcherType() == DispatcherType.ERROR) {
+            return true;
+        }
         return ("GET".equals(request.getMethod())
                 && request.getRequestURI().equals(request.getContextPath() + "/actuator/health"))
                 || request.getRequestURI().startsWith(request.getContextPath() + "/publico/presupuestos/");
@@ -98,9 +106,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     e.getClass().getSimpleName());
         } catch (UsernameNotFoundException e) {
             log.warn("JWT: usuario del token no encontrado en {} {}", request.getMethod(), LogSanitizer.clean(request.getRequestURI()));
+        } catch (DataAccessException | TransactionException e) {
+            // Neon dormido o conexión cortada. Si esto escapa del filtro, el dispatcher ERROR
+            // vuelve a pasar por Spring Security sin autenticación y el cliente recibe 401.
+            log.warn("JWT: base de datos no disponible en {} {} ({})", request.getMethod(),
+                    LogSanitizer.clean(request.getRequestURI()), e.getClass().getSimpleName());
+            writeDatabaseUnavailable(response);
+            return;
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private static void writeDatabaseUnavailable(HttpServletResponse response) throws IOException {
+        response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write(
+                "{\"error\":\"No se pudo conectar con la base de datos. Inténtalo de nuevo en unos segundos.\","
+                        + "\"message\":\"No se pudo conectar con la base de datos. Inténtalo de nuevo en unos segundos.\"}");
     }
 
     private String extractTokenFromRequest(HttpServletRequest request) {

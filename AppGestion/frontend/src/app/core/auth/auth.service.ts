@@ -12,7 +12,7 @@ import {
   TotpSetupStartResponse,
 } from './models/auth.model';
 import { buildDeviceClientInfo } from './device-client-info';
-import { readJwtSessionId } from './jwt-sid.util';
+import { isJwtExpired, readJwtSessionId } from './jwt-sid.util';
 import { environment } from '../../../environments/environment';
 
 const TOKEN_KEY = 'appgestion_token';
@@ -61,6 +61,10 @@ export class AuthService {
   private userSignal = signal<AuthResponse | null>(this.getStoredUser());
   /** Evita bucles de 401 durante POST /auth/logout y peticiones paralelas al cerrar sesión. */
   private logoutInProgress = false;
+  /** El token guardado ya estaba caducado al abrir la app. El guard muestra el aviso una sola vez. */
+  private expiredAtStartup = false;
+  /** Evita un aviso por cada petición en paralelo cuando el JWT caduca con la pestaña abierta. */
+  private expiryNoticeShown = false;
 
   token = this.tokenSignal.asReadonly();
   user = this.userSignal.asReadonly();
@@ -73,7 +77,39 @@ export class AuthService {
   constructor(
     private http: HttpClient,
     private router: Router
-  ) {}
+  ) {
+    // Si el JWT ya caducó, no arrancar el dashboard: esas peticiones esperan a que Neon
+    // despierte y, al responder 401, cierran la sesión después de un minuto.
+    const stored = this.getStoredToken();
+    if (stored && isJwtExpired(stored)) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      this.tokenSignal.set(null);
+      this.userSignal.set(null);
+      this.expiredAtStartup = true;
+    }
+  }
+
+  /** True una sola vez si al abrir la app el JWT guardado ya estaba caducado. */
+  consumeSessionExpiredOnLoad(): boolean {
+    const expired = this.expiredAtStartup;
+    this.expiredAtStartup = false;
+    return expired;
+  }
+
+  /**
+   * Quita un JWT ya caducado sin llamar al API. Devuelve true solo la primera vez,
+   * para mostrar el aviso y navegar a login una sola vez aunque haya varias peticiones.
+   */
+  consumeExpiredSessionNotice(): boolean {
+    if (this.logoutInProgress || this.expiryNoticeShown) {
+      this.clearSessionLocal();
+      return false;
+    }
+    this.expiryNoticeShown = true;
+    this.clearSessionLocal();
+    return true;
+  }
 
   login(credentials: LoginRequest): Observable<AuthResponse> {
     const body: Record<string, unknown> = {
@@ -341,6 +377,8 @@ export class AuthService {
     };
     localStorage.setItem(TOKEN_KEY, response.token);
     localStorage.setItem(USER_KEY, JSON.stringify(normalized));
+    this.expiryNoticeShown = false;
+    this.expiredAtStartup = false;
     this.tokenSignal.set(response.token);
     this.userSignal.set(normalized);
   }
