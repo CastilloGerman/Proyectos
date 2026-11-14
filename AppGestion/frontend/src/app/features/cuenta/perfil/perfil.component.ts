@@ -19,7 +19,7 @@ import { getApiErrorMessage } from '../../../core/http/api-error.util';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { map } from 'rxjs';
 import { buildPaisOptionsEs } from '../../../shared/constants/paises-select-options';
-import { formatLocalDateForApi, parseApiLocalDate } from '../../../shared/utils/local-date.util';
+import { formatLocalDateForApi, parseApiLocalDate } from '../../../core/utils/local-date.util';
 
 const PHONE_CHARS = /^[\d\s+().-]*$/;
 

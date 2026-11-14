@@ -10,7 +10,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ConfigService } from '../../core/services/config.service';
 import { Empresa } from '../../core/models/empresa.model';
-import { dataUrlFromStoredBase64 } from '../../core/utils/image-data-url';
+import { dataUrlFromStoredBase64 } from '../utils/image-data-url';
 import { TranslateService } from '@ngx-translate/core';
 
 export type ConfigContext = 'presupuesto' | 'factura' | 'mail';

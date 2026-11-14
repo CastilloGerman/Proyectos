@@ -21,7 +21,7 @@ import { nifValidator } from '../../../shared/validators/nif.validator';
 import { RUBRO_AUTONOMO_CATEGORIAS } from './rubro-autonomo.catalog';
 import { ConfigService } from '../../../core/services/config.service';
 import { Empresa } from '../../../core/models/empresa.model';
-import { dataUrlFromStoredBase64 } from '../../../core/utils/image-data-url';
+import { dataUrlFromStoredBase64 } from '../../../shared/utils/image-data-url';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 /** Límite servidor ~400 KB; margen en cliente. */
