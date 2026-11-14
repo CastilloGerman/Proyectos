@@ -21,7 +21,7 @@ import { Presupuesto } from '../../../core/models/presupuesto.model';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfigEmpresaDialogComponent } from '../../../shared/config-empresa-dialog/config-empresa-dialog.component';
 import { EnviarEmailDialogComponent } from '../../../shared/enviar-email-dialog/enviar-email-dialog.component';
-import { CompletarClienteFiscalDialogComponent } from '../../../shared/completar-cliente-fiscal-dialog/completar-cliente-fiscal-dialog.component';
+import { CompletarClienteFiscalDialogComponent } from '../completar-cliente-fiscal-dialog/completar-cliente-fiscal-dialog.component';
 import { Observable } from 'rxjs';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { presupuestoSePuedeFacturar } from '../../../core/utils/presupuesto-facturable.util';

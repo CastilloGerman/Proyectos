@@ -6,7 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { ClienteService } from '../../core/services/cliente.service';
+import { ClienteService } from '../../../core/services/cliente.service';
 import { TranslateService } from '@ngx-translate/core';
 
 export interface CompletarClienteFiscalDialogData {

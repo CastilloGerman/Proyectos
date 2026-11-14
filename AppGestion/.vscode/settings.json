@@ -21,9 +21,18 @@
   "java.configuration.maven.notCoveredPluginExecutionSeverity": "ignore",
   "java.compile.nullAnalysis.mode": "automatic",
   "java.errors.incompleteClasspath.severity": "ignore",
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/target": true,
+    "**/dist": true,
+    "**/.angular": true
+  },
   "search.exclude": {
     "**/target": true,
-    "**/node_modules": true
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.angular": true,
+    "**/.vercel": true
   },
   "java.import.exclusions": [
     "**/node_modules/**",

@@ -8,7 +8,7 @@ La API ofrece `POST /presupuestos/{id}/enlace` para crear otro enlace por envío
 
 Configura `app.frontend-url`, `app.public-links.expiry-days` (60 días), `app.public-links.max-active-links` (10), `app.public-links.trusted-proxies` (vacía por defecto), `app.public-links.rate-limit-per-ip` (600/minuto) y `app.public-links.rate-limit-per-token` (60/minuto). Las variables equivalentes son `PUBLIC_BUDGET_LINK_EXPIRY_DAYS`, `PUBLIC_BUDGET_LINK_MAX_ACTIVE`, `PUBLIC_BUDGET_LINK_TRUSTED_PROXIES`, `PUBLIC_BUDGET_LINK_RATE_IP` y `PUBLIC_BUDGET_LINK_RATE_TOKEN`. Por defecto no se confía en `X-Forwarded-For`. El modo de IP del cliente es `app.security.client-ip-mode` (`APP_SECURITY_CLIENT_IP_MODE`: `none`, `trusted-proxies` o `vercel`). El limitador Caffeine es local por instancia. El PDF público solo muestra el nombre del cliente, sin NIF, teléfono, email ni dirección.
 
-Las respuestas anónimas de la API llevan `Cache-Control: no-store`, `X-Robots-Tag: noindex, nofollow` y `Referrer-Policy: no-referrer`. La ruta Angular `/p/:token` publica las meta `robots` y `referrer` equivalentes mientras está abierta. El hosting estático (`frontend/vercel.json` y `frontend/server.mjs`) aplica `Referrer-Policy: strict-origin-when-cross-origin` a todas las rutas. Consulta [el modelo de amenazas, límites, datos expuestos y texto recomendado para privacidad](docs/ENLACE-PUBLICO.md).
+Las respuestas anónimas de la API llevan `Cache-Control: no-store`, `X-Robots-Tag: noindex, nofollow` y `Referrer-Policy: no-referrer`. La ruta Angular `/p/:token` publica las meta `robots` y `referrer` equivalentes mientras está abierta. El hosting estático (`frontend/vercel.json`) aplica `Referrer-Policy: strict-origin-when-cross-origin` a todas las rutas. Consulta [el modelo de amenazas, límites, datos expuestos y texto recomendado para privacidad](docs/ENLACE-PUBLICO.md).
 
 **Respuesta del cliente desde el enlace público:** el cliente puede pulsar «Me interesa» o «Tengo dudas» desde `/p/:token`. Es un aviso al contratista, no una aceptación contractual: no cambia el estado del presupuesto. El contratista recibe notificación in-app y email. Consulta [Respuesta del cliente](docs/RESPUESTA-CLIENTE.md).
 
@@ -112,7 +112,6 @@ AppGestion/
 ├── frontend/
 │   ├── package.json
 │   ├── angular.json
-│   ├── server.mjs               # servidor estático (Railway / producción)
 │   ├── vercel.json
 │   ├── proxy.conf.js            # /api -> http://localhost:8081
 │   └── src/app/

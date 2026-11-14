@@ -3,8 +3,8 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { of, Subject, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { PresupuestoIaBorradorResponse, PresupuestoIaRequestError } from '../../core/models/presupuesto-ia.model';
-import { PresupuestoIaService } from '../../core/services/presupuesto-ia.service';
+import { PresupuestoIaBorradorResponse, PresupuestoIaRequestError } from '../../../core/models/presupuesto-ia.model';
+import { PresupuestoIaService } from '../../../core/services/presupuesto-ia.service';
 import { PresupuestoIaPanelComponent } from './presupuesto-ia-panel.component';
 
 describe('PresupuestoIaPanelComponent', () => {

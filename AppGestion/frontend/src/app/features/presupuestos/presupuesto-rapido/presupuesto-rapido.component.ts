@@ -32,8 +32,8 @@ import { MaterialService } from '../../../core/services/material.service';
 import { PresupuestoService } from '../../../core/services/presupuesto.service';
 import { calcularPresupuestoCostes } from '../../../core/utils/presupuesto-costes.util';
 import { EnviarPresupuestoComponent } from '../enviar-presupuesto/enviar-presupuesto.component';
-import { PresupuestoIaPanelComponent, PresupuestoIaPanelState } from '../../../shared/presupuesto-ia-panel/presupuesto-ia-panel.component';
-import { PresupuestoIaPriceInfoComponent } from '../../../shared/presupuesto-ia-panel/presupuesto-ia-price-info.component';
+import { PresupuestoIaPanelComponent, PresupuestoIaPanelState } from '../presupuesto-ia-panel/presupuesto-ia-panel.component';
+import { PresupuestoIaPriceInfoComponent } from '../presupuesto-ia-panel/presupuesto-ia-price-info.component';
 
 const BORRADOR_LEGACY_KEY = 'presupuesto_rapido_borrador_v1';
 const BORRADOR_KEY_PREFIX = 'presupuesto_rapido_borrador';

@@ -4,8 +4,8 @@ import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/materia
 import { MatButtonModule } from '@angular/material/button';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { Presupuesto } from '../../core/models/presupuesto.model';
-import { EstadoBadgeComponent } from '../estado-badge/estado-badge.component';
+import { Presupuesto } from '../../../core/models/presupuesto.model';
+import { EstadoBadgeComponent } from '../../../shared/estado-badge/estado-badge.component';
 
 export interface ImportarPresupuestoDialogData {
   presupuestos: Presupuesto[];

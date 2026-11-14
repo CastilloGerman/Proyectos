@@ -39,8 +39,8 @@ import {
 import { PresupuestoIaRevisionDatos } from '../../../core/utils/presupuesto-ia-review.util';
 import { EnviarPresupuestoComponent } from '../enviar-presupuesto/enviar-presupuesto.component';
 import { PresupuestoIaBorradorResponse } from '../../../core/models/presupuesto-ia.model';
-import { PresupuestoIaPanelComponent, PresupuestoIaPanelState } from '../../../shared/presupuesto-ia-panel/presupuesto-ia-panel.component';
-import { PresupuestoIaPriceInfoComponent } from '../../../shared/presupuesto-ia-panel/presupuesto-ia-price-info.component';
+import { PresupuestoIaPanelComponent, PresupuestoIaPanelState } from '../presupuesto-ia-panel/presupuesto-ia-panel.component';
+import { PresupuestoIaPriceInfoComponent } from '../presupuesto-ia-panel/presupuesto-ia-price-info.component';
 
 @Component({
     selector: 'app-presupuesto-form',
