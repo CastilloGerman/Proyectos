@@ -29,3 +29,6 @@ Thumbs.db
 
 # Config local con contraseñas (nunca subir a Git)
 **/application-local.yml
+
+# Vercel (enlace local del proyecto)
+.vercel/
