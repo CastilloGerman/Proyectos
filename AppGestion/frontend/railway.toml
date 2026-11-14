@@ -1,9 +1,0 @@
-# Railway: Root Directory del servicio frontend = frontend.
-# Sirve el build estatico en el puerto que Railway inyecta ($PORT).
-
-[build]
-buildCommand = "npm ci && npm run build"
-
-[deploy]
-# Servidor estatico propio: no descarga paquetes en runtime y escucha en 0.0.0.0:$PORT.
-startCommand = "npm run serve:railway"
